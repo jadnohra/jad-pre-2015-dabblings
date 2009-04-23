@@ -1,0 +1,6 @@
+*** http://graphics.cs.brown.edu/games/quake/quake3.html
+*** http://graphics.stanford.edu/~kekoa/q3/
+** http://code.google.com/p/bsp-renderer/
+
+http://q3libxna.codeplex.com/
+http://www.dxquake3.dsl.pipex.com/
