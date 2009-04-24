@@ -30,7 +30,7 @@ namespace Framework1.Quake3
             {
                 VertexSemantics = renderResMan.NewGPUVertexSemanticsProxy(typeof(VertexPositionColor), VertexPositionColor.VertexElements);
 
-                BspLoaderFaceRAMStreamSource source = new BspLoaderFaceRAMStreamSource(bspTree.m_Level, face);
+                BspFaceRAMStreamSource source = new BspFaceRAMStreamSource(bspTree.m_Level, face);
                 Vertices = renderResMan.NewRAMVertexStreamProxy<VertexPositionColor>(new RenderResourceManager.VertexSemantics(VertexPositionColor.VertexElements), source, true);
                 TriangleList = renderResMan.NewRAMIndexStreamProxy<Int16>(source, true);
                 

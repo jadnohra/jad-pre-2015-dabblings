@@ -12,12 +12,12 @@ namespace Framework1.Quake3
     // ----------------------------------------------------------------------------
     // Can load a face's vertices and triangle indices
     // ----------------------------------------------------------------------------
-    public class BspLoaderFaceRAMStreamSource : RenderResourceManager.RAMStreamSource
+    public class BspFaceRAMStreamSource : RenderResourceManager.RAMStreamSource
     {
         internal LoadedBspLevel m_Level;
         internal int m_Face;
 
-        public BspLoaderFaceRAMStreamSource(LoadedBspLevel bspLevel, int face)
+        public BspFaceRAMStreamSource(LoadedBspLevel bspLevel, int face)
         {
             m_Level = bspLevel;
             m_Face = face;
@@ -44,10 +44,10 @@ namespace Framework1.Quake3
         {
             // Optimization: Instead of a layout, a mapping can be initialized and checked 
             // in parent and then used here.
-            internal BspLoaderFaceRAMStreamSource m_Parent;
+            internal BspFaceRAMStreamSource m_Parent;
             internal CoalescedIntervals m_CoalescedVertexIntervals;
 
-            public ReaderBase(BspLoaderFaceRAMStreamSource parent, Type type)
+            public ReaderBase(BspFaceRAMStreamSource parent, Type type)
             {
                 m_Parent = parent;
             }
@@ -98,7 +98,7 @@ namespace Framework1.Quake3
             int m_VertexCount;
             int m_IndexCount;
 
-            public IndexReader(BspLoaderFaceRAMStreamSource parent, Type type)
+            public IndexReader(BspFaceRAMStreamSource parent, Type type)
                 : base(parent, type)
             {
                 base.Init(ref m_IndexCount, ref m_VertexCount);
@@ -156,7 +156,7 @@ namespace Framework1.Quake3
         {
             int m_VertexCount;
 
-            public VertexReader(BspLoaderFaceRAMStreamSource parent, RenderResourceManager.VertexSemantics semantics, Type type)
+            public VertexReader(BspFaceRAMStreamSource parent, RenderResourceManager.VertexSemantics semantics, Type type)
             : base(parent, type)
             {
                 int indexCount = 0;

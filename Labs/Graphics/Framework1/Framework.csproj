@@ -92,7 +92,6 @@
     <Compile Include="Quake3\BspLoader.cs" />
     <Compile Include="Quake3\BspFile.cs" />
     <Compile Include="Quake3\BspLoaderFaceRAMStreamSource.cs" />
-    <Compile Include="Quake3\BspLoaderLeafRAMStreamSource.cs" />
     <Compile Include="Quake3\BspTree.cs" />
     <Compile Include="Quake3\BspVertexLoader.cs" />
     <Compile Include="Quake3\IntervalCoalescor.cs" />
