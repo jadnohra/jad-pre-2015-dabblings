@@ -13,7 +13,8 @@ namespace Framework1.Quake3
         public BspFile.CoordSysConv CoordSysConv;
     }
 
-    class LevelScene : Scene
+    class LevelScene
+    : Scene
     {
         LoadedBspLevel m_LoadedLevel;
         BspTree m_Tree;
@@ -51,7 +52,7 @@ namespace Framework1.Quake3
                 m_RenderResourceBlockCollector = new RenderResourceBlockCollector();
                 //string texRelPath = Path.Combine(Path.GetDirectoryName(path), "../textures/");
                 string texRelPath = Path.Combine(content.RootDirectory, "jof3dm2.pk3/textures/");
-                m_RenderResourceManager = new RenderResourceManager(content, texRelPath);
+                m_RenderResourceManager = new RenderResourceManager(graphicsDevice, content, texRelPath);
                 m_Renderer = new BasicRenderer(content, graphicsDevice);
                 m_RenderQueue = new BasicRenderQueue(m_Renderer);
             }

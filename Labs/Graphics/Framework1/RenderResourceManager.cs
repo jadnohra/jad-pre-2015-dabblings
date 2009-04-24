@@ -12,16 +12,44 @@ namespace Framework1
      * The goal here is to enable the manager to per example add multiple vertex buffers 
      * into one vertex buffer
      * 
-     **/ 
+     * Source classes are kept in memory, Reader classes are temporary objects, so they should be written with
+     * this in mind, many variations and compromizes on processing vs memory can be expressed easily this way.
+     **/
     public class RenderResourceManager
     {
-        public class DataStructure
+        public class VertexSemantics
         {
             public readonly VertexElement[] Layout;
 
-            public DataStructure(VertexElement[] layout)
+            public VertexSemantics(VertexElement[] layout)
             {
                 Layout = layout;
+            }
+
+            static public bool Equals(VertexElement[] layout1, VertexElement[] layout2)
+            {
+                if (layout1.Length == layout2.Length)
+                {
+                    for (int i = 0; i < layout1.Length; ++i)
+                    {
+                        if (layout1[i] != layout2[i])
+                            return false;
+                    }
+
+                    return true;
+                }
+
+                return false;
+            }
+        }
+
+        public class GPUVertexSemanticsProxy
+        {
+            public VertexDeclaration m_VertexDeclaration;
+
+            public GPUVertexSemanticsProxy(VertexDeclaration vertexDeclaration)
+            {
+                m_VertexDeclaration = vertexDeclaration;
             }
         }
 
@@ -35,16 +63,23 @@ namespace Framework1
             public void Evict() { Data = null; }
         }
         
-        public abstract class RAMStreamReader
+
+        public interface IRAMVertexStreamReader
         {
-            public abstract int Count();
-            public abstract void Read<T>(ref RAMStream<T> array);
+            int Count();
+            void Read<T>(ref RAMStream<T> array, VertexSemantics semantics);
+        }
+
+        public interface IRAMIndexStreamReader
+        {
+            int Count();
+            void Read<T>(ref RAMStream<T> array);
         }
 
         public abstract class RAMStreamSource
         {
-            public abstract RAMStreamReader GetVertexReader(DataStructure vertexStructure, Type vertexType);
-            public abstract RAMStreamReader GetIndexReader(Type indexType);
+            public abstract IRAMVertexStreamReader GetVertexReader(VertexSemantics vertexStructure, Type vertexType);
+            public abstract IRAMIndexStreamReader GetIndexReader(Type indexType);
         }
 
         public abstract class RAMStreamProxyBase
@@ -131,8 +166,10 @@ namespace Framework1
             public override void Evict() { Trace.Assert(false, "TODO"); }
         }
 
-        public RenderResourceManager(ContentManager contentManager, string textureRelativeRoot)
+        public RenderResourceManager(GraphicsDevice graphicsDevice, ContentManager contentManager, string textureRelativeRoot)
         {
+            m_GraphicsDevice = graphicsDevice;
+
             if (contentManager != null)
             {
                 string texRootPath = Path.Combine(contentManager.RootDirectory, textureRelativeRoot);
@@ -140,9 +177,26 @@ namespace Framework1
             }
         }
 
-        public RAMVertexStreamProxy<T> NewRAMVertexStreamProxy<T>(DataStructure structure, RAMStreamSource source, bool evictable)
+        public GPUVertexSemanticsProxy NewGPUVertexSemanticsProxy(Type type, VertexElement[] layout)
         {
-            RAMStreamReader reader = source.GetVertexReader(structure, typeof(T));
+            GPUVertexSemanticsProxy proxy;
+
+            if (m_RenderVertexSemanticsProxies.TryGetValue(type, out proxy))
+            {
+                Trace.Assert(VertexSemantics.Equals(proxy.m_VertexDeclaration.GetVertexElements(), layout));
+
+                return proxy;
+            }
+
+            proxy = new GPUVertexSemanticsProxy(new VertexDeclaration(m_GraphicsDevice, layout));
+            m_RenderVertexSemanticsProxies.Add(type, proxy);
+
+            return proxy;
+        }
+
+        public RAMVertexStreamProxy<T> NewRAMVertexStreamProxy<T>(VertexSemantics semantics, RAMStreamSource source, bool evictable)
+        {
+            IRAMVertexStreamReader reader = source.GetVertexReader(semantics, typeof(T));
 
             if (reader == null)
                 return null;
@@ -155,7 +209,7 @@ namespace Framework1
             vertexStream.Count = reader.Count();
             vertexStream.Data = new T[vertexStream.Count];
 
-            reader.Read(ref vertexStream);
+            reader.Read(ref vertexStream, semantics);
 
             RAMVertexStreamProxy<T> proxy = new RAMVertexStreamProxy<T>(vertexStream);
             m_RAMStreamProxies.Add(proxy);
@@ -179,7 +233,7 @@ namespace Framework1
         public RAMIndexStreamProxy<T> NewRAMIndexStreamProxy<T>(RAMStreamSource source, bool evictable)
         {
             Trace.Assert(typeof(T).IsValueType);
-            RAMStreamReader reader = source.GetIndexReader(typeof(T));
+            IRAMIndexStreamReader reader = source.GetIndexReader(typeof(T));
 
             if (reader == null)
                 return null;
@@ -239,9 +293,11 @@ namespace Framework1
             //m_ManagedTextureBytes -= 
         }
 
+        GraphicsDevice m_GraphicsDevice;
         ContentManager m_TextureContentManager;
         List<RAMStreamProxyBase> m_RAMStreamProxies = new List<RAMStreamProxyBase>();
         List<ManagedTextureProxyBase> m_ManagedTextureProxies = new List<ManagedTextureProxyBase>();
+        Dictionary<Type, GPUVertexSemanticsProxy> m_RenderVertexSemanticsProxies = new Dictionary<Type, GPUVertexSemanticsProxy>();
         int m_RAMManagementBytes = 0;
         int m_RAMStreamDataBytes = 0;
         int m_ManagedTextureBytes = 0;

@@ -88,21 +88,6 @@ namespace Framework1.Quake3
             public int faceCount;
         }
 
-        public Interval[] GetLeafFaceIntervals(Leaf leaf)
-        {
-            // Performance: We could compress this or cache it, but it is probably not worth the trouble at all...
-
-            Interval[] intervals = new Interval[leaf.leafFaceCount];
-
-            for (int lf = leaf.firstLeafFace, lfi = 0; lfi < leaf.leafFaceCount; ++lfi, ++lf)
-            {
-                intervals[lfi].Start = m_LeafFaces[lf].faceIndex;
-                intervals[lfi].End = intervals[lfi].Start;
-            }
-
-            return intervals;
-        }
-
         public bool Load(LoadedBspLevel loadedLevel)
         {
             m_Level = loadedLevel;

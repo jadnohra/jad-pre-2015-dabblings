@@ -4,5 +4,13 @@
 
 ** maps: http://www.users.on.net/~justonefix/
 
+engine:
+// general engine / performance http://decadeengine.blogspot.com/
+// effect state management: http://www.nesnausk.org/inoutside/Technology.php
+// resource management: http://aras-p.info/texts/index.html
+// unity info: http://unity3d.com/support/documentation/Manual/Optimizing%20Graphics%20Performance.html
+// nice stats window: http://unity3d.com/support/documentation/Manual/RenderingStatistics.html
+
 http://q3libxna.codeplex.com/
 http://www.dxquake3.dsl.pipex.com/
+http://www.lvlworld.com

@@ -21,10 +21,7 @@ namespace Framework1
     {
         GraphicsDeviceManager graphics;
 
-        //BspHeader m_BspHeader;
         Scene m_Scene;
-        AssetInterpeterFactory m_AssetInterpeterFactory;
-        Renderer m_Renderer;
         
         ManualCamera m_Camera;
         Matrix m_Projection;
@@ -69,26 +66,6 @@ namespace Framework1
             {
                 bspFileDumper.Print(true);
             }
-
-            /*
-            BspLoader loader = new BspLoader(filePath);
-            m_BspHeader = loader.Open();
-
-            m_AssetInterpeterFactory = new AssetInterpeterFactory();
-            {
-                AssetInterpreter_BspLoaderVertices_CPUPositionColorStream interepreter = new 
-                    AssetInterpreter_BspLoaderVertices_CPUPositionColorStream();
-
-                m_AssetInterpeterFactory.Insert(interepreter.GetAssetType(), interepreter.GetTargetType(), interepreter);
-            }
-
-            {
-                AssetInterpreter_BspLoaderFaces_CPUIndex16Stream interepreter = new
-                    AssetInterpreter_BspLoaderFaces_CPUIndex16Stream();
-
-                m_AssetInterpeterFactory.Insert(interepreter.GetAssetType(), interepreter.GetTargetType(), interepreter);
-            }
-             */
 
             {
                 Quake3.LevelScene scene = new Quake3.LevelScene();
