@@ -179,14 +179,14 @@ namespace Framework1
                     this.Move(Vector3.Left * distance);
 
                 if (keybState.IsKeyDown(Keys.Left))
-                    Rotate(Vector3.Up, MathHelper.PiOver2 * 0.01f, 0);
+                    Rotate(Vector3.Up, MathHelper.PiOver2 * 0.03f, 0);
                 else if (keybState.IsKeyDown(Keys.Right))
-                    Rotate(Vector3.Up, -MathHelper.PiOver2 * 0.01f, 0);
+                    Rotate(Vector3.Up, -MathHelper.PiOver2 * 0.03f, 0);
 
                 if (keybState.IsKeyDown(Keys.Up))
-                    Rotate(worldTransform.Right, MathHelper.PiOver2 * 0.01f, 1);
+                    Rotate(worldTransform.Right, MathHelper.PiOver2 * 0.03f, 1);
                 else if (keybState.IsKeyDown(Keys.Down))
-                    Rotate(worldTransform.Right, -MathHelper.PiOver2 * 0.01f, 1);
+                    Rotate(worldTransform.Right, -MathHelper.PiOver2 * 0.03f, 1);
 
             }
 

@@ -103,8 +103,8 @@ namespace Framework1
 
             //m_Renderer = new Renderer(graphics.GraphicsDevice, Content, m_AssetInterpeterFactory);
             m_Camera = new ManualCamera();
-            m_Camera.SetMoveScale(100.0f);
-            m_Camera.SetNearFarPlanes(10.0f, 2000.0f);
+            m_Camera.SetMoveScale(170.0f);
+            m_Camera.SetNearFarPlanes(5.0f, 5000.0f);
         }
 
         /// <summary>
