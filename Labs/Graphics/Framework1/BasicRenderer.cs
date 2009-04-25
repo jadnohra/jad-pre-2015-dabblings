@@ -52,7 +52,7 @@ namespace Framework1
         public BasicRenderer(ContentManager content, GraphicsDevice device)
         {
             Device = device;
-            m_Effect = content.Load<Effect>("Effects/Ambient");
+            m_Effect = content.Load<Effect>("Effects/AmbientTextured");
         }
 
         public void Push(BasicRenderQueue queue)
@@ -70,9 +70,8 @@ namespace Framework1
                 Matrix WvXf = Matrix.Multiply(Matrix.Identity, camera.GetViewMatrix());
                 Matrix WvpXf = Matrix.Multiply(WvXf, projection);
 
-            
                 m_Effect.Parameters[0].SetValue(WvpXf);
-
+                
                 {
                     int queueCount = m_Queues.Count;
 

@@ -16,6 +16,7 @@ namespace Framework1.Quake3
         BspFile.CoordSysConv m_Conv;
 
         Vector3 vector3 = new Vector3();
+        Vector2 vector2 = new Vector2();
         Color color = new Color();
 
         public BspVertexLoader(FieldInfo[] typeFields, VertexElement[] semanticEls, BspFile.CoordSysConv conv)
@@ -58,6 +59,18 @@ namespace Framework1.Quake3
                         color.A = vertex.color_a;
 
                         fieldInfo.SetValue(outVertex, color);
+                    }
+                    break;
+
+                    case VertexElementUsage.TextureCoordinate:
+                    {
+                        // Trace.Assert(vEl.VertexElementFormat == VertexElementFormat.Vector2);
+                        // Trace.Assert(fieldInfo.FullName == "Microsoft.Xna.Framework.Vector2");
+                        vector2.X = vertex.texcoord_s;
+                        vector2.Y = vertex.texcoord_t;
+                        m_Conv.ConvertTexCoord(ref vector2);
+
+                        fieldInfo.SetValue(outVertex, vector2);
                     }
                     break;
 

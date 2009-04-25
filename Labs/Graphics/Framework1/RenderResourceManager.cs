@@ -147,6 +147,7 @@ namespace Framework1
         public class ManagedTexture2DProxy : ManagedTextureProxyBase
         {
             Texture2D m_Texture2D;
+            static int trc = 0;
 
             public ManagedTexture2DProxy(Texture2D tex2D)
             {
@@ -160,7 +161,9 @@ namespace Framework1
                 if (m_Texture2D == null)
                     return 0;
 
-                Trace.TraceWarning("ManagedTexture2DProxy.GetSizeBytes() not implemented");
+                if (trc++ == 0)
+                    Trace.TraceWarning("ManagedTexture2DProxy.GetSizeBytes() not implemented");
+
                 return 0;
             }
             public override void Evict() { Trace.Assert(false, "TODO"); }
@@ -284,7 +287,8 @@ namespace Framework1
                 return null;
 
             ManagedTexture2DProxy proxy = new ManagedTexture2DProxy(tex2D);
-            m_ManagedTextureBytes += proxy.GetSizeBytes();
+            // Wrong! texture might be shared using ContentManager
+            // m_ManagedTextureBytes += proxy.GetSizeBytes();
 
             m_ManagedTextureProxies.Add(proxy);
 

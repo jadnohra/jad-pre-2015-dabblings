@@ -345,6 +345,11 @@
       <Importer>TextureImporter</Importer>
       <Processor>TextureProcessor</Processor>
     </Compile>
+    <Compile Include="Effects\AmbientTextured.fx">
+      <Name>AmbientTextured</Name>
+      <Importer>EffectImporter</Importer>
+      <Processor>EffectProcessor</Processor>
+    </Compile>
     <None Include="Q3Maps\jof3dm2.pk3\jof3dm2.txt">
       <Name>jof3dm2</Name>
     </None>

@@ -5,6 +5,8 @@ using Microsoft.Xna.Framework.Graphics;
 
 namespace Framework1.Quake3
 {
+    using VertexFormat = VertexPositionColorTexture;
+
     public abstract class LeafRenderResourceBlock 
     : RenderResourceBlockCollector.ResourceBlock
     {
@@ -21,17 +23,19 @@ namespace Framework1.Quake3
         class FaceRenderJob
         : IBasicRenderJob
         {
+            
+
             internal RenderResourceManager.GPUVertexSemanticsProxy VertexSemantics;
             internal RenderResourceManager.RAMIndexStreamProxy<Int16> TriangleList;
-            internal RenderResourceManager.RAMVertexStreamProxy<VertexPositionColor> Vertices;
+            internal RenderResourceManager.RAMVertexStreamProxy<VertexFormat> Vertices;
             internal RenderResourceManager.ManagedTexture2DProxy DiffuseTexture;
 
             public FaceRenderJob(RenderResourceManager renderResMan, BspTree bspTree, BspTree.Leaf leaf, int face)
             {
-                VertexSemantics = renderResMan.NewGPUVertexSemanticsProxy(typeof(VertexPositionColor), VertexPositionColor.VertexElements);
+                VertexSemantics = renderResMan.NewGPUVertexSemanticsProxy(typeof(VertexFormat), VertexFormat.VertexElements);
 
                 BspFaceRAMStreamSource source = new BspFaceRAMStreamSource(bspTree.m_Level, face);
-                Vertices = renderResMan.NewRAMVertexStreamProxy<VertexPositionColor>(new RenderResourceManager.VertexSemantics(VertexPositionColor.VertexElements), source, true);
+                Vertices = renderResMan.NewRAMVertexStreamProxy<VertexFormat>(new RenderResourceManager.VertexSemantics(VertexFormat.VertexElements), source, true);
                 TriangleList = renderResMan.NewRAMIndexStreamProxy<Int16>(source, true);
 
                 LoadDiffuseTexture(renderResMan, bspTree, face);
@@ -79,14 +83,21 @@ namespace Framework1.Quake3
             public void Execute(BasicRenderer renderer)
             {
                 RenderResourceManager.RAMStream<Int16> indexData;
-                this.TriangleList.Get(out indexData);
+                TriangleList.Get(out indexData);
 
-                RenderResourceManager.RAMStream<VertexPositionColor> vertexData;
-                this.Vertices.Get(out vertexData);
+                RenderResourceManager.RAMStream<VertexFormat> vertexData;
+                Vertices.Get(out vertexData);
+
+                Texture2D diffuseTexture = null;
+                if (DiffuseTexture != null)
+                {
+                    DiffuseTexture.Get(out diffuseTexture);
+                }
 
                 // TODO!!!! this is also a resource!!! make it that way!
-                renderer.Device.VertexDeclaration = VertexSemantics.m_VertexDeclaration; 
-                renderer.Device.DrawUserIndexedPrimitives<VertexPositionColor>(PrimitiveType.TriangleList, vertexData.Data, vertexData.Offset, vertexData.Count, indexData.Data, indexData.Offset, indexData.Count / 3);
+                renderer.Device.VertexDeclaration = VertexSemantics.m_VertexDeclaration;
+                renderer.Device.Textures[0] = diffuseTexture;
+                renderer.Device.DrawUserIndexedPrimitives<VertexFormat>(PrimitiveType.TriangleList, vertexData.Data, vertexData.Offset, vertexData.Count, indexData.Data, indexData.Offset, indexData.Count / 3);
             }
         }
 
