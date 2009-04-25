@@ -60,6 +60,8 @@ technique TechniqueHLSL
 {
 	pass Pass1
     {
+		//ColorOp[0] = Modulate4x;
+    
         VertexShader = compile vs_1_1 VS_AmbientTextured();
         PixelShader = compile ps_1_1 PS_AmbientTextured();
     }
