@@ -33,8 +33,26 @@ namespace Framework1.Quake3
                 BspFaceRAMStreamSource source = new BspFaceRAMStreamSource(bspTree.m_Level, face);
                 Vertices = renderResMan.NewRAMVertexStreamProxy<VertexPositionColor>(new RenderResourceManager.VertexSemantics(VertexPositionColor.VertexElements), source, true);
                 TriangleList = renderResMan.NewRAMIndexStreamProxy<Int16>(source, true);
-                
-                //DiffuseTexture = renderResMan.NewManagedTexture2D("e7/e7bricks01", true);
+
+                LoadDiffuseTexture(renderResMan, bspTree, face);
+            }
+
+            void LoadDiffuseTexture(RenderResourceManager renderResMan, BspTree bspTree, int faceIndex)
+            {
+                 BspFile.Header header = bspTree.m_Level.Header;
+
+                 using (BspFile.Faces faces = header.Loader.GetFaces(header, faceIndex, 1))
+                 {
+                     BspFile.Faces.Binary_face face = faces.m_Faces[0];
+
+                     if (face.texture >= 0)
+                     {
+                         using (BspFile.Textures textures = header.Loader.GetTextures(header, face.texture, 1))
+                         {
+                             DiffuseTexture = renderResMan.NewManagedTexture2D(textures.m_Textures[0].GetTextureNameString(), true);
+                         }
+                     }
+                 }
             }
 
             internal void Evict(RenderResourceManager resMan)

@@ -269,7 +269,16 @@ namespace Framework1
 
         public ManagedTexture2DProxy NewManagedTexture2D(string assetName, bool evictable)
         {
-            Texture2D tex2D = m_TextureContentManager.Load<Texture2D>(assetName);
+            Texture2D tex2D = null;
+
+            try
+            {
+                tex2D = m_TextureContentManager.Load<Texture2D>(assetName);
+            }
+            catch (Exception e)
+            {
+                Trace.TraceWarning(e.Message);
+            }
 
             if (tex2D == null)
                 return null;

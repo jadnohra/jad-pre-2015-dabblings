@@ -47,6 +47,325 @@
       <Importer>FontDescriptionImporter</Importer>
       <Processor>FontDescriptionProcessor</Processor>
     </Compile>
+    <Compile Include="Q3Maps\jof3dm2.pk3\textures\e7\e7bricks01.jpg">
+      <Name>e7bricks01</Name>
+      <Importer>TextureImporter</Importer>
+      <Processor>TextureProcessor</Processor>
+    </Compile>
+    <Compile Include="Q3Maps\jof3dm2.pk3\textures\egyptsoc_mat\block02a.jpg">
+      <Name>block02a</Name>
+      <Importer>TextureImporter</Importer>
+      <Processor>TextureProcessor</Processor>
+    </Compile>
+    <Compile Include="Q3Maps\jof3dm2.pk3\textures\jof3dm2\bg.jpg">
+      <Name>bg</Name>
+      <Importer>TextureImporter</Importer>
+      <Processor>TextureProcessor</Processor>
+    </Compile>
+    <Compile Include="Q3Maps\jof3dm2.pk3\textures\jof3dm2\fireswirl2gold.jpg">
+      <Name>fireswirl2gold</Name>
+      <Importer>TextureImporter</Importer>
+      <Processor>TextureProcessor</Processor>
+    </Compile>
+    <Compile Include="Q3Maps\jof3dm2.pk3\textures\jof3dm2\floor079.jpg">
+      <Name>floor079</Name>
+      <Importer>TextureImporter</Importer>
+      <Processor>TextureProcessor</Processor>
+    </Compile>
+    <Compile Include="Q3Maps\jof3dm2.pk3\textures\jof3dm2\gold_telep.jpg">
+      <Name>gold_telep</Name>
+      <Importer>TextureImporter</Importer>
+      <Processor>TextureProcessor</Processor>
+    </Compile>
+    <Compile Include="Q3Maps\jof3dm2.pk3\textures\jof3dm2\ground061.jpg">
+      <Name>ground061</Name>
+      <Importer>TextureImporter</Importer>
+      <Processor>TextureProcessor</Processor>
+    </Compile>
+    <Compile Include="Q3Maps\jof3dm2.pk3\textures\jof3dm2\oldstone3.jpg">
+      <Name>oldstone3</Name>
+      <Importer>TextureImporter</Importer>
+      <Processor>TextureProcessor</Processor>
+    </Compile>
+    <Compile Include="Q3Maps\jof3dm2.pk3\textures\jof3dm2\roof06.jpg">
+      <Name>roof06</Name>
+      <Importer>TextureImporter</Importer>
+      <Processor>TextureProcessor</Processor>
+    </Compile>
+    <Compile Include="Q3Maps\jof3dm2.pk3\textures\jof3dm2\rust01.jpg">
+      <Name>rust01</Name>
+      <Importer>TextureImporter</Importer>
+      <Processor>TextureProcessor</Processor>
+    </Compile>
+    <Compile Include="Q3Maps\jof3dm2.pk3\textures\medieval\block02.jpg">
+      <Name>block02</Name>
+      <Importer>TextureImporter</Importer>
+      <Processor>TextureProcessor</Processor>
+    </Compile>
+    <Compile Include="Q3Maps\jof3dm2.pk3\textures\medieval\block03broke3.jpg">
+      <Name>block03broke3</Name>
+      <Importer>TextureImporter</Importer>
+      <Processor>TextureProcessor</Processor>
+    </Compile>
+    <Compile Include="Q3Maps\jof3dm2.pk3\textures\medieval\block04broke3.jpg">
+      <Name>block04broke3</Name>
+      <Importer>TextureImporter</Importer>
+      <Processor>TextureProcessor</Processor>
+    </Compile>
+    <Compile Include="Q3Maps\jof3dm2.pk3\textures\medieval\col_marble1.jpg">
+      <Name>col_marble1</Name>
+      <Importer>TextureImporter</Importer>
+      <Processor>TextureProcessor</Processor>
+    </Compile>
+    <Compile Include="Q3Maps\jof3dm2.pk3\textures\medieval\col_marble2.jpg">
+      <Name>col_marble2</Name>
+      <Importer>TextureImporter</Importer>
+      <Processor>TextureProcessor</Processor>
+    </Compile>
+    <Compile Include="Q3Maps\jof3dm2.pk3\textures\medieval\col_marble3.jpg">
+      <Name>col_marble3</Name>
+      <Importer>TextureImporter</Importer>
+      <Processor>TextureProcessor</Processor>
+    </Compile>
+    <Compile Include="Q3Maps\jof3dm2.pk3\textures\medieval\flr_marble1.jpg">
+      <Name>flr_marble1</Name>
+      <Importer>TextureImporter</Importer>
+      <Processor>TextureProcessor</Processor>
+    </Compile>
+    <Compile Include="Q3Maps\jof3dm2.pk3\textures\medieval\flr_marble1_b2.jpg">
+      <Name>flr_marble1_b2</Name>
+      <Importer>TextureImporter</Importer>
+      <Processor>TextureProcessor</Processor>
+    </Compile>
+    <Compile Include="Q3Maps\jof3dm2.pk3\textures\medieval\flr_marble2.jpg">
+      <Name>flr_marble2</Name>
+      <Importer>TextureImporter</Importer>
+      <Processor>TextureProcessor</Processor>
+    </Compile>
+    <Compile Include="Q3Maps\jof3dm2.pk3\textures\medieval\flr_marble2_b1.jpg">
+      <Name>flr_marble2_b1</Name>
+      <Importer>TextureImporter</Importer>
+      <Processor>TextureProcessor</Processor>
+    </Compile>
+    <Compile Include="Q3Maps\jof3dm2.pk3\textures\medieval\flr_marble2_b2.jpg">
+      <Name>flr_marble2_b2</Name>
+      <Importer>TextureImporter</Importer>
+      <Processor>TextureProcessor</Processor>
+    </Compile>
+    <Compile Include="Q3Maps\jof3dm2.pk3\textures\medieval\flr_marble3.jpg">
+      <Name>flr_marble3</Name>
+      <Importer>TextureImporter</Importer>
+      <Processor>TextureProcessor</Processor>
+    </Compile>
+    <Compile Include="Q3Maps\jof3dm2.pk3\textures\medieval\flr_marble3_b2.jpg">
+      <Name>flr_marble3_b2</Name>
+      <Importer>TextureImporter</Importer>
+      <Processor>TextureProcessor</Processor>
+    </Compile>
+    <Compile Include="Q3Maps\jof3dm2.pk3\textures\medieval\flr_marble3_c2glow.blend.jpg">
+      <Name>flr_marble3_c2glow.blend</Name>
+      <Importer>TextureImporter</Importer>
+      <Processor>TextureProcessor</Processor>
+    </Compile>
+    <Compile Include="Q3Maps\jof3dm2.pk3\textures\medieval\flr_marble3_c3trn.tga">
+      <Name>flr_marble3_c3trn</Name>
+      <Importer>TextureImporter</Importer>
+      <Processor>TextureProcessor</Processor>
+    </Compile>
+    <Compile Include="Q3Maps\jof3dm2.pk3\textures\medieval\glass_arch1.tga">
+      <Name>glass_arch1</Name>
+      <Importer>TextureImporter</Importer>
+      <Processor>TextureProcessor</Processor>
+    </Compile>
+    <Compile Include="Q3Maps\jof3dm2.pk3\textures\medieval\marb03-3b80.jpg">
+      <Name>marb03-3b80</Name>
+      <Importer>TextureImporter</Importer>
+      <Processor>TextureProcessor</Processor>
+    </Compile>
+    <Compile Include="Q3Maps\jof3dm2.pk3\textures\medieval\marb54-3b80.jpg">
+      <Name>marb54-3b80</Name>
+      <Importer>TextureImporter</Importer>
+      <Processor>TextureProcessor</Processor>
+    </Compile>
+    <Compile Include="Q3Maps\jof3dm2.pk3\textures\medieval\marb82-1b64.jpg">
+      <Name>marb82-1b64</Name>
+      <Importer>TextureImporter</Importer>
+      <Processor>TextureProcessor</Processor>
+    </Compile>
+    <Compile Include="Q3Maps\jof3dm2.pk3\textures\medieval\marb82-3b80.jpg">
+      <Name>marb82-3b80</Name>
+      <Importer>TextureImporter</Importer>
+      <Processor>TextureProcessor</Processor>
+    </Compile>
+    <Compile Include="Q3Maps\jof3dm2.pk3\textures\medieval\metal_horz1.jpg">
+      <Name>metal_horz1</Name>
+      <Importer>TextureImporter</Importer>
+      <Processor>TextureProcessor</Processor>
+    </Compile>
+    <Compile Include="Q3Maps\jof3dm2.pk3\textures\medieval\metal_m2.jpg">
+      <Name>metal_m2</Name>
+      <Importer>TextureImporter</Importer>
+      <Processor>TextureProcessor</Processor>
+    </Compile>
+    <Compile Include="Q3Maps\jof3dm2.pk3\textures\medieval\metal_m4.jpg">
+      <Name>metal_m4</Name>
+      <Importer>TextureImporter</Importer>
+      <Processor>TextureProcessor</Processor>
+    </Compile>
+    <Compile Include="Q3Maps\jof3dm2.pk3\textures\medieval\metal_st2a1_ds.jpg">
+      <Name>metal_st2a1_ds</Name>
+      <Importer>TextureImporter</Importer>
+      <Processor>TextureProcessor</Processor>
+    </Compile>
+    <Compile Include="Q3Maps\jof3dm2.pk3\textures\medieval\metal_st5a1_ds.jpg">
+      <Name>metal_st5a1_ds</Name>
+      <Importer>TextureImporter</Importer>
+      <Processor>TextureProcessor</Processor>
+    </Compile>
+    <Compile Include="Q3Maps\jof3dm2.pk3\textures\medieval\metal_vert1.jpg">
+      <Name>metal_vert1</Name>
+      <Importer>TextureImporter</Importer>
+      <Processor>TextureProcessor</Processor>
+    </Compile>
+    <Compile Include="Q3Maps\jof3dm2.pk3\textures\medieval\metal_wd1lgt_ds.jpg">
+      <Name>metal_wd1lgt_ds</Name>
+      <Importer>TextureImporter</Importer>
+      <Processor>TextureProcessor</Processor>
+    </Compile>
+    <Compile Include="Q3Maps\jof3dm2.pk3\textures\medieval\metal_wd2lgt_ss.jpg">
+      <Name>metal_wd2lgt_ss</Name>
+      <Importer>TextureImporter</Importer>
+      <Processor>TextureProcessor</Processor>
+    </Compile>
+    <Compile Include="Q3Maps\jof3dm2.pk3\textures\medieval\metal_wd3_ds.jpg">
+      <Name>metal_wd3_ds</Name>
+      <Importer>TextureImporter</Importer>
+      <Processor>TextureProcessor</Processor>
+    </Compile>
+    <Compile Include="Q3Maps\jof3dm2.pk3\textures\medieval\wood05b.jpg">
+      <Name>wood05b</Name>
+      <Importer>TextureImporter</Importer>
+      <Processor>TextureProcessor</Processor>
+    </Compile>
+    <Compile Include="Q3Maps\jof3dm2.pk3\textures\medieval\wood09.jpg">
+      <Name>wood09</Name>
+      <Importer>TextureImporter</Importer>
+      <Processor>TextureProcessor</Processor>
+    </Compile>
+    <Compile Include="Q3Maps\jof3dm2.pk3\textures\medieval\wood18.jpg">
+      <Name>wood18</Name>
+      <Importer>TextureImporter</Importer>
+      <Processor>TextureProcessor</Processor>
+    </Compile>
+    <Compile Include="Q3Maps\jof3dm2.pk3\textures\tech1soc_mat\matbrown_drk1.jpg">
+      <Name>matbrown_drk1</Name>
+      <Importer>TextureImporter</Importer>
+      <Processor>TextureProcessor</Processor>
+    </Compile>
+    <Compile Include="Q3Maps\jof3dm2.pk3\textures\tech1soc_mat\matbrown_lgt2.jpg">
+      <Name>matbrown_lgt2</Name>
+      <Importer>TextureImporter</Importer>
+      <Processor>TextureProcessor</Processor>
+    </Compile>
+    <Compile Include="Q3Maps\jof3dm2.pk3\textures\tech1soc_trim\064-11a.jpg">
+      <Name>064-11a</Name>
+      <Importer>TextureImporter</Importer>
+      <Processor>TextureProcessor</Processor>
+    </Compile>
+    <Compile Include="Q3Maps\jof3dm2.pk3\textures\tech1soc_trim\064-13a.jpg">
+      <Name>064-13a</Name>
+      <Importer>TextureImporter</Importer>
+      <Processor>TextureProcessor</Processor>
+    </Compile>
+    <Compile Include="Q3Maps\jof3dm2.pk3\textures\tech1soc_trim\128-05a.jpg">
+      <Name>128-05a</Name>
+      <Importer>TextureImporter</Importer>
+      <Processor>TextureProcessor</Processor>
+    </Compile>
+    <Compile Include="Q3Maps\jof3dm2.pk3\textures\tech1soc_trim\128-05b.jpg">
+      <Name>128-05b</Name>
+      <Importer>TextureImporter</Importer>
+      <Processor>TextureProcessor</Processor>
+    </Compile>
+    <Compile Include="Q3Maps\jof3dm2.pk3\textures\tech1soc_trim\s128-01c.jpg">
+      <Name>s128-01c</Name>
+      <Importer>TextureImporter</Importer>
+      <Processor>TextureProcessor</Processor>
+    </Compile>
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="Q3Maps\jof3dm2.pk3\maps\jof3dm2.bsp">
+      <Name>jof3dm2</Name>
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+    <None Include="Q3Maps\jof3dm2.pk3\scripts\common.shader">
+      <Name>common</Name>
+    </None>
+    <None Include="Q3Maps\jof3dm2.pk3\scripts\danight.shader">
+      <Name>danight</Name>
+    </None>
+    <None Include="Q3Maps\jof3dm2.pk3\scripts\jof3dm2.arena">
+      <Name>jof3dm2</Name>
+    </None>
+    <None Include="Q3Maps\jof3dm2.pk3\scripts\jof3dm2.shader">
+      <Name>jof3dm2</Name>
+    </None>
+    <None Include="Q3Maps\jof3dm2.pk3\scripts\medieval.shader">
+      <Name>medieval</Name>
+    </None>
+  </ItemGroup>
+  <ItemGroup>
+    <Compile Include="Q3Maps\jof3dm2.pk3\env\danight\danight_bk.jpg">
+      <Name>danight_bk</Name>
+      <Importer>TextureImporter</Importer>
+      <Processor>TextureProcessor</Processor>
+    </Compile>
+    <Compile Include="Q3Maps\jof3dm2.pk3\env\danight\danight_dn.jpg">
+      <Name>danight_dn</Name>
+      <Importer>TextureImporter</Importer>
+      <Processor>TextureProcessor</Processor>
+    </Compile>
+    <Compile Include="Q3Maps\jof3dm2.pk3\env\danight\danight_ft.jpg">
+      <Name>danight_ft</Name>
+      <Importer>TextureImporter</Importer>
+      <Processor>TextureProcessor</Processor>
+    </Compile>
+    <Compile Include="Q3Maps\jof3dm2.pk3\env\danight\danight_lf.jpg">
+      <Name>danight_lf</Name>
+      <Importer>TextureImporter</Importer>
+      <Processor>TextureProcessor</Processor>
+    </Compile>
+    <Compile Include="Q3Maps\jof3dm2.pk3\env\danight\danight_rt.jpg">
+      <Name>danight_rt</Name>
+      <Importer>TextureImporter</Importer>
+      <Processor>TextureProcessor</Processor>
+    </Compile>
+    <Compile Include="Q3Maps\jof3dm2.pk3\env\danight\danight_up.jpg">
+      <Name>danight_up</Name>
+      <Importer>TextureImporter</Importer>
+      <Processor>TextureProcessor</Processor>
+    </Compile>
+    <None Include="Q3Maps\jof3dm2.pk3\jof3dm2.txt">
+      <Name>jof3dm2</Name>
+    </None>
+    <Compile Include="Q3Maps\jof3dm2.pk3\levelshots\jof3dm2.jpg">
+      <Name>jof3dm2</Name>
+      <Importer>TextureImporter</Importer>
+      <Processor>TextureProcessor</Processor>
+    </Compile>
+    <None Include="Q3Maps\jof3dm2.pk3\maps\jof3dm2.aas">
+      <Name>jof3dm2</Name>
+    </None>
+    <Compile Include="Q3Maps\jof3dm2.pk3\sound\movers\plats\pt1_end.wav">
+      <Name>pt1_end</Name>
+      <Importer>WavImporter</Importer>
+      <Processor>SoundEffectProcessor</Processor>
+    </Compile>
+    <Compile Include="Q3Maps\jof3dm2.pk3\sound\movers\plats\pt1_strt.wav">
+      <Name>pt1_strt</Name>
+      <Importer>WavImporter</Importer>
+      <Processor>SoundEffectProcessor</Processor>
+    </Compile>
   </ItemGroup>
   <Import Project="$(MSBuildExtensionsPath)\Microsoft\XNA Game Studio\v3.0\Microsoft.Xna.GameStudio.ContentPipeline.targets" />
   <!-- To modify your build process, add your task inside one of the targets below and uncomment it. 

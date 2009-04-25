@@ -60,7 +60,8 @@ namespace Framework1
             if (m_Stats != null)
                 m_Stats.LoadContent(GraphicsDevice, Content);
 
-            string filePath = Path.Combine(StorageContainer.TitleLocation, "../../test2.bsp");
+            //string filePath = Path.Combine(StorageContainer.TitleLocation, "../../test2.bsp");
+            string filePath = Path.Combine(Content.RootDirectory, "Q3Maps/jof3dm2.pk3/maps/jof3dm2.bsp");
 
             using (Quake3.BspFileDumper bspFileDumper = new Quake3.BspFileDumper(filePath))
             {

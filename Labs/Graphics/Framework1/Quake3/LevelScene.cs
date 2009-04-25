@@ -50,8 +50,8 @@ namespace Framework1.Quake3
                 m_Tree.Load(m_LoadedLevel);
 
                 m_RenderResourceBlockCollector = new RenderResourceBlockCollector();
-                //string texRelPath = Path.Combine(Path.GetDirectoryName(path), "../textures/");
-                string texRelPath = Path.Combine(content.RootDirectory, "jof3dm2.pk3/textures/");
+                string texRelPath = Path.Combine(Path.GetDirectoryName(path), "../");
+                //string texRelPath = Path.Combine(content.RootDirectory, "jof3dm2.pk3/textures/");
                 m_RenderResourceManager = new RenderResourceManager(graphicsDevice, content, texRelPath);
                 m_Renderer = new BasicRenderer(content, graphicsDevice);
                 m_RenderQueue = new BasicRenderQueue(m_Renderer);
