@@ -452,4 +452,25 @@ namespace Framework1.Quake3.BspFile
         {
         }
     }
+
+    public class Lightmaps : Asset, IDisposable
+    {
+        [StructLayout(LayoutKind.Sequential)]
+        public class Binary_lightmap
+        {
+            public Microsoft.Xna.Framework.Graphics.Color[] pixels;
+        }
+
+        public Binary_lightmap[] m_Lightmaps;
+
+        public bool construct(Binary_lightmap[] lightmaps)
+        {
+            m_Lightmaps = lightmaps;
+            return true;
+        }
+
+        public void Dispose()
+        {
+        }
+    }
 }

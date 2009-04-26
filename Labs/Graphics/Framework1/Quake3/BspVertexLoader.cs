@@ -66,8 +66,22 @@ namespace Framework1.Quake3
                     {
                         // Trace.Assert(vEl.VertexElementFormat == VertexElementFormat.Vector2);
                         // Trace.Assert(fieldInfo.FullName == "Microsoft.Xna.Framework.Vector2");
-                        vector2.X = vertex.texcoord_s;
-                        vector2.Y = vertex.texcoord_t;
+
+                        if (vEl.UsageIndex == 0)
+                        {
+                            vector2.X = vertex.texcoord_s;
+                            vector2.Y = vertex.texcoord_t;
+                        }
+                        else if (vEl.UsageIndex == 1)
+                        {
+                            vector2.X = vertex.texcoord_lm_s;
+                            vector2.Y = vertex.texcoord_lm_t;
+                        }
+                        else
+                        {
+                            Trace.Assert(false, "Vertex Layout is incompatible");
+                        }
+                       
                         m_Conv.ConvertTexCoord(ref vector2);
 
                         fieldInfo.SetValue(outVertex, vector2);

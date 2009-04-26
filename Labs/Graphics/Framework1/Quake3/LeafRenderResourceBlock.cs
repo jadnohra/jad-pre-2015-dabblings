@@ -1,11 +1,28 @@
 using System;
 using System.Diagnostics;
 using System.Collections.Generic;
+using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
 
 namespace Framework1.Quake3
 {
-    using VertexFormat = VertexPositionColorTexture;
+    using VertexFormat = FaceVertex;
+
+    public struct FaceVertex
+    {
+        public Vector3 Position;
+        public Vector2 DiffuseTextureCoordinate;
+        public Vector2 LightmapTextureCoordinate;
+
+        public static readonly VertexElement[] VertexElements = 
+        {
+            new VertexElement(0, 0, VertexElementFormat.Vector3, VertexElementMethod.Default, VertexElementUsage.Position, 0),
+            new VertexElement(0, (sizeof(float) * 3), VertexElementFormat.Vector2, VertexElementMethod.Default, VertexElementUsage.TextureCoordinate, 0),
+            new VertexElement(0, (sizeof(float) * 3) + (sizeof(float) * 2), VertexElementFormat.Vector2, VertexElementMethod.Default, VertexElementUsage.TextureCoordinate, 1),
+        };
+
+        public static int SizeInBytes = (sizeof(float) * 3) + (sizeof(float) * 2) + (sizeof(float) * 2);
+    }
 
     public abstract class LeafRenderResourceBlock 
     : RenderResourceBlockCollector.ResourceBlock
@@ -23,14 +40,13 @@ namespace Framework1.Quake3
         class FaceRenderJob
         : IBasicRenderJob
         {
-            
-
             internal RenderResourceManager.GPUVertexSemanticsProxy VertexSemantics;
             internal RenderResourceManager.RAMIndexStreamProxy<Int16> TriangleList;
             internal RenderResourceManager.RAMVertexStreamProxy<VertexFormat> Vertices;
             internal RenderResourceManager.ManagedTexture2DProxy DiffuseTexture;
+            internal RenderResourceManager.ManagedTexture2DProxy LightmapTexture;
 
-            public FaceRenderJob(RenderResourceManager renderResMan, BspTree bspTree, BspTree.Leaf leaf, int face)
+            public FaceRenderJob(RenderResourceManager renderResMan, BspContentManager bspConentManager, BspTree bspTree, BspTree.Leaf leaf, int face)
             {
                 VertexSemantics = renderResMan.NewGPUVertexSemanticsProxy(typeof(VertexFormat), VertexFormat.VertexElements);
 
@@ -38,10 +54,10 @@ namespace Framework1.Quake3
                 Vertices = renderResMan.NewRAMVertexStreamProxy<VertexFormat>(new RenderResourceManager.VertexSemantics(VertexFormat.VertexElements), source, true);
                 TriangleList = renderResMan.NewRAMIndexStreamProxy<Int16>(source, true);
 
-                LoadDiffuseTexture(renderResMan, bspTree, face);
+                LoadTextures(renderResMan, bspConentManager, bspTree, face);
             }
 
-            void LoadDiffuseTexture(RenderResourceManager renderResMan, BspTree bspTree, int faceIndex)
+            void LoadTextures(RenderResourceManager renderResMan, BspContentManager bspConentManager, BspTree bspTree, int faceIndex)
             {
                  BspFile.Header header = bspTree.m_Level.Header;
 
@@ -53,11 +69,17 @@ namespace Framework1.Quake3
                      {
                          using (BspFile.Textures textures = header.Loader.GetTextures(header, face.texture, 1))
                          {
-                             DiffuseTexture = renderResMan.NewManagedTexture2D(textures.m_Textures[0].GetTextureNameString(), true);
+                             DiffuseTexture = renderResMan.LoadManagedTexture2D(textures.m_Textures[0].GetTextureNameString(), true);
                          }
+                     }
+
+                     if (face.lm_index >= 0)
+                     {
+                         LightmapTexture = renderResMan.LoadManagedTexture2D(bspConentManager.GetLightMapLoader(), string.Format("{0:G}", face.lm_index), true);
                      }
                  }
             }
+
 
             internal void Evict(RenderResourceManager resMan)
             {
@@ -94,9 +116,15 @@ namespace Framework1.Quake3
                     DiffuseTexture.Get(out diffuseTexture);
                 }
 
-                // TODO!!!! this is also a resource!!! make it that way!
-                renderer.Device.VertexDeclaration = VertexSemantics.m_VertexDeclaration;
+                Texture2D lightmapTexture = null;
+                if (LightmapTexture != null)
+                {
+                    LightmapTexture.Get(out lightmapTexture);
+                }
+
                 renderer.Device.Textures[0] = diffuseTexture;
+                renderer.Device.Textures[1] = lightmapTexture;
+                renderer.Device.VertexDeclaration = VertexSemantics.m_VertexDeclaration;
                 renderer.Device.DrawUserIndexedPrimitives<VertexFormat>(PrimitiveType.TriangleList, vertexData.Data, vertexData.Offset, vertexData.Count, indexData.Data, indexData.Offset, indexData.Count / 3);
             }
         }
@@ -119,7 +147,7 @@ namespace Framework1.Quake3
             }
         }
 
-        public RAMLeafRenderResourceBlock(RenderResourceManager renderResMan, BspTree bspTree, BspTree.Leaf leaf)
+        public RAMLeafRenderResourceBlock(RenderResourceManager renderResMan, BspContentManager bspConentManager, BspTree bspTree, BspTree.Leaf leaf)
         {
             BspFile.Header header = bspTree.m_Level.Header;
 
@@ -132,7 +160,7 @@ namespace Framework1.Quake3
             foreach (Interval leafFaceInterval in leafFaceIntervals)
             {
                 Trace.Assert(leafFaceInterval.Count() == 1);
-                FaceRenderJobs[i++] = new FaceRenderJob(renderResMan, bspTree, leaf, leafFaceInterval.Start);
+                FaceRenderJobs[i++] = new FaceRenderJob(renderResMan, bspConentManager, bspTree, leaf, leafFaceInterval.Start);
             }
         }
 

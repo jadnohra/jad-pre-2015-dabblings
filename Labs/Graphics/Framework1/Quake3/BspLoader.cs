@@ -572,6 +572,73 @@ namespace Framework1.Quake3
 
             return null;
         }
+
+        static int BinLightmapSizeBytes = 128 * 128 * 3;
+
+        public int GetLightmapCount(Header header)
+        {
+            int size = BinLightmapSizeBytes;
+            int length = header.m_DirEntries[(int)(Header.EntityType.Lightmaps)].length;
+            int count = (length / size);
+
+            Trace.Assert(count * size == length);
+
+            return count;
+        }
+
+        public Lightmaps GetLightmaps(Header header, int startIndex, int count)
+        {
+            if (header == null)
+                return null;
+
+            int size = BinLightmapSizeBytes;
+
+            long baseOffset = header.StreamOffset + header.m_DirEntries[(int)(Header.EntityType.Lightmaps)].offset;
+            long startOffset = baseOffset + startIndex * size;
+            long endOffset = startOffset + count * size;
+            int totalSize = (int)(endOffset - startOffset);
+
+            if (m_Buffer.Length < totalSize)
+            {
+                m_Buffer = new byte[totalSize];
+            }
+
+            Lightmaps.Binary_lightmap[] binaryLightmaps = new Lightmaps.Binary_lightmap[count];
+
+            m_Stream.Seek(startOffset, SeekOrigin.Begin);
+            if (m_Stream.Read(m_Buffer, 0, totalSize) == totalSize)
+            {
+                int offset = 0;
+                for (int i = 0; i < count; ++i, offset += size)
+                {
+                    binaryLightmaps[i] = new Lightmaps.Binary_lightmap();
+                    binaryLightmaps[i].pixels = new Microsoft.Xna.Framework.Graphics.Color[128 * 128];
+                    
+                    int bufferIndex = offset;
+                    int pixelIndex = 0;
+                    for (int x = 0; x < 128; ++x)
+                    {
+                        for (int y = 0; y < 128; ++y)
+                        {
+                            binaryLightmaps[i].pixels[pixelIndex].B = m_Buffer[bufferIndex++];
+                            binaryLightmaps[i].pixels[pixelIndex].G = m_Buffer[bufferIndex++];
+                            binaryLightmaps[i].pixels[pixelIndex].R = m_Buffer[bufferIndex++];
+                            binaryLightmaps[i].pixels[pixelIndex].A = 255;
+                            ++pixelIndex;
+                        }
+                    }
+                }
+
+                Lightmaps asset = new Lightmaps();
+                asset.StreamOffset = startOffset;
+                asset.Header = header;
+
+                if (asset.construct(binaryLightmaps))
+                    return asset;
+            }
+
+            return null;
+        }
     }
 
     class BinarySerializer

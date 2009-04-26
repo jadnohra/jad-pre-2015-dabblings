@@ -88,6 +88,7 @@
     <Compile Include="ManualCamera.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="Program.cs" />
+    <Compile Include="Quake3\BspContentManager.cs" />
     <Compile Include="Quake3\BspFaceRAMStreamSource.cs" />
     <Compile Include="Quake3\BspFileDumper.cs" />
     <Compile Include="Quake3\BspLoader.cs" />
@@ -115,6 +116,7 @@
     <Content Include="Game.ico" />
     <Content Include="GameThumbnail.png" />
     <Content Include="References.txt" />
+    <Content Include="TODO.txt" />
   </ItemGroup>
   <ItemGroup>
     <NestedContentProject Include="Content\Content.contentproj">

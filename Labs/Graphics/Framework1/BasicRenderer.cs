@@ -52,7 +52,7 @@ namespace Framework1
         public BasicRenderer(ContentManager content, GraphicsDevice device)
         {
             Device = device;
-            m_Effect = content.Load<Effect>("Effects/AmbientTextured");
+            m_Effect = content.Load<Effect>("Effects/AmbientTexturedLightmapped");
         }
 
         public void Push(BasicRenderQueue queue)

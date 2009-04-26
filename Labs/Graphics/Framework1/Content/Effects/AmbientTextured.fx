@@ -51,7 +51,7 @@ PSO_AmbientTextured PS_AmbientTextured(VSO_AmbientTextured input)
 	
 	//output.color = Ambient;
 	//output.color = float4(1.0, 0.0, 0.0, 1.0);
-	output.color = tex2D(DiffuseTexSampler, input.tex) * float4(input.color.rgb, 1.0);
+	output.color = tex2D(DiffuseTexSampler, input.tex)/* * float4(input.color.rgb, 1.0)*/;
 	
     return output;
 }	

@@ -138,6 +138,11 @@ namespace Framework1
             public override void Evict() { m_RAMIndexStream.Evict(); m_RAMIndexStream = null; }
         }
 
+        public interface IManagedTextureLoader
+        {
+            Texture2D LoadTexture(string assetName);
+        }
+
         abstract public class ManagedTextureProxyBase
         {
             public abstract int GetSizeBytes();
@@ -270,13 +275,40 @@ namespace Framework1
             //m_RAMStreamDataBytes -= 
         }
 
-        public ManagedTexture2DProxy NewManagedTexture2D(string assetName, bool evictable)
+        // Load will be used for shared textures
+        // New will be used for not shared ones
+        public ManagedTexture2DProxy LoadManagedTexture2D(string assetName, bool evictable)
         {
             Texture2D tex2D = null;
 
             try
             {
                 tex2D = m_TextureContentManager.Load<Texture2D>(assetName);
+            }
+            catch (Exception e)
+            {
+                Trace.TraceWarning(e.Message);
+            }
+
+            if (tex2D == null)
+                return null;
+
+            ManagedTexture2DProxy proxy = new ManagedTexture2DProxy(tex2D);
+            // Wrong! texture might be shared using ContentManager
+            // m_ManagedTextureBytes += proxy.GetSizeBytes();
+
+            m_ManagedTextureProxies.Add(proxy);
+
+            return proxy;
+        }
+
+        public ManagedTexture2DProxy LoadManagedTexture2D(IManagedTextureLoader loader, string assetName, bool evictable)
+        {
+            Texture2D tex2D = null;
+
+            try
+            {
+                tex2D = loader.LoadTexture(assetName);
             }
             catch (Exception e)
             {

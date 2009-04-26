@@ -127,6 +127,12 @@ namespace Framework1.Quake3
                 }
             }
 
+            {
+                int lightmapCount = Header.Loader.GetLightmapCount(Header);
+
+                Console.WriteLine(string.Format("{0:G} lightmaps", lightmapCount));
+            }
+
             Console.WriteLine("> End bsp file dump");
         }
     }

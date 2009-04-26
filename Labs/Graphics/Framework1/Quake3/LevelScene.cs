@@ -20,6 +20,7 @@ namespace Framework1.Quake3
         BspTree m_Tree;
 
         // All this and render is WIP, will be moved elsewhere
+        BspContentManager m_BspContentManager;
         RenderResourceBlockCollector m_RenderResourceBlockCollector;
         RenderResourceManager m_RenderResourceManager;
         BasicRenderer m_Renderer;
@@ -55,6 +56,7 @@ namespace Framework1.Quake3
                 m_RenderResourceManager = new RenderResourceManager(graphicsDevice, content, texRelPath);
                 m_Renderer = new BasicRenderer(content, graphicsDevice);
                 m_RenderQueue = new BasicRenderQueue(m_Renderer);
+                m_BspContentManager = new BspContentManager(graphicsDevice, m_LoadedLevel);
             }
             else
             {
@@ -82,7 +84,7 @@ namespace Framework1.Quake3
                 if (leaf.renderResourceBlock == null)
                 {
                     ++newVisibleLeafCount;
-                    leaf.renderResourceBlock = new RAMLeafRenderResourceBlock(m_RenderResourceManager, m_Tree, leaf);
+                    leaf.renderResourceBlock = new RAMLeafRenderResourceBlock(m_RenderResourceManager, m_BspContentManager, m_Tree, leaf);
                 }
                 else
                 {
