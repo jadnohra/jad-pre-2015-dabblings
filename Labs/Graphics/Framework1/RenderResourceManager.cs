@@ -287,7 +287,7 @@ namespace Framework1
             }
             catch (Exception e)
             {
-                Trace.TraceWarning(e.Message);
+                //Trace.TraceWarning(e.Message);
             }
 
             if (tex2D == null)
@@ -312,7 +312,7 @@ namespace Framework1
             }
             catch (Exception e)
             {
-                Trace.TraceWarning(e.Message);
+                //Trace.TraceWarning(e.Message);
             }
 
             if (tex2D == null)

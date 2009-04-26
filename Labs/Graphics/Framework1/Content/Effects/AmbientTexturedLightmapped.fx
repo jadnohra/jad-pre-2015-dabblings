@@ -73,7 +73,7 @@ PSO_AmbientTexturedLighmapped PS_AmbientTexturedLighmapped(VSO_AmbientTexturedLi
 	//output.color = tex2D(DiffuseTexSampler, input.tex) * float4(input.color.rgb, 1.0);
 	float4 diffuseCol = tex2D(DiffuseTexSampler, input.tex);
 	float4 lightmapCol = tex2D(LighmapTexSampler, input.tex_lm);
-	output.color = diffuseCol * 4.0 * lightmapCol;
+	output.color = diffuseCol * (4.0 * lightmapCol);
 	
     return output;
 }	

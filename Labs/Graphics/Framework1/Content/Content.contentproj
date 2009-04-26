@@ -371,6 +371,123 @@
     <None Include="Q3Maps\jof3dm2.pk3\maps\jof3dm2.aas">
       <Name>jof3dm2</Name>
     </None>
+    <None Include="Q3Maps\natedm3.pk3\demos\natedm3_gettingthequad.dm_68">
+      <Name>natedm3_gettingthequad</Name>
+    </None>
+    <Compile Include="Q3Maps\natedm3.pk3\levelshots\natedm3.tga">
+      <Name>natedm3</Name>
+      <Importer>TextureImporter</Importer>
+      <Processor>TextureProcessor</Processor>
+    </Compile>
+    <None Include="Q3Maps\natedm3.pk3\maps\natedm3.aas">
+      <Name>natedm3</Name>
+    </None>
+    <None Include="Q3Maps\natedm3.pk3\maps\natedm3.bsp">
+      <Name>natedm3</Name>
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+    <None Include="Q3Maps\natedm3.pk3\models\mapobjects\ferna.MD3">
+      <Name>ferna</Name>
+    </None>
+    <Compile Include="Q3Maps\natedm3.pk3\models\mapobjects\ferna.tga">
+      <Name>ferna</Name>
+      <Importer>TextureImporter</Importer>
+      <Processor>TextureProcessor</Processor>
+    </Compile>
+    <None Include="Q3Maps\natedm3.pk3\models\mapobjects\fernb.MD3">
+      <Name>fernb</Name>
+    </None>
+    <Compile Include="Q3Maps\natedm3.pk3\models\mapobjects\fernb.tga">
+      <Name>fernb</Name>
+      <Importer>TextureImporter</Importer>
+      <Processor>TextureProcessor</Processor>
+    </Compile>
+    <None Include="Q3Maps\natedm3.pk3\models\mapobjects\flower.MD3">
+      <Name>flower</Name>
+    </None>
+    <Compile Include="Q3Maps\natedm3.pk3\models\mapobjects\leafa.tga">
+      <Name>leafa</Name>
+      <Importer>TextureImporter</Importer>
+      <Processor>TextureProcessor</Processor>
+    </Compile>
+    <Compile Include="Q3Maps\natedm3.pk3\models\mapobjects\leafb.tga">
+      <Name>leafb</Name>
+      <Importer>TextureImporter</Importer>
+      <Processor>TextureProcessor</Processor>
+    </Compile>
+    <None Include="Q3Maps\natedm3.pk3\models\mapobjects\leafgroup.MD3">
+      <Name>leafgroup</Name>
+    </None>
+    <None Include="Q3Maps\natedm3.pk3\models\mapobjects\leafgroupground.MD3">
+      <Name>leafgroupground</Name>
+    </None>
+    <None Include="Q3Maps\natedm3.pk3\models\mapobjects\leafything2.MD3">
+      <Name>leafything2</Name>
+    </None>
+    <Compile Include="Q3Maps\natedm3.pk3\models\mapobjects\natedm3shroom.tga">
+      <Name>natedm3shroom</Name>
+      <Importer>TextureImporter</Importer>
+      <Processor>TextureProcessor</Processor>
+    </Compile>
+    <Compile Include="Q3Maps\natedm3.pk3\models\mapobjects\natedm3shroomstalk.tga">
+      <Name>natedm3shroomstalk</Name>
+      <Importer>TextureImporter</Importer>
+      <Processor>TextureProcessor</Processor>
+    </Compile>
+    <Compile Include="Q3Maps\natedm3.pk3\models\mapobjects\natedm3shroom_glow.tga">
+      <Name>natedm3shroom_glow</Name>
+      <Importer>TextureImporter</Importer>
+      <Processor>TextureProcessor</Processor>
+    </Compile>
+    <None Include="Q3Maps\natedm3.pk3\models\mapobjects\shroom2cap.MD3">
+      <Name>shroom2cap</Name>
+    </None>
+    <None Include="Q3Maps\natedm3.pk3\models\mapobjects\shroom2capunder.MD3">
+      <Name>shroom2capunder</Name>
+    </None>
+    <None Include="Q3Maps\natedm3.pk3\models\mapobjects\shroom2stalk.MD3">
+      <Name>shroom2stalk</Name>
+    </None>
+    <Compile Include="Q3Maps\natedm3.pk3\models\mapobjects\tree3.tga">
+      <Name>tree3</Name>
+      <Importer>TextureImporter</Importer>
+      <Processor>TextureProcessor</Processor>
+    </Compile>
+    <None Include="Q3Maps\natedm3.pk3\scripts\natedm3.arena">
+      <Name>natedm3</Name>
+    </None>
+    <None Include="Q3Maps\natedm3.pk3\scripts\nateleaf2.shader">
+      <Name>nateleaf2</Name>
+    </None>
+    <None Include="Q3Maps\natedm3.pk3\scripts\nateshad.shader">
+      <Name>nateshad</Name>
+    </None>
+    <None Include="Q3Maps\natedm3.pk3\scripts\natetourney.shader">
+      <Name>natetourney</Name>
+    </None>
+    <None Include="Q3Maps\natedm3.pk3\scripts\natetrnysky.shader">
+      <Name>natetrnysky</Name>
+    </None>
+    <Compile Include="Q3Maps\natedm3.pk3\textures\medieval\flr_marble3_c3trn.tga">
+      <Name>flr_marble3_c3trn</Name>
+      <Importer>TextureImporter</Importer>
+      <Processor>TextureProcessor</Processor>
+    </Compile>
+    <Compile Include="Q3Maps\natedm3.pk3\textures\medieval\glass_arch1.tga">
+      <Name>glass_arch1</Name>
+      <Importer>TextureImporter</Importer>
+      <Processor>TextureProcessor</Processor>
+    </Compile>
+    <Compile Include="Q3Maps\natedm3.pk3\textures\natestah\nateswater.tga">
+      <Name>nateswater</Name>
+      <Importer>TextureImporter</Importer>
+      <Processor>TextureProcessor</Processor>
+    </Compile>
+    <Compile Include="Q3Maps\natedm3.pk3\textures\natetourney1\nateportal_fx.tga">
+      <Name>nateportal_fx</Name>
+      <Importer>TextureImporter</Importer>
+      <Processor>TextureProcessor</Processor>
+    </Compile>
     <Compile Include="Q3Maps\jof3dm2.pk3\sound\movers\plats\pt1_end.wav">
       <Name>pt1_end</Name>
       <Importer>WavImporter</Importer>
@@ -381,6 +498,835 @@
       <Importer>WavImporter</Importer>
       <Processor>SoundEffectProcessor</Processor>
     </Compile>
+  </ItemGroup>
+  <ItemGroup>
+    <Compile Include="Q3Maps\natedm3.pk3\env\natetrny1_bk.JPG">
+      <Name>natetrny1_bk</Name>
+      <Importer>TextureImporter</Importer>
+      <Processor>TextureProcessor</Processor>
+    </Compile>
+    <Compile Include="Q3Maps\natedm3.pk3\env\natetrny1_dn.JPG">
+      <Name>natetrny1_dn</Name>
+      <Importer>TextureImporter</Importer>
+      <Processor>TextureProcessor</Processor>
+    </Compile>
+    <Compile Include="Q3Maps\natedm3.pk3\env\natetrny1_ft.JPG">
+      <Name>natetrny1_ft</Name>
+      <Importer>TextureImporter</Importer>
+      <Processor>TextureProcessor</Processor>
+    </Compile>
+    <Compile Include="Q3Maps\natedm3.pk3\env\natetrny1_lf.JPG">
+      <Name>natetrny1_lf</Name>
+      <Importer>TextureImporter</Importer>
+      <Processor>TextureProcessor</Processor>
+    </Compile>
+    <Compile Include="Q3Maps\natedm3.pk3\env\natetrny1_rt.JPG">
+      <Name>natetrny1_rt</Name>
+      <Importer>TextureImporter</Importer>
+      <Processor>TextureProcessor</Processor>
+    </Compile>
+    <Compile Include="Q3Maps\natedm3.pk3\env\natetrny1_up.JPG">
+      <Name>natetrny1_up</Name>
+      <Importer>TextureImporter</Importer>
+      <Processor>TextureProcessor</Processor>
+    </Compile>
+    <Compile Include="Q3Maps\natedm3.pk3\models\mapobjects\mossyrock.JPG">
+      <Name>mossyrock</Name>
+      <Importer>TextureImporter</Importer>
+      <Processor>TextureProcessor</Processor>
+    </Compile>
+    <Compile Include="Q3Maps\natedm3.pk3\models\mapobjects\Nateshroom1.JPG">
+      <Name>Nateshroom1</Name>
+      <Importer>TextureImporter</Importer>
+      <Processor>TextureProcessor</Processor>
+    </Compile>
+    <Compile Include="Q3Maps\natedm3.pk3\models\mapobjects\treetrunk.JPG">
+      <Name>treetrunk</Name>
+      <Importer>TextureImporter</Importer>
+      <Processor>TextureProcessor</Processor>
+    </Compile>
+    <None Include="Q3Maps\acid3dm9.pk3\maps\acid3dm9.aas">
+      <Name>acid3dm9</Name>
+    </None>
+    <None Include="Q3Maps\acid3dm9.pk3\maps\acid3dm9.bsp">
+      <Name>acid3dm9</Name>
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+    <None Include="Q3Maps\acid3dm9.pk3\maps\acid3dm9.map">
+      <Name>acid3dm9</Name>
+    </None>
+    <None Include="Q3Maps\acid3dm9.pk3\scripts\acid3dm9.arena">
+      <Name>acid3dm9</Name>
+    </None>
+    <None Include="Q3Maps\acid3dm9.pk3\scripts\acid3dm9.shader">
+      <Name>acid3dm9</Name>
+    </None>
+    <Compile Include="Q3Maps\acid3dm9.pk3\textures\acid3dm9\grate.tga">
+      <Name>grate</Name>
+      <Importer>TextureImporter</Importer>
+      <Processor>TextureProcessor</Processor>
+    </Compile>
+    <Compile Include="Q3Maps\acid3dm9.pk3\textures\acid3dm9\gring.tga">
+      <Name>gring</Name>
+      <Importer>TextureImporter</Importer>
+      <Processor>TextureProcessor</Processor>
+    </Compile>
+    <Compile Include="Q3Maps\acid3dm9.pk3\textures\acid3dm9\gring_glow.tga">
+      <Name>gring_glow</Name>
+      <Importer>TextureImporter</Importer>
+      <Processor>TextureProcessor</Processor>
+    </Compile>
+    <Compile Include="Q3Maps\acid3dm9.pk3\textures\acid3dm9\gtrim.tga">
+      <Name>gtrim</Name>
+      <Importer>TextureImporter</Importer>
+      <Processor>TextureProcessor</Processor>
+    </Compile>
+    <Compile Include="Q3Maps\acid3dm9.pk3\textures\acid3dm9\gtrim_end.tga">
+      <Name>gtrim_end</Name>
+      <Importer>TextureImporter</Importer>
+      <Processor>TextureProcessor</Processor>
+    </Compile>
+    <Compile Include="Q3Maps\acid3dm9.pk3\textures\acid3dm9\gtrim_end_glow.tga">
+      <Name>gtrim_end_glow</Name>
+      <Importer>TextureImporter</Importer>
+      <Processor>TextureProcessor</Processor>
+    </Compile>
+    <Compile Include="Q3Maps\acid3dm9.pk3\textures\acid3dm9\gtrim_glow.tga">
+      <Name>gtrim_glow</Name>
+      <Importer>TextureImporter</Importer>
+      <Processor>TextureProcessor</Processor>
+    </Compile>
+    <Compile Include="Q3Maps\acid3dm9.pk3\textures\acid3dm9\gtrim_turn.tga">
+      <Name>gtrim_turn</Name>
+      <Importer>TextureImporter</Importer>
+      <Processor>TextureProcessor</Processor>
+    </Compile>
+    <Compile Include="Q3Maps\acid3dm9.pk3\textures\acid3dm9\gtrim_turn_glow.tga">
+      <Name>gtrim_turn_glow</Name>
+      <Importer>TextureImporter</Importer>
+      <Processor>TextureProcessor</Processor>
+    </Compile>
+    <Compile Include="Q3Maps\acid3dm9.pk3\textures\acid3dm9\sky_black.tga">
+      <Name>sky_black</Name>
+      <Importer>TextureImporter</Importer>
+      <Processor>TextureProcessor</Processor>
+    </Compile>
+    <Compile Include="Q3Maps\acid3dm9.pk3\textures\acid3dm9\struc_white.tga">
+      <Name>struc_white</Name>
+      <Importer>TextureImporter</Importer>
+      <Processor>TextureProcessor</Processor>
+    </Compile>
+    <Compile Include="Q3Maps\acid3dm9.pk3\textures\acid3dm9\trim_light.tga">
+      <Name>trim_light</Name>
+      <Importer>TextureImporter</Importer>
+      <Processor>TextureProcessor</Processor>
+    </Compile>
+    <Compile Include="Q3Maps\acid3dm9.pk3\textures\acid3dm9\trim_light_glow.tga">
+      <Name>trim_light_glow</Name>
+      <Importer>TextureImporter</Importer>
+      <Processor>TextureProcessor</Processor>
+    </Compile>
+    <Compile Include="Q3Maps\acid3dm9.pk3\textures\acid3dm9\wall_cyan066.tga">
+      <Name>wall_cyan066</Name>
+      <Importer>TextureImporter</Importer>
+      <Processor>TextureProcessor</Processor>
+    </Compile>
+    <Compile Include="Q3Maps\acid3dm9.pk3\textures\acid3dm9\wall_olive066.tga">
+      <Name>wall_olive066</Name>
+      <Importer>TextureImporter</Importer>
+      <Processor>TextureProcessor</Processor>
+    </Compile>
+    <None Include="Q3Maps\halct4b.pk3\maps\halctf4b.aas">
+      <Name>halctf4b</Name>
+    </None>
+    <None Include="Q3Maps\halct4b.pk3\maps\halctf4b.bsp">
+      <Name>halctf4b</Name>
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+    <None Include="Q3Maps\halct4b.pk3\scripts\halctf4.shader">
+      <Name>halctf4</Name>
+    </None>
+    <None Include="Q3Maps\halct4b.pk3\scripts\halctf4b.arena">
+      <Name>halctf4b</Name>
+    </None>
+    <Compile Include="Q3Maps\halct4b.pk3\textures\gothic_trim\metalsupport4small.tga">
+      <Name>metalsupport4small</Name>
+      <Importer>TextureImporter</Importer>
+      <Processor>TextureProcessor</Processor>
+    </Compile>
+    <None Include="Q3Maps\natedm3.pk3\natedm3.txt">
+      <Name>natedm3</Name>
+    </None>
+    <Compile Include="Q3Maps\natedm3.pk3\sound\natetourney\birds.wav">
+      <Name>birds</Name>
+      <Importer>WavImporter</Importer>
+      <Processor>SoundEffectProcessor</Processor>
+    </Compile>
+    <Compile Include="Q3Maps\natedm3.pk3\sound\natetourney\riviere_ac_courant.wav">
+      <Name>riviere_ac_courant</Name>
+      <Importer>WavImporter</Importer>
+      <Processor>SoundEffectProcessor</Processor>
+    </Compile>
+    <Compile Include="Q3Maps\natedm3.pk3\textures\base_button\metal3_3_shootme.jpg">
+      <Name>metal3_3_shootme</Name>
+      <Importer>TextureImporter</Importer>
+      <Processor>TextureProcessor</Processor>
+    </Compile>
+    <Compile Include="Q3Maps\natedm3.pk3\textures\e7\e7bricks01.jpg">
+      <Name>e7bricks01</Name>
+      <Importer>TextureImporter</Importer>
+      <Processor>TextureProcessor</Processor>
+    </Compile>
+    <Compile Include="Q3Maps\natedm3.pk3\textures\egyptsoc_mat\block02a.jpg">
+      <Name>block02a</Name>
+      <Importer>TextureImporter</Importer>
+      <Processor>TextureProcessor</Processor>
+    </Compile>
+    <Compile Include="Q3Maps\natedm3.pk3\textures\jof3dm2\bg.jpg">
+      <Name>bg</Name>
+      <Importer>TextureImporter</Importer>
+      <Processor>TextureProcessor</Processor>
+    </Compile>
+    <Compile Include="Q3Maps\natedm3.pk3\textures\jof3dm2\fireswirl2gold.jpg">
+      <Name>fireswirl2gold</Name>
+      <Importer>TextureImporter</Importer>
+      <Processor>TextureProcessor</Processor>
+    </Compile>
+    <Compile Include="Q3Maps\natedm3.pk3\textures\jof3dm2\floor079.jpg">
+      <Name>floor079</Name>
+      <Importer>TextureImporter</Importer>
+      <Processor>TextureProcessor</Processor>
+    </Compile>
+    <Compile Include="Q3Maps\natedm3.pk3\textures\jof3dm2\gold_telep.jpg">
+      <Name>gold_telep</Name>
+      <Importer>TextureImporter</Importer>
+      <Processor>TextureProcessor</Processor>
+    </Compile>
+    <Compile Include="Q3Maps\natedm3.pk3\textures\jof3dm2\ground061.jpg">
+      <Name>ground061</Name>
+      <Importer>TextureImporter</Importer>
+      <Processor>TextureProcessor</Processor>
+    </Compile>
+    <Compile Include="Q3Maps\natedm3.pk3\textures\jof3dm2\oldstone3.jpg">
+      <Name>oldstone3</Name>
+      <Importer>TextureImporter</Importer>
+      <Processor>TextureProcessor</Processor>
+    </Compile>
+    <Compile Include="Q3Maps\natedm3.pk3\textures\jof3dm2\roof06.jpg">
+      <Name>roof06</Name>
+      <Importer>TextureImporter</Importer>
+      <Processor>TextureProcessor</Processor>
+    </Compile>
+    <Compile Include="Q3Maps\natedm3.pk3\textures\jof3dm2\rust01.jpg">
+      <Name>rust01</Name>
+      <Importer>TextureImporter</Importer>
+      <Processor>TextureProcessor</Processor>
+    </Compile>
+    <Compile Include="Q3Maps\natedm3.pk3\textures\medieval\block02.jpg">
+      <Name>block02</Name>
+      <Importer>TextureImporter</Importer>
+      <Processor>TextureProcessor</Processor>
+    </Compile>
+    <Compile Include="Q3Maps\natedm3.pk3\textures\medieval\block03broke3.jpg">
+      <Name>block03broke3</Name>
+      <Importer>TextureImporter</Importer>
+      <Processor>TextureProcessor</Processor>
+    </Compile>
+    <Compile Include="Q3Maps\natedm3.pk3\textures\medieval\block04broke3.jpg">
+      <Name>block04broke3</Name>
+      <Importer>TextureImporter</Importer>
+      <Processor>TextureProcessor</Processor>
+    </Compile>
+    <Compile Include="Q3Maps\natedm3.pk3\textures\medieval\col_marble1.jpg">
+      <Name>col_marble1</Name>
+      <Importer>TextureImporter</Importer>
+      <Processor>TextureProcessor</Processor>
+    </Compile>
+    <Compile Include="Q3Maps\natedm3.pk3\textures\medieval\col_marble2.jpg">
+      <Name>col_marble2</Name>
+      <Importer>TextureImporter</Importer>
+      <Processor>TextureProcessor</Processor>
+    </Compile>
+    <Compile Include="Q3Maps\natedm3.pk3\textures\medieval\col_marble3.jpg">
+      <Name>col_marble3</Name>
+      <Importer>TextureImporter</Importer>
+      <Processor>TextureProcessor</Processor>
+    </Compile>
+    <Compile Include="Q3Maps\natedm3.pk3\textures\medieval\flr_marble1.jpg">
+      <Name>flr_marble1</Name>
+      <Importer>TextureImporter</Importer>
+      <Processor>TextureProcessor</Processor>
+    </Compile>
+    <Compile Include="Q3Maps\natedm3.pk3\textures\medieval\flr_marble1_b2.jpg">
+      <Name>flr_marble1_b2</Name>
+      <Importer>TextureImporter</Importer>
+      <Processor>TextureProcessor</Processor>
+    </Compile>
+    <Compile Include="Q3Maps\natedm3.pk3\textures\medieval\flr_marble2.jpg">
+      <Name>flr_marble2</Name>
+      <Importer>TextureImporter</Importer>
+      <Processor>TextureProcessor</Processor>
+    </Compile>
+    <Compile Include="Q3Maps\natedm3.pk3\textures\medieval\flr_marble2_b1.jpg">
+      <Name>flr_marble2_b1</Name>
+      <Importer>TextureImporter</Importer>
+      <Processor>TextureProcessor</Processor>
+    </Compile>
+    <Compile Include="Q3Maps\natedm3.pk3\textures\medieval\flr_marble2_b2.jpg">
+      <Name>flr_marble2_b2</Name>
+      <Importer>TextureImporter</Importer>
+      <Processor>TextureProcessor</Processor>
+    </Compile>
+    <Compile Include="Q3Maps\natedm3.pk3\textures\medieval\flr_marble3.jpg">
+      <Name>flr_marble3</Name>
+      <Importer>TextureImporter</Importer>
+      <Processor>TextureProcessor</Processor>
+    </Compile>
+    <Compile Include="Q3Maps\natedm3.pk3\textures\medieval\flr_marble3_b2.jpg">
+      <Name>flr_marble3_b2</Name>
+      <Importer>TextureImporter</Importer>
+      <Processor>TextureProcessor</Processor>
+    </Compile>
+    <Compile Include="Q3Maps\natedm3.pk3\textures\medieval\flr_marble3_c2glow.blend.jpg">
+      <Name>flr_marble3_c2glow.blend</Name>
+      <Importer>TextureImporter</Importer>
+      <Processor>TextureProcessor</Processor>
+    </Compile>
+    <Compile Include="Q3Maps\natedm3.pk3\textures\medieval\marb03-3b80.jpg">
+      <Name>marb03-3b80</Name>
+      <Importer>TextureImporter</Importer>
+      <Processor>TextureProcessor</Processor>
+    </Compile>
+    <Compile Include="Q3Maps\natedm3.pk3\textures\medieval\marb54-3b80.jpg">
+      <Name>marb54-3b80</Name>
+      <Importer>TextureImporter</Importer>
+      <Processor>TextureProcessor</Processor>
+    </Compile>
+    <Compile Include="Q3Maps\natedm3.pk3\textures\medieval\marb82-1b64.jpg">
+      <Name>marb82-1b64</Name>
+      <Importer>TextureImporter</Importer>
+      <Processor>TextureProcessor</Processor>
+    </Compile>
+    <Compile Include="Q3Maps\natedm3.pk3\textures\medieval\marb82-3b80.jpg">
+      <Name>marb82-3b80</Name>
+      <Importer>TextureImporter</Importer>
+      <Processor>TextureProcessor</Processor>
+    </Compile>
+    <Compile Include="Q3Maps\natedm3.pk3\textures\medieval\metal_horz1.jpg">
+      <Name>metal_horz1</Name>
+      <Importer>TextureImporter</Importer>
+      <Processor>TextureProcessor</Processor>
+    </Compile>
+    <Compile Include="Q3Maps\natedm3.pk3\textures\medieval\metal_m2.jpg">
+      <Name>metal_m2</Name>
+      <Importer>TextureImporter</Importer>
+      <Processor>TextureProcessor</Processor>
+    </Compile>
+    <Compile Include="Q3Maps\natedm3.pk3\textures\medieval\metal_m4.jpg">
+      <Name>metal_m4</Name>
+      <Importer>TextureImporter</Importer>
+      <Processor>TextureProcessor</Processor>
+    </Compile>
+    <Compile Include="Q3Maps\natedm3.pk3\textures\medieval\metal_st2a1_ds.jpg">
+      <Name>metal_st2a1_ds</Name>
+      <Importer>TextureImporter</Importer>
+      <Processor>TextureProcessor</Processor>
+    </Compile>
+    <Compile Include="Q3Maps\natedm3.pk3\textures\medieval\metal_st5a1_ds.jpg">
+      <Name>metal_st5a1_ds</Name>
+      <Importer>TextureImporter</Importer>
+      <Processor>TextureProcessor</Processor>
+    </Compile>
+    <Compile Include="Q3Maps\natedm3.pk3\textures\medieval\metal_vert1.jpg">
+      <Name>metal_vert1</Name>
+      <Importer>TextureImporter</Importer>
+      <Processor>TextureProcessor</Processor>
+    </Compile>
+    <Compile Include="Q3Maps\natedm3.pk3\textures\medieval\metal_wd1lgt_ds.jpg">
+      <Name>metal_wd1lgt_ds</Name>
+      <Importer>TextureImporter</Importer>
+      <Processor>TextureProcessor</Processor>
+    </Compile>
+    <Compile Include="Q3Maps\natedm3.pk3\textures\medieval\metal_wd2lgt_ss.jpg">
+      <Name>metal_wd2lgt_ss</Name>
+      <Importer>TextureImporter</Importer>
+      <Processor>TextureProcessor</Processor>
+    </Compile>
+    <Compile Include="Q3Maps\natedm3.pk3\textures\medieval\metal_wd3_ds.jpg">
+      <Name>metal_wd3_ds</Name>
+      <Importer>TextureImporter</Importer>
+      <Processor>TextureProcessor</Processor>
+    </Compile>
+    <Compile Include="Q3Maps\natedm3.pk3\textures\medieval\wood05b.jpg">
+      <Name>wood05b</Name>
+      <Importer>TextureImporter</Importer>
+      <Processor>TextureProcessor</Processor>
+    </Compile>
+    <Compile Include="Q3Maps\natedm3.pk3\textures\medieval\wood09.jpg">
+      <Name>wood09</Name>
+      <Importer>TextureImporter</Importer>
+      <Processor>TextureProcessor</Processor>
+    </Compile>
+    <Compile Include="Q3Maps\natedm3.pk3\textures\medieval\wood18.jpg">
+      <Name>wood18</Name>
+      <Importer>TextureImporter</Importer>
+      <Processor>TextureProcessor</Processor>
+    </Compile>
+    <Compile Include="Q3Maps\natedm3.pk3\textures\natetourney1\mossyblock.jpg">
+      <Name>mossyblock</Name>
+      <Importer>TextureImporter</Importer>
+      <Processor>TextureProcessor</Processor>
+    </Compile>
+    <Compile Include="Q3Maps\natedm3.pk3\textures\natetourney1\mossyblockbroke.jpg">
+      <Name>mossyblockbroke</Name>
+      <Importer>TextureImporter</Importer>
+      <Processor>TextureProcessor</Processor>
+    </Compile>
+    <Compile Include="Q3Maps\natedm3.pk3\textures\natetourney1\mossybrokewall.jpg">
+      <Name>mossybrokewall</Name>
+      <Importer>TextureImporter</Importer>
+      <Processor>TextureProcessor</Processor>
+    </Compile>
+    <Compile Include="Q3Maps\natedm3.pk3\textures\natetourney1\mossytrim.jpg">
+      <Name>mossytrim</Name>
+      <Importer>TextureImporter</Importer>
+      <Processor>TextureProcessor</Processor>
+    </Compile>
+    <Compile Include="Q3Maps\natedm3.pk3\textures\natetourney1\natewindow.JPG">
+      <Name>natewindow</Name>
+      <Importer>TextureImporter</Importer>
+      <Processor>TextureProcessor</Processor>
+    </Compile>
+    <Compile Include="Q3Maps\natedm3.pk3\textures\natetourney1\natewindow_blend.JPG">
+      <Name>natewindow_blend</Name>
+      <Importer>TextureImporter</Importer>
+      <Processor>TextureProcessor</Processor>
+    </Compile>
+    <Compile Include="Q3Maps\natedm3.pk3\textures\tech1soc_mat\matbrown_drk1.jpg">
+      <Name>matbrown_drk1</Name>
+      <Importer>TextureImporter</Importer>
+      <Processor>TextureProcessor</Processor>
+    </Compile>
+    <Compile Include="Q3Maps\natedm3.pk3\textures\tech1soc_mat\matbrown_lgt2.jpg">
+      <Name>matbrown_lgt2</Name>
+      <Importer>TextureImporter</Importer>
+      <Processor>TextureProcessor</Processor>
+    </Compile>
+    <Compile Include="Q3Maps\natedm3.pk3\textures\tech1soc_trim\064-11a.jpg">
+      <Name>064-11a</Name>
+      <Importer>TextureImporter</Importer>
+      <Processor>TextureProcessor</Processor>
+    </Compile>
+    <Compile Include="Q3Maps\natedm3.pk3\textures\tech1soc_trim\064-13a.jpg">
+      <Name>064-13a</Name>
+      <Importer>TextureImporter</Importer>
+      <Processor>TextureProcessor</Processor>
+    </Compile>
+    <Compile Include="Q3Maps\natedm3.pk3\textures\tech1soc_trim\128-05a.jpg">
+      <Name>128-05a</Name>
+      <Importer>TextureImporter</Importer>
+      <Processor>TextureProcessor</Processor>
+    </Compile>
+    <Compile Include="Q3Maps\natedm3.pk3\textures\tech1soc_trim\128-05b.jpg">
+      <Name>128-05b</Name>
+      <Importer>TextureImporter</Importer>
+      <Processor>TextureProcessor</Processor>
+    </Compile>
+    <Compile Include="Q3Maps\natedm3.pk3\textures\tech1soc_trim\s128-01c.jpg">
+      <Name>s128-01c</Name>
+      <Importer>TextureImporter</Importer>
+      <Processor>TextureProcessor</Processor>
+    </Compile>
+  </ItemGroup>
+  <ItemGroup>
+    <Compile Include="Q3Maps\acid3dm9.pk3\env\acid3dm9\sky_bk.jpg">
+      <Name>sky_bk</Name>
+      <Importer>TextureImporter</Importer>
+      <Processor>TextureProcessor</Processor>
+    </Compile>
+    <Compile Include="Q3Maps\acid3dm9.pk3\env\acid3dm9\sky_dn.jpg">
+      <Name>sky_dn</Name>
+      <Importer>TextureImporter</Importer>
+      <Processor>TextureProcessor</Processor>
+    </Compile>
+    <Compile Include="Q3Maps\acid3dm9.pk3\env\acid3dm9\sky_ft.jpg">
+      <Name>sky_ft</Name>
+      <Importer>TextureImporter</Importer>
+      <Processor>TextureProcessor</Processor>
+    </Compile>
+    <Compile Include="Q3Maps\acid3dm9.pk3\env\acid3dm9\sky_lf.jpg">
+      <Name>sky_lf</Name>
+      <Importer>TextureImporter</Importer>
+      <Processor>TextureProcessor</Processor>
+    </Compile>
+    <Compile Include="Q3Maps\acid3dm9.pk3\env\acid3dm9\sky_rt.jpg">
+      <Name>sky_rt</Name>
+      <Importer>TextureImporter</Importer>
+      <Processor>TextureProcessor</Processor>
+    </Compile>
+    <Compile Include="Q3Maps\acid3dm9.pk3\env\acid3dm9\sky_up.jpg">
+      <Name>sky_up</Name>
+      <Importer>TextureImporter</Importer>
+      <Processor>TextureProcessor</Processor>
+    </Compile>
+    <Compile Include="Q3Maps\acid3dm9.pk3\levelshots\acid3dm9.jpg">
+      <Name>acid3dm9</Name>
+      <Importer>TextureImporter</Importer>
+      <Processor>TextureProcessor</Processor>
+    </Compile>
+    <Compile Include="Q3Maps\acid3dm9.pk3\textures\acid3dm9\big-blue-cement.jpg">
+      <Name>big-blue-cement</Name>
+      <Importer>TextureImporter</Importer>
+      <Processor>TextureProcessor</Processor>
+    </Compile>
+    <Compile Include="Q3Maps\acid3dm9.pk3\textures\acid3dm9\cement-tiled.jpg">
+      <Name>cement-tiled</Name>
+      <Importer>TextureImporter</Importer>
+      <Processor>TextureProcessor</Processor>
+    </Compile>
+    <Compile Include="Q3Maps\acid3dm9.pk3\textures\acid3dm9\cement_1_grimy.jpg">
+      <Name>cement_1_grimy</Name>
+      <Importer>TextureImporter</Importer>
+      <Processor>TextureProcessor</Processor>
+    </Compile>
+    <Compile Include="Q3Maps\acid3dm9.pk3\textures\acid3dm9\flat_dk.jpg">
+      <Name>flat_dk</Name>
+      <Importer>TextureImporter</Importer>
+      <Processor>TextureProcessor</Processor>
+    </Compile>
+    <Compile Include="Q3Maps\acid3dm9.pk3\textures\acid3dm9\logo2.jpg">
+      <Name>logo2</Name>
+      <Importer>TextureImporter</Importer>
+      <Processor>TextureProcessor</Processor>
+    </Compile>
+    <Compile Include="Q3Maps\acid3dm9.pk3\textures\acid3dm9\neon1.blend.jpg">
+      <Name>neon1.blend</Name>
+      <Importer>TextureImporter</Importer>
+      <Processor>TextureProcessor</Processor>
+    </Compile>
+    <Compile Include="Q3Maps\acid3dm9.pk3\textures\acid3dm9\neon1.jpg">
+      <Name>neon1</Name>
+      <Importer>TextureImporter</Importer>
+      <Processor>TextureProcessor</Processor>
+    </Compile>
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="Q3Maps\halct4b.pk3\halctf4b.txt">
+      <Name>halctf4b</Name>
+    </None>
+    <None Include="Q3Maps\q3shw23.pk3\maps\q3shw23.aas">
+      <Name>q3shw23</Name>
+    </None>
+    <None Include="Q3Maps\q3shw23.pk3\maps\q3shw23.bsp">
+      <Name>q3shw23</Name>
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+    <None Include="Q3Maps\q3shw23.pk3\maps\q3shw23_ffa.aas">
+      <Name>q3shw23_ffa</Name>
+    </None>
+    <None Include="Q3Maps\q3shw23.pk3\maps\q3shw23_ffa.bsp">
+      <Name>q3shw23_ffa</Name>
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+    <None Include="Q3Maps\q3shw23.pk3\scripts\Hipertrofia.shader">
+      <Name>Hipertrofia</Name>
+    </None>
+    <None Include="Q3Maps\q3shw23.pk3\scripts\q3shw23.arena">
+      <Name>q3shw23</Name>
+    </None>
+    <None Include="Q3Maps\q3shw23.pk3\scripts\q3shw23_ffa.arena">
+      <Name>q3shw23_ffa</Name>
+    </None>
+    <Compile Include="Q3Maps\q3shw23.pk3\textures\hipertrofia\basemetalsupport_01.tga">
+      <Name>basemetalsupport_01</Name>
+      <Importer>TextureImporter</Importer>
+      <Processor>TextureProcessor</Processor>
+    </Compile>
+    <Compile Include="Q3Maps\q3shw23.pk3\textures\hipertrofia\basemetalsupport_02.tga">
+      <Name>basemetalsupport_02</Name>
+      <Importer>TextureImporter</Importer>
+      <Processor>TextureProcessor</Processor>
+    </Compile>
+    <Compile Include="Q3Maps\q3shw23.pk3\textures\hipertrofia\basemetalsupport_03.tga">
+      <Name>basemetalsupport_03</Name>
+      <Importer>TextureImporter</Importer>
+      <Processor>TextureProcessor</Processor>
+    </Compile>
+    <Compile Include="Q3Maps\q3shw23.pk3\textures\hipertrofia\basemetalsupport_04.tga">
+      <Name>basemetalsupport_04</Name>
+      <Importer>TextureImporter</Importer>
+      <Processor>TextureProcessor</Processor>
+    </Compile>
+    <Compile Include="Q3Maps\q3shw23.pk3\textures\hipertrofia\basemetalsupport_05.tga">
+      <Name>basemetalsupport_05</Name>
+      <Importer>TextureImporter</Importer>
+      <Processor>TextureProcessor</Processor>
+    </Compile>
+    <Compile Include="Q3Maps\q3shw23.pk3\textures\hipertrofia\basemetal_01_01.tga">
+      <Name>basemetal_01_01</Name>
+      <Importer>TextureImporter</Importer>
+      <Processor>TextureProcessor</Processor>
+    </Compile>
+    <Compile Include="Q3Maps\q3shw23.pk3\textures\hipertrofia\concrete.tga">
+      <Name>concrete</Name>
+      <Importer>TextureImporter</Importer>
+      <Processor>TextureProcessor</Processor>
+    </Compile>
+    <Compile Include="Q3Maps\q3shw23.pk3\textures\hipertrofia\concrete02.tga">
+      <Name>concrete02</Name>
+      <Importer>TextureImporter</Importer>
+      <Processor>TextureProcessor</Processor>
+    </Compile>
+    <Compile Include="Q3Maps\q3shw23.pk3\textures\hipertrofia\concrete02h.tga">
+      <Name>concrete02h</Name>
+      <Importer>TextureImporter</Importer>
+      <Processor>TextureProcessor</Processor>
+    </Compile>
+    <Compile Include="Q3Maps\q3shw23.pk3\textures\hipertrofia\concrete03cdirty.tga">
+      <Name>concrete03cdirty</Name>
+      <Importer>TextureImporter</Importer>
+      <Processor>TextureProcessor</Processor>
+    </Compile>
+    <Compile Include="Q3Maps\q3shw23.pk3\textures\hipertrofia\concrete04.tga">
+      <Name>concrete04</Name>
+      <Importer>TextureImporter</Importer>
+      <Processor>TextureProcessor</Processor>
+    </Compile>
+    <Compile Include="Q3Maps\q3shw23.pk3\textures\hipertrofia\concrete04dvt.tga">
+      <Name>concrete04dvt</Name>
+      <Importer>TextureImporter</Importer>
+      <Processor>TextureProcessor</Processor>
+    </Compile>
+    <Compile Include="Q3Maps\q3shw23.pk3\textures\hipertrofia\concrete04edged.tga">
+      <Name>concrete04edged</Name>
+      <Importer>TextureImporter</Importer>
+      <Processor>TextureProcessor</Processor>
+    </Compile>
+    <Compile Include="Q3Maps\q3shw23.pk3\textures\hipertrofia\concrete04rfhp.tga">
+      <Name>concrete04rfhp</Name>
+      <Importer>TextureImporter</Importer>
+      <Processor>TextureProcessor</Processor>
+    </Compile>
+    <Compile Include="Q3Maps\q3shw23.pk3\textures\hipertrofia\concrete04stair.tga">
+      <Name>concrete04stair</Name>
+      <Importer>TextureImporter</Importer>
+      <Processor>TextureProcessor</Processor>
+    </Compile>
+    <Compile Include="Q3Maps\q3shw23.pk3\textures\hipertrofia\concrete1.tga">
+      <Name>concrete1</Name>
+      <Importer>TextureImporter</Importer>
+      <Processor>TextureProcessor</Processor>
+    </Compile>
+    <Compile Include="Q3Maps\q3shw23.pk3\textures\hipertrofia\conc_01_01.tga">
+      <Name>conc_01_01</Name>
+      <Importer>TextureImporter</Importer>
+      <Processor>TextureProcessor</Processor>
+    </Compile>
+    <Compile Include="Q3Maps\q3shw23.pk3\textures\hipertrofia\conc_01_03.tga">
+      <Name>conc_01_03</Name>
+      <Importer>TextureImporter</Importer>
+      <Processor>TextureProcessor</Processor>
+    </Compile>
+    <Compile Include="Q3Maps\q3shw23.pk3\textures\hipertrofia\floor_01_02.tga">
+      <Name>floor_01_02</Name>
+      <Importer>TextureImporter</Importer>
+      <Processor>TextureProcessor</Processor>
+    </Compile>
+    <Compile Include="Q3Maps\q3shw23.pk3\textures\hipertrofia\floor_01_06.tga">
+      <Name>floor_01_06</Name>
+      <Importer>TextureImporter</Importer>
+      <Processor>TextureProcessor</Processor>
+    </Compile>
+    <Compile Include="Q3Maps\q3shw23.pk3\textures\hipertrofia\girder03.tga">
+      <Name>girder03</Name>
+      <Importer>TextureImporter</Importer>
+      <Processor>TextureProcessor</Processor>
+    </Compile>
+    <Compile Include="Q3Maps\q3shw23.pk3\textures\hipertrofia\girder04.tga">
+      <Name>girder04</Name>
+      <Importer>TextureImporter</Importer>
+      <Processor>TextureProcessor</Processor>
+    </Compile>
+    <Compile Include="Q3Maps\q3shw23.pk3\textures\hipertrofia\grit01.tga">
+      <Name>grit01</Name>
+      <Importer>TextureImporter</Importer>
+      <Processor>TextureProcessor</Processor>
+    </Compile>
+    <Compile Include="Q3Maps\q3shw23.pk3\textures\hipertrofia\metalfloor_wall_15_03.tga">
+      <Name>metalfloor_wall_15_03</Name>
+      <Importer>TextureImporter</Importer>
+      <Processor>TextureProcessor</Processor>
+    </Compile>
+    <Compile Include="Q3Maps\q3shw23.pk3\textures\hipertrofia\metwallnubbed.tga">
+      <Name>metwallnubbed</Name>
+      <Importer>TextureImporter</Importer>
+      <Processor>TextureProcessor</Processor>
+    </Compile>
+    <Compile Include="Q3Maps\q3shw23.pk3\textures\hipertrofia\panel03.tga">
+      <Name>panel03</Name>
+      <Importer>TextureImporter</Importer>
+      <Processor>TextureProcessor</Processor>
+    </Compile>
+    <Compile Include="Q3Maps\q3shw23.pk3\textures\hipertrofia\panel_01_01.tga">
+      <Name>panel_01_01</Name>
+      <Importer>TextureImporter</Importer>
+      <Processor>TextureProcessor</Processor>
+    </Compile>
+    <Compile Include="Q3Maps\q3shw23.pk3\textures\hipertrofia\panel_01_02.tga">
+      <Name>panel_01_02</Name>
+      <Importer>TextureImporter</Importer>
+      <Processor>TextureProcessor</Processor>
+    </Compile>
+    <Compile Include="Q3Maps\q3shw23.pk3\textures\hipertrofia\panel_01_03.tga">
+      <Name>panel_01_03</Name>
+      <Importer>TextureImporter</Importer>
+      <Processor>TextureProcessor</Processor>
+    </Compile>
+    <Compile Include="Q3Maps\q3shw23.pk3\textures\hipertrofia\panel_01_04.tga">
+      <Name>panel_01_04</Name>
+      <Importer>TextureImporter</Importer>
+      <Processor>TextureProcessor</Processor>
+    </Compile>
+    <Compile Include="Q3Maps\q3shw23.pk3\textures\hipertrofia\panel_01_05.tga">
+      <Name>panel_01_05</Name>
+      <Importer>TextureImporter</Importer>
+      <Processor>TextureProcessor</Processor>
+    </Compile>
+    <Compile Include="Q3Maps\q3shw23.pk3\textures\hipertrofia\panel_01_06.tga">
+      <Name>panel_01_06</Name>
+      <Importer>TextureImporter</Importer>
+      <Processor>TextureProcessor</Processor>
+    </Compile>
+    <Compile Include="Q3Maps\q3shw23.pk3\textures\hipertrofia\panel_03_02.tga">
+      <Name>panel_03_02</Name>
+      <Importer>TextureImporter</Importer>
+      <Processor>TextureProcessor</Processor>
+    </Compile>
+    <Compile Include="Q3Maps\q3shw23.pk3\textures\hipertrofia\panel_edged_01.tga">
+      <Name>panel_edged_01</Name>
+      <Importer>TextureImporter</Importer>
+      <Processor>TextureProcessor</Processor>
+    </Compile>
+    <Compile Include="Q3Maps\q3shw23.pk3\textures\hipertrofia\panel_edged_02.tga">
+      <Name>panel_edged_02</Name>
+      <Importer>TextureImporter</Importer>
+      <Processor>TextureProcessor</Processor>
+    </Compile>
+    <Compile Include="Q3Maps\q3shw23.pk3\textures\hipertrofia\panel_xpass_02.tga">
+      <Name>panel_xpass_02</Name>
+      <Importer>TextureImporter</Importer>
+      <Processor>TextureProcessor</Processor>
+    </Compile>
+    <Compile Include="Q3Maps\q3shw23.pk3\textures\hipertrofia\patch10_beatup4.tga">
+      <Name>patch10_beatup4</Name>
+      <Importer>TextureImporter</Importer>
+      <Processor>TextureProcessor</Processor>
+    </Compile>
+    <Compile Include="Q3Maps\q3shw23.pk3\textures\hipertrofia\steelsupport.tga">
+      <Name>steelsupport</Name>
+      <Importer>TextureImporter</Importer>
+      <Processor>TextureProcessor</Processor>
+    </Compile>
+    <Compile Include="Q3Maps\q3shw23.pk3\textures\hipertrofia\techtrim02_nospecular.tga">
+      <Name>techtrim02_nospecular</Name>
+      <Importer>TextureImporter</Importer>
+      <Processor>TextureProcessor</Processor>
+    </Compile>
+    <Compile Include="Q3Maps\q3shw23.pk3\textures\hipertrofia\trim_02_01.tga">
+      <Name>trim_02_01</Name>
+      <Importer>TextureImporter</Importer>
+      <Processor>TextureProcessor</Processor>
+    </Compile>
+    <Compile Include="Q3Maps\q3shw23.pk3\textures\hipertrofia\wall_07_01.tga">
+      <Name>wall_07_01</Name>
+      <Importer>TextureImporter</Importer>
+      <Processor>TextureProcessor</Processor>
+    </Compile>
+    <Compile Include="Q3Maps\q3shw23.pk3\textures\hipertrofia\wall_07_02.tga">
+      <Name>wall_07_02</Name>
+      <Importer>TextureImporter</Importer>
+      <Processor>TextureProcessor</Processor>
+    </Compile>
+    <Compile Include="Q3Maps\q3shw23.pk3\textures\hipertrofia\wall_07_03.tga">
+      <Name>wall_07_03</Name>
+      <Importer>TextureImporter</Importer>
+      <Processor>TextureProcessor</Processor>
+    </Compile>
+    <Compile Include="Q3Maps\q3shw23.pk3\textures\hipertrofia\wall_08_01.tga">
+      <Name>wall_08_01</Name>
+      <Importer>TextureImporter</Importer>
+      <Processor>TextureProcessor</Processor>
+    </Compile>
+    <Compile Include="Q3Maps\q3shw23.pk3\textures\hipertrofia\wall_08_02.tga">
+      <Name>wall_08_02</Name>
+      <Importer>TextureImporter</Importer>
+      <Processor>TextureProcessor</Processor>
+    </Compile>
+    <Compile Include="Q3Maps\q3shw23.pk3\textures\hipertrofia\wall_08_03.tga">
+      <Name>wall_08_03</Name>
+      <Importer>TextureImporter</Importer>
+      <Processor>TextureProcessor</Processor>
+    </Compile>
+    <Compile Include="Q3Maps\q3shw23.pk3\textures\hipertrofia\weapfloor_1.tga">
+      <Name>weapfloor_1</Name>
+      <Importer>TextureImporter</Importer>
+      <Processor>TextureProcessor</Processor>
+    </Compile>
+    <Compile Include="Q3Maps\q3shw23.pk3\textures\hipertrofia\weapfloor_fx_blue.tga">
+      <Name>weapfloor_fx_blue</Name>
+      <Importer>TextureImporter</Importer>
+      <Processor>TextureProcessor</Processor>
+    </Compile>
+    <Compile Include="Q3Maps\q3shw23.pk3\textures\hipertrofia\weapfloor_shadow.tga">
+      <Name>weapfloor_shadow</Name>
+      <Importer>TextureImporter</Importer>
+      <Processor>TextureProcessor</Processor>
+    </Compile>
+    <Compile Include="Q3Maps\q3shw23.pk3\textures\hipertrofia\xflag01.tga">
+      <Name>xflag01</Name>
+      <Importer>TextureImporter</Importer>
+      <Processor>TextureProcessor</Processor>
+    </Compile>
+    <Compile Include="Q3Maps\halct4b.pk3\levelshots\halctf4b.jpg">
+      <Name>halctf4b</Name>
+      <Importer>TextureImporter</Importer>
+      <Processor>TextureProcessor</Processor>
+    </Compile>
+    <Compile Include="Q3Maps\halct4b.pk3\textures\gothic_trim\metalblackwave01.jpg">
+      <Name>metalblackwave01</Name>
+      <Importer>TextureImporter</Importer>
+      <Processor>TextureProcessor</Processor>
+    </Compile>
+    <Compile Include="Q3Maps\halct4b.pk3\textures\halctf4\blueskull.jpg">
+      <Name>blueskull</Name>
+      <Importer>TextureImporter</Importer>
+      <Processor>TextureProcessor</Processor>
+    </Compile>
+    <Compile Include="Q3Maps\halct4b.pk3\textures\halctf4\redskull.jpg">
+      <Name>redskull</Name>
+      <Importer>TextureImporter</Importer>
+      <Processor>TextureProcessor</Processor>
+    </Compile>
+    <Compile Include="Q3Maps\halct4b.pk3\textures\halctf4\supportborderb.jpg">
+      <Name>supportborderb</Name>
+      <Importer>TextureImporter</Importer>
+      <Processor>TextureProcessor</Processor>
+    </Compile>
+  </ItemGroup>
+  <ItemGroup>
+    <Compile Include="Q3Maps\q3shw23.pk3\Levelshots\q3shw23.jpg">
+      <Name>q3shw23</Name>
+      <Importer>TextureImporter</Importer>
+      <Processor>TextureProcessor</Processor>
+    </Compile>
+    <Compile Include="Q3Maps\q3shw23.pk3\Levelshots\q3shw23_ffa.jpg">
+      <Name>q3shw23_ffa</Name>
+      <Importer>TextureImporter</Importer>
+      <Processor>TextureProcessor</Processor>
+    </Compile>
+    <None Include="Q3Maps\q3shw23.pk3\Q3shw23 - read me.txt">
+      <Name>Q3shw23 - read me</Name>
+    </None>
   </ItemGroup>
   <Import Project="$(MSBuildExtensionsPath)\Microsoft\XNA Game Studio\v3.0\Microsoft.Xna.GameStudio.ContentPipeline.targets" />
   <!-- To modify your build process, add your task inside one of the targets below and uncomment it. 
