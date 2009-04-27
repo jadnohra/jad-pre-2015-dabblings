@@ -1,0 +1,2 @@
+Add frustum cullin
+Add a sharingManager on top of contentManager to manage shared tex's, models, lightmap tex's ???
