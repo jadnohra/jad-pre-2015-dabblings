@@ -50,7 +50,7 @@ namespace Framework1.Quake3
             {
                 VertexSemantics = renderResMan.NewGPUVertexSemanticsProxy(typeof(VertexFormat), VertexFormat.VertexElements);
 
-                BspFaceRAMStreamSource source = new BspFaceRAMStreamSource(bspTree.m_Level, face);
+                BspFaceMeshRAMStreamSource source = new BspFaceMeshRAMStreamSource(bspTree.m_Level, face);
                 Vertices = renderResMan.NewRAMVertexStreamProxy<VertexFormat>(new RenderResourceManager.VertexSemantics(VertexFormat.VertexElements), source, true);
                 TriangleList = renderResMan.NewRAMIndexStreamProxy<Int16>(source, true);
 
@@ -178,8 +178,10 @@ namespace Framework1.Quake3
                 {
                     BspFile.Faces.Binary_face face = faces.m_Faces[0];
 
-                    if ((face.type == (int)BspFile.FaceType.Mesh || face.type == (int)BspFile.FaceType.Polygon)
-                        && face.n_meshverts > 0)
+                    if ((face.type == (int)BspFile.FaceType.Mesh && face.n_meshverts > 0)
+                        || (face.type == (int)BspFile.FaceType.Polygon && face.n_meshverts > 0)
+                        //|| (face.type == (int)BspFile.FaceType.Patch && face.n_vertexes > 0)
+                        )
                     {
                         intervals.Add(new Interval(faceIndex, faceIndex));
                     }

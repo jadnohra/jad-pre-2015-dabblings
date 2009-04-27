@@ -2,6 +2,9 @@
 *** http://graphics.stanford.edu/~kekoa/q3/
 ** http://code.google.com/p/bsp-renderer/
 
+http://linux.ucla.edu/~phaethon/q3/formats/md3format.html
+http://www.paulsprojects.net/opengl/octagon/octagon.html
+
 ** maps: http://www.users.on.net/~justonefix/
 
 engine:
