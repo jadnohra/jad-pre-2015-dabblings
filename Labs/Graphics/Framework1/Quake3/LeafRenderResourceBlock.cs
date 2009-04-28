@@ -46,37 +46,48 @@ namespace Framework1.Quake3
             internal RenderResourceManager.ManagedTexture2DProxy DiffuseTexture;
             internal RenderResourceManager.ManagedTexture2DProxy LightmapTexture;
 
-            public FaceRenderJob(RenderResourceManager renderResMan, BspContentManager bspConentManager, BspTree bspTree, BspTree.Leaf leaf, int face)
+            public FaceRenderJob(RenderResourceManager renderResMan, BspContentManager bspConentManager, BspTree bspTree, BspTree.Leaf leaf, int faceIndex)
             {
-                VertexSemantics = renderResMan.NewGPUVertexSemanticsProxy(typeof(VertexFormat), VertexFormat.VertexElements);
+                BspFile.Header header = bspTree.m_Level.Header;
 
-                BspFaceMeshRAMStreamSource source = new BspFaceMeshRAMStreamSource(bspTree.m_Level, face);
-                Vertices = renderResMan.NewRAMVertexStreamProxy<VertexFormat>(new RenderResourceManager.VertexSemantics(VertexFormat.VertexElements), source, true);
-                TriangleList = renderResMan.NewRAMIndexStreamProxy<Int16>(source, true);
+                using (BspFile.Faces faces = header.Loader.GetFaces(header, faceIndex, 1))
+                {
+                    BspFile.Faces.Binary_face face = faces.m_Faces[0];
 
-                LoadTextures(renderResMan, bspConentManager, bspTree, face);
+                    VertexSemantics = renderResMan.NewGPUVertexSemanticsProxy(typeof(VertexFormat), VertexFormat.VertexElements);
+                    RenderResourceManager.RAMStreamSource source = null;
+
+                    if ((face.type == (int)BspFile.FaceType.Mesh) || (face.type == (int)BspFile.FaceType.Polygon))
+                    {
+                        source = new BspMeshFaceRAMStreamSource(bspTree.m_Level, faceIndex);
+                    }
+                    else if (face.type == (int)BspFile.FaceType.Patch)
+                    {
+                        source = new BspBezierFaceRAMStreamSource(bspTree.m_Level, faceIndex);
+                    }
+                    
+                    Vertices = renderResMan.NewRAMVertexStreamProxy<VertexFormat>(new RenderResourceManager.VertexSemantics(VertexFormat.VertexElements), source, true);
+                    TriangleList = renderResMan.NewRAMIndexStreamProxy<Int16>(source, true);
+
+                    LoadTextures(renderResMan, bspConentManager, bspTree, face);
+                }
             }
 
-            void LoadTextures(RenderResourceManager renderResMan, BspContentManager bspConentManager, BspTree bspTree, int faceIndex)
+            void LoadTextures(RenderResourceManager renderResMan, BspContentManager bspConentManager, BspTree bspTree, BspFile.Faces.Binary_face face)
             {
-                 BspFile.Header header = bspTree.m_Level.Header;
-
-                 using (BspFile.Faces faces = header.Loader.GetFaces(header, faceIndex, 1))
+                 if (face.texture >= 0)
                  {
-                     BspFile.Faces.Binary_face face = faces.m_Faces[0];
+                     BspFile.Header header = bspTree.m_Level.Header;
 
-                     if (face.texture >= 0)
+                     using (BspFile.Textures textures = header.Loader.GetTextures(header, face.texture, 1))
                      {
-                         using (BspFile.Textures textures = header.Loader.GetTextures(header, face.texture, 1))
-                         {
-                             DiffuseTexture = renderResMan.LoadManagedTexture2D(textures.m_Textures[0].GetTextureNameString(), true);
-                         }
+                         DiffuseTexture = renderResMan.LoadManagedTexture2D(textures.m_Textures[0].GetTextureNameString(), true);
                      }
+                 }
 
-                     if (face.lm_index >= 0)
-                     {
-                         LightmapTexture = renderResMan.LoadManagedTexture2D(bspConentManager.GetLightMapLoader(), string.Format("{0:G}", face.lm_index), true);
-                     }
+                 if (face.lm_index >= 0)
+                 {
+                     LightmapTexture = renderResMan.LoadManagedTexture2D(bspConentManager.GetLightMapLoader(), string.Format("{0:G}", face.lm_index), true);
                  }
             }
 
@@ -180,7 +191,7 @@ namespace Framework1.Quake3
 
                     if ((face.type == (int)BspFile.FaceType.Mesh && face.n_meshverts > 0)
                         || (face.type == (int)BspFile.FaceType.Polygon && face.n_meshverts > 0)
-                        //|| (face.type == (int)BspFile.FaceType.Patch && face.n_vertexes > 0)
+                        || (face.type == (int)BspFile.FaceType.Patch && face.n_vertexes > 0)
                         )
                     {
                         intervals.Add(new Interval(faceIndex, faceIndex));

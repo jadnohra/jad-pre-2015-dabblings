@@ -12,12 +12,12 @@ namespace Framework1.Quake3
     // ----------------------------------------------------------------------------
     // Can load a face's vertices and triangle indices
     // ----------------------------------------------------------------------------
-    public class BspFaceMeshRAMStreamSource : RenderResourceManager.RAMStreamSource
+    public class BspMeshFaceRAMStreamSource : RenderResourceManager.RAMStreamSource
     {
         internal LoadedBspLevel m_Level;
         internal int m_Face;
 
-        public BspFaceMeshRAMStreamSource(LoadedBspLevel bspLevel, int face)
+        public BspMeshFaceRAMStreamSource(LoadedBspLevel bspLevel, int face)
         {
             m_Level = bspLevel;
             m_Face = face;
@@ -44,10 +44,10 @@ namespace Framework1.Quake3
         {
             // Optimization: Instead of a layout, a mapping can be initialized and checked 
             // in parent and then used here.
-            internal BspFaceMeshRAMStreamSource m_Parent;
+            internal BspMeshFaceRAMStreamSource m_Parent;
             internal CoalescedIntervals m_CoalescedVertexIntervals;
 
-            public ReaderBase(BspFaceMeshRAMStreamSource parent, Type type)
+            public ReaderBase(BspMeshFaceRAMStreamSource parent, Type type)
             {
                 m_Parent = parent;
             }
@@ -98,7 +98,7 @@ namespace Framework1.Quake3
             int m_VertexCount;
             int m_IndexCount;
 
-            public IndexReader(BspFaceMeshRAMStreamSource parent, Type type)
+            public IndexReader(BspMeshFaceRAMStreamSource parent, Type type)
                 : base(parent, type)
             {
                 base.Init(ref m_IndexCount, ref m_VertexCount);
@@ -156,7 +156,7 @@ namespace Framework1.Quake3
         {
             int m_VertexCount;
 
-            public VertexReader(BspFaceMeshRAMStreamSource parent, RenderResourceManager.VertexSemantics semantics, Type type)
+            public VertexReader(BspMeshFaceRAMStreamSource parent, RenderResourceManager.VertexSemantics semantics, Type type)
             : base(parent, type)
             {
                 int indexCount = 0;
