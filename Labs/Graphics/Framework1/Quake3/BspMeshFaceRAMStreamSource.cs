@@ -10,7 +10,7 @@ using Microsoft.Xna.Framework.Graphics;
 namespace Framework1.Quake3
 {
     // ----------------------------------------------------------------------------
-    // Can load a face's vertices and triangle indices
+    // Can load a mesh face's vertices and triangle indices
     // ----------------------------------------------------------------------------
     public class BspMeshFaceRAMStreamSource : RenderResourceManager.RAMStreamSource
     {

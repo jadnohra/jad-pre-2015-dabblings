@@ -110,6 +110,7 @@
     </Compile>
     <Compile Include="Stats.cs" />
     <Compile Include="Tests.cs" />
+    <Compile Include="UniformGridTesselator.cs" />
     <Compile Include="Viewer.cs" />
   </ItemGroup>
   <ItemGroup>

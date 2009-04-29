@@ -10,7 +10,7 @@ using Microsoft.Xna.Framework.Graphics;
 namespace Framework1.Quake3
 {
     // ----------------------------------------------------------------------------
-    // Can load a face's vertices and triangle indices
+    // Can load a bezier face's vertices and triangle indices
     // ----------------------------------------------------------------------------
     public class BspBezierFaceRAMStreamSource : RenderResourceManager.RAMStreamSource
     {
@@ -80,8 +80,10 @@ namespace Framework1.Quake3
                 {
                     BspFile.Faces.Binary_face face = faces.m_Faces[0];
 
-                    if (face.type == (int)BspFile.FaceType.Mesh || face.type == (int)BspFile.FaceType.Polygon)
+                    Trace.Assert(face.type == (int)BspFile.FaceType.Patch);
                     {
+                        m_VertexCount = face.n_vertexes;
+                        /*
                         Trace.Assert(face.n_vertexes != 0);
                         
                         int patchCountX = (face.size_x - 1) / 2;
@@ -109,6 +111,7 @@ namespace Framework1.Quake3
                                 }
                             }
                         }
+                        */ 
                     }
                 }
             }
@@ -120,7 +123,29 @@ namespace Framework1.Quake3
 
             public void Read<T>(ref RenderResourceManager.RAMStream<T> array, RenderResourceManager.VertexSemantics semantics)
             {
-                
+                BspFile.Header header = m_Parent.m_Level.Header;
+
+                using (BspFile.Faces faces = header.Loader.GetFaces(header, m_Parent.m_Face, 1))
+                {
+                    BspFile.Faces.Binary_face face = faces.m_Faces[0];
+
+                    using (BspFile.Vertices loadedVertices = header.Loader.GetVertices(header, face.n_vertexes, face.vertex))
+                    {
+                        BspVertexLoader vertexLoader = new BspVertexLoader(typeof(T).GetFields(), semantics.Layout, m_Parent.m_Level.CoordSysConv);
+                        
+                        T boxedHolder = Activator.CreateInstance<T>();
+                        object boxed = (object)boxedHolder;
+
+                        int i = array.Offset;
+                        for (int j = 0; j < loadedVertices.m_Vertices.Length; ++i, ++j)
+                        {
+                            BspFile.Vertices.Binary_vertex vertex = loadedVertices.m_Vertices[j];
+
+                            vertexLoader.Read(loadedVertices.m_Vertices[j], ref boxed);
+                            array.Data[i] = (T)boxed;
+                        }
+                    }
+                }
             }
         }
     }
