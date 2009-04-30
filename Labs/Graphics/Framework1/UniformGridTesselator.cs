@@ -7,7 +7,10 @@ namespace Framework1.Geometry
     {
         public static int GetTriangleStripSize(int gridSizeX, int gridSizeY)
         {
-            return ((gridSizeY - 1) * (2 + ((gridSizeX - 1) * 2))) + ((gridSizeY - 2) * 2);
+            int degenerateIndexCount = (gridSizeY - 2) * 3;
+            int rowCount = (gridSizeY - 1);
+            int indexCountPerRow = 2 + ((gridSizeX - 1) * 2);
+            return (rowCount * indexCountPerRow) + degenerateIndexCount;
         }
 
         public static void GenerateTriangleStrip<T>(int gridSizeX, int gridSizeY, ref T[] indices, int indexOffset)
@@ -24,10 +27,12 @@ namespace Framework1.Geometry
 
                 if (y + 1 < gridSizeY - 1)
                 {
-                    // stitch with degenerate tri
+                    // stitch with degenerate tris
                     indices[i] = indices[i - 1]; 
                     ++i;
                     indices[i] = (T)Convert.ChangeType(nextRowOffset + gridSizeX + 0, typeof(T));
+                    ++i;
+                    indices[i] = indices[i - 1];
                     ++i;
                 }
             }

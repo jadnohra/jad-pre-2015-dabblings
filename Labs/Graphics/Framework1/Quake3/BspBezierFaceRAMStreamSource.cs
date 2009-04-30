@@ -60,7 +60,6 @@ namespace Framework1.Quake3
                  using (BspFile.Faces faces = header.Loader.GetFaces(header, m_Parent.m_Face, 1))
                  {
                      BspFile.Faces.Binary_face face = faces.m_Faces[0];
-                     // this is probably wrong we need to connect in 3x3 disconnected patches (see glitches with F9 pressed)
                      m_IndexCount = Geometry.UniformGridTesselator.GetTriangleStripSize((Int16)face.size_x, (Int16)face.size_y);
                  }
             }
