@@ -50,18 +50,35 @@ namespace Framework1.Quake3
         : ReaderBase
         , RenderResourceManager.IRAMIndexStreamReader
         {
+            int m_IndexCount;
+
             public IndexReader(BspBezierFaceRAMStreamSource parent, Type type)
                 : base(parent, type)
             {
+                 BspFile.Header header = m_Parent.m_Level.Header;
+
+                 using (BspFile.Faces faces = header.Loader.GetFaces(header, m_Parent.m_Face, 1))
+                 {
+                     BspFile.Faces.Binary_face face = faces.m_Faces[0];
+                     // this is probably wrong we need to connect in 3x3 disconnected patches (see glitches with F9 pressed)
+                     m_IndexCount = Geometry.UniformGridTesselator.GetTriangleStripSize((Int16)face.size_x, (Int16)face.size_y);
+                 }
             }
 
             public int Count()
             {
-                return 0;
+                return m_IndexCount;
             }
 
             public void Read<T>(ref RenderResourceManager.RAMStream<T> array)
             {
+                 BspFile.Header header = m_Parent.m_Level.Header;
+
+                 using (BspFile.Faces faces = header.Loader.GetFaces(header, m_Parent.m_Face, 1))
+                 {
+                     BspFile.Faces.Binary_face face = faces.m_Faces[0];
+                     Geometry.UniformGridTesselator.GenerateTriangleStrip(face.size_x, face.size_y, ref array.Data, array.Offset);
+                 }
             }
         }
 
@@ -129,7 +146,7 @@ namespace Framework1.Quake3
                 {
                     BspFile.Faces.Binary_face face = faces.m_Faces[0];
 
-                    using (BspFile.Vertices loadedVertices = header.Loader.GetVertices(header, face.n_vertexes, face.vertex))
+                    using (BspFile.Vertices loadedVertices = header.Loader.GetVertices(header, face.vertex, face.n_vertexes))
                     {
                         BspVertexLoader vertexLoader = new BspVertexLoader(typeof(T).GetFields(), semantics.Layout, m_Parent.m_Level.CoordSysConv);
                         

@@ -42,6 +42,7 @@ namespace Framework1.Quake3
         {
             internal RenderResourceManager.GPUVertexSemanticsProxy VertexSemantics;
             internal RenderResourceManager.RAMIndexStreamProxy<Int16> TriangleList;
+            PrimitiveType TriangleListType;
             internal RenderResourceManager.RAMVertexStreamProxy<VertexFormat> Vertices;
             internal RenderResourceManager.ManagedTexture2DProxy DiffuseTexture;
             internal RenderResourceManager.ManagedTexture2DProxy LightmapTexture;
@@ -60,10 +61,12 @@ namespace Framework1.Quake3
                     if ((face.type == (int)BspFile.FaceType.Mesh) || (face.type == (int)BspFile.FaceType.Polygon))
                     {
                         source = new BspMeshFaceRAMStreamSource(bspTree.m_Level, faceIndex);
+                        TriangleListType = PrimitiveType.TriangleList;
                     }
                     else if (face.type == (int)BspFile.FaceType.Patch)
                     {
                         source = new BspBezierFaceRAMStreamSource(bspTree.m_Level, faceIndex);
+                        TriangleListType = PrimitiveType.TriangleStrip;
                     }
                     
                     Vertices = renderResMan.NewRAMVertexStreamProxy<VertexFormat>(new RenderResourceManager.VertexSemantics(VertexFormat.VertexElements), source, true);
@@ -136,7 +139,7 @@ namespace Framework1.Quake3
                 renderer.Device.Textures[0] = diffuseTexture;
                 renderer.Device.Textures[1] = lightmapTexture;
                 renderer.Device.VertexDeclaration = VertexSemantics.m_VertexDeclaration;
-                renderer.Device.DrawUserIndexedPrimitives<VertexFormat>(PrimitiveType.TriangleList, vertexData.Data, vertexData.Offset, vertexData.Count, indexData.Data, indexData.Offset, indexData.Count / 3);
+                renderer.Device.DrawUserIndexedPrimitives<VertexFormat>(TriangleListType, vertexData.Data, vertexData.Offset, vertexData.Count, indexData.Data, indexData.Offset, TriangleListTypes.ToPrimitiveCount(TriangleListType, indexData.Count));
             }
         }
 

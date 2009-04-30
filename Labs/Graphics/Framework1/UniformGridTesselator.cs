@@ -1,30 +1,38 @@
 using System;
+using System.Diagnostics;
 
 namespace Framework1.Geometry
 {
     public class UniformGridTesselator
     {
-        public static int GetTriangleStripSize(Int16 gridSizeX, Int16 gridSizeY)
+        public static int GetTriangleStripSize(int gridSizeX, int gridSizeY)
         {
-            return ((gridSizeY - 1) * ((gridSizeX - 1) * 2)) + ((gridSizeY - 2) * 2);
+            return ((gridSizeY - 1) * (2 + ((gridSizeX - 1) * 2))) + ((gridSizeY - 2) * 2);
         }
 
-        public static void GenerateTriangleStrip(Int16 gridSizeX, Int16 gridSizeY, ref Int16[] indices, int indexOffset)
+        public static void GenerateTriangleStrip<T>(int gridSizeX, int gridSizeY, ref T[] indices, int indexOffset)
         {
             int i = indexOffset;
 
-            for (Int16 y = 0, rowOffset = 0, nextRowOffset = 1; y < gridSizeY; ++y, rowOffset += gridSizeX, nextRowOffset += gridSizeX)
+            for (int y = 0, rowOffset = 0, nextRowOffset = gridSizeX; y < gridSizeY - 1; ++y, rowOffset += gridSizeX, nextRowOffset += gridSizeX)
             {
-                for (Int16 x = 0; x < gridSizeX; ++x)
+                for (int x = 0; x < gridSizeX; ++x)
                 {
-                    indices[i++] = (Int16)(rowOffset + x);
-                    indices[i++] = (Int16)(nextRowOffset + x);
+                    indices[i++] = (T)Convert.ChangeType(rowOffset + x, typeof(T));
+                    indices[i++] = (T)Convert.ChangeType(nextRowOffset + x, typeof(T));
                 }
 
-                // stitch with degenerate tri
-                indices[i++] = indices[i-1];
-                indices[i++] = indices[nextRowOffset + gridSizeX + 0];
+                if (y + 1 < gridSizeY - 1)
+                {
+                    // stitch with degenerate tri
+                    indices[i] = indices[i - 1]; 
+                    ++i;
+                    indices[i] = (T)Convert.ChangeType(nextRowOffset + gridSizeX + 0, typeof(T));
+                    ++i;
+                }
             }
+
+            Trace.Assert(GetTriangleStripSize(gridSizeX, gridSizeY) == i - indexOffset);
         }
     }
 }
