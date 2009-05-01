@@ -118,6 +118,9 @@ namespace Framework1.Quake3
 
             public void Execute(BasicRenderer renderer)
             {
+                //if (TriangleListType != PrimitiveType.TriangleStrip)
+                  //  return;
+
                 RenderResourceManager.RAMStream<Int16> indexData;
                 TriangleList.Get(out indexData);
 

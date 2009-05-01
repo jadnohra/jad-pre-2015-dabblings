@@ -7,7 +7,7 @@ namespace Framework1.Geometry
     {
         public static int GetTriangleStripSize(int gridSizeX, int gridSizeY)
         {
-            int degenerateIndexCount = (gridSizeY - 2) * 3;
+            int degenerateIndexCount = (gridSizeY - 2) * 4;
             int rowCount = (gridSizeY - 1);
             int indexCountPerRow = 2 + ((gridSizeX - 1) * 2);
             return (rowCount * indexCountPerRow) + degenerateIndexCount;
@@ -32,6 +32,9 @@ namespace Framework1.Geometry
                     ++i;
                     indices[i] = (T)Convert.ChangeType(nextRowOffset + gridSizeX + 0, typeof(T));
                     ++i;
+                    indices[i] = indices[i - 1];
+                    ++i;
+                    // This one is to keep the winding consistent
                     indices[i] = indices[i - 1];
                     ++i;
                 }
