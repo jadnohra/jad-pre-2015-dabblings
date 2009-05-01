@@ -4,32 +4,40 @@ using Microsoft.Xna.Framework.Graphics;
 
 namespace Framework1
 {
-    public class BiQuadBezierPatch
+    public class BiQuadBezierPatch<T>
     {
-        public Vector3[] ControlPoints;
-        public int Width;
-        public int Height;
+        public T[] ControlPoints = new T[9];
     }
 
-    public class Tesselation
+    public class Tesselation<T>
     {
-        public Vector3[] Vertices;
-        public Int16[] Indices;
-        public PrimitiveType PrimType;
+        public T[] Vertices;
     }
 
-    public class BezierPatchTesselator
+   
+    public class BezierPatchTesselator<T> where T : IVertex
     {
-        Vector3[] tempVertices = new Vector3[3];
+        T[] tempVertices = new T[3];
 
-        void Tesselate(int subdivisionLevel, BiQuadBezierPatch patch, ref Tesselation tesselation)
+        public BezierPatchTesselator()
+        {
+            //for (int i = 0; i < 3; ++i)
+              //  tempVertices[i] = new T();
+        }
+
+        T Combine(T p1, float w1, T p2, float w2, T p3, float w3)
+        {
+            return (T)(p1.Mul(w1).Add((T)p2.Mul(w2)).Add((T)p3.Mul(w3)));
+        }
+
+        public void Tesselate(int subdivisionLevel, BiQuadBezierPatch<T> patch, ref Tesselation<T> tesselation)
         {
             int level = subdivisionLevel;
 
             // The number of vertices along a side is 1 + num edges
             int sideVertexCount = level + 1;
 
-            tesselation.Vertices = new Vector3[sideVertexCount * sideVertexCount];
+            tesselation.Vertices = new T[sideVertexCount * sideVertexCount];
 
             // Compute the vertices
             {
@@ -38,10 +46,13 @@ namespace Framework1
                     float a = (float)i / (float)level;
                     float b = 1.0f - a;
 
-                    tesselation.Vertices[i] = 
-                        patch.ControlPoints[0] * (b * b) + 
-                        patch.ControlPoints[3] * (2.0f * b * a) +
-                        patch.ControlPoints[6] * (a * a);
+                    //tesselation.Vertices[i] = 
+                      //  patch.ControlPoints[0] * (b * b) + 
+                        //patch.ControlPoints[3] * (2.0f * b * a) +
+                        //patch.ControlPoints[6] * (a * a);
+                    tesselation.Vertices[i] = Combine(patch.ControlPoints[0], b * b,
+                                                      patch.ControlPoints[3], 2.0f * b * a,
+                                                      patch.ControlPoints[6], a * a); 
                 }
 
                 for (int i = 1; i <= level; ++i) {
@@ -53,10 +64,15 @@ namespace Framework1
                     for (j = 0; j < 3; ++j) {
 
                         int k = 3 * j;
-                        tempVertices[j] =
-                            patch.ControlPoints[k + 0] * (b * b) +
-                            patch.ControlPoints[k + 1] * (2.0f * b * a) +
-                            patch.ControlPoints[k + 2] * (a * a);
+                        
+                        //tempVertices[j] =
+                        //  patch.ControlPoints[k + 0] * (b * b) +
+                        //  patch.ControlPoints[k + 1] * (2.0f * b * a) +
+                        //  patch.ControlPoints[k + 2] * (a * a);
+
+                        tempVertices[j] = Combine(patch.ControlPoints[k + 0], b * b,
+                                                  patch.ControlPoints[k + 1], 2.0f * b * a,
+                                                  patch.ControlPoints[k + 2], a * a); 
                     }
 
                     for(j = 0; j <= level; ++j) {
@@ -64,40 +80,17 @@ namespace Framework1
                         float a2 = (float)j / level;
                         float b2 = 1.0f - a;
 
+                        //tesselation.Vertices[i * sideVertexCount + j] =
+                        //    tempVertices[0] * (b2 * b2) +
+                        //    tempVertices[1] * (2.0f * b2 * a2) +
+                        //    tempVertices[2] * (a2 * a2);
+
                         tesselation.Vertices[i * sideVertexCount + j] =
-                            tempVertices[0] * (b2 * b2) +
-                            tempVertices[1] * (2.0f * b2 * a2) +
-                            tempVertices[2] * (a2 * a2);
+                                            Combine(tempVertices[0], b2 * b2,
+                                                    tempVertices[1], 2.0f * b2 * a2,
+                                                    tempVertices[2], a2 * a2); 
                     }
                 }
-            }
-
-
-            // Compute the indices
-            {
-                /*
-                int row;
-                tesselation.Indices = new Int16[level * (sideVertexCount) * 2];
-                tesselation.PrimType = PrimitiveType.TriangleStrip;
-
-                for (row = 0; row < level; ++row) {
-
-                    for(int col = 0; col <= level; ++col)	{
-
-                        tesselation.Indices[(row * (level + 1) + col) * 2 + 1] = (Int16)(row * sideVertexCount + col);
-                        tesselation.Indices[(row * (level + 1) + col) * 2] = (Int16)((row + 1) * sideVertexCount + col);
-                    }
-                }
-                */
-
-                /*
-                trianglesPerRow.resize(level);
-                rowIndexes.resize(level);
-                for (row = 0; row < level; ++row) {
-                    trianglesPerRow[row] = 2 * sideVertexCount;
-                    rowIndexes[row]      = &indexes[row * 2 * sideVertexCount];
-                }
-                */ 
             }
         }
     }

@@ -169,6 +169,7 @@ namespace Framework1.Quake3
             }
 
             public void Read<T>(ref RenderResourceManager.RAMStream<T> array, RenderResourceManager.VertexSemantics semantics)
+            where T : IVertex
             {
                 BspVertexLoader vertexLoader = new BspVertexLoader(typeof(T).GetFields(), semantics.Layout, m_Parent.m_Level.CoordSysConv);
                 BspFile.Header header = m_Parent.m_Level.Header;

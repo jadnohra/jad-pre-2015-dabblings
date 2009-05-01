@@ -8,6 +8,12 @@ using Microsoft.Xna.Framework.Content;
 
 namespace Framework1
 {
+    public interface IVertex
+    {
+        IVertex Mul(float f);
+        IVertex Add(IVertex b);
+    }
+
     /*
      * The goal here is to enable the manager to per example add multiple vertex buffers 
      * into one vertex buffer
@@ -17,6 +23,7 @@ namespace Framework1
      **/
     public class RenderResourceManager
     {
+       
         public class VertexSemantics
         {
             public readonly VertexElement[] Layout;
@@ -62,12 +69,11 @@ namespace Framework1
             public int GetSizeBytes() { return Count * Marshal.SizeOf(typeof(T)); }
             public void Evict() { Data = null; }
         }
-        
 
         public interface IRAMVertexStreamReader
         {
             int Count();
-            void Read<T>(ref RAMStream<T> array, VertexSemantics semantics);
+            void Read<T>(ref RAMStream<T> array, VertexSemantics semantics) where T : IVertex;
         }
 
         public interface IRAMIndexStreamReader
@@ -203,6 +209,7 @@ namespace Framework1
         }
 
         public RAMVertexStreamProxy<T> NewRAMVertexStreamProxy<T>(VertexSemantics semantics, RAMStreamSource source, bool evictable)
+        where T : IVertex
         {
             IRAMVertexStreamReader reader = source.GetVertexReader(semantics, typeof(T));
 

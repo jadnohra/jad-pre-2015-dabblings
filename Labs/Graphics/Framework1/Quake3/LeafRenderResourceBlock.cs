@@ -8,7 +8,7 @@ namespace Framework1.Quake3
 {
     using VertexFormat = FaceVertex;
 
-    public struct FaceVertex
+    public struct FaceVertex : IVertex
     {
         public Vector3 Position;
         public Vector2 DiffuseTextureCoordinate;
@@ -22,6 +22,9 @@ namespace Framework1.Quake3
         };
 
         public static int SizeInBytes = (sizeof(float) * 3) + (sizeof(float) * 2) + (sizeof(float) * 2);
+
+        public IVertex Mul(float f) { FaceVertex ret = new FaceVertex(); ret = this; ret.Position *= f; return ret; }
+        public IVertex Add(IVertex b) { FaceVertex ret = new FaceVertex(); ret.Position = this.Position + ((FaceVertex) b).Position; return ret; }
     }
 
     public abstract class LeafRenderResourceBlock 
