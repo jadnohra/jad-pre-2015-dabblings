@@ -133,6 +133,7 @@ namespace Framework1.Quake3
                             array.Data[i] = (T)boxed;
                         }
 
+                        //continue here
                         /*
                         {
                             Trace.Assert(face.n_vertexes != 0);
@@ -146,30 +147,55 @@ namespace Framework1.Quake3
 
                             BiQuadBezierPatch<T> patch = new BiQuadBezierPatch<T>();
                             BezierPatchTesselator<T> tesselator = new BezierPatchTesselator<T>();
+                            Tesselation<T> tesselation = new Tesselation<T>();
 
                             // read the vertices (grid x * y  divided into 3*3 subgrids + sharing 1 line), set control points
 
-                            for (int x = 0, x2 = 0; x < patchCountX; ++x, x2 += 2)
+                            for (int patchIndexX = 0, vertexIndexX = 0; patchIndexX < patchCountX; ++patchIndexX, vertexIndexX += 2)
                             {
-                                for (int y = 0, y2 = 0; y < patchCountY; ++y, y2 += 2)
+                                for (int patchIndexY = 0, vertexIndexY = 0; patchIndexY < patchCountY; ++patchIndexY, vertexIndexY += 2)
                                 {
-                                    for (int ctli = 0; ctli < 3; ++ctli)
+                                    int vertexRowIndex = face.size_x * vertexIndexY;
+
+                                    for (int controlRowOffset = 0; controlRowOffset < 9; controlRowOffset += 3)
                                     {
-                                        int ctlOffset = ctli * face.size_x;
+                                        int vertexIndexRow0 = vertexRowIndex + vertexIndexX + controlRowOffset;
 
-                                        int vertexIndexRow0 = 0 + x2 + face.size_x * y2 + ctlOffset;
+                                        patch.ControlPoints[controlRowOffset + 0] = array.Data[array.Offset + vertexIndexRow0];
+                                        patch.ControlPoints[controlRowOffset + 1] = array.Data[array.Offset + vertexIndexRow0 + 1];
+                                        patch.ControlPoints[controlRowOffset + 2] = array.Data[array.Offset + vertexIndexRow0 + 2];
+                                    }
 
-                                        patch.ControlPoints[ctlOffset + 0] = array.Data[array.Offset + vertexIndexRow0];
-                                        patch.ControlPoints[ctlOffset + 1] = array.Data[array.Offset + vertexIndexRow0 + 1];
-                                        patch.ControlPoints[ctlOffset + 2] = array.Data[array.Offset + vertexIndexRow0 + 2];
+                                    tesselator.Tesselate(5, patch, ref tesselation);
+
+                                    {
+                                        Console.WriteLine("");
+                                        Console.WriteLine(string.Format("{0:G}.{0:G}", patchIndexX, patchIndexY));
+
+                                        Type type = typeof(T);
+                                        VertexElement[] semanticEls = semantics.Layout;
+                                        FieldInfo[] typeFields = type.GetFields();
+
+                                        for (int fieldIndex = 0; fieldIndex < semanticEls.Length; ++fieldIndex)
+                                        {
+                                            VertexElement vEl = semanticEls[fieldIndex];
+                                            FieldInfo fieldInfo = typeFields[fieldIndex];
+                                        
+                                            if (vEl.VertexElementUsage == VertexElementUsage.Position)
+                                            {
+                                                for (int vi = 0; vi < tesselation.Vertices.Length; ++vi)
+                                                {
+                                                    Vector3 pos = (Vector3) (fieldInfo.GetValue(((T) tesselation.Vertices[vi])));
+
+                                                    Console.WriteLine(string.Format("{0:G} - {1:F},{2:F},{3:F}", vi, pos.X, pos.Y, pos.Z));
+                                                }
+                                            }
+                                        }
                                     }
                                 }
                             }
-
-                            Tesselation<T> tesselation = new Tesselation<T>();
-                            tesselator.Tesselate(5, patch, ref tesselation);
                         }
-                        */
+                         */ 
                     }
                 }
             }
