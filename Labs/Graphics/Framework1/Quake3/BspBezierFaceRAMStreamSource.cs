@@ -133,7 +133,7 @@ namespace Framework1.Quake3
                             array.Data[i] = (T)boxed;
                         }
 
-                        //continue here
+                        //continue here, it seems we dont have to stitch the patches together???
                         /*
                         {
                             Trace.Assert(face.n_vertexes != 0);
