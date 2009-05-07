@@ -17,3 +17,6 @@ engine:
 http://q3libxna.codeplex.com/
 http://www.dxquake3.dsl.pipex.com/
 http://www.lvlworld.com
+
+Stitching Bezier patches (not needed for Q3)
+http://books.google.de/books?id=mOKEfBTw4x0C&pg=RA1-PA511&lpg=RA1-PA511&dq=stitching+bezier+patches+together&source=bl&ots=mbLJJoez41&sig=UvAEnTZBaen8nyHPkRURfSX6F9s&hl=en&ei=CXP7Sdz_FNOHsAb-zazNBA&sa=X&oi=book_result&ct=result&resnum=9#PRA1-PA511,M1

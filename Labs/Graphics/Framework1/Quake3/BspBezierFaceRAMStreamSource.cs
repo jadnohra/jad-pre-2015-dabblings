@@ -88,10 +88,6 @@ namespace Framework1.Quake3
                      int sideVertexCount = m_Parent.m_TesselationLevel + 1;
 
                      Geometry.UniformGridTesselator.GenerateTriangleStrip(patchCountX, patchCountY, sideVertexCount, sideVertexCount, ref array.Data, array.Offset, false);
-
-                     //T[] tempIndices = new T[m_IndexCount];
-                     //Geometry.UniformGridTesselator.GenerateTriangleStrip(patchCountX, patchCountY, sideVertexCount, sideVertexCount, ref tempIndices, 0);
-                     //TriangleListTypes.InvertTriangleWinding<T>(PrimitiveType.TriangleStrip, tempIndices, 0, tempIndices.Length, ref array.Data, array.Offset);
                  }
             }
         }
@@ -142,20 +138,7 @@ namespace Framework1.Quake3
                         T boxedHolder = Activator.CreateInstance<T>();
                         object boxed = (object)boxedHolder;
 
-                        /*
-                        int i = array.Offset;
-                        for (int j = 0; j < loadedVertices.m_Vertices.Length; ++i, ++j)
-                        {
-                            BspFile.Vertices.Binary_vertex vertex = loadedVertices.m_Vertices[j];
-
-                            vertexLoader.Read(loadedVertices.m_Vertices[j], ref boxed);
-                            array.Data[i] = (T)boxed;
-                        }
-                        */ 
-
-                        //continue here, it seems we dont have to stitch the patches together (from other q3 renderers)???
-                        // or maybe we do??
-                        // http://books.google.de/books?id=mOKEfBTw4x0C&pg=RA1-PA511&lpg=RA1-PA511&dq=stitching+bezier+patches+together&source=bl&ots=mbLJJoez41&sig=UvAEnTZBaen8nyHPkRURfSX6F9s&hl=en&ei=CXP7Sdz_FNOHsAb-zazNBA&sa=X&oi=book_result&ct=result&resnum=9#PRA1-PA511,M1
+                        // We do not have to stitch the patches together
                         {
                             Trace.Assert(face.n_vertexes != 0);
 
@@ -173,7 +156,6 @@ namespace Framework1.Quake3
                             int patchIndexStride = face.size_x;
                             int sideVertexCount = m_Parent.m_TesselationLevel + 1;
                             int tesselpathIndexStride = patchCountX * sideVertexCount;
-                            // read the vertices (grid x * y  divided into 3*3 subgrids + sharing 1 line), set control points
 
                             for (int patchIndexX = 0; patchIndexX < patchCountX; patchIndexX += 1)
                             {
@@ -212,33 +194,6 @@ namespace Framework1.Quake3
                                     }
 
                                     Trace.Assert(tesselationVertexIndex == tesselation.Vertices.Length);
-
-                                    /*
-                                    {
-                                        Console.WriteLine("");
-                                        Console.WriteLine(string.Format("{0:G}.{0:G}", patchIndexX, patchIndexY));
-
-                                        Type type = typeof(T);
-                                        VertexElement[] semanticEls = semantics.Layout;
-                                        FieldInfo[] typeFields = type.GetFields();
-
-                                        for (int fieldIndex = 0; fieldIndex < semanticEls.Length; ++fieldIndex)
-                                        {
-                                            VertexElement vEl = semanticEls[fieldIndex];
-                                            FieldInfo fieldInfo = typeFields[fieldIndex];
-                                        
-                                            if (vEl.VertexElementUsage == VertexElementUsage.Position)
-                                            {
-                                                for (int vi = 0; vi < tesselation.Vertices.Length; ++vi)
-                                                {
-                                                    Vector3 pos = (Vector3) (fieldInfo.GetValue(((T) tesselation.Vertices[vi])));
-
-                                                    Console.WriteLine(string.Format("{0:G} - {1:F},{2:F},{3:F}", vi, pos.X, pos.Y, pos.Z));
-                                                }
-                                            }
-                                        }
-                                    }
-                                    */
                                 }
                             }
                         }
