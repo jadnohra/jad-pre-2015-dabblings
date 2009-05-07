@@ -83,8 +83,11 @@ namespace Framework1.Quake3
             {
                 if (leaf.renderResourceBlock == null)
                 {
-                    ++newVisibleLeafCount;
-                    leaf.renderResourceBlock = new RAMLeafRenderResourceBlock(m_RenderResourceManager, m_BspContentManager, m_Tree, leaf);
+                    {
+                        
+                        ++newVisibleLeafCount;
+                        leaf.renderResourceBlock = new RAMLeafRenderResourceBlock(m_RenderResourceManager, m_BspContentManager, m_Tree, leaf);
+                    }
                 }
                 else
                 {

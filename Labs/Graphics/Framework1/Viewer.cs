@@ -61,6 +61,7 @@ namespace Framework1
                 m_Stats.LoadContent(GraphicsDevice, Content);
 
             //string filePath = Path.Combine(StorageContainer.TitleLocation, "../../test2.bsp");
+            //string filePath = Path.Combine(Content.RootDirectory, "Q3Maps/test1.pk3/maps/test1.bsp");
             string filePath = Path.Combine(Content.RootDirectory, "Q3Maps/jof3dm2.pk3/maps/jof3dm2.bsp");
             //string filePath = Path.Combine(Content.RootDirectory, "Q3Maps/natedm3.pk3/maps/natedm3.bsp");
             //string filePath = Path.Combine(Content.RootDirectory, "Q3Maps/acid3dm9.pk3/maps/acid3dm9.bsp");

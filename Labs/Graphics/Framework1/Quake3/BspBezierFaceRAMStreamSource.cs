@@ -16,6 +16,7 @@ namespace Framework1.Quake3
     {
         internal LoadedBspLevel m_Level;
         internal int m_Face;
+        int m_TesselationLevel = 5;
 
         public BspBezierFaceRAMStreamSource(LoadedBspLevel bspLevel, int face)
         {
@@ -60,7 +61,12 @@ namespace Framework1.Quake3
                  using (BspFile.Faces faces = header.Loader.GetFaces(header, m_Parent.m_Face, 1))
                  {
                      BspFile.Faces.Binary_face face = faces.m_Faces[0];
-                     m_IndexCount = Geometry.UniformGridTesselator.GetTriangleStripSize((Int16)face.size_x, (Int16)face.size_y);
+
+                     int patchCountX = (face.size_x - 1) / 2;
+                     int patchCountY = (face.size_y - 1) / 2;
+                     int sideVertexCount = m_Parent.m_TesselationLevel+1;
+
+                     m_IndexCount = Geometry.UniformGridTesselator.GetTriangleStripSize(patchCountX, patchCountY, sideVertexCount, sideVertexCount);
                  }
             }
 
@@ -76,7 +82,16 @@ namespace Framework1.Quake3
                  using (BspFile.Faces faces = header.Loader.GetFaces(header, m_Parent.m_Face, 1))
                  {
                      BspFile.Faces.Binary_face face = faces.m_Faces[0];
-                     Geometry.UniformGridTesselator.GenerateTriangleStrip(face.size_x, face.size_y, ref array.Data, array.Offset);
+
+                     int patchCountX = (face.size_x - 1) / 2;
+                     int patchCountY = (face.size_y - 1) / 2;
+                     int sideVertexCount = m_Parent.m_TesselationLevel + 1;
+
+                     Geometry.UniformGridTesselator.GenerateTriangleStrip(patchCountX, patchCountY, sideVertexCount, sideVertexCount, ref array.Data, array.Offset, false);
+
+                     //T[] tempIndices = new T[m_IndexCount];
+                     //Geometry.UniformGridTesselator.GenerateTriangleStrip(patchCountX, patchCountY, sideVertexCount, sideVertexCount, ref tempIndices, 0);
+                     //TriangleListTypes.InvertTriangleWinding<T>(PrimitiveType.TriangleStrip, tempIndices, 0, tempIndices.Length, ref array.Data, array.Offset);
                  }
             }
         }
@@ -98,7 +113,10 @@ namespace Framework1.Quake3
 
                     Trace.Assert(face.type == (int)BspFile.FaceType.Patch);
                     {
-                        m_VertexCount = face.n_vertexes;
+                        int patchCountX = (face.size_x - 1) / 2;
+                        int patchCountY = (face.size_y - 1) / 2;
+                        int patchCount = patchCountX * patchCountY;
+                        m_VertexCount = patchCount * BezierPatchTesselator<IVertex>.GetPathVertexCount(m_Parent.m_TesselationLevel);
                     }
                 }
             }
@@ -124,6 +142,7 @@ namespace Framework1.Quake3
                         T boxedHolder = Activator.CreateInstance<T>();
                         object boxed = (object)boxedHolder;
 
+                        /*
                         int i = array.Offset;
                         for (int j = 0; j < loadedVertices.m_Vertices.Length; ++i, ++j)
                         {
@@ -132,9 +151,11 @@ namespace Framework1.Quake3
                             vertexLoader.Read(loadedVertices.m_Vertices[j], ref boxed);
                             array.Data[i] = (T)boxed;
                         }
+                        */ 
 
-                        //continue here, it seems we dont have to stitch the patches together???
-                        /*
+                        //continue here, it seems we dont have to stitch the patches together (from other q3 renderers)???
+                        // or maybe we do??
+                        // http://books.google.de/books?id=mOKEfBTw4x0C&pg=RA1-PA511&lpg=RA1-PA511&dq=stitching+bezier+patches+together&source=bl&ots=mbLJJoez41&sig=UvAEnTZBaen8nyHPkRURfSX6F9s&hl=en&ei=CXP7Sdz_FNOHsAb-zazNBA&sa=X&oi=book_result&ct=result&resnum=9#PRA1-PA511,M1
                         {
                             Trace.Assert(face.n_vertexes != 0);
 
@@ -149,25 +170,50 @@ namespace Framework1.Quake3
                             BezierPatchTesselator<T> tesselator = new BezierPatchTesselator<T>();
                             Tesselation<T> tesselation = new Tesselation<T>();
 
+                            int patchIndexStride = face.size_x;
+                            int sideVertexCount = m_Parent.m_TesselationLevel + 1;
+                            int tesselpathIndexStride = patchCountX * sideVertexCount;
                             // read the vertices (grid x * y  divided into 3*3 subgrids + sharing 1 line), set control points
 
-                            for (int patchIndexX = 0, vertexIndexX = 0; patchIndexX < patchCountX; ++patchIndexX, vertexIndexX += 2)
+                            for (int patchIndexX = 0; patchIndexX < patchCountX; patchIndexX += 1)
                             {
-                                for (int patchIndexY = 0, vertexIndexY = 0; patchIndexY < patchCountY; ++patchIndexY, vertexIndexY += 2)
+                                for (int patchIndexY = 0; patchIndexY < patchCountY; patchIndexY += 1)
                                 {
-                                    int vertexRowIndex = face.size_x * vertexIndexY;
+                                    int patchIndexOffset = (2 * patchIndexX) + (patchIndexY * patchIndexStride);
 
-                                    for (int controlRowOffset = 0; controlRowOffset < 9; controlRowOffset += 3)
+                                    int controlPointIndex = 0;
+                                    for (int controlY = 0; controlY < 3; ++controlY)
                                     {
-                                        int vertexIndexRow0 = vertexRowIndex + vertexIndexX + controlRowOffset;
+                                        int controlYOffset = controlY * 3;
+                                        int controlIndexOffset = patchIndexOffset + (controlY * patchIndexStride);
 
-                                        patch.ControlPoints[controlRowOffset + 0] = array.Data[array.Offset + vertexIndexRow0];
-                                        patch.ControlPoints[controlRowOffset + 1] = array.Data[array.Offset + vertexIndexRow0 + 1];
-                                        patch.ControlPoints[controlRowOffset + 2] = array.Data[array.Offset + vertexIndexRow0 + 2];
+                                        for (int controlX = 0; controlX < 3; ++controlX)
+                                        {
+                                            vertexLoader.Read(loadedVertices.m_Vertices[controlIndexOffset + controlX], ref boxed);
+                                            patch.ControlPoints[controlX + controlYOffset] = (T)boxed;
+                                            ++controlPointIndex;
+                                        }
+                                    }
+                                    Trace.Assert(controlPointIndex == 9);
+
+                                    tesselator.Tesselate(m_Parent.m_TesselationLevel, patch, ref tesselation);
+                                    int tesselPatchIndexOffset = (sideVertexCount * patchIndexX) + (patchIndexY * tesselpathIndexStride);
+                                    int tesselationVertexIndex = 0;
+
+                                    for (int tesselY = 0; tesselY < sideVertexCount; ++tesselY)
+                                    {
+                                        int tessetlYOffset = tesselY * sideVertexCount;
+                                        int tesselIndexOffset = array.Offset + (tesselPatchIndexOffset + (tesselY * tesselpathIndexStride));
+
+                                        for (int tesselX = 0; tesselX < sideVertexCount; ++tesselX)
+                                        {
+                                            array.Data[tesselX + tesselIndexOffset] = tesselation.Vertices[tesselationVertexIndex++];
+                                        }
                                     }
 
-                                    tesselator.Tesselate(5, patch, ref tesselation);
+                                    Trace.Assert(tesselationVertexIndex == tesselation.Vertices.Length);
 
+                                    /*
                                     {
                                         Console.WriteLine("");
                                         Console.WriteLine(string.Format("{0:G}.{0:G}", patchIndexX, patchIndexY));
@@ -192,10 +238,10 @@ namespace Framework1.Quake3
                                             }
                                         }
                                     }
+                                    */
                                 }
                             }
                         }
-                         */ 
                     }
                 }
             }
@@ -250,7 +296,7 @@ namespace Framework1.Quake3
                 using (BspFile.Faces faces = header.Loader.GetFaces(header, m_Parent.m_Face, 1))
                 {
                     BspFile.Faces.Binary_face face = faces.m_Faces[0];
-                    m_IndexCount = Geometry.UniformGridTesselator.GetTriangleStripSize((Int16)face.size_x, (Int16)face.size_y);
+                    m_IndexCount = Geometry.UniformGridTesselator.GetTriangleStripSize(face.size_x, face.size_y);
                 }
             }
 
@@ -266,7 +312,7 @@ namespace Framework1.Quake3
                 using (BspFile.Faces faces = header.Loader.GetFaces(header, m_Parent.m_Face, 1))
                 {
                     BspFile.Faces.Binary_face face = faces.m_Faces[0];
-                    Geometry.UniformGridTesselator.GenerateTriangleStrip(face.size_x, face.size_y, ref array.Data, array.Offset);
+                    Geometry.UniformGridTesselator.GenerateTriangleStrip(face.size_x, face.size_y, ref array.Data, array.Offset, true);
                 }
             }
         }

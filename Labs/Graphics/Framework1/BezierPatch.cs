@@ -30,14 +30,26 @@ namespace Framework1
             return (T)(p1.Mul(w1).Add((T)p2.Mul(w2)).Add((T)p3.Mul(w3)));
         }
 
+        static public int GetPathVertexCount(int subdivisionLevel)
+        {
+            // The number of vertices along a side is 1 + num edges
+            int sideVertexCount = subdivisionLevel + 1;
+
+            return sideVertexCount * sideVertexCount;
+        }
+
         public void Tesselate(int subdivisionLevel, BiQuadBezierPatch<T> patch, ref Tesselation<T> tesselation)
         {
             int level = subdivisionLevel;
 
             // The number of vertices along a side is 1 + num edges
             int sideVertexCount = level + 1;
+            int totalVertexCount = GetPathVertexCount(subdivisionLevel);
 
-            tesselation.Vertices = new T[sideVertexCount * sideVertexCount];
+            if (tesselation.Vertices == null || tesselation.Vertices.Length != totalVertexCount)
+            {
+                tesselation.Vertices = new T[totalVertexCount];
+            }
 
             // Compute the vertices
             {
@@ -78,7 +90,7 @@ namespace Framework1
                     for(j = 0; j <= level; ++j) {
 
                         float a2 = (float)j / level;
-                        float b2 = 1.0f - a;
+                        float b2 = 1.0f - a2;
 
                         //tesselation.Vertices[i * sideVertexCount + j] =
                         //    tempVertices[0] * (b2 * b2) +

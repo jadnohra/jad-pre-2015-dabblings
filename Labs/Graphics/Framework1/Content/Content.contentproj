@@ -1327,6 +1327,14 @@
     <None Include="Q3Maps\q3shw23.pk3\Q3shw23 - read me.txt">
       <Name>Q3shw23 - read me</Name>
     </None>
+    <None Include="Q3Maps\test1.pk3\maps\test1.bsp">
+      <Name>test1</Name>
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+    <None Include="Q3Maps\test1.pk3\maps\test2.bsp">
+      <Name>test2</Name>
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
   </ItemGroup>
   <Import Project="$(MSBuildExtensionsPath)\Microsoft\XNA Game Studio\v3.0\Microsoft.Xna.GameStudio.ContentPipeline.targets" />
   <!-- To modify your build process, add your task inside one of the targets below and uncomment it. 

@@ -23,8 +23,28 @@ namespace Framework1.Quake3
 
         public static int SizeInBytes = (sizeof(float) * 3) + (sizeof(float) * 2) + (sizeof(float) * 2);
 
-        public IVertex Mul(float f) { FaceVertex ret = new FaceVertex(); ret = this; ret.Position *= f; return ret; }
-        public IVertex Add(IVertex b) { FaceVertex ret = new FaceVertex(); ret.Position = this.Position + ((FaceVertex) b).Position; return ret; }
+        public IVertex Mul(float f) 
+        { 
+            FaceVertex ret; 
+            
+            ret.Position = Position * f;
+            ret.DiffuseTextureCoordinate = DiffuseTextureCoordinate * f;
+            ret.LightmapTextureCoordinate = LightmapTextureCoordinate * f; 
+            
+            return ret; 
+        }
+
+        public IVertex Add(IVertex b) 
+        { 
+            FaceVertex ret;
+            FaceVertex bVertex = (FaceVertex)b;
+
+            ret.Position = Position + bVertex.Position;
+            ret.DiffuseTextureCoordinate = DiffuseTextureCoordinate + bVertex.DiffuseTextureCoordinate;
+            ret.LightmapTextureCoordinate = LightmapTextureCoordinate + bVertex.LightmapTextureCoordinate; 
+            
+            return ret; 
+        }
     }
 
     public abstract class LeafRenderResourceBlock 
@@ -122,7 +142,7 @@ namespace Framework1.Quake3
             public void Execute(BasicRenderer renderer)
             {
                 //if (TriangleListType != PrimitiveType.TriangleStrip)
-                  //  return;
+                //    return;
 
                 RenderResourceManager.RAMStream<Int16> indexData;
                 TriangleList.Get(out indexData);
