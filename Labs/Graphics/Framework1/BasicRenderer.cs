@@ -47,6 +47,7 @@ namespace Framework1
     {
         public GraphicsDevice Device;
         Queue<BasicRenderQueue> m_Queues = new Queue<BasicRenderQueue>();
+        EffectContext m_EffectContext = new EffectContext();
         Effect m_Effect;
 
         public BasicRenderer(ContentManager content, GraphicsDevice device)
@@ -55,22 +56,24 @@ namespace Framework1
             m_Effect = content.Load<Effect>("Effects/AmbientTexturedLightmapped");
         }
 
+        public EffectContext getEffectContext()
+        {
+            return m_EffectContext;
+        }
+
         public void Push(BasicRenderQueue queue)
         {
             m_Queues.Enqueue(queue);
         }
 
-        public void Render(ManualCamera camera, Matrix projection)
+        public void Render()
         {
             Device.RenderState.DepthBufferEnable = true;
             {
                 m_Effect.Begin();
                 m_Effect.CurrentTechnique.Passes[0].Begin();
 
-                Matrix WvXf = Matrix.Multiply(Matrix.Identity, camera.GetViewMatrix());
-                Matrix WvpXf = Matrix.Multiply(WvXf, projection);
-
-                m_Effect.Parameters[0].SetValue(WvpXf);
+                m_Effect.Parameters[0].SetValue(m_EffectContext.GetViewProjectionMatrix());
                 
                 {
                     int queueCount = m_Queues.Count;

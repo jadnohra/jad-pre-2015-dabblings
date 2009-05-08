@@ -52,8 +52,7 @@ namespace Framework1.Quake3
 
                 m_RenderResourceBlockCollector = new RenderResourceBlockCollector();
                 string texRelPath = Path.Combine(Path.GetDirectoryName(path), "../");
-                //string texRelPath = Path.Combine(content.RootDirectory, "jof3dm2.pk3/textures/");
-                m_RenderResourceManager = new RenderResourceManager(graphicsDevice, content, texRelPath);
+                m_RenderResourceManager = new RenderResourceManager(graphicsDevice, content, texRelPath, "Effects");
                 m_Renderer = new BasicRenderer(content, graphicsDevice);
                 m_RenderQueue = new BasicRenderQueue(m_Renderer);
                 m_BspContentManager = new BspContentManager(graphicsDevice, m_LoadedLevel);
@@ -98,7 +97,9 @@ namespace Framework1.Quake3
             }
 
             m_Renderer.Push(m_RenderQueue);
-            m_Renderer.Render(camera, projection);
+            m_Renderer.getEffectContext().SetViewMatrix(camera.GetViewMatrix());
+            m_Renderer.getEffectContext().SetProjectionMatrix(projection);
+            m_Renderer.Render();
 
             if (newVisibleLeafCount > 0)
             {

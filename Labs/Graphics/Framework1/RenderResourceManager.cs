@@ -180,7 +180,28 @@ namespace Framework1
             public override void Evict() { Trace.Assert(false, "TODO"); }
         }
 
-        public RenderResourceManager(GraphicsDevice graphicsDevice, ContentManager contentManager, string textureRelativeRoot)
+        public interface IManagedEffectLoader
+        {
+            Effect LoadEffect(string assetName);
+        }
+
+        public class ManagedEffectProxy
+        {
+            Effect m_Effect;
+            static int trc = 0;
+
+            public ManagedEffectProxy(Effect effect)
+            {
+                m_Effect = effect;
+            }
+
+            public void Get(out Effect effect) { effect = m_Effect; }
+
+            public void Evict() { Trace.Assert(false, "TODO"); }
+        }
+
+
+        public RenderResourceManager(GraphicsDevice graphicsDevice, ContentManager contentManager, string textureRelativeRoot, string effectRelativeRoot)
         {
             m_GraphicsDevice = graphicsDevice;
 
@@ -188,6 +209,12 @@ namespace Framework1
             {
                 string texRootPath = Path.Combine(contentManager.RootDirectory, textureRelativeRoot);
                 m_TextureContentManager = new ContentManager(contentManager.ServiceProvider, texRootPath);
+            }
+
+            if (contentManager != null)
+            {
+                string effectRootPath = Path.Combine(contentManager.RootDirectory, effectRelativeRoot);
+                m_EffectContentManager = new ContentManager(contentManager.ServiceProvider, effectRootPath);
             }
         }
 
@@ -297,16 +324,7 @@ namespace Framework1
                 //Trace.TraceWarning(e.Message);
             }
 
-            if (tex2D == null)
-                return null;
-
-            ManagedTexture2DProxy proxy = new ManagedTexture2DProxy(tex2D);
-            // Wrong! texture might be shared using ContentManager
-            // m_ManagedTextureBytes += proxy.GetSizeBytes();
-
-            m_ManagedTextureProxies.Add(proxy);
-
-            return proxy;
+            return LoadManagedTexture2D(tex2D, evictable);
         }
 
         public ManagedTexture2DProxy LoadManagedTexture2D(IManagedTextureLoader loader, string assetName, bool evictable)
@@ -322,6 +340,11 @@ namespace Framework1
                 //Trace.TraceWarning(e.Message);
             }
 
+            return LoadManagedTexture2D(tex2D, evictable);
+        }
+
+        ManagedTexture2DProxy LoadManagedTexture2D(Texture2D tex2D, bool evictable)
+        {
             if (tex2D == null)
                 return null;
 
@@ -345,10 +368,71 @@ namespace Framework1
             //m_ManagedTextureBytes -= 
         }
 
+
+        // Load will be used for shared textures
+        // New will be used for not shared ones
+        public ManagedEffectProxy LoadManagedEffect(string assetName, bool evictable)
+        {
+            Effect effect = null;
+
+            try
+            {
+                effect = m_EffectContentManager.Load<Effect>(assetName);
+            }
+            catch (Exception e)
+            {
+                //Trace.TraceWarning(e.Message);
+            }
+
+            return LoadManagedEffect(effect, evictable);
+        }
+
+        public ManagedEffectProxy LoadManagedTexture2D(IManagedEffectLoader loader, string assetName, bool evictable)
+        {
+            Effect effect = null;
+
+            try
+            {
+                effect = loader.LoadEffect(assetName);
+            }
+            catch (Exception e)
+            {
+                //Trace.TraceWarning(e.Message);
+            }
+
+            return LoadManagedEffect(effect, evictable);
+        }
+
+        ManagedEffectProxy LoadManagedEffect(Effect effect, bool evictable)
+        {
+            if (effect == null)
+                return null;
+
+            ManagedEffectProxy proxy = new ManagedEffectProxy(effect);
+            // Wrong! texture might be shared using ContentManager
+            // m_ManagedTextureBytes += proxy.GetSizeBytes();
+
+            m_ManagedEffectProxies.Add(proxy);
+
+            return proxy;
+        }
+
+        public void Restore(ManagedEffectProxy proxy)
+        {
+            Trace.Assert(false, "TODO");
+        }
+
+        public void Delete(ManagedEffectProxy proxy)
+        {
+            Trace.Assert(false, "TODO");
+        }
+
         GraphicsDevice m_GraphicsDevice;
         ContentManager m_TextureContentManager;
+        ContentManager m_EffectContentManager;
         List<RAMStreamProxyBase> m_RAMStreamProxies = new List<RAMStreamProxyBase>();
         List<ManagedTextureProxyBase> m_ManagedTextureProxies = new List<ManagedTextureProxyBase>();
+        List<ManagedEffectProxy> m_ManagedEffectProxies = new List<ManagedEffectProxy>();
         Dictionary<Type, GPUVertexSemanticsProxy> m_RenderVertexSemanticsProxies = new Dictionary<Type, GPUVertexSemanticsProxy>();
         int m_RAMManagementBytes = 0;
         int m_RAMStreamDataBytes = 0;
