@@ -1,6 +1,7 @@
 *** http://graphics.cs.brown.edu/games/quake/quake3.html
 *** http://graphics.stanford.edu/~kekoa/q3/
 ** http://code.google.com/p/bsp-renderer/
+*** shaders: http://www.heppler.com/shader/
 
 http://linux.ucla.edu/~phaethon/q3/formats/md3format.html
 http://www.paulsprojects.net/opengl/octagon/octagon.html

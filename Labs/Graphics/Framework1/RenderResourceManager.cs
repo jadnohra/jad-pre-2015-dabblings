@@ -409,9 +409,7 @@ namespace Framework1
                 return null;
 
             ManagedEffectProxy proxy = new ManagedEffectProxy(effect);
-            // Wrong! texture might be shared using ContentManager
-            // m_ManagedTextureBytes += proxy.GetSizeBytes();
-
+       
             m_ManagedEffectProxies.Add(proxy);
 
             return proxy;
