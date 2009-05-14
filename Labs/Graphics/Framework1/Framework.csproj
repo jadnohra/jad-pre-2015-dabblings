@@ -91,16 +91,20 @@
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="Program.cs" />
     <Compile Include="Quake3\BspBezierFaceRAMStreamSource.cs" />
-    <Compile Include="Quake3\BspContentManager.cs" />
     <Compile Include="Quake3\BspMeshFaceRAMStreamSource.cs" />
     <Compile Include="Quake3\BspTree.cs" />
     <Compile Include="Quake3\BspVertexLoader.cs" />
     <Compile Include="Quake3\IntervalCoalescor.cs" />
     <Compile Include="Quake3\LeafRenderResourceBlock.cs" />
+    <Compile Include="Quake3\LevelContentManager.cs" />
     <Compile Include="Quake3\LevelScene.cs" />
     <Compile Include="Quake3\Load\BspFile.cs" />
     <Compile Include="Quake3\Load\BspFileDumper.cs" />
     <Compile Include="Quake3\Load\BspLoader.cs" />
+    <Compile Include="Quake3\Load\LightmapLoader.cs" />
+    <Compile Include="Quake3\Load\ScriptLoader.cs" />
+    <Compile Include="Quake3\Load\ScriptParser.cs" />
+    <Compile Include="Quake3\Load\TextureLoader.cs" />
     <Compile Include="Quake3\RenderResourceBlockCollector.cs" />
     <Compile Include="Renderer.cs">
       <SubType>Code</SubType>

@@ -70,7 +70,7 @@ namespace Framework1.Quake3
             internal RenderResourceManager.ManagedTexture2DProxy DiffuseTexture;
             internal RenderResourceManager.ManagedTexture2DProxy LightmapTexture;
 
-            public FaceRenderJob(RenderResourceManager renderResMan, BspContentManager bspConentManager, BspTree bspTree, BspTree.Leaf leaf, int faceIndex)
+            public FaceRenderJob(RenderResourceManager renderResMan, LevelContentManager bspConentManager, BspTree bspTree, BspTree.Leaf leaf, int faceIndex)
             {
                 BspFile.Header header = bspTree.m_Level.Header;
 
@@ -99,7 +99,7 @@ namespace Framework1.Quake3
                 }
             }
 
-            void LoadTextures(RenderResourceManager renderResMan, BspContentManager bspConentManager, BspTree bspTree, BspFile.Faces.Binary_face face)
+            void LoadTextures(RenderResourceManager renderResMan, LevelContentManager bspConentManager, BspTree bspTree, BspFile.Faces.Binary_face face)
             {
                  if (face.texture >= 0)
                  {
@@ -113,7 +113,7 @@ namespace Framework1.Quake3
 
                  if (face.lm_index >= 0)
                  {
-                     LightmapTexture = renderResMan.LoadManagedTexture2D(bspConentManager.GetLightMapLoader(), string.Format("{0:G}", face.lm_index), true);
+                     LightmapTexture = renderResMan.LoadManagedTexture2D(bspConentManager.GetLightmapLoader(), string.Format("{0:G}", face.lm_index), true);
                  }
             }
 
@@ -187,7 +187,7 @@ namespace Framework1.Quake3
             }
         }
 
-        public RAMLeafRenderResourceBlock(RenderResourceManager renderResMan, BspContentManager bspConentManager, BspTree bspTree, BspTree.Leaf leaf)
+        public RAMLeafRenderResourceBlock(RenderResourceManager renderResMan, LevelContentManager bspConentManager, BspTree bspTree, BspTree.Leaf leaf)
         {
             BspFile.Header header = bspTree.m_Level.Header;
 

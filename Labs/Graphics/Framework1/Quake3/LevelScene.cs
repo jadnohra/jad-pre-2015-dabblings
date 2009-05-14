@@ -21,7 +21,7 @@ namespace Framework1.Quake3
         BspTree m_Tree;
 
         // All this and render is WIP, will be moved elsewhere
-        BspContentManager m_BspContentManager;
+        LevelContentManager m_BspContentManager;
         RenderResourceBlockCollector m_RenderResourceBlockCollector;
         RenderResourceManager m_RenderResourceManager;
         BasicRenderer m_Renderer;
@@ -56,7 +56,7 @@ namespace Framework1.Quake3
                 m_RenderResourceManager = new RenderResourceManager(graphicsDevice, content, "Effects");
                 m_Renderer = new BasicRenderer(content, graphicsDevice);
                 m_RenderQueue = new BasicRenderQueue(m_Renderer);
-                m_BspContentManager = new BspContentManager(m_LoadedLevel, graphicsDevice, content);
+                m_BspContentManager = new LevelContentManager(m_LoadedLevel, graphicsDevice, content);
             }
             else
             {
