@@ -24,8 +24,8 @@ namespace Framework1.Quake3
         public void Dispose()
         {
         }
-        
-        public void Print(bool dumpTextures)
+
+        public void Print(bool dumpTextures, bool dumpEffects)
         {
             Console.WriteLine("> Start bsp file dump");
 
@@ -131,6 +131,29 @@ namespace Framework1.Quake3
                 int lightmapCount = Header.Loader.GetLightmapCount(Header);
 
                 Console.WriteLine(string.Format("{0:G} lightmaps", lightmapCount));
+            }
+
+            {
+                int effectCount = Header.Loader.GetEffectCount(Header);
+
+                Console.WriteLine(string.Format("{0:G} effects", effectCount));
+
+                if (effectCount > 0 && dumpEffects)
+                {
+                    Console.WriteLine("> Start effect names");
+
+                    using (BspFile.Effects effects = Header.Loader.GetEffects(Header, 0, effectCount))
+                    {
+                        Trace.Assert(effects != null);
+
+                        for (int i = 0; i < effects.m_Effects.Length; ++i)
+                        {
+                            Console.WriteLine(effects.m_Effects[i].GetEffectNameString());
+                        }
+                    }
+
+                    Console.WriteLine("> End effect names");
+                }
             }
 
             Console.WriteLine("> End bsp file dump");

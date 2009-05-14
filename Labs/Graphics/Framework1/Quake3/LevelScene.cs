@@ -9,6 +9,7 @@ namespace Framework1.Quake3
 {
     public class LoadedBspLevel
     {
+        public string RootPath;
         public BspFile.Header Header;
         public BspFile.CoordSysConv CoordSysConv;
     }
@@ -46,16 +47,16 @@ namespace Framework1.Quake3
             if (m_LoadedLevel.Header != null)
             {
                 m_LoadedLevel.CoordSysConv = new BspFile.CoordSysConv();
+                m_LoadedLevel.RootPath = Path.Combine(Path.GetDirectoryName(path), "../");
 
                 m_Tree = new BspTree();
                 m_Tree.Load(m_LoadedLevel);
 
                 m_RenderResourceBlockCollector = new RenderResourceBlockCollector();
-                string texRelPath = Path.Combine(Path.GetDirectoryName(path), "../");
-                m_RenderResourceManager = new RenderResourceManager(graphicsDevice, content, texRelPath, "Effects");
+                m_RenderResourceManager = new RenderResourceManager(graphicsDevice, content, "Effects");
                 m_Renderer = new BasicRenderer(content, graphicsDevice);
                 m_RenderQueue = new BasicRenderQueue(m_Renderer);
-                m_BspContentManager = new BspContentManager(graphicsDevice, m_LoadedLevel);
+                m_BspContentManager = new BspContentManager(m_LoadedLevel, graphicsDevice, content);
             }
             else
             {

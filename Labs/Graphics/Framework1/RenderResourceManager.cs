@@ -201,15 +201,9 @@ namespace Framework1
         }
 
 
-        public RenderResourceManager(GraphicsDevice graphicsDevice, ContentManager contentManager, string textureRelativeRoot, string effectRelativeRoot)
+        public RenderResourceManager(GraphicsDevice graphicsDevice, ContentManager contentManager, string effectRelativeRoot)
         {
             m_GraphicsDevice = graphicsDevice;
-
-            if (contentManager != null)
-            {
-                string texRootPath = Path.Combine(contentManager.RootDirectory, textureRelativeRoot);
-                m_TextureContentManager = new ContentManager(contentManager.ServiceProvider, texRootPath);
-            }
 
             if (contentManager != null)
             {
@@ -309,24 +303,9 @@ namespace Framework1
             //m_RAMStreamDataBytes -= 
         }
 
+      
         // Load will be used for shared textures
         // New will be used for not shared ones
-        public ManagedTexture2DProxy LoadManagedTexture2D(string assetName, bool evictable)
-        {
-            Texture2D tex2D = null;
-
-            try
-            {
-                tex2D = m_TextureContentManager.Load<Texture2D>(assetName);
-            }
-            catch (Exception e)
-            {
-                //Trace.TraceWarning(e.Message);
-            }
-
-            return LoadManagedTexture2D(tex2D, evictable);
-        }
-
         public ManagedTexture2DProxy LoadManagedTexture2D(IManagedTextureLoader loader, string assetName, bool evictable)
         {
             Texture2D tex2D = null;
@@ -337,6 +316,7 @@ namespace Framework1
             }
             catch (Exception e)
             {
+                Trace.TraceWarning("Tex Not found: '" + assetName + "'");
                 //Trace.TraceWarning(e.Message);
             }
 
@@ -426,7 +406,6 @@ namespace Framework1
         }
 
         GraphicsDevice m_GraphicsDevice;
-        ContentManager m_TextureContentManager;
         ContentManager m_EffectContentManager;
         List<RAMStreamProxyBase> m_RAMStreamProxies = new List<RAMStreamProxyBase>();
         List<ManagedTextureProxyBase> m_ManagedTextureProxies = new List<ManagedTextureProxyBase>();

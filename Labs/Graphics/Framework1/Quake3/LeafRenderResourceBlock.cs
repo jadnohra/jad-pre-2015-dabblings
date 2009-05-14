@@ -88,7 +88,7 @@ namespace Framework1.Quake3
                     }
                     else if (face.type == (int)BspFile.FaceType.Patch)
                     {
-                        source = new BspBezierFaceRAMStreamSource(bspTree.m_Level, faceIndex);
+                        source = new SimpleBspBezierFaceRAMStreamSource(bspTree.m_Level, faceIndex);
                         TriangleListType = PrimitiveType.TriangleStrip;
                     }
                     
@@ -107,7 +107,7 @@ namespace Framework1.Quake3
 
                      using (BspFile.Textures textures = header.Loader.GetTextures(header, face.texture, 1))
                      {
-                         DiffuseTexture = renderResMan.LoadManagedTexture2D(textures.m_Textures[0].GetTextureNameString(), true);
+                         DiffuseTexture = renderResMan.LoadManagedTexture2D(bspConentManager.GetTextureLoader(), textures.m_Textures[0].GetTextureNameString(), true);
                      }
                  }
 

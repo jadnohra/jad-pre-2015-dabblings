@@ -639,6 +639,59 @@ namespace Framework1.Quake3
 
             return null;
         }
+
+
+        public int GetEffectCount(Header header)
+        {
+            Type type = typeof(Effects.Binary_effect);
+            int size = Marshal.SizeOf(type);
+            int length = header.m_DirEntries[(int)(Header.EntityType.Effects)].length;
+            int count = (length / size);
+
+            Trace.Assert(count * size == length);
+
+            return count;
+        }
+
+        public Effects GetEffects(Header header, int startIndex, int count)
+        {
+            if (header == null)
+                return null;
+
+            Type type = typeof(Effects.Binary_effect);
+            int size = Marshal.SizeOf(type);
+
+            long baseOffset = header.StreamOffset + header.m_DirEntries[(int)(Header.EntityType.Effects)].offset;
+            long startOffset = baseOffset + startIndex * size;
+            long endOffset = startOffset + count * size;
+            int totalSize = (int)(endOffset - startOffset);
+
+            if (m_Buffer.Length < totalSize)
+            {
+                m_Buffer = new byte[totalSize];
+            }
+
+            Effects.Binary_effect[] binaryEffects = new Effects.Binary_effect[count];
+
+            m_Stream.Seek(startOffset, SeekOrigin.Begin);
+            if (m_Stream.Read(m_Buffer, 0, totalSize) == totalSize)
+            {
+                int offset = 0;
+                for (int i = 0; i < count; ++i, offset += size)
+                {
+                    binaryEffects[i] = (Effects.Binary_effect)BinarySerializer.RawDeserialize(m_Buffer, offset, type);
+                }
+
+                Effects asset = new Effects();
+                asset.StreamOffset = startOffset;
+                asset.Header = header;
+
+                if (asset.construct(binaryEffects))
+                    return asset;
+            }
+
+            return null;
+        }
     }
 
     class BinarySerializer

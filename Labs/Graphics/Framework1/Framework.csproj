@@ -116,6 +116,7 @@
     <Compile Include="Viewer.cs" />
   </ItemGroup>
   <ItemGroup>
+    <Content Include="Bugs.txt" />
     <Content Include="Game.ico" />
     <Content Include="GameThumbnail.png" />
     <Content Include="References.txt" />
