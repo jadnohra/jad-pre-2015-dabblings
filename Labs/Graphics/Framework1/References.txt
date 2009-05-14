@@ -3,6 +3,7 @@
 ** http://code.google.com/p/bsp-renderer/
 *** shaders: http://www.heppler.com/shader/
 **** ref engine: http://xreal-project.net/
+**** ref engine: http://ioquake3.org/source-codes/
 
 http://linux.ucla.edu/~phaethon/q3/formats/md3format.html
 http://www.paulsprojects.net/opengl/octagon/octagon.html
