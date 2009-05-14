@@ -9,6 +9,7 @@ http://linux.ucla.edu/~phaethon/q3/formats/md3format.html
 http://www.paulsprojects.net/opengl/octagon/octagon.html
 
 ** maps: http://www.users.on.net/~justonefix/
+** maps: http://www.zfight.com/ (check xreal benchmark... http://xreal-project.net/?p=266)
 
 engine:
 // general engine / performance http://decadeengine.blogspot.com/
