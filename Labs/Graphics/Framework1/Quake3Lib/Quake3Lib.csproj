@@ -94,10 +94,10 @@
     <Compile Include="Source\Load\BspFileDumper.cs" />
     <Compile Include="Source\Load\BspLoader.cs" />
     <Compile Include="Source\Load\LightmapLoader.cs" />
-    <Compile Include="Source\Load\Q3ScannerParser.cs" />
-    <Compile Include="Source\Load\Q3ShaderParser.cs" />
     <Compile Include="Source\Load\ScriptLoader.cs" />
     <Compile Include="Source\Load\ScriptParser.cs" />
+    <Compile Include="Source\Load\ShaderParser.cs" />
+    <Compile Include="Source\Load\ShaderScanner.cs" />
     <Compile Include="Source\Load\TextureLoader.cs" />
     <Compile Include="Source\RenderResourceBlockCollector.cs" />
   </ItemGroup>

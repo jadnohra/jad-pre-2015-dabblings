@@ -1,4 +1,4 @@
-Coco Q3Shader.atg -namespace BlackRice.Framework.Quake3.Load
+Coco Q3Shader.atg -namespace BlackRice.Framework.Quake3.ShaderParser
 mkdir build
-move Parser.cs build/Q3ShaderParser.cs
-move Scanner.cs build/Q3ScannerParser.cs
+move Parser.cs build/ShaderParser.cs
+move Scanner.cs build/ShaderScanner.cs

@@ -1,7 +1,7 @@
 
 using System;
 
-namespace BlackRice.Framework.Quake3.Load {
+namespace BlackRice.Framework.Quake3.ShaderParser {
 
 
 
