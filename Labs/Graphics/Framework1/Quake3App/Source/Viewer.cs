@@ -10,6 +10,7 @@ using Microsoft.Xna.Framework.Input;
 using Microsoft.Xna.Framework.Media;
 using Microsoft.Xna.Framework.Net;
 using Microsoft.Xna.Framework.Storage;
+using BlackRice.Framework;
 
 namespace BlackRice.Framework.Quake3App
 {
@@ -20,7 +21,7 @@ namespace BlackRice.Framework.Quake3App
     {
         GraphicsDeviceManager graphics;
 
-        //Scene m_Scene;
+        Quake3.LevelScene m_Scene;
         
         ManualCamera m_Camera;
         Matrix m_Projection;
@@ -68,8 +69,7 @@ namespace BlackRice.Framework.Quake3App
             //string filePath = Path.Combine(Content.RootDirectory, "Q3Maps/openarena.pk3/maps/dm6ish.bsp");
             string filePath = Path.Combine(Content.RootDirectory, "Q3Maps/openarena.pk3/maps/oa_ctf2.bsp");
 
-            /*
-            using (Quake3.BspFileDumper bspFileDumper = new Quake3.BspFileDumper(filePath))
+            using (Quake3.Load.BspFileDumper bspFileDumper = new Quake3.Load.BspFileDumper(filePath))
             {
                 bspFileDumper.Print(true, true);
             }
@@ -84,7 +84,7 @@ namespace BlackRice.Framework.Quake3App
 
                 m_Scene = scene;
             }
-            */
+
             //m_Renderer = new Renderer(graphics.GraphicsDevice, Content, m_AssetInterpeterFactory);
             m_Camera = new ManualCamera();
             m_Camera.SetMoveScale(170.0f);
@@ -152,10 +152,8 @@ namespace BlackRice.Framework.Quake3App
 
             GraphicsDevice.Clear(Color.CornflowerBlue);
 
-           // m_Scene.Render(m_Camera, m_Projection);
-           // m_Scene.Render(m_Renderer, m_BspHeader, m_Camera.GetViewMatrix(), m_Projection);
-            //m_Renderer.Render();
-
+            m_Scene.Render(m_Camera.GetWorldTransform(), m_Camera.GetViewMatrix(), m_Projection);
+           
             if (m_Stats != null)
                 m_Stats.Draw();
 

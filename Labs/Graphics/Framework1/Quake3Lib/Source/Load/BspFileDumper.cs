@@ -4,7 +4,7 @@ using System.Diagnostics;
 
 namespace BlackRice.Framework.Quake3.Load
 {
-    class BspFileDumper : IDisposable
+    public class BspFileDumper : IDisposable
     {
         BspFile.Header Header;
         string FilePath;

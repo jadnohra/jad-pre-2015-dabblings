@@ -16,8 +16,7 @@ namespace BlackRice.Framework.Quake3
         public BspFile.CoordSysConv CoordSysConv;
     }
 
-    class LevelScene
-    //: Scene
+    public class LevelScene
     {
         LoadedBspLevel m_LoadedLevel;
         BspTree m_Tree;
@@ -73,12 +72,11 @@ namespace BlackRice.Framework.Quake3
             m_LoadedLevel = null;
         }
 
-        /*
-        override public void Render(ManualCamera camera, Matrix projection)
+        public void Render(Matrix camWorldTransform, Matrix viewMatrix, Matrix projectionMatrix)
         {
             
             BspTree.VisibleLeafs visibleLeafs = new BspTree.VisibleLeafs();
-            m_Tree.FindVisibleLeafs(camera.GetWorldTransform().Translation, visibleLeafs, true);
+            m_Tree.FindVisibleLeafs(camWorldTransform.Translation, visibleLeafs, true);
             m_Tree.Evict(m_RenderResourceBlockCollector);
 
             int newVisibleLeafCount = 0;
@@ -102,8 +100,8 @@ namespace BlackRice.Framework.Quake3
             }
 
             m_Renderer.Push(m_RenderQueue);
-            m_Renderer.getEffectContext().SetViewMatrix(camera.GetViewMatrix());
-            m_Renderer.getEffectContext().SetProjectionMatrix(projection);
+            m_Renderer.getEffectContext().SetViewMatrix(viewMatrix);
+            m_Renderer.getEffectContext().SetProjectionMatrix(projectionMatrix);
             m_Renderer.Render();
 
             if (newVisibleLeafCount > 0)
@@ -111,6 +109,5 @@ namespace BlackRice.Framework.Quake3
                 Console.WriteLine(String.Format("{0:G} new visible leafs", newVisibleLeafCount));
             }
         }
-        */
     }
 }
