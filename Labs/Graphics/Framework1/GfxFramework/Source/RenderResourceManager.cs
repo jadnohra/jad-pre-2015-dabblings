@@ -6,7 +6,7 @@ using System.Runtime.InteropServices;
 using Microsoft.Xna.Framework.Graphics;
 using Microsoft.Xna.Framework.Content;
 
-namespace Framework1
+namespace BlackRice.Framework.Graphics
 {
     public interface IVertex
     {

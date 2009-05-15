@@ -1,7 +1,7 @@
 using System;
 using Microsoft.Xna.Framework.Graphics;
 
-namespace Framework1
+namespace BlackRice.Framework.Graphics
 {
     public class TriangleListTypes
     {

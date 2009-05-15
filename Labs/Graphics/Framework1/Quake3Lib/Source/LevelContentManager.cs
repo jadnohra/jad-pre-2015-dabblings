@@ -2,9 +2,10 @@ using System;
 using System.IO;
 using Microsoft.Xna.Framework.Graphics;
 using Microsoft.Xna.Framework.Content;
-using Framework1.Quake3.Load;
+using BlackRice.Framework.Quake3.Load;
+using BlackRice.Framework.Graphics;
 
-namespace Framework1.Quake3
+namespace BlackRice.Framework.Quake3
 {
     public class LevelContentManager
     {

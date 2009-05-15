@@ -1,7 +1,8 @@
 using System.Diagnostics;
 using System.Collections.Generic;
+using BlackRice.Framework.Graphics;
 
-namespace Framework1.Quake3
+namespace BlackRice.Framework.Quake3
 {
     /*
      * Holds the block of render resources needed to render a scene renderable

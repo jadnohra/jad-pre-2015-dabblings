@@ -3,9 +3,9 @@ using System.IO;
 using System.Diagnostics;
 using System.Runtime.InteropServices;
 
-namespace Framework1.Quake3
+namespace BlackRice.Framework.Quake3.Load
 {
-    using BspFile;
+    //using BspFile;
 
     public class BspLoader
     {
@@ -29,12 +29,12 @@ namespace Framework1.Quake3
             }
         }
 
-        public Header Open()
+        public BspFile.Header Open()
         {
             if (m_Stream == null)
                 return null;
 
-            Type type = typeof(Header.Binary);
+            Type type = typeof(BspFile.Header.Binary);
             int size = Marshal.SizeOf(type);
 
             if (m_Buffer.Length < size)
@@ -45,9 +45,9 @@ namespace Framework1.Quake3
             m_Stream.Seek(0, SeekOrigin.Begin);
             if (m_Stream.Read(m_Buffer, 0, size) == size)
             {
-                Header.Binary binary = (Header.Binary)BinarySerializer.RawDeserialize(m_Buffer, 0, type);
+                BspFile.Header.Binary binary = (BspFile.Header.Binary)BinarySerializer.RawDeserialize(m_Buffer, 0, type);
 
-                Header asset = new Header();
+                BspFile.Header asset = new BspFile.Header();
                 asset.Header = asset;
                 asset.Loader = this;
                 asset.StreamOffset = 0;
@@ -59,11 +59,11 @@ namespace Framework1.Quake3
             return null;
         }
 
-        public int GetFaceCount(Header header)
+        public int GetFaceCount(BspFile.Header header)
         {
-            Type type = typeof(Faces.Binary_face);
+            Type type = typeof(BspFile.Faces.Binary_face);
             int size = Marshal.SizeOf(type);
-            int length = header.m_DirEntries[(int)(Header.EntityType.Faces)].length;
+            int length = header.m_DirEntries[(int)(BspFile.Header.EntityType.Faces)].length;
             int count = (length / size);
 
             Trace.Assert(count * size == length);
@@ -71,15 +71,15 @@ namespace Framework1.Quake3
             return count;
         }
 
-        public Faces GetFaces(Header header, int startIndex, int count)
+        public BspFile.Faces GetFaces(BspFile.Header header, int startIndex, int count)
         {
             if (header == null)
                 return null;
 
-            Type type = typeof(Faces.Binary_face);
+            Type type = typeof(BspFile.Faces.Binary_face);
             int size = Marshal.SizeOf(type);
 
-            long baseOffset = header.StreamOffset + header.m_DirEntries[(int)(Header.EntityType.Faces)].offset;
+            long baseOffset = header.StreamOffset + header.m_DirEntries[(int)(BspFile.Header.EntityType.Faces)].offset;
             long startOffset = baseOffset + startIndex * size;
             long endOffset = startOffset + count * size;
             int totalSize = (int)(endOffset - startOffset);
@@ -89,7 +89,7 @@ namespace Framework1.Quake3
                 m_Buffer = new byte[totalSize];
             }
 
-            Faces.Binary_face[] binaryFaces = new Faces.Binary_face[count];
+            BspFile.Faces.Binary_face[] binaryFaces = new BspFile.Faces.Binary_face[count];
 
             m_Stream.Seek(startOffset, SeekOrigin.Begin);
             if (m_Stream.Read(m_Buffer, 0, totalSize) == totalSize)
@@ -97,10 +97,10 @@ namespace Framework1.Quake3
                 int offset = 0;
                 for (int i = 0; i < count; ++i, offset += size)
                 {
-                    binaryFaces[i] = (Faces.Binary_face)BinarySerializer.RawDeserialize(m_Buffer, offset, type);
+                    binaryFaces[i] = (BspFile.Faces.Binary_face)BinarySerializer.RawDeserialize(m_Buffer, offset, type);
                 }
 
-                Faces asset = new Faces();
+                BspFile.Faces asset = new BspFile.Faces();
                 asset.StreamOffset = startOffset;
                 asset.Header = header;
 
@@ -111,11 +111,11 @@ namespace Framework1.Quake3
             return null;
         }
 
-        public int GetVertexCount(Header header)
+        public int GetVertexCount(BspFile.Header header)
         {
-            Type type = typeof(Vertices.Binary_vertex);
+            Type type = typeof(BspFile.Vertices.Binary_vertex);
             int size = Marshal.SizeOf(type);
-            int length = header.m_DirEntries[(int)(Header.EntityType.Vertices)].length;
+            int length = header.m_DirEntries[(int)(BspFile.Header.EntityType.Vertices)].length;
             int count = (length / size);
 
             Trace.Assert(count * size == length);
@@ -123,15 +123,15 @@ namespace Framework1.Quake3
             return count;
         }
 
-        public Vertices GetVertices(Header header, int startIndex, int count)
+        public BspFile.Vertices GetVertices(BspFile.Header header, int startIndex, int count)
         {
             if (header == null)
                 return null;
 
-            Type type = typeof(Vertices.Binary_vertex);
+            Type type = typeof(BspFile.Vertices.Binary_vertex);
             int size = Marshal.SizeOf(type);
 
-            long baseOffset = header.StreamOffset + header.m_DirEntries[(int)(Header.EntityType.Vertices)].offset;
+            long baseOffset = header.StreamOffset + header.m_DirEntries[(int)(BspFile.Header.EntityType.Vertices)].offset;
             long startOffset = baseOffset + startIndex * size;
             long endOffset = startOffset + count * size;
             int totalSize = (int)(endOffset - startOffset);
@@ -141,7 +141,7 @@ namespace Framework1.Quake3
                 m_Buffer = new byte[totalSize];
             }
 
-            Vertices.Binary_vertex[] binaryVertices = new Vertices.Binary_vertex[count];
+            BspFile.Vertices.Binary_vertex[] binaryVertices = new BspFile.Vertices.Binary_vertex[count];
 
             m_Stream.Seek(startOffset, SeekOrigin.Begin);
             if (m_Stream.Read(m_Buffer, 0, totalSize) == totalSize)
@@ -149,10 +149,10 @@ namespace Framework1.Quake3
                 int offset = 0;
                 for (int i = 0; i < count; ++i, offset += size)
                 {
-                    binaryVertices[i] = (Vertices.Binary_vertex)BinarySerializer.RawDeserialize(m_Buffer, offset, type);
+                    binaryVertices[i] = (BspFile.Vertices.Binary_vertex)BinarySerializer.RawDeserialize(m_Buffer, offset, type);
                 }
 
-                Vertices asset = new Vertices();
+                BspFile.Vertices asset = new BspFile.Vertices();
                 asset.StreamOffset = startOffset;
                 asset.Header = header;
 
@@ -163,11 +163,11 @@ namespace Framework1.Quake3
             return null;
         }
 
-        public int GetMeshVertexCount(Header header)
+        public int GetMeshVertexCount(BspFile.Header header)
         {
-            Type type = typeof(MeshVertices.Binary_meshvert);
+            Type type = typeof(BspFile.MeshVertices.Binary_meshvert);
             int size = Marshal.SizeOf(type);
-            int length = header.m_DirEntries[(int)(Header.EntityType.Meshverts)].length;
+            int length = header.m_DirEntries[(int)(BspFile.Header.EntityType.Meshverts)].length;
             int count = (length / size);
 
             Trace.Assert(count * size == length);
@@ -175,15 +175,15 @@ namespace Framework1.Quake3
             return count;
         }
 
-        public MeshVertices GetMeshVertices(Header header, int startIndex, int count)
+        public BspFile.MeshVertices GetMeshVertices(BspFile.Header header, int startIndex, int count)
         {
             if (header == null)
                 return null;
 
-            Type type = typeof(MeshVertices.Binary_meshvert);
+            Type type = typeof(BspFile.MeshVertices.Binary_meshvert);
             int size = Marshal.SizeOf(type);
 
-            long baseOffset = header.StreamOffset + header.m_DirEntries[(int)(Header.EntityType.Meshverts)].offset;
+            long baseOffset = header.StreamOffset + header.m_DirEntries[(int)(BspFile.Header.EntityType.Meshverts)].offset;
             long startOffset = baseOffset + startIndex * size;
             long endOffset = startOffset + count * size;
             int totalSize = (int)(endOffset - startOffset);
@@ -193,7 +193,7 @@ namespace Framework1.Quake3
                 m_Buffer = new byte[totalSize];
             }
 
-            MeshVertices.Binary_meshvert[] binaryVertices = new MeshVertices.Binary_meshvert[count];
+            BspFile.MeshVertices.Binary_meshvert[] binaryVertices = new BspFile.MeshVertices.Binary_meshvert[count];
 
             m_Stream.Seek(startOffset, SeekOrigin.Begin);
             if (m_Stream.Read(m_Buffer, 0, totalSize) == totalSize)
@@ -201,10 +201,10 @@ namespace Framework1.Quake3
                 int offset = 0;
                 for (int i = 0; i < count; ++i, offset += size)
                 {
-                    binaryVertices[i] = (MeshVertices.Binary_meshvert)BinarySerializer.RawDeserialize(m_Buffer, offset, type);
+                    binaryVertices[i] = (BspFile.MeshVertices.Binary_meshvert)BinarySerializer.RawDeserialize(m_Buffer, offset, type);
                 }
 
-                MeshVertices asset = new MeshVertices();
+                BspFile.MeshVertices asset = new BspFile.MeshVertices();
                 asset.StreamOffset = startOffset;
                 asset.Header = header;
 
@@ -215,11 +215,11 @@ namespace Framework1.Quake3
             return null;
         }
 
-        public int GetNodeCount(Header header)
+        public int GetNodeCount(BspFile.Header header)
         {
-            Type type = typeof(Nodes.Binary_node);
+            Type type = typeof(BspFile.Nodes.Binary_node);
             int size = Marshal.SizeOf(type);
-            int length = header.m_DirEntries[(int)(Header.EntityType.Nodes)].length;
+            int length = header.m_DirEntries[(int)(BspFile.Header.EntityType.Nodes)].length;
             int count = (length / size);
 
             Trace.Assert(count * size == length);
@@ -227,15 +227,15 @@ namespace Framework1.Quake3
             return count;
         }
 
-        public Nodes GetNodes(Header header, int startIndex, int count)
+        public BspFile.Nodes GetNodes(BspFile.Header header, int startIndex, int count)
         {
             if (header == null)
                 return null;
 
-            Type type = typeof(Nodes.Binary_node);
+            Type type = typeof(BspFile.Nodes.Binary_node);
             int size = Marshal.SizeOf(type);
 
-            long baseOffset = header.StreamOffset + header.m_DirEntries[(int)(Header.EntityType.Nodes)].offset;
+            long baseOffset = header.StreamOffset + header.m_DirEntries[(int)(BspFile.Header.EntityType.Nodes)].offset;
             long startOffset = baseOffset + startIndex * size;
             long endOffset = startOffset + count * size;
             int totalSize = (int)(endOffset - startOffset);
@@ -245,7 +245,7 @@ namespace Framework1.Quake3
                 m_Buffer = new byte[totalSize];
             }
 
-            Nodes.Binary_node[] binaryNodes = new Nodes.Binary_node[count];
+            BspFile.Nodes.Binary_node[] binaryNodes = new BspFile.Nodes.Binary_node[count];
 
             m_Stream.Seek(startOffset, SeekOrigin.Begin);
             if (m_Stream.Read(m_Buffer, 0, totalSize) == totalSize)
@@ -253,10 +253,10 @@ namespace Framework1.Quake3
                 int offset = 0;
                 for (int i = 0; i < count; ++i, offset += size)
                 {
-                    binaryNodes[i] = (Nodes.Binary_node)BinarySerializer.RawDeserialize(m_Buffer, offset, type);
+                    binaryNodes[i] = (BspFile.Nodes.Binary_node)BinarySerializer.RawDeserialize(m_Buffer, offset, type);
                 }
 
-                Nodes asset = new Nodes();
+                BspFile.Nodes asset = new BspFile.Nodes();
                 asset.StreamOffset = startOffset;
                 asset.Header = header;
 
@@ -267,11 +267,11 @@ namespace Framework1.Quake3
             return null;
         }
 
-        public int GetLeafCount(Header header)
+        public int GetLeafCount(BspFile.Header header)
         {
-            Type type = typeof(Leafs.Binary_leaf);
+            Type type = typeof(BspFile.Leafs.Binary_leaf);
             int size = Marshal.SizeOf(type);
-            int length = header.m_DirEntries[(int)(Header.EntityType.Leafs)].length;
+            int length = header.m_DirEntries[(int)(BspFile.Header.EntityType.Leafs)].length;
             int count = (length / size);
 
             Trace.Assert(count * size == length);
@@ -279,15 +279,15 @@ namespace Framework1.Quake3
             return count;
         }
 
-        public Leafs GetLeafs(Header header, int startIndex, int count)
+        public BspFile.Leafs GetLeafs(BspFile.Header header, int startIndex, int count)
         {
             if (header == null)
                 return null;
 
-            Type type = typeof(Leafs.Binary_leaf);
+            Type type = typeof(BspFile.Leafs.Binary_leaf);
             int size = Marshal.SizeOf(type);
 
-            long baseOffset = header.StreamOffset + header.m_DirEntries[(int)(Header.EntityType.Leafs)].offset;
+            long baseOffset = header.StreamOffset + header.m_DirEntries[(int)(BspFile.Header.EntityType.Leafs)].offset;
             long startOffset = baseOffset + startIndex * size;
             long endOffset = startOffset + count * size;
             int totalSize = (int)(endOffset - startOffset);
@@ -297,7 +297,7 @@ namespace Framework1.Quake3
                 m_Buffer = new byte[totalSize];
             }
 
-            Leafs.Binary_leaf[] binaryLeafs = new Leafs.Binary_leaf[count];
+            BspFile.Leafs.Binary_leaf[] binaryLeafs = new BspFile.Leafs.Binary_leaf[count];
 
             m_Stream.Seek(startOffset, SeekOrigin.Begin);
             if (m_Stream.Read(m_Buffer, 0, totalSize) == totalSize)
@@ -305,10 +305,10 @@ namespace Framework1.Quake3
                 int offset = 0;
                 for (int i = 0; i < count; ++i, offset += size)
                 {
-                    binaryLeafs[i] = (Leafs.Binary_leaf)BinarySerializer.RawDeserialize(m_Buffer, offset, type);
+                    binaryLeafs[i] = (BspFile.Leafs.Binary_leaf)BinarySerializer.RawDeserialize(m_Buffer, offset, type);
                 }
 
-                Leafs asset = new Leafs();
+                BspFile.Leafs asset = new BspFile.Leafs();
                 asset.StreamOffset = startOffset;
                 asset.Header = header;
 
@@ -319,11 +319,11 @@ namespace Framework1.Quake3
             return null;
         }
 
-        public int GetLeafFaceCount(Header header)
+        public int GetLeafFaceCount(BspFile.Header header)
         {
-            Type type = typeof(LeafFaces.Binary_leafface);
+            Type type = typeof(BspFile.LeafFaces.Binary_leafface);
             int size = Marshal.SizeOf(type);
-            int length = header.m_DirEntries[(int)(Header.EntityType.Leaffaces)].length;
+            int length = header.m_DirEntries[(int)(BspFile.Header.EntityType.Leaffaces)].length;
             int count = (length / size);
 
             Trace.Assert(count * size == length);
@@ -331,15 +331,15 @@ namespace Framework1.Quake3
             return count;
         }
 
-        public LeafFaces GetLeafFaces(Header header, int startIndex, int count)
+        public BspFile.LeafFaces GetLeafFaces(BspFile.Header header, int startIndex, int count)
         {
             if (header == null)
                 return null;
 
-            Type type = typeof(LeafFaces.Binary_leafface);
+            Type type = typeof(BspFile.LeafFaces.Binary_leafface);
             int size = Marshal.SizeOf(type);
 
-            long baseOffset = header.StreamOffset + header.m_DirEntries[(int)(Header.EntityType.Leaffaces)].offset;
+            long baseOffset = header.StreamOffset + header.m_DirEntries[(int)(BspFile.Header.EntityType.Leaffaces)].offset;
             long startOffset = baseOffset + startIndex * size;
             long endOffset = startOffset + count * size;
             int totalSize = (int)(endOffset - startOffset);
@@ -349,7 +349,7 @@ namespace Framework1.Quake3
                 m_Buffer = new byte[totalSize];
             }
 
-            LeafFaces.Binary_leafface[] binaryLeafFaces = new LeafFaces.Binary_leafface[count];
+            BspFile.LeafFaces.Binary_leafface[] binaryLeafFaces = new BspFile.LeafFaces.Binary_leafface[count];
 
             m_Stream.Seek(startOffset, SeekOrigin.Begin);
             if (m_Stream.Read(m_Buffer, 0, totalSize) == totalSize)
@@ -357,10 +357,10 @@ namespace Framework1.Quake3
                 int offset = 0;
                 for (int i = 0; i < count; ++i, offset += size)
                 {
-                    binaryLeafFaces[i] = (LeafFaces.Binary_leafface)BinarySerializer.RawDeserialize(m_Buffer, offset, type);
+                    binaryLeafFaces[i] = (BspFile.LeafFaces.Binary_leafface)BinarySerializer.RawDeserialize(m_Buffer, offset, type);
                 }
 
-                LeafFaces asset = new LeafFaces();
+                BspFile.LeafFaces asset = new BspFile.LeafFaces();
                 asset.StreamOffset = startOffset;
                 asset.Header = header;
 
@@ -371,11 +371,11 @@ namespace Framework1.Quake3
             return null;
         }
 
-        public int GetPlaneCount(Header header)
+        public int GetPlaneCount(BspFile.Header header)
         {
-            Type type = typeof(Planes.Binary_plane);
+            Type type = typeof(BspFile.Planes.Binary_plane);
             int size = Marshal.SizeOf(type);
-            int length = header.m_DirEntries[(int)(Header.EntityType.Planes)].length;
+            int length = header.m_DirEntries[(int)(BspFile.Header.EntityType.Planes)].length;
             int count = (length / size);
 
             Trace.Assert(count * size == length);
@@ -383,15 +383,15 @@ namespace Framework1.Quake3
             return count;
         }
 
-        public Planes GetPlanes(Header header, int startIndex, int count)
+        public BspFile.Planes GetPlanes(BspFile.Header header, int startIndex, int count)
         {
             if (header == null)
                 return null;
 
-            Type type = typeof(Planes.Binary_plane);
+            Type type = typeof(BspFile.Planes.Binary_plane);
             int size = Marshal.SizeOf(type);
 
-            long baseOffset = header.StreamOffset + header.m_DirEntries[(int)(Header.EntityType.Planes)].offset;
+            long baseOffset = header.StreamOffset + header.m_DirEntries[(int)(BspFile.Header.EntityType.Planes)].offset;
             long startOffset = baseOffset + startIndex * size;
             long endOffset = startOffset + count * size;
             int totalSize = (int)(endOffset - startOffset);
@@ -401,7 +401,7 @@ namespace Framework1.Quake3
                 m_Buffer = new byte[totalSize];
             }
 
-            Planes.Binary_plane[] binaryPlanes = new Planes.Binary_plane[count];
+            BspFile.Planes.Binary_plane[] binaryPlanes = new BspFile.Planes.Binary_plane[count];
 
             m_Stream.Seek(startOffset, SeekOrigin.Begin);
             if (m_Stream.Read(m_Buffer, 0, totalSize) == totalSize)
@@ -409,10 +409,10 @@ namespace Framework1.Quake3
                 int offset = 0;
                 for (int i = 0; i < count; ++i, offset += size)
                 {
-                    binaryPlanes[i] = (Planes.Binary_plane)BinarySerializer.RawDeserialize(m_Buffer, offset, type);
+                    binaryPlanes[i] = (BspFile.Planes.Binary_plane)BinarySerializer.RawDeserialize(m_Buffer, offset, type);
                 }
 
-                Planes asset = new Planes();
+                BspFile.Planes asset = new BspFile.Planes();
                 asset.StreamOffset = startOffset;
                 asset.Header = header;
 
@@ -423,22 +423,22 @@ namespace Framework1.Quake3
             return null;
         }
 
-        public bool HasVisdata(Header header)
+        public bool HasVisdata(BspFile.Header header)
         {
             if (header == null)
                 return false;
 
-            if (header.m_DirEntries[(int)(Header.EntityType.Visdata)].length == 0)
+            if (header.m_DirEntries[(int)(BspFile.Header.EntityType.Visdata)].length == 0)
                 return false;
 
-            Type infoType = typeof(Visdata.Binary_info);
+            Type infoType = typeof(BspFile.Visdata.Binary_info);
             int infoSize = Marshal.SizeOf(infoType);
 
-            Type type = typeof(Visdata.Binary_data);
+            Type type = typeof(BspFile.Visdata.Binary_data);
             int size = Marshal.SizeOf(type);
 
-            long baseOffset = header.StreamOffset + header.m_DirEntries[(int)(Header.EntityType.Visdata)].offset;
-            long dataSize = header.StreamOffset + header.m_DirEntries[(int)(Header.EntityType.Visdata)].length;
+            long baseOffset = header.StreamOffset + header.m_DirEntries[(int)(BspFile.Header.EntityType.Visdata)].offset;
+            long dataSize = header.StreamOffset + header.m_DirEntries[(int)(BspFile.Header.EntityType.Visdata)].length;
             long startOffset = baseOffset + infoSize;
             long endOffset = startOffset + (dataSize - infoSize);
             int totalSize = (int)(endOffset - startOffset);
@@ -447,22 +447,22 @@ namespace Framework1.Quake3
             return count > 0;
         }
 
-        public Visdata GetVisdata(Header header)
+        public BspFile.Visdata GetVisdata(BspFile.Header header)
         {
             if (header == null)
                 return null;
 
-            if (header.m_DirEntries[(int)(Header.EntityType.Visdata)].length == 0)
+            if (header.m_DirEntries[(int)(BspFile.Header.EntityType.Visdata)].length == 0)
                 return null;
 
-            Type infoType = typeof(Visdata.Binary_info);
+            Type infoType = typeof(BspFile.Visdata.Binary_info);
             int infoSize = Marshal.SizeOf(infoType);
 
-            Type type = typeof(Visdata.Binary_data);
+            Type type = typeof(BspFile.Visdata.Binary_data);
             int size = Marshal.SizeOf(type);
 
-            long baseOffset = header.StreamOffset + header.m_DirEntries[(int)(Header.EntityType.Visdata)].offset;
-            long dataSize = header.StreamOffset + header.m_DirEntries[(int)(Header.EntityType.Visdata)].length;
+            long baseOffset = header.StreamOffset + header.m_DirEntries[(int)(BspFile.Header.EntityType.Visdata)].offset;
+            long dataSize = header.StreamOffset + header.m_DirEntries[(int)(BspFile.Header.EntityType.Visdata)].length;
             long startOffset = baseOffset + infoSize;
             long endOffset = startOffset + (dataSize - infoSize);
             int totalSize = (int)(endOffset - startOffset);
@@ -473,7 +473,7 @@ namespace Framework1.Quake3
 
             Trace.Assert(count * size == totalSize);
 
-            Visdata.Binary_info binaryInfo = new Visdata.Binary_info();
+            BspFile.Visdata.Binary_info binaryInfo = new BspFile.Visdata.Binary_info();
 
             {
                 if (m_Buffer.Length < infoSize)
@@ -484,7 +484,7 @@ namespace Framework1.Quake3
                 m_Stream.Seek(baseOffset, SeekOrigin.Begin);
                 if (m_Stream.Read(m_Buffer, 0, infoSize) == infoSize)
                 {
-                    binaryInfo = (Visdata.Binary_info)BinarySerializer.RawDeserialize(m_Buffer, 0, infoType);
+                    binaryInfo = (BspFile.Visdata.Binary_info)BinarySerializer.RawDeserialize(m_Buffer, 0, infoType);
 
                     Trace.Assert(binaryInfo.n_vecs * binaryInfo.sz_vecs == count);
                 }
@@ -499,7 +499,7 @@ namespace Framework1.Quake3
                 m_Buffer = new byte[totalSize];
             }
 
-            Visdata.Binary_data[] binaryVisdata = new Visdata.Binary_data[count];
+            BspFile.Visdata.Binary_data[] binaryVisdata = new BspFile.Visdata.Binary_data[count];
 
             m_Stream.Seek(startOffset, SeekOrigin.Begin);
             if (m_Stream.Read(m_Buffer, 0, totalSize) == totalSize)
@@ -507,10 +507,10 @@ namespace Framework1.Quake3
                 int offset = 0;
                 for (int i = 0; i < count; ++i, offset += size)
                 {
-                    binaryVisdata[i] = (Visdata.Binary_data)BinarySerializer.RawDeserialize(m_Buffer, offset, type);
+                    binaryVisdata[i] = (BspFile.Visdata.Binary_data)BinarySerializer.RawDeserialize(m_Buffer, offset, type);
                 }
 
-                Visdata asset = new Visdata();
+                BspFile.Visdata asset = new BspFile.Visdata();
                 asset.StreamOffset = startOffset;
                 asset.Header = header;
 
@@ -521,11 +521,11 @@ namespace Framework1.Quake3
             return null;
         }
 
-        public int GetTextureCount(Header header)
+        public int GetTextureCount(BspFile.Header header)
         {
-            Type type = typeof(Textures.Binary_texture);
+            Type type = typeof(BspFile.Textures.Binary_texture);
             int size = Marshal.SizeOf(type);
-            int length = header.m_DirEntries[(int)(Header.EntityType.Textures)].length;
+            int length = header.m_DirEntries[(int)(BspFile.Header.EntityType.Textures)].length;
             int count = (length / size);
 
             Trace.Assert(count * size == length);
@@ -533,15 +533,15 @@ namespace Framework1.Quake3
             return count;
         }
 
-        public Textures GetTextures(Header header, int startIndex, int count)
+        public BspFile.Textures GetTextures(BspFile.Header header, int startIndex, int count)
         {
             if (header == null)
                 return null;
 
-            Type type = typeof(Textures.Binary_texture);
+            Type type = typeof(BspFile.Textures.Binary_texture);
             int size = Marshal.SizeOf(type);
 
-            long baseOffset = header.StreamOffset + header.m_DirEntries[(int)(Header.EntityType.Textures)].offset;
+            long baseOffset = header.StreamOffset + header.m_DirEntries[(int)(BspFile.Header.EntityType.Textures)].offset;
             long startOffset = baseOffset + startIndex * size;
             long endOffset = startOffset + count * size;
             int totalSize = (int)(endOffset - startOffset);
@@ -551,7 +551,7 @@ namespace Framework1.Quake3
                 m_Buffer = new byte[totalSize];
             }
 
-            Textures.Binary_texture[] binaryTextures = new Textures.Binary_texture[count];
+            BspFile.Textures.Binary_texture[] binaryTextures = new BspFile.Textures.Binary_texture[count];
 
             m_Stream.Seek(startOffset, SeekOrigin.Begin);
             if (m_Stream.Read(m_Buffer, 0, totalSize) == totalSize)
@@ -559,10 +559,10 @@ namespace Framework1.Quake3
                 int offset = 0;
                 for (int i = 0; i < count; ++i, offset += size)
                 {
-                    binaryTextures[i] = (Textures.Binary_texture)BinarySerializer.RawDeserialize(m_Buffer, offset, type);
+                    binaryTextures[i] = (BspFile.Textures.Binary_texture)BinarySerializer.RawDeserialize(m_Buffer, offset, type);
                 }
 
-                Textures asset = new Textures();
+                BspFile.Textures asset = new BspFile.Textures();
                 asset.StreamOffset = startOffset;
                 asset.Header = header;
 
@@ -575,10 +575,10 @@ namespace Framework1.Quake3
 
         static int BinLightmapSizeBytes = 128 * 128 * 3;
 
-        public int GetLightmapCount(Header header)
+        public int GetLightmapCount(BspFile.Header header)
         {
             int size = BinLightmapSizeBytes;
-            int length = header.m_DirEntries[(int)(Header.EntityType.Lightmaps)].length;
+            int length = header.m_DirEntries[(int)(BspFile.Header.EntityType.Lightmaps)].length;
             int count = (length / size);
 
             Trace.Assert(count * size == length);
@@ -586,14 +586,14 @@ namespace Framework1.Quake3
             return count;
         }
 
-        public Lightmaps GetLightmaps(Header header, int startIndex, int count)
+        public BspFile.Lightmaps GetLightmaps(BspFile.Header header, int startIndex, int count)
         {
             if (header == null)
                 return null;
 
             int size = BinLightmapSizeBytes;
 
-            long baseOffset = header.StreamOffset + header.m_DirEntries[(int)(Header.EntityType.Lightmaps)].offset;
+            long baseOffset = header.StreamOffset + header.m_DirEntries[(int)(BspFile.Header.EntityType.Lightmaps)].offset;
             long startOffset = baseOffset + startIndex * size;
             long endOffset = startOffset + count * size;
             int totalSize = (int)(endOffset - startOffset);
@@ -603,7 +603,7 @@ namespace Framework1.Quake3
                 m_Buffer = new byte[totalSize];
             }
 
-            Lightmaps.Binary_lightmap[] binaryLightmaps = new Lightmaps.Binary_lightmap[count];
+            BspFile.Lightmaps.Binary_lightmap[] binaryLightmaps = new BspFile.Lightmaps.Binary_lightmap[count];
 
             m_Stream.Seek(startOffset, SeekOrigin.Begin);
             if (m_Stream.Read(m_Buffer, 0, totalSize) == totalSize)
@@ -611,7 +611,7 @@ namespace Framework1.Quake3
                 int offset = 0;
                 for (int i = 0; i < count; ++i, offset += size)
                 {
-                    binaryLightmaps[i] = new Lightmaps.Binary_lightmap();
+                    binaryLightmaps[i] = new BspFile.Lightmaps.Binary_lightmap();
                     binaryLightmaps[i].pixels = new Microsoft.Xna.Framework.Graphics.Color[128 * 128];
                     
                     int bufferIndex = offset;
@@ -629,7 +629,7 @@ namespace Framework1.Quake3
                     }
                 }
 
-                Lightmaps asset = new Lightmaps();
+                BspFile.Lightmaps asset = new BspFile.Lightmaps();
                 asset.StreamOffset = startOffset;
                 asset.Header = header;
 
@@ -641,11 +641,11 @@ namespace Framework1.Quake3
         }
 
 
-        public int GetEffectCount(Header header)
+        public int GetEffectCount(BspFile.Header header)
         {
-            Type type = typeof(Effects.Binary_effect);
+            Type type = typeof(BspFile.Effects.Binary_effect);
             int size = Marshal.SizeOf(type);
-            int length = header.m_DirEntries[(int)(Header.EntityType.Effects)].length;
+            int length = header.m_DirEntries[(int)(BspFile.Header.EntityType.Effects)].length;
             int count = (length / size);
 
             Trace.Assert(count * size == length);
@@ -653,15 +653,15 @@ namespace Framework1.Quake3
             return count;
         }
 
-        public Effects GetEffects(Header header, int startIndex, int count)
+        public BspFile.Effects GetEffects(BspFile.Header header, int startIndex, int count)
         {
             if (header == null)
                 return null;
 
-            Type type = typeof(Effects.Binary_effect);
+            Type type = typeof(BspFile.Effects.Binary_effect);
             int size = Marshal.SizeOf(type);
 
-            long baseOffset = header.StreamOffset + header.m_DirEntries[(int)(Header.EntityType.Effects)].offset;
+            long baseOffset = header.StreamOffset + header.m_DirEntries[(int)(BspFile.Header.EntityType.Effects)].offset;
             long startOffset = baseOffset + startIndex * size;
             long endOffset = startOffset + count * size;
             int totalSize = (int)(endOffset - startOffset);
@@ -671,7 +671,7 @@ namespace Framework1.Quake3
                 m_Buffer = new byte[totalSize];
             }
 
-            Effects.Binary_effect[] binaryEffects = new Effects.Binary_effect[count];
+            BspFile.Effects.Binary_effect[] binaryEffects = new BspFile.Effects.Binary_effect[count];
 
             m_Stream.Seek(startOffset, SeekOrigin.Begin);
             if (m_Stream.Read(m_Buffer, 0, totalSize) == totalSize)
@@ -679,10 +679,10 @@ namespace Framework1.Quake3
                 int offset = 0;
                 for (int i = 0; i < count; ++i, offset += size)
                 {
-                    binaryEffects[i] = (Effects.Binary_effect)BinarySerializer.RawDeserialize(m_Buffer, offset, type);
+                    binaryEffects[i] = (BspFile.Effects.Binary_effect)BinarySerializer.RawDeserialize(m_Buffer, offset, type);
                 }
 
-                Effects asset = new Effects();
+                BspFile.Effects asset = new BspFile.Effects();
                 asset.StreamOffset = startOffset;
                 asset.Header = header;
 

@@ -4,8 +4,10 @@ using System.IO;
 using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
 using Microsoft.Xna.Framework.Content;
+using BlackRice.Framework.Graphics;
+using BlackRice.Framework.Quake3.Load;
 
-namespace Framework1.Quake3
+namespace BlackRice.Framework.Quake3
 {
     public class LoadedBspLevel
     {

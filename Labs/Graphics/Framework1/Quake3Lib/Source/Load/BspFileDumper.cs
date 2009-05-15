@@ -2,7 +2,7 @@ using System;
 using System.IO;
 using System.Diagnostics;
 
-namespace Framework1.Quake3
+namespace BlackRice.Framework.Quake3.Load
 {
     class BspFileDumper : IDisposable
     {

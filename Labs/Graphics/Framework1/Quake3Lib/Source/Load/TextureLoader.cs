@@ -3,8 +3,9 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using Microsoft.Xna.Framework.Graphics;
 using Microsoft.Xna.Framework.Content;
+using BlackRice.Framework.Graphics;
 
-namespace Framework1.Quake3.Load
+namespace BlackRice.Framework.Quake3.Load
 {
     class TextureLoader : RenderResourceManager.IManagedTextureLoader
     {

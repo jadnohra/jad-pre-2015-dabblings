@@ -2,7 +2,7 @@ using System;
 using System.IO;
 using System.Text;
 
-namespace Framework1.Quake3.Load
+namespace BlackRice.Framework.Quake3.Load
 {
     public class ScriptBlockParser
     {

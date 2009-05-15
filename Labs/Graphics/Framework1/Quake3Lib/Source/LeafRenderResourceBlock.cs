@@ -3,8 +3,10 @@ using System.Diagnostics;
 using System.Collections.Generic;
 using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
+using BlackRice.Framework.Graphics;
+using BlackRice.Framework.Quake3.Load;
 
-namespace Framework1.Quake3
+namespace BlackRice.Framework.Quake3
 {
     using VertexFormat = FaceVertex;
 

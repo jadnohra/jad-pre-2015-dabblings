@@ -3,7 +3,7 @@ using System.Diagnostics;
 using System.Collections.Generic;
 
 
-namespace Framework1.Quake3
+namespace BlackRice.Framework.Quake3
 {
     public struct Interval
     {

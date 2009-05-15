@@ -2,8 +2,9 @@
 using System.Collections.Generic;
 using System.Diagnostics;
 using Microsoft.Xna.Framework;
+using BlackRice.Framework.Quake3.Load;
 
-namespace Framework1.Quake3
+namespace BlackRice.Framework.Quake3
 {
     public class BspTree
     {

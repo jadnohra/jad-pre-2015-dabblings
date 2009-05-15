@@ -3,7 +3,7 @@ using System.IO;
 using System.Collections.Generic;
 using System.Diagnostics;
 
-namespace Framework1.Quake3.Load
+namespace BlackRice.Framework.Quake3.Load
 {
     class ScriptLoader
     {

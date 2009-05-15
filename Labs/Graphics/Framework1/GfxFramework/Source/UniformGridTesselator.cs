@@ -1,7 +1,7 @@
 using System;
 using System.Diagnostics;
 
-namespace Framework1.Geometry
+namespace BlackRice.Framework.Geometry
 {
     public class UniformGridTesselator
     {
