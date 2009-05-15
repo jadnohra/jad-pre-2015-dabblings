@@ -1,6 +1,7 @@
 using System;
 using System.IO;
 using System.Collections.Generic;
+using System.Diagnostics;
 
 namespace Framework1.Quake3.Load
 {
@@ -14,14 +15,12 @@ namespace Framework1.Quake3.Load
         internal class ShaderAddress
         {
             internal int file;
-            internal int pos;
-            internal int size;
+            ScriptBlockParser.BlockAddress address;
 
-            internal ShaderAddress(int file_, int pos_, int size_)
+            internal ShaderAddress(int file_, ScriptBlockParser.BlockAddress address_)
             {
                 file = file_;
-                pos = pos_;
-                size = size_;
+                address = address_;
             }
         }
 
@@ -35,7 +34,7 @@ namespace Framework1.Quake3.Load
             m_Parent = parent;
             m_TypeFilter = typeFilter;
 
-            //ParseScripts();
+            ParseScripts();
         }
 
         void ParseScripts()
@@ -49,22 +48,24 @@ namespace Framework1.Quake3.Load
 
                 m_ScriptFiles = new ScriptFile[fileInfos.Length];
                 m_ShaderAddresses = new Dictionary<string, ShaderAddress>();
-                
+
+                string scriptName = null;
+                ScriptBlockParser.BlockAddress address = new ScriptBlockParser.BlockAddress();
+
+
                 for (int i = 0; i < fileInfos.Length; ++i)
                 {
                     FileInfo fi  = fileInfos[i];
                     scriptBlockParser.Open(fi.FullName);
                     m_ScriptFiles[i].assetName = fi.Name;
 
-                    string scriptName = null;
-                    int scriptStartPos = 0;
-                    int scriptSourceSize = 0;
-
-                    
-                    while (scriptBlockParser.GetNextScriptAddress(ref scriptName, ref scriptStartPos, ref scriptSourceSize))
+                    while (scriptBlockParser.GetNextScriptAddress(ref scriptName, ref address))
                     {
-                        m_ShaderAddresses[scriptName] = new ShaderAddress(i, scriptStartPos, scriptSourceSize);
+                        m_ShaderAddresses[scriptName] = new ShaderAddress(i, address);
                     }
+
+                    if (scriptBlockParser.HasError())
+                        Trace.TraceWarning("Error parsing '" + fi.FullName + "'");
                 }
            }
         }

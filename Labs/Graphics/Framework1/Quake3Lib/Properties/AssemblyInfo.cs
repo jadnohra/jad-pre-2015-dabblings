@@ -5,11 +5,10 @@ using System.Runtime.InteropServices;
 // General Information about an assembly is controlled through the following 
 // set of attributes. Change these attribute values to modify the information
 // associated with an assembly.
-[assembly: AssemblyTitle("QuakeLab")]
-[assembly: AssemblyProduct("QuakeLab")]
+[assembly: AssemblyTitle("Quake3Lib")]
+[assembly: AssemblyProduct("Quake3Lib")]
 [assembly: AssemblyDescription("")]
 [assembly: AssemblyCompany("Microsoft")]
-
 [assembly: AssemblyCopyright("Copyright © Microsoft 2009")]
 [assembly: AssemblyTrademark("")]
 [assembly: AssemblyCulture("")]
@@ -20,8 +19,7 @@ using System.Runtime.InteropServices;
 [assembly: ComVisible(false)]
 
 // The following GUID is for the ID of the typelib if this project is exposed to COM
-[assembly: Guid("7aa5adf8-2bb3-43f3-bb71-5960c01d9110")]
-
+[assembly: Guid("1db1ec00-fe79-4dd2-933e-b70bf0bc18da")]
 
 // Version information for an assembly consists of the following four values:
 //

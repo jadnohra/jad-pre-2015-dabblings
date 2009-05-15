@@ -5,6 +5,10 @@
 **** ref engine: http://xreal-project.net/
 **** ref engine: http://ioquake3.org/source-codes/
 
+** lighting: http://www.bluesnews.com/abrash/contents.shtml
+** lighting: http://icculus.org/twilight/darkplaces/technotes.html
+** lighting: http://www.katsbits.com/htm/tutorials/doom_3_lighting.htm
+
 http://linux.ucla.edu/~phaethon/q3/formats/md3format.html
 http://www.paulsprojects.net/opengl/octagon/octagon.html
 

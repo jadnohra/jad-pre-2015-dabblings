@@ -20,7 +20,7 @@ namespace Framework1
     {
         GraphicsDeviceManager graphics;
 
-        Scene m_Scene;
+        //Scene m_Scene;
         
         ManualCamera m_Camera;
         Matrix m_Projection;
@@ -68,6 +68,7 @@ namespace Framework1
             //string filePath = Path.Combine(Content.RootDirectory, "Q3Maps/openarena.pk3/maps/dm6ish.bsp");
             string filePath = Path.Combine(Content.RootDirectory, "Q3Maps/openarena.pk3/maps/oa_ctf2.bsp");
 
+            /*
             using (Quake3.BspFileDumper bspFileDumper = new Quake3.BspFileDumper(filePath))
             {
                 bspFileDumper.Print(true, true);
@@ -83,7 +84,7 @@ namespace Framework1
 
                 m_Scene = scene;
             }
-
+            */
             //m_Renderer = new Renderer(graphics.GraphicsDevice, Content, m_AssetInterpeterFactory);
             m_Camera = new ManualCamera();
             m_Camera.SetMoveScale(170.0f);
@@ -151,7 +152,7 @@ namespace Framework1
 
             GraphicsDevice.Clear(Color.CornflowerBlue);
 
-            m_Scene.Render(m_Camera, m_Projection);
+           // m_Scene.Render(m_Camera, m_Projection);
            // m_Scene.Render(m_Renderer, m_BspHeader, m_Camera.GetViewMatrix(), m_Projection);
             //m_Renderer.Render();
 

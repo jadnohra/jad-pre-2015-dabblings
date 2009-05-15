@@ -15,7 +15,7 @@ namespace Framework1.Quake3
     }
 
     class LevelScene
-    : Scene
+    //: Scene
     {
         LoadedBspLevel m_LoadedLevel;
         BspTree m_Tree;
@@ -71,8 +71,10 @@ namespace Framework1.Quake3
             m_LoadedLevel = null;
         }
 
+        /*
         override public void Render(ManualCamera camera, Matrix projection)
         {
+            
             BspTree.VisibleLeafs visibleLeafs = new BspTree.VisibleLeafs();
             m_Tree.FindVisibleLeafs(camera.GetWorldTransform().Translation, visibleLeafs, true);
             m_Tree.Evict(m_RenderResourceBlockCollector);
@@ -107,5 +109,6 @@ namespace Framework1.Quake3
                 Console.WriteLine(String.Format("{0:G} new visible leafs", newVisibleLeafCount));
             }
         }
+        */
     }
 }
