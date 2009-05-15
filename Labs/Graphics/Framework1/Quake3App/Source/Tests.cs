@@ -6,12 +6,10 @@ using System.Reflection;
 using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
 using Microsoft.Xna.Framework.Storage;
-using Framework1.Quake3;
+using BlackRice.Framework.Quake3;
 
-namespace Framework1
+namespace BlackRice.Framework.Quake3App
 {
-    using Quake3.BspFile;
-
     class UnitTests : IDisposable
     {
         public void Dispose()
@@ -22,7 +20,6 @@ namespace Framework1
         public void Main(string[] args) 
         {
             Test_Types();
-            Test_Quake3Loader();
         }
 
         [StructLayout(LayoutKind.Sequential)]
@@ -92,37 +89,6 @@ namespace Framework1
                 Trace.Assert(vertex.Position.X == -66.0f); 
              }
         }
-
-        void Test_Quake3Loader()
-        {
-            /*
-            string filePath = Path.Combine(StorageContainer.TitleLocation, "test.bsp");
-            
-            BspLoader loader = new BspLoader(filePath);
-            Header header = loader.Open();
-
-            Trace.Assert(header != null);
-
-            int faceCount = loader.GetFaceCount(header);
-
-            if (faceCount > 0)
-            {
-                using (Faces faces = loader.GetFaces(header, 0, faceCount))
-                {
-                    Trace.Assert(faces != null);
-                }
-            }
-
-            int vertexCount = loader.GetVertexCount(header);
-
-            if (vertexCount > 0)
-            {
-                using (Vertices vertices = loader.GetVertices(header, 0, vertexCount))
-                {
-                    Trace.Assert(vertices != null);
-                }
-            }
-             */ 
-        }
+      
     }
 }

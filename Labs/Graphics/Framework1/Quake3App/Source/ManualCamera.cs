@@ -2,7 +2,7 @@
 using Microsoft.Xna.Framework.Graphics;
 using Microsoft.Xna.Framework.Input;
 
-namespace Framework1
+namespace BlackRice.Framework.Quake3App
 {
     public class ManualCamera
     {

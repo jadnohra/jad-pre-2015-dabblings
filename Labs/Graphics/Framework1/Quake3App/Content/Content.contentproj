@@ -263,393 +263,522 @@
       <Importer>TextureImporter</Importer>
       <Processor>TextureProcessor</Processor>
     </Compile>
-    <Compile Include="Q3Maps\openarena.pk3\maps\aggressor.bsp">
+    <None Include="Q3Maps\openarena.pk3\maps\aggressor.bsp">
       <Name>aggressor</Name>
-    </Compile>
-    <Compile Include="Q3Maps\openarena.pk3\maps\am_galmevish.bsp">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+    <None Include="Q3Maps\openarena.pk3\maps\am_galmevish.bsp">
       <Name>am_galmevish</Name>
-    </Compile>
-    <Compile Include="Q3Maps\openarena.pk3\maps\cbctf1.bsp">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+    <None Include="Q3Maps\openarena.pk3\maps\cbctf1.bsp">
       <Name>cbctf1</Name>
-    </Compile>
-    <Compile Include="Q3Maps\openarena.pk3\maps\ce1m7.bsp">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+    <None Include="Q3Maps\openarena.pk3\maps\ce1m7.bsp">
       <Name>ce1m7</Name>
-    </Compile>
-    <Compile Include="Q3Maps\openarena.pk3\maps\ctf_compromise.bsp">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+    <None Include="Q3Maps\openarena.pk3\maps\ctf_compromise.bsp">
       <Name>ctf_compromise</Name>
-    </Compile>
-    <Compile Include="Q3Maps\openarena.pk3\maps\ctf_gate1.bsp">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+    <None Include="Q3Maps\openarena.pk3\maps\ctf_gate1.bsp">
       <Name>ctf_gate1</Name>
-    </Compile>
-    <Compile Include="Q3Maps\openarena.pk3\maps\ctf_inyard.bsp">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+    <None Include="Q3Maps\openarena.pk3\maps\ctf_inyard.bsp">
       <Name>ctf_inyard</Name>
-    </Compile>
-    <Compile Include="Q3Maps\openarena.pk3\maps\czest1dm.bsp">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+    <None Include="Q3Maps\openarena.pk3\maps\czest1dm.bsp">
       <Name>czest1dm</Name>
-    </Compile>
-    <Compile Include="Q3Maps\openarena.pk3\maps\czest1tourney.bsp">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+    <None Include="Q3Maps\openarena.pk3\maps\czest1tourney.bsp">
       <Name>czest1tourney</Name>
-    </Compile>
-    <Compile Include="Q3Maps\openarena.pk3\maps\czest2ctf.bsp">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+    <None Include="Q3Maps\openarena.pk3\maps\czest2ctf.bsp">
       <Name>czest2ctf</Name>
-    </Compile>
-    <Compile Include="Q3Maps\openarena.pk3\maps\czest3ctf.bsp">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+    <None Include="Q3Maps\openarena.pk3\maps\czest3ctf.bsp">
       <Name>czest3ctf</Name>
-    </Compile>
-    <Compile Include="Q3Maps\openarena.pk3\maps\delta.bsp">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+    <None Include="Q3Maps\openarena.pk3\maps\delta.bsp">
       <Name>delta</Name>
-    </Compile>
-    <Compile Include="Q3Maps\openarena.pk3\maps\dm4ish.bsp">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+    <None Include="Q3Maps\openarena.pk3\maps\dm4ish.bsp">
       <Name>dm4ish</Name>
-    </Compile>
-    <Compile Include="Q3Maps\openarena.pk3\maps\dm6ish.bsp">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+    <None Include="Q3Maps\openarena.pk3\maps\dm6ish.bsp">
       <Name>dm6ish</Name>
-    </Compile>
-    <Compile Include="Q3Maps\openarena.pk3\maps\fan.bsp">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+    <None Include="Q3Maps\openarena.pk3\maps\fan.bsp">
       <Name>fan</Name>
-    </Compile>
-    <Compile Include="Q3Maps\openarena.pk3\maps\hydronex.bsp">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+    <None Include="Q3Maps\openarena.pk3\maps\hydronex.bsp">
       <Name>hydronex</Name>
-    </Compile>
-    <Compile Include="Q3Maps\openarena.pk3\maps\islandctf.bsp">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+    <None Include="Q3Maps\openarena.pk3\maps\islandctf.bsp">
       <Name>islandctf</Name>
-    </Compile>
-    <Compile Include="Q3Maps\openarena.pk3\maps\islanddm.bsp">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+    <None Include="Q3Maps\openarena.pk3\maps\islanddm.bsp">
       <Name>islanddm</Name>
-    </Compile>
-    <Compile Include="Q3Maps\openarena.pk3\maps\kaos.bsp">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+    <None Include="Q3Maps\openarena.pk3\maps\kaos.bsp">
       <Name>kaos</Name>
-    </Compile>
-    <Compile Include="Q3Maps\openarena.pk3\maps\kaos2.bsp">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+    <None Include="Q3Maps\openarena.pk3\maps\kaos2.bsp">
       <Name>kaos2</Name>
-    </Compile>
-    <Compile Include="Q3Maps\openarena.pk3\maps\oasago2.bsp">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+    <None Include="Q3Maps\openarena.pk3\maps\oasago2.bsp">
       <Name>oasago2</Name>
-    </Compile>
-    <Compile Include="Q3Maps\openarena.pk3\maps\oa_bases3.bsp">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+    <None Include="Q3Maps\openarena.pk3\maps\oa_bases3.bsp">
       <Name>oa_bases3</Name>
-    </Compile>
-    <Compile Include="Q3Maps\openarena.pk3\maps\oa_bases3cl.bsp">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+    <None Include="Q3Maps\openarena.pk3\maps\oa_bases3cl.bsp">
       <Name>oa_bases3cl</Name>
-    </Compile>
-    <Compile Include="Q3Maps\openarena.pk3\maps\oa_bases3plus3.bsp">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+    <None Include="Q3Maps\openarena.pk3\maps\oa_bases3plus3.bsp">
       <Name>oa_bases3plus3</Name>
-    </Compile>
-    <Compile Include="Q3Maps\openarena.pk3\maps\oa_bases5.bsp">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+    <None Include="Q3Maps\openarena.pk3\maps\oa_bases5.bsp">
       <Name>oa_bases5</Name>
-    </Compile>
-    <Compile Include="Q3Maps\openarena.pk3\maps\oa_bases7.bsp">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+    <None Include="Q3Maps\openarena.pk3\maps\oa_bases7.bsp">
       <Name>oa_bases7</Name>
-    </Compile>
-    <Compile Include="Q3Maps\openarena.pk3\maps\oa_ctf2.bsp">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+    <None Include="Q3Maps\openarena.pk3\maps\oa_ctf2.bsp">
       <Name>oa_ctf2</Name>
-    </Compile>
-    <Compile Include="Q3Maps\openarena.pk3\maps\oa_ctf2old.bsp">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+    <None Include="Q3Maps\openarena.pk3\maps\oa_ctf2old.bsp">
       <Name>oa_ctf2old</Name>
-    </Compile>
-    <Compile Include="Q3Maps\openarena.pk3\maps\oa_ctf4ish.bsp">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+    <None Include="Q3Maps\openarena.pk3\maps\oa_ctf4ish.bsp">
       <Name>oa_ctf4ish</Name>
-    </Compile>
-    <Compile Include="Q3Maps\openarena.pk3\maps\oa_dm1.bsp">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+    <None Include="Q3Maps\openarena.pk3\maps\oa_dm1.bsp">
       <Name>oa_dm1</Name>
-    </Compile>
-    <Compile Include="Q3Maps\openarena.pk3\maps\oa_dm2.bsp">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+    <None Include="Q3Maps\openarena.pk3\maps\oa_dm2.bsp">
       <Name>oa_dm2</Name>
-    </Compile>
-    <Compile Include="Q3Maps\openarena.pk3\maps\oa_dm3.bsp">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+    <None Include="Q3Maps\openarena.pk3\maps\oa_dm3.bsp">
       <Name>oa_dm3</Name>
-    </Compile>
-    <Compile Include="Q3Maps\openarena.pk3\maps\oa_dm4.bsp">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+    <None Include="Q3Maps\openarena.pk3\maps\oa_dm4.bsp">
       <Name>oa_dm4</Name>
-    </Compile>
-    <Compile Include="Q3Maps\openarena.pk3\maps\oa_dm5.bsp">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+    <None Include="Q3Maps\openarena.pk3\maps\oa_dm5.bsp">
       <Name>oa_dm5</Name>
-    </Compile>
-    <Compile Include="Q3Maps\openarena.pk3\maps\oa_dm6.bsp">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+    <None Include="Q3Maps\openarena.pk3\maps\oa_dm6.bsp">
       <Name>oa_dm6</Name>
-    </Compile>
-    <Compile Include="Q3Maps\openarena.pk3\maps\oa_dm7.bsp">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+    <None Include="Q3Maps\openarena.pk3\maps\oa_dm7.bsp">
       <Name>oa_dm7</Name>
-    </Compile>
-    <Compile Include="Q3Maps\openarena.pk3\maps\oa_koth1.bsp">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+    <None Include="Q3Maps\openarena.pk3\maps\oa_koth1.bsp">
       <Name>oa_koth1</Name>
-    </Compile>
-    <Compile Include="Q3Maps\openarena.pk3\maps\oa_minia.bsp">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+    <None Include="Q3Maps\openarena.pk3\maps\oa_minia.bsp">
       <Name>oa_minia</Name>
-    </Compile>
-    <Compile Include="Q3Maps\openarena.pk3\maps\oa_pvomit.bsp">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+    <None Include="Q3Maps\openarena.pk3\maps\oa_pvomit.bsp">
       <Name>oa_pvomit</Name>
-    </Compile>
-    <Compile Include="Q3Maps\openarena.pk3\maps\oa_rpg3dm2.bsp">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+    <None Include="Q3Maps\openarena.pk3\maps\oa_rpg3dm2.bsp">
       <Name>oa_rpg3dm2</Name>
-    </Compile>
-    <Compile Include="Q3Maps\openarena.pk3\maps\oa_shine.bsp">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+    <None Include="Q3Maps\openarena.pk3\maps\oa_shine.bsp">
       <Name>oa_shine</Name>
-    </Compile>
-    <Compile Include="Q3Maps\openarena.pk3\maps\oa_shouse.bsp">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+    <None Include="Q3Maps\openarena.pk3\maps\oa_shouse.bsp">
       <Name>oa_shouse</Name>
-    </Compile>
-    <Compile Include="Q3Maps\openarena.pk3\maps\oa_spirit3.bsp">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+    <None Include="Q3Maps\openarena.pk3\maps\oa_spirit3.bsp">
       <Name>oa_spirit3</Name>
-    </Compile>
-    <Compile Include="Q3Maps\openarena.pk3\maps\ps37ctf.bsp">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+    <None Include="Q3Maps\openarena.pk3\maps\ps37ctf.bsp">
       <Name>ps37ctf</Name>
-    </Compile>
-    <Compile Include="Q3Maps\openarena.pk3\maps\pul1ctf.bsp">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+    <None Include="Q3Maps\openarena.pk3\maps\pul1ctf.bsp">
       <Name>pul1ctf</Name>
-    </Compile>
-    <Compile Include="Q3Maps\openarena.pk3\maps\q3dm6ish.bsp">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+    <None Include="Q3Maps\openarena.pk3\maps\q3dm6ish.bsp">
       <Name>q3dm6ish</Name>
-    </Compile>
-    <Compile Include="Q3Maps\openarena.pk3\maps\sleekgrinder.bsp">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+    <None Include="Q3Maps\openarena.pk3\maps\sleekgrinder.bsp">
       <Name>sleekgrinder</Name>
-    </Compile>
-    <Compile Include="Q3Maps\openarena.pk3\maps\slimefac.bsp">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+    <None Include="Q3Maps\openarena.pk3\maps\slimefac.bsp">
       <Name>slimefac</Name>
-    </Compile>
-    <Compile Include="Q3Maps\openarena.pk3\maps\suspended.bsp">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+    <None Include="Q3Maps\openarena.pk3\maps\suspended.bsp">
       <Name>suspended</Name>
-    </Compile>
-    <Compile Include="Q3Maps\openarena.pk3\maps\wrackdm17.bsp">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+    <None Include="Q3Maps\openarena.pk3\maps\wrackdm17.bsp">
       <Name>wrackdm17</Name>
-    </Compile>
-    <Compile Include="Q3Maps\openarena.pk3\scripts\acc.shader">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+    <None Include="Q3Maps\openarena.pk3\scripts\acc.shader">
       <Name>acc</Name>
-    </Compile>
-    <Compile Include="Q3Maps\openarena.pk3\scripts\ammo.shader">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+    <None Include="Q3Maps\openarena.pk3\scripts\ammo.shader">
       <Name>ammo</Name>
-    </Compile>
-    <Compile Include="Q3Maps\openarena.pk3\scripts\beams.shader">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+    <None Include="Q3Maps\openarena.pk3\scripts\beams.shader">
       <Name>beams</Name>
-    </Compile>
-    <Compile Include="Q3Maps\openarena.pk3\scripts\cf_models.shader">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+    <None Include="Q3Maps\openarena.pk3\scripts\cf_models.shader">
       <Name>cf_models</Name>
-    </Compile>
-    <Compile Include="Q3Maps\openarena.pk3\scripts\clown.shader">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+    <None Include="Q3Maps\openarena.pk3\scripts\clown.shader">
       <Name>clown</Name>
-    </Compile>
-    <Compile Include="Q3Maps\openarena.pk3\scripts\clown2.shader">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+    <None Include="Q3Maps\openarena.pk3\scripts\clown2.shader">
       <Name>clown2</Name>
-    </Compile>
-    <Compile Include="Q3Maps\openarena.pk3\scripts\common.shader">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+    <None Include="Q3Maps\openarena.pk3\scripts\common.shader">
       <Name>common</Name>
-    </Compile>
-    <Compile Include="Q3Maps\openarena.pk3\scripts\cosmoflash.shader">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+    <None Include="Q3Maps\openarena.pk3\scripts\cosmoflash.shader">
       <Name>cosmoflash</Name>
-    </Compile>
-    <Compile Include="Q3Maps\openarena.pk3\scripts\ctf.shader">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+    <None Include="Q3Maps\openarena.pk3\scripts\ctf.shader">
       <Name>ctf</Name>
-    </Compile>
-    <Compile Include="Q3Maps\openarena.pk3\scripts\czest.shader">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+    <None Include="Q3Maps\openarena.pk3\scripts\czest.shader">
       <Name>czest</Name>
-    </Compile>
-    <Compile Include="Q3Maps\openarena.pk3\scripts\decals.shader">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+    <None Include="Q3Maps\openarena.pk3\scripts\decals.shader">
       <Name>decals</Name>
-    </Compile>
-    <Compile Include="Q3Maps\openarena.pk3\scripts\details.shader">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+    <None Include="Q3Maps\openarena.pk3\scripts\details.shader">
       <Name>details</Name>
-    </Compile>
-    <Compile Include="Q3Maps\openarena.pk3\scripts\detailtest.shader">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+    <None Include="Q3Maps\openarena.pk3\scripts\detailtest.shader">
       <Name>detailtest</Name>
-    </Compile>
-    <Compile Include="Q3Maps\openarena.pk3\scripts\doubledomination.shader">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+    <None Include="Q3Maps\openarena.pk3\scripts\doubledomination.shader">
       <Name>doubledomination</Name>
-    </Compile>
-    <Compile Include="Q3Maps\openarena.pk3\scripts\evil8.shader">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+    <None Include="Q3Maps\openarena.pk3\scripts\evil8.shader">
       <Name>evil8</Name>
-    </Compile>
-    <Compile Include="Q3Maps\openarena.pk3\scripts\filth.shader">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+    <None Include="Q3Maps\openarena.pk3\scripts\filth.shader">
       <Name>filth</Name>
-    </Compile>
-    <Compile Include="Q3Maps\openarena.pk3\scripts\flaretest.shader">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+    <None Include="Q3Maps\openarena.pk3\scripts\flaretest.shader">
       <Name>flaretest</Name>
-    </Compile>
-    <Compile Include="Q3Maps\openarena.pk3\scripts\iconsprites.shader">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+    <None Include="Q3Maps\openarena.pk3\scripts\iconsprites.shader">
       <Name>iconsprites</Name>
-    </Compile>
-    <Compile Include="Q3Maps\openarena.pk3\scripts\islandctf.shader">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+    <None Include="Q3Maps\openarena.pk3\scripts\islandctf.shader">
       <Name>islandctf</Name>
-    </Compile>
-    <Compile Include="Q3Maps\openarena.pk3\scripts\item_health.shader">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+    <None Include="Q3Maps\openarena.pk3\scripts\item_health.shader">
       <Name>item_health</Name>
-    </Compile>
-    <Compile Include="Q3Maps\openarena.pk3\scripts\liquid_lavas.shader">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+    <None Include="Q3Maps\openarena.pk3\scripts\liquid_lavas.shader">
       <Name>liquid_lavas</Name>
-    </Compile>
-    <Compile Include="Q3Maps\openarena.pk3\scripts\liquid_water.shader">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+    <None Include="Q3Maps\openarena.pk3\scripts\liquid_water.shader">
       <Name>liquid_water</Name>
-    </Compile>
-    <Compile Include="Q3Maps\openarena.pk3\scripts\mc-oa.shader">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+    <None Include="Q3Maps\openarena.pk3\scripts\mc-oa.shader">
       <Name>mc-oa</Name>
-    </Compile>
-    <Compile Include="Q3Maps\openarena.pk3\scripts\mpmodels.shader">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+    <None Include="Q3Maps\openarena.pk3\scripts\mpmodels.shader">
       <Name>mpmodels</Name>
-    </Compile>
-    <Compile Include="Q3Maps\openarena.pk3\scripts\newmenu.shader">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+    <None Include="Q3Maps\openarena.pk3\scripts\newmenu.shader">
       <Name>newmenu</Name>
-    </Compile>
-    <Compile Include="Q3Maps\openarena.pk3\scripts\newmenu2.shader">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+    <None Include="Q3Maps\openarena.pk3\scripts\newmenu2.shader">
       <Name>newmenu2</Name>
-    </Compile>
-    <Compile Include="Q3Maps\openarena.pk3\scripts\nki.shader">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+    <None Include="Q3Maps\openarena.pk3\scripts\nki.shader">
       <Name>nki</Name>
-    </Compile>
-    <Compile Include="Q3Maps\openarena.pk3\scripts\oaflares.shader">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+    <None Include="Q3Maps\openarena.pk3\scripts\oaflares.shader">
       <Name>oaflares</Name>
-    </Compile>
-    <Compile Include="Q3Maps\openarena.pk3\scripts\oagfx.shader">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+    <None Include="Q3Maps\openarena.pk3\scripts\oagfx.shader">
       <Name>oagfx</Name>
-    </Compile>
-    <Compile Include="Q3Maps\openarena.pk3\scripts\oalite.shader">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+    <None Include="Q3Maps\openarena.pk3\scripts\oalite.shader">
       <Name>oalite</Name>
-    </Compile>
-    <Compile Include="Q3Maps\openarena.pk3\scripts\oanew.shader">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+    <None Include="Q3Maps\openarena.pk3\scripts\oanew.shader">
       <Name>oanew</Name>
-    </Compile>
-    <Compile Include="Q3Maps\openarena.pk3\scripts\oapowerups.shader">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+    <None Include="Q3Maps\openarena.pk3\scripts\oapowerups.shader">
       <Name>oapowerups</Name>
-    </Compile>
-    <Compile Include="Q3Maps\openarena.pk3\scripts\oasfx.shader">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+    <None Include="Q3Maps\openarena.pk3\scripts\oasfx.shader">
       <Name>oasfx</Name>
-    </Compile>
-    <Compile Include="Q3Maps\openarena.pk3\scripts\oasky.shader">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+    <None Include="Q3Maps\openarena.pk3\scripts\oasky.shader">
       <Name>oasky</Name>
-    </Compile>
-    <Compile Include="Q3Maps\openarena.pk3\scripts\oa_fogs.shader">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+    <None Include="Q3Maps\openarena.pk3\scripts\oa_fogs.shader">
       <Name>oa_fogs</Name>
-    </Compile>
-    <Compile Include="Q3Maps\openarena.pk3\scripts\oquartz.shader">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+    <None Include="Q3Maps\openarena.pk3\scripts\oquartz.shader">
       <Name>oquartz</Name>
-    </Compile>
-    <Compile Include="Q3Maps\openarena.pk3\scripts\player_angelyss.shader">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+    <None Include="Q3Maps\openarena.pk3\scripts\player_angelyss.shader">
       <Name>player_angelyss</Name>
-    </Compile>
-    <Compile Include="Q3Maps\openarena.pk3\scripts\player_arachna.shader">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+    <None Include="Q3Maps\openarena.pk3\scripts\player_arachna.shader">
       <Name>player_arachna</Name>
-    </Compile>
-    <Compile Include="Q3Maps\openarena.pk3\scripts\player_assassin.shader">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+    <None Include="Q3Maps\openarena.pk3\scripts\player_assassin.shader">
       <Name>player_assassin</Name>
-    </Compile>
-    <Compile Include="Q3Maps\openarena.pk3\scripts\player_ayumi.shader">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+    <None Include="Q3Maps\openarena.pk3\scripts\player_ayumi.shader">
       <Name>player_ayumi</Name>
-    </Compile>
-    <Compile Include="Q3Maps\openarena.pk3\scripts\player_beret.shader">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+    <None Include="Q3Maps\openarena.pk3\scripts\player_beret.shader">
       <Name>player_beret</Name>
-    </Compile>
-    <Compile Include="Q3Maps\openarena.pk3\scripts\player_gargoyle.shader">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+    <None Include="Q3Maps\openarena.pk3\scripts\player_gargoyle.shader">
       <Name>player_gargoyle</Name>
-    </Compile>
-    <Compile Include="Q3Maps\openarena.pk3\scripts\player_kyonshi.shader">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+    <None Include="Q3Maps\openarena.pk3\scripts\player_kyonshi.shader">
       <Name>player_kyonshi</Name>
-    </Compile>
-    <Compile Include="Q3Maps\openarena.pk3\scripts\player_liz.shader">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+    <None Include="Q3Maps\openarena.pk3\scripts\player_liz.shader">
       <Name>player_liz</Name>
-    </Compile>
-    <Compile Include="Q3Maps\openarena.pk3\scripts\player_major.shader">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+    <None Include="Q3Maps\openarena.pk3\scripts\player_major.shader">
       <Name>player_major</Name>
-    </Compile>
-    <Compile Include="Q3Maps\openarena.pk3\scripts\player_merman.shader">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+    <None Include="Q3Maps\openarena.pk3\scripts\player_merman.shader">
       <Name>player_merman</Name>
-    </Compile>
-    <Compile Include="Q3Maps\openarena.pk3\scripts\player_penguin.shader">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+    <None Include="Q3Maps\openarena.pk3\scripts\player_penguin.shader">
       <Name>player_penguin</Name>
-    </Compile>
-    <Compile Include="Q3Maps\openarena.pk3\scripts\player_sergei.shader">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+    <None Include="Q3Maps\openarena.pk3\scripts\player_sergei.shader">
       <Name>player_sergei</Name>
-    </Compile>
-    <Compile Include="Q3Maps\openarena.pk3\scripts\player_skelebot.shader">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+    <None Include="Q3Maps\openarena.pk3\scripts\player_skelebot.shader">
       <Name>player_skelebot</Name>
-    </Compile>
-    <Compile Include="Q3Maps\openarena.pk3\scripts\player_smarine.shader">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+    <None Include="Q3Maps\openarena.pk3\scripts\player_smarine.shader">
       <Name>player_smarine</Name>
-    </Compile>
-    <Compile Include="Q3Maps\openarena.pk3\scripts\player_sorceress.shader">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+    <None Include="Q3Maps\openarena.pk3\scripts\player_sorceress.shader">
       <Name>player_sorceress</Name>
-    </Compile>
-    <Compile Include="Q3Maps\openarena.pk3\scripts\player_tony.shader">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+    <None Include="Q3Maps\openarena.pk3\scripts\player_tony.shader">
       <Name>player_tony</Name>
-    </Compile>
-    <Compile Include="Q3Maps\openarena.pk3\scripts\player_tux.shader">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+    <None Include="Q3Maps\openarena.pk3\scripts\player_tux.shader">
       <Name>player_tux</Name>
-    </Compile>
-    <Compile Include="Q3Maps\openarena.pk3\scripts\pulchr.shader">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+    <None Include="Q3Maps\openarena.pk3\scripts\pulchr.shader">
       <Name>pulchr</Name>
-    </Compile>
-    <Compile Include="Q3Maps\openarena.pk3\scripts\q3map2_void3.shader">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+    <None Include="Q3Maps\openarena.pk3\scripts\q3map2_void3.shader">
       <Name>q3map2_void3</Name>
-    </Compile>
-    <Compile Include="Q3Maps\openarena.pk3\scripts\q3map2_void4.shader">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+    <None Include="Q3Maps\openarena.pk3\scripts\q3map2_void4.shader">
       <Name>q3map2_void4</Name>
-    </Compile>
-    <Compile Include="Q3Maps\openarena.pk3\scripts\QTex.shader">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+    <None Include="Q3Maps\openarena.pk3\scripts\QTex.shader">
       <Name>QTex</Name>
-    </Compile>
-    <Compile Include="Q3Maps\openarena.pk3\scripts\shells.shader">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+    <None Include="Q3Maps\openarena.pk3\scripts\shells.shader">
       <Name>shells</Name>
-    </Compile>
-    <Compile Include="Q3Maps\openarena.pk3\scripts\suction.shader">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+    <None Include="Q3Maps\openarena.pk3\scripts\suction.shader">
       <Name>suction</Name>
-    </Compile>
-    <Compile Include="Q3Maps\openarena.pk3\scripts\teamicons.shader">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+    <None Include="Q3Maps\openarena.pk3\scripts\teamicons.shader">
       <Name>teamicons</Name>
-    </Compile>
-    <Compile Include="Q3Maps\openarena.pk3\scripts\teleporter.shader">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+    <None Include="Q3Maps\openarena.pk3\scripts\teleporter.shader">
       <Name>teleporter</Name>
-    </Compile>
-    <Compile Include="Q3Maps\openarena.pk3\scripts\temporary.shader">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+    <None Include="Q3Maps\openarena.pk3\scripts\temporary.shader">
       <Name>temporary</Name>
-    </Compile>
-    <Compile Include="Q3Maps\openarena.pk3\scripts\terrain.shader">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+    <None Include="Q3Maps\openarena.pk3\scripts\terrain.shader">
       <Name>terrain</Name>
-    </Compile>
-    <Compile Include="Q3Maps\openarena.pk3\scripts\trak2.shader">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+    <None Include="Q3Maps\openarena.pk3\scripts\trak2.shader">
       <Name>trak2</Name>
-    </Compile>
-    <Compile Include="Q3Maps\openarena.pk3\scripts\weaponhits.shader">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+    <None Include="Q3Maps\openarena.pk3\scripts\weaponhits.shader">
       <Name>weaponhits</Name>
-    </Compile>
-    <Compile Include="Q3Maps\openarena.pk3\scripts\weaponry.shader">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+    <None Include="Q3Maps\openarena.pk3\scripts\weaponry.shader">
       <Name>weaponry</Name>
-    </Compile>
-    <Compile Include="Q3Maps\openarena.pk3\scripts\weapon_bfg.shader">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+    <None Include="Q3Maps\openarena.pk3\scripts\weapon_bfg.shader">
       <Name>weapon_bfg</Name>
-    </Compile>
-    <Compile Include="Q3Maps\openarena.pk3\scripts\weapon_chaingun.shader">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+    <None Include="Q3Maps\openarena.pk3\scripts\weapon_chaingun.shader">
       <Name>weapon_chaingun</Name>
-    </Compile>
-    <Compile Include="Q3Maps\openarena.pk3\scripts\weapon_gauntlet.shader">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+    <None Include="Q3Maps\openarena.pk3\scripts\weapon_gauntlet.shader">
       <Name>weapon_gauntlet</Name>
-    </Compile>
-    <Compile Include="Q3Maps\openarena.pk3\scripts\weapon_grenadelauncher.shader">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+    <None Include="Q3Maps\openarena.pk3\scripts\weapon_grenadelauncher.shader">
       <Name>weapon_grenadelauncher</Name>
-    </Compile>
-    <Compile Include="Q3Maps\openarena.pk3\scripts\weapon_machinegun.shader">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+    <None Include="Q3Maps\openarena.pk3\scripts\weapon_machinegun.shader">
       <Name>weapon_machinegun</Name>
-    </Compile>
-    <Compile Include="Q3Maps\openarena.pk3\scripts\weapon_muzzles.shader">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+    <None Include="Q3Maps\openarena.pk3\scripts\weapon_muzzles.shader">
       <Name>weapon_muzzles</Name>
-    </Compile>
-    <Compile Include="Q3Maps\openarena.pk3\scripts\weapon_nailgun.shader">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+    <None Include="Q3Maps\openarena.pk3\scripts\weapon_nailgun.shader">
       <Name>weapon_nailgun</Name>
-    </Compile>
-    <Compile Include="Q3Maps\openarena.pk3\scripts\weapon_newmuzzle.shader">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+    <None Include="Q3Maps\openarena.pk3\scripts\weapon_newmuzzle.shader">
       <Name>weapon_newmuzzle</Name>
-    </Compile>
-    <Compile Include="Q3Maps\openarena.pk3\scripts\weapon_plasma.shader">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+    <None Include="Q3Maps\openarena.pk3\scripts\weapon_plasma.shader">
       <Name>weapon_plasma</Name>
-    </Compile>
-    <Compile Include="Q3Maps\openarena.pk3\scripts\weapon_proxbomb.shader">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+    <None Include="Q3Maps\openarena.pk3\scripts\weapon_proxbomb.shader">
       <Name>weapon_proxbomb</Name>
-    </Compile>
-    <Compile Include="Q3Maps\openarena.pk3\scripts\weapon_railgun.shader">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+    <None Include="Q3Maps\openarena.pk3\scripts\weapon_railgun.shader">
       <Name>weapon_railgun</Name>
-    </Compile>
-    <Compile Include="Q3Maps\openarena.pk3\scripts\weapon_rocketlauncher.shader">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+    <None Include="Q3Maps\openarena.pk3\scripts\weapon_rocketlauncher.shader">
       <Name>weapon_rocketlauncher</Name>
-    </Compile>
-    <Compile Include="Q3Maps\openarena.pk3\scripts\weapon_shotgun.shader">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+    <None Include="Q3Maps\openarena.pk3\scripts\weapon_shotgun.shader">
       <Name>weapon_shotgun</Name>
-    </Compile>
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
     <Compile Include="Q3Maps\openarena.pk3\sprites\balloon3.tga">
       <Name>balloon3</Name>
       <Importer>TextureImporter</Importer>
@@ -3025,27 +3154,26 @@
       <Importer>TextureImporter</Importer>
       <Processor>TextureProcessor</Processor>
     </Compile>
-    <Compile Include="Q3Maps\q3shw23.pk3\maps\q3shw23.aas">
+    <None Include="Q3Maps\q3shw23.pk3\maps\q3shw23.bsp">
       <Name>q3shw23</Name>
-    </Compile>
-    <Compile Include="Q3Maps\q3shw23.pk3\maps\q3shw23.bsp">
-      <Name>q3shw23</Name>
-    </Compile>
-    <Compile Include="Q3Maps\q3shw23.pk3\maps\q3shw23_ffa.aas">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+    <None Include="Q3Maps\q3shw23.pk3\maps\q3shw23_ffa.bsp">
       <Name>q3shw23_ffa</Name>
-    </Compile>
-    <Compile Include="Q3Maps\q3shw23.pk3\maps\q3shw23_ffa.bsp">
-      <Name>q3shw23_ffa</Name>
-    </Compile>
-    <Compile Include="Q3Maps\q3shw23.pk3\scripts\Hipertrofia.shader">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+    <None Include="Q3Maps\q3shw23.pk3\scripts\Hipertrofia.shader">
       <Name>Hipertrofia</Name>
-    </Compile>
-    <Compile Include="Q3Maps\q3shw23.pk3\scripts\q3shw23.arena">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+    <None Include="Q3Maps\q3shw23.pk3\scripts\q3shw23.arena">
       <Name>q3shw23</Name>
-    </Compile>
-    <Compile Include="Q3Maps\q3shw23.pk3\scripts\q3shw23_ffa.arena">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+    <None Include="Q3Maps\q3shw23.pk3\scripts\q3shw23_ffa.arena">
       <Name>q3shw23_ffa</Name>
-    </Compile>
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
     <Compile Include="Q3Maps\q3shw23.pk3\textures\hipertrofia\basemetalsupport_01.tga">
       <Name>basemetalsupport_01</Name>
       <Importer>TextureImporter</Importer>
@@ -3296,27 +3424,30 @@
       <Importer>TextureImporter</Importer>
       <Processor>TextureProcessor</Processor>
     </Compile>
-    <Compile Include="Q3Maps\jof3dm2.pk3\maps\jof3dm2.aas">
+    <None Include="Q3Maps\jof3dm2.pk3\maps\jof3dm2.bsp">
       <Name>jof3dm2</Name>
-    </Compile>
-    <Compile Include="Q3Maps\jof3dm2.pk3\maps\jof3dm2.bsp">
-      <Name>jof3dm2</Name>
-    </Compile>
-    <Compile Include="Q3Maps\jof3dm2.pk3\scripts\common.shader">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+    <None Include="Q3Maps\jof3dm2.pk3\scripts\common.shader">
       <Name>common</Name>
-    </Compile>
-    <Compile Include="Q3Maps\jof3dm2.pk3\scripts\danight.shader">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+    <None Include="Q3Maps\jof3dm2.pk3\scripts\danight.shader">
       <Name>danight</Name>
-    </Compile>
-    <Compile Include="Q3Maps\jof3dm2.pk3\scripts\jof3dm2.arena">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+    <None Include="Q3Maps\jof3dm2.pk3\scripts\jof3dm2.arena">
       <Name>jof3dm2</Name>
-    </Compile>
-    <Compile Include="Q3Maps\jof3dm2.pk3\scripts\jof3dm2.shader">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+    <None Include="Q3Maps\jof3dm2.pk3\scripts\jof3dm2.shader">
       <Name>jof3dm2</Name>
-    </Compile>
-    <Compile Include="Q3Maps\jof3dm2.pk3\scripts\medieval.shader">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+    <None Include="Q3Maps\jof3dm2.pk3\scripts\medieval.shader">
       <Name>medieval</Name>
-    </Compile>
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
     <Compile Include="Q3Maps\jof3dm2.pk3\textures\medieval\flr_marble3_c3trn.tga">
       <Name>flr_marble3_c3trn</Name>
       <Importer>TextureImporter</Importer>
@@ -3364,23 +3495,10 @@
       <Importer>TextureImporter</Importer>
       <Processor>TextureProcessor</Processor>
     </Compile>
-    <Compile Include="Q3Maps\jof3dm2.pk3\jof3dm2.txt">
-      <Name>jof3dm2</Name>
-    </Compile>
     <Compile Include="Q3Maps\jof3dm2.pk3\levelshots\jof3dm2.jpg">
       <Name>jof3dm2</Name>
       <Importer>TextureImporter</Importer>
       <Processor>TextureProcessor</Processor>
-    </Compile>
-    <Compile Include="Q3Maps\jof3dm2.pk3\sound\movers\plats\pt1_end.wav">
-      <Name>pt1_end</Name>
-      <Importer>WavImporter</Importer>
-      <Processor>SoundEffectProcessor</Processor>
-    </Compile>
-    <Compile Include="Q3Maps\jof3dm2.pk3\sound\movers\plats\pt1_strt.wav">
-      <Name>pt1_strt</Name>
-      <Importer>WavImporter</Importer>
-      <Processor>SoundEffectProcessor</Processor>
     </Compile>
     <Compile Include="Q3Maps\jof3dm2.pk3\textures\e7\e7bricks01.jpg">
       <Name>e7bricks01</Name>
@@ -3664,15 +3782,18 @@
       <Importer>TextureImporter</Importer>
       <Processor>TextureProcessor</Processor>
     </Compile>
-    <Compile Include="Q3Maps\openarena.pk3\scripts\arenas.txt">
+    <None Include="Q3Maps\openarena.pk3\scripts\arenas.txt">
       <Name>arenas</Name>
-    </Compile>
-    <Compile Include="Q3Maps\openarena.pk3\scripts\bots.txt">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+    <None Include="Q3Maps\openarena.pk3\scripts\bots.txt">
       <Name>bots</Name>
-    </Compile>
-    <Compile Include="Q3Maps\openarena.pk3\scripts\shaderlist.txt">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+    <None Include="Q3Maps\openarena.pk3\scripts\shaderlist.txt">
       <Name>shaderlist</Name>
-    </Compile>
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
     <Compile Include="Q3Maps\openarena.pk3\textures\acc_dm3\ceiling.jpg">
       <Name>ceiling</Name>
       <Importer>TextureImporter</Importer>
@@ -9858,11 +9979,9 @@
       <Importer>TextureImporter</Importer>
       <Processor>TextureProcessor</Processor>
     </Compile>
-    <Compile Include="Q3Maps\q3shw23.pk3\Q3shw23 - read me.txt">
-      <Name>Q3shw23 - read me</Name>
-    </Compile>
   </ItemGroup>
   <ItemGroup>
+    <Folder Include="Q3Maps\jof3dm2.pk3\sound\movers\plats\" />
     <Folder Include="Q3Maps\openarena.pk3\gfx\2d\crosshairs\" />
     <Folder Include="Q3Maps\openarena.pk3\textures\anoice1\" />
     <Folder Include="Q3Maps\openarena.pk3\textures\babel\" />

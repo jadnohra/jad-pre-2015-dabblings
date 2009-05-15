@@ -2,7 +2,7 @@
 using Microsoft.Xna.Framework.Graphics;
 using Microsoft.Xna.Framework.Content;
 
-namespace Framework1
+namespace BlackRice.Framework.Quake3App
 {
     class Stats
     {

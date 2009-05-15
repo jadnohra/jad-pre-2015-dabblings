@@ -1,6 +1,6 @@
 using System;
 
-namespace Framework1
+namespace BlackRice.Framework.Quake3App
 {
     static class Program
     {

@@ -11,7 +11,7 @@ using Microsoft.Xna.Framework.Media;
 using Microsoft.Xna.Framework.Net;
 using Microsoft.Xna.Framework.Storage;
 
-namespace Framework1
+namespace BlackRice.Framework.Quake3App
 {
     /// <summary>
     /// This is the main type for your game
