@@ -15,10 +15,11 @@ CHARACTERS
 
 TOKENS
   path  = letter { letter | digit | '/' | '_' | '.' | '-' }.
-  number = ( digit | '-' digit | '-' ) { digit } [ '.' { digit } ].
+  number = ([ '-' ] digit { digit } [ '.' { digit } ]) | ('-' '.' digit [ { digit } ]) | ('.' digit [ { digit } ]).
+
 
 COMMENTS FROM "/*" TO "*/" NESTED
-COMMENTS FROM "//" TO cr lf
+COMMENTS FROM "//" TO (cr | lf)
 
 IGNORE cr + lf + tab
 
@@ -216,7 +217,7 @@ DeformVertexes
 =
   "deformVertexes"
   ( "wave"
-    Number /*div*/
+    Number /*div*/ [ GeneratorFunction ]
   | "normal"
     Number /*div*/
     ( Number
@@ -332,6 +333,7 @@ ShaderDecl
   | "q3map_vertexScale" Number
   | "q3map_vertexShadows"
   | "q3map_vlight"
+  | "q3map_flare" Path
   }
 
   '}'
