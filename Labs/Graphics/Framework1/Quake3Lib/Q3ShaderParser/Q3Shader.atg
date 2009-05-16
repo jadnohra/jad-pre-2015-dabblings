@@ -1,9 +1,10 @@
 /******************************************************************************
 * http://www.ssw.uni-linz.ac.at/Research/Projects/Coco/Contributions/
-* Grammar for Q3 shader scripts. Thanks to Stephan Reiter!
+* Modified version of: "Grammar for Q3 shader scripts. Thanks to Stephan Reiter!"
 ******************************************************************************/
 
 COMPILER Q3Shader
+IGNORECASE
 
 CHARACTERS
   letter = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz".
@@ -33,7 +34,7 @@ Number
   number
 .
 
-GeneratorFunction
+GeneratorFunctionType
 =
   ( "sin"
   | "triangle"
@@ -42,6 +43,40 @@ GeneratorFunction
   | "inversesawtooth"
   | "random"
   | "noise"
+  )
+.
+
+GeneratorFunction
+=
+  GeneratorFunctionType Number /*base*/ Number /*amplitude*/ Number /*phase*/ Number /*frequency*/
+.
+
+Q3Map2Func
+=
+  ( "dotProduct" '(' Number Number Number ')'
+  | "dotProduct2" '(' Number Number Number ')'
+  | "dotProductScale" '(' Number Number Number Number Number')'
+  | "dotProduct2Scale" '(' Number Number Number Number Number')'
+  | "scale" Number
+  | "set" Number
+  )
+.
+
+Q3Map2TcGenFunc
+=
+  ( "vector" Number Number
+  | "ivector" Number Number
+  )
+.
+
+Q3Map2TcModFunc
+=
+  ( "rotate"
+    Number /*degrees*/
+  | "scale"
+    Number /*scale.s*/ Number /*scale.t*/
+  | ( "translate" | "shift" | "move" )
+    Number Number 
   )
 .
 
@@ -70,10 +105,10 @@ RgbGen
   | "vertex"
   | "oneMinusVertex"
   | "exactVertex"
-  | ( "lightingDiffuse" | "LightingDiffuse" )
+  | "lightingDiffuse"
   | "lightingSpecular"
   | "wave"
-    GeneratorFunction Number /*base*/ Number /*amplitude*/ Number /*phase*/ Number /*frequency*/
+    GeneratorFunction
   | "const"
     '(' Number /*color.x*/ Number /*color.y*/ Number /*color.z*/ ')'
   )
@@ -90,10 +125,9 @@ AlphaGen
   | "oneMinusVertex"
   | "exactVertex"
   | "lightingDiffuse"
-  | "LightingDiffuse"
   | "lightingSpecular"
   | "wave"
-    GeneratorFunction Number /*base*/ Number /*amplitude*/ Number /*phase*/ Number /*frequency*/
+    GeneratorFunction
   | "const"
     Number /*alpha*/
   | "portal"
@@ -123,7 +157,7 @@ TcMod
   | "scroll"
     Number /*rate.x*/ Number /*rate.y*/
   | "stretch"
-    GeneratorFunction Number /*base*/ Number /*amplitude*/ Number /*phase*/ Number /*frequency*/
+    GeneratorFunction
   | "transform"
     Number /*u.x*/ Number /*u.y*/ Number /*v.x*/ Number/*v.y*/ Number /*o.x*/ Number /*o.y*/
   | "turb"
@@ -172,7 +206,7 @@ Stage
 
 SkyParms
 =
-  ( "skyParms" | "skyparms" )
+  "skyParms"
   ( Path /*farBox*/ | '-' )
   Number /*cloudHeight*/
   ( Path /*nearBox*/ | '-' )
@@ -182,14 +216,14 @@ DeformVertexes
 =
   "deformVertexes"
   ( "wave"
-    Number /*div*/ GeneratorFunction Number /*base*/ Number /*amplitude*/ Number /*phase*/ Number /*frequency*/
+    Number /*div*/
   | "normal"
     Number /*div*/
     ( Number
-    | GeneratorFunction Number /*base*/ Number /*amplitude*/ Number /*frequency*/
+    | GeneratorFunction
     )
   | "move"
-    Number /*dir.x*/ Number /*dir.y*/ Number /*dir.z*/ GeneratorFunction Number /*base*/ Number /*amplitude*/ Number /*phase*/ Number /*frequency*/
+    Number /*dir.x*/ Number /*dir.y*/ Number /*dir.z*/ GeneratorFunction
   | "bulge" Number Number Number
   | "autoSprite"
   | "autoSprite2"
@@ -230,18 +264,74 @@ ShaderDecl
   | "portal"
   | "entityMergable"
   | "tessSize" Number
-  | "q3map_backshader" Path
-  | "q3map_globaltexture"
-  | "q3map_sun" Number Number Number Number Number Number
   | "light" Number
-  | "q3map_surfacelight" Number
-  | "q3map_lightimage" Path
-  | "q3map_lightsubdivide" Number
-  | "q3map_backsplash" Number Number
   | SurfaceParm
   | "qer_editorimage" Path
   | "qer_nocarve"
   | "qer_trans" Number
+  | "q3map_alphaGen" Q3Map2Func
+  | "q3map_alphaMod" Q3Map2Func
+  | "q3map_backshader" Path
+  | "q3map_backsplash" Number Number
+  | "q3map_baseshader" Path
+  | "q3map_bounce" Number
+  | "q3map_bounceScale" Number
+  | "q3map_clipModel"
+  | "q3map_cloneShader" Path
+  | "q3map_colorGen" 
+  | "q3map_colorMod" 
+  | "q3map_fogDir" Number /*Angle*/
+  | "q3map_forceMeta"
+  | "q3map_forceSunlight"
+  | "q3map_fur" Number /*layers*/ Number /*offset*/ Number /*fade*/
+  | "q3map_globaltexture"
+  | "q3map_indexed"
+  | "q3map_invert"
+  | "q3map_lightImage" Path
+  | "q3map_lightmapAxis" Number /*axis*/
+  | "q3map_lightmapBrightness" Number
+  | "q3map_lightmapFilterRadius" Number /*self*/ Number /*other*/
+  | "q3map_lightmapGamma" Number
+  | "q3map_lightmapMergable"
+  | "q3map_lightmapSampleOffset" Number /*distance*/
+  | "q3map_lightmapSampleSize" Number
+  | "q3map_lightmapSize" Number /*width*/ Number /*height*/
+  | "q3map_lightRGB" Number /*red*/ Number /*green*/ Number /*blue*/
+  | "q3map_lightStyle" Number
+  | "q3map_lightSubdivide" Number
+  | "q3map_noClip"
+  | "q3map_noFast"
+  | "q3map_noFog"
+  | "q3map_nonPlanar"
+  | "q3map_normalImage" Path
+  | "q3map_noTJunc"
+  | "q3map_noVertexLight" 
+  | "q3map_noVertexShadows"
+  | "q3map_offset" Number
+  | "q3map_patchShadows"
+  | "q3map_remapShader" Number
+  | "q3map_replicate"
+  | "q3map_rgbGen"
+  | "q3map_rgbMod"
+  | "q3map_shadeAngle" Number
+  | "q3map_skylight" Number /*amount*/ Number /*iterations*/
+  | "q3map_splotchFix"
+  | "q3map_styleMarker"
+  | "q3map_styleMarker2" 
+  | "q3map_sun" Number /*red*/ Number /*green*/ Number /*blue*/ Number /*intensity*/ Number /*degrees*/ Number /*elevation*/
+  | "q3map_sunExt" Number /*red*/ Number /*green*/ Number /*blue*/ Number /*intensity*/ Number /*degrees*/ Number /*elevation*/ Number /*deviance*/ Number /*samples*/
+  | "q3map_sunlight"
+  | "q3map_surfacelight" Number
+  | "q3map_surfaceModel" Path /*modelpath*/ Number /*density*/ Number /*odds*/ Number /*minscale*/ Number /*maxscale*/ Number /*minangle*/ Number /*maxangle*/ Number /*oriented*/
+  | "q3map_tcGen" Q3Map2TcGenFunc
+  | "q3map_tcMod" Q3Map2TcModFunc
+  | "q3map_terrain"
+  | "q3map_tessSize" Number /*amount*/
+  | "q3map_textureSize" Number /*X*/ Number /*Y*/
+  | "q3map_traceLight"
+  | "q3map_vertexScale" Number
+  | "q3map_vertexShadows"
+  | "q3map_vlight"
   }
 
   '}'
