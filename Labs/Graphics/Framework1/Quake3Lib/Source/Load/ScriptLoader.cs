@@ -56,9 +56,20 @@ namespace BlackRice.Framework.Quake3.Load
                 for (int i = 0; i < fileInfos.Length; ++i)
                 {
                     FileInfo fi  = fileInfos[i];
-                    scriptBlockParser.Open(fi.FullName);
                     m_ScriptFiles[i].assetName = fi.Name;
 
+                    ShaderParser.Scanner scanner = new ShaderParser.Scanner(fi.FullName);
+                    ShaderParser.Parser parser = new ShaderParser.Parser(scanner);
+
+                    parser.Parse();
+
+                    if (parser.errors.count > 0)
+                    {
+                        Trace.TraceWarning("Error parsing '" + fi.FullName + "'");
+                    }
+                    
+                    /*
+                    scriptBlockParser.Open(fi.FullName);
                     while (scriptBlockParser.GetNextScriptAddress(ref scriptName, ref address))
                     {
                         m_ShaderAddresses[scriptName] = new ShaderAddress(i, address);
@@ -66,6 +77,7 @@ namespace BlackRice.Framework.Quake3.Load
 
                     if (scriptBlockParser.HasError())
                         Trace.TraceWarning("Error parsing '" + fi.FullName + "'");
+                     */
                 }
            }
         }

@@ -246,7 +246,7 @@ SurfaceParm
   | "metalsteps" | "nodamage" | "nodlight" | "nodraw" | "nodrop" | "noimpact" | "nomarks"
   | "nolightmap" | "nosteps" | "nonsolid" | "origin" | "playerclip" | "slick" | "slime"
   | "structural" | "trans" | "water" | "pointlight" | "forcefield" | "shotclip" | "sky"
-  | "monsterclip" | "hint" | "ladder" | "detail"
+  | "monsterclip" | "hint" | "ladder" | "detail" | "dust" | "botclip" | "antiportal" | "lightgrid"
   )
 .
 
@@ -323,7 +323,7 @@ ShaderDecl
   | "q3map_sun" Number /*red*/ Number /*green*/ Number /*blue*/ Number /*intensity*/ Number /*degrees*/ Number /*elevation*/
   | "q3map_sunExt" Number /*red*/ Number /*green*/ Number /*blue*/ Number /*intensity*/ Number /*degrees*/ Number /*elevation*/ Number /*deviance*/ Number /*samples*/
   | "q3map_sunlight"
-  | "q3map_surfacelight" Path
+  | "q3map_surfacelight" (Number | Path)
   | "q3map_surfaceModel" Path /*modelpath*/ Number /*density*/ Number /*odds*/ Number /*minscale*/ Number /*maxscale*/ Number /*minangle*/ Number /*maxangle*/ Number /*oriented*/
   | "q3map_tcGen" Q3Map2TcGenFunc
   | "q3map_tcMod" Q3Map2TcModFunc
@@ -335,6 +335,7 @@ ShaderDecl
   | "q3map_vertexShadows"
   | "q3map_vlight"
   | "q3map_flare" Path
+  | "q3map_nolightmap"
   }
 
   '}'

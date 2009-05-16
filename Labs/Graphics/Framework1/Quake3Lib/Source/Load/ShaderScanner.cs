@@ -200,9 +200,9 @@ public class UTF8Buffer: Buffer {
 public class Scanner {
 	const char EOL = '\n';
 	const int eofSym = 0; /* pdt */
-	const int maxT = 141;
-	const int noSym = 141;
-
+	const int maxT = 209;
+	const int noSym = 209;
+	char valCh;       // current input character (for token.val)
 
 	public Buffer buffer; // scanner buffer
 	
@@ -222,16 +222,16 @@ public class Scanner {
 	
 	static Scanner() {
 		start = new Hashtable(128);
-		for (int i = 65; i <= 90; ++i) start[i] = 1;
 		for (int i = 97; i <= 122; ++i) start[i] = 1;
 		for (int i = 48; i <= 57; ++i) start[i] = 2;
-		start[45] = 32; 
-		start[40] = 4; 
-		start[41] = 5; 
-		start[123] = 6; 
-		start[36] = 33; 
-		start[42] = 25; 
-		start[125] = 31; 
+		start[45] = 38; 
+		start[46] = 7; 
+		start[40] = 10; 
+		start[41] = 11; 
+		start[123] = 12; 
+		start[36] = 39; 
+		start[42] = 31; 
+		start[125] = 37; 
 		start[Buffer.EOF] = -1;
 
 	}
@@ -277,6 +277,10 @@ public class Scanner {
 			if (ch == '\r' && buffer.Peek() != '\n') ch = EOL;
 			if (ch == EOL) { line++; col = 0; }
 		}
+		if (ch != Buffer.EOF) {
+			valCh = (char) ch;
+			ch = char.ToLower((char) ch);
+		}
 
 	}
 
@@ -287,7 +291,7 @@ public class Scanner {
 			tval = newBuf;
 		}
 		if (ch != Buffer.EOF) {
-			tval[tlen++] = (char) ch;
+			tval[tlen++] = valCh;
 			NextCh();
 		}
 	}
@@ -300,13 +304,10 @@ public class Scanner {
 		if (ch == '/') {
 			NextCh();
 			for(;;) {
-				if (ch == 13) {
+				if (ch == 10) {
+					level--;
+					if (level == 0) { oldEols = line - line0; NextCh(); return true; }
 					NextCh();
-					if (ch == 10) {
-						level--;
-						if (level == 0) { oldEols = line - line0; NextCh(); return true; }
-						NextCh();
-					}
 				} else if (ch == Buffer.EOF) return false;
 				else NextCh();
 			}
@@ -317,6 +318,25 @@ public class Scanner {
 	}
 
 	bool Comment1() {
+		int level = 1, pos0 = pos, line0 = line, col0 = col;
+		NextCh();
+		if (ch == '/') {
+			NextCh();
+			for(;;) {
+				if (ch == 13) {
+					level--;
+					if (level == 0) { oldEols = line - line0; NextCh(); return true; }
+					NextCh();
+				} else if (ch == Buffer.EOF) return false;
+				else NextCh();
+			}
+		} else {
+			buffer.Pos = pos0; NextCh(); line = line0; col = col0;
+		}
+		return false;
+	}
+
+	bool Comment2() {
 		int level = 1, pos0 = pos, line0 = line, col0 = col;
 		NextCh();
 		if (ch == '*') {
@@ -345,7 +365,7 @@ public class Scanner {
 
 
 	void CheckLiteral() {
-		switch (t.val) {
+		switch (t.val.ToLower()) {
 			case "sin": t.kind = 3; break;
 			case "triangle": t.kind = 4; break;
 			case "square": t.kind = 5; break;
@@ -353,129 +373,197 @@ public class Scanner {
 			case "inversesawtooth": t.kind = 7; break;
 			case "random": t.kind = 8; break;
 			case "noise": t.kind = 9; break;
-			case "GL_ZERO": t.kind = 10; break;
-			case "GL_ONE": t.kind = 11; break;
-			case "GL_SRC_COLOR": t.kind = 12; break;
-			case "GL_ONE_MINUS_SRC_COLOR": t.kind = 13; break;
-			case "GL_DST_COLOR": t.kind = 14; break;
-			case "GL_ONE_MINUS_DST_COLOR": t.kind = 15; break;
-			case "GL_SRC_ALPHA": t.kind = 16; break;
-			case "GL_ONE_MINUS_SRC_ALPHA": t.kind = 17; break;
-			case "GL_DST_ALPHA": t.kind = 18; break;
-			case "GL_ONE_MINUS_DST_ALPHA": t.kind = 19; break;
-			case "rgbGen": t.kind = 20; break;
-			case "identityLighting": t.kind = 21; break;
-			case "identity": t.kind = 22; break;
-			case "entity": t.kind = 23; break;
-			case "oneMinusEntity": t.kind = 24; break;
-			case "vertex": t.kind = 25; break;
-			case "oneMinusVertex": t.kind = 26; break;
-			case "exactVertex": t.kind = 27; break;
-			case "lightingDiffuse": t.kind = 28; break;
-			case "LightingDiffuse": t.kind = 29; break;
-			case "lightingSpecular": t.kind = 30; break;
-			case "wave": t.kind = 31; break;
-			case "const": t.kind = 32; break;
-			case "alphaGen": t.kind = 35; break;
-			case "portal": t.kind = 36; break;
-			case "tcGen": t.kind = 37; break;
-			case "base": t.kind = 38; break;
-			case "lightmap": t.kind = 39; break;
-			case "environment": t.kind = 40; break;
-			case "vector": t.kind = 41; break;
-			case "tcMod": t.kind = 42; break;
-			case "rotate": t.kind = 43; break;
-			case "scale": t.kind = 44; break;
-			case "scroll": t.kind = 45; break;
-			case "stretch": t.kind = 46; break;
-			case "transform": t.kind = 47; break;
-			case "turb": t.kind = 48; break;
-			case "entityTranslate": t.kind = 49; break;
-			case "alphaFunc": t.kind = 50; break;
-			case "GT0": t.kind = 51; break;
-			case "LT128": t.kind = 52; break;
-			case "GE128": t.kind = 53; break;
-			case "map": t.kind = 55; break;
-			case "clampmap": t.kind = 59; break;
-			case "animMap": t.kind = 60; break;
-			case "blendFunc": t.kind = 61; break;
-			case "add": t.kind = 62; break;
-			case "filter": t.kind = 63; break;
-			case "blend": t.kind = 64; break;
-			case "depthFunc": t.kind = 65; break;
-			case "equal": t.kind = 66; break;
-			case "lequal": t.kind = 67; break;
-			case "disable": t.kind = 68; break;
-			case "depthWrite": t.kind = 69; break;
-			case "detail": t.kind = 70; break;
-			case "skyParms": t.kind = 72; break;
-			case "skyparms": t.kind = 73; break;
-			case "deformVertexes": t.kind = 75; break;
-			case "normal": t.kind = 76; break;
-			case "move": t.kind = 77; break;
-			case "bulge": t.kind = 78; break;
-			case "autoSprite": t.kind = 79; break;
-			case "autoSprite2": t.kind = 80; break;
-			case "projectionShadow": t.kind = 81; break;
-			case "fogparms": t.kind = 82; break;
-			case "surfaceparm": t.kind = 83; break;
-			case "alphashadow": t.kind = 84; break;
-			case "areaportal": t.kind = 85; break;
-			case "clusterportal": t.kind = 86; break;
-			case "donotenter": t.kind = 87; break;
-			case "flesh": t.kind = 88; break;
-			case "fog": t.kind = 89; break;
-			case "lava": t.kind = 90; break;
-			case "metalsteps": t.kind = 91; break;
-			case "nodamage": t.kind = 92; break;
-			case "nodlight": t.kind = 93; break;
-			case "nodraw": t.kind = 94; break;
-			case "nodrop": t.kind = 95; break;
-			case "noimpact": t.kind = 96; break;
-			case "nomarks": t.kind = 97; break;
-			case "nolightmap": t.kind = 98; break;
-			case "nosteps": t.kind = 99; break;
-			case "nonsolid": t.kind = 100; break;
-			case "origin": t.kind = 101; break;
-			case "playerclip": t.kind = 102; break;
-			case "slick": t.kind = 103; break;
-			case "slime": t.kind = 104; break;
-			case "structural": t.kind = 105; break;
-			case "trans": t.kind = 106; break;
-			case "water": t.kind = 107; break;
-			case "pointlight": t.kind = 108; break;
-			case "forcefield": t.kind = 109; break;
-			case "shotclip": t.kind = 110; break;
-			case "sky": t.kind = 111; break;
-			case "monsterclip": t.kind = 112; break;
-			case "hint": t.kind = 113; break;
-			case "ladder": t.kind = 114; break;
-			case "cull": t.kind = 115; break;
-			case "front": t.kind = 116; break;
-			case "back": t.kind = 117; break;
-			case "none": t.kind = 118; break;
-			case "sort": t.kind = 119; break;
-			case "opaque": t.kind = 120; break;
-			case "banner": t.kind = 121; break;
-			case "underwater": t.kind = 122; break;
-			case "additive": t.kind = 123; break;
-			case "nearest": t.kind = 124; break;
-			case "nopicmip": t.kind = 125; break;
-			case "nomipmaps": t.kind = 126; break;
-			case "polygonOffset": t.kind = 127; break;
-			case "entityMergable": t.kind = 128; break;
-			case "tessSize": t.kind = 129; break;
-			case "q3map_backshader": t.kind = 130; break;
-			case "q3map_globaltexture": t.kind = 131; break;
-			case "q3map_sun": t.kind = 132; break;
-			case "light": t.kind = 133; break;
-			case "q3map_surfacelight": t.kind = 134; break;
-			case "q3map_lightimage": t.kind = 135; break;
-			case "q3map_lightsubdivide": t.kind = 136; break;
-			case "q3map_backsplash": t.kind = 137; break;
-			case "qer_editorimage": t.kind = 138; break;
-			case "qer_nocarve": t.kind = 139; break;
-			case "qer_trans": t.kind = 140; break;
+			case "dotproduct": t.kind = 10; break;
+			case "dotproduct2": t.kind = 13; break;
+			case "dotproductscale": t.kind = 14; break;
+			case "dotproduct2scale": t.kind = 15; break;
+			case "scale": t.kind = 16; break;
+			case "set": t.kind = 17; break;
+			case "vector": t.kind = 18; break;
+			case "ivector": t.kind = 19; break;
+			case "rotate": t.kind = 20; break;
+			case "translate": t.kind = 21; break;
+			case "shift": t.kind = 22; break;
+			case "move": t.kind = 23; break;
+			case "gl_zero": t.kind = 24; break;
+			case "gl_one": t.kind = 25; break;
+			case "gl_src_color": t.kind = 26; break;
+			case "gl_one_minus_src_color": t.kind = 27; break;
+			case "gl_dst_color": t.kind = 28; break;
+			case "gl_one_minus_dst_color": t.kind = 29; break;
+			case "gl_src_alpha": t.kind = 30; break;
+			case "gl_one_minus_src_alpha": t.kind = 31; break;
+			case "gl_dst_alpha": t.kind = 32; break;
+			case "gl_one_minus_dst_alpha": t.kind = 33; break;
+			case "rgbgen": t.kind = 34; break;
+			case "identitylighting": t.kind = 35; break;
+			case "identity": t.kind = 36; break;
+			case "entity": t.kind = 37; break;
+			case "oneminusentity": t.kind = 38; break;
+			case "vertex": t.kind = 39; break;
+			case "oneminusvertex": t.kind = 40; break;
+			case "exactvertex": t.kind = 41; break;
+			case "lightingdiffuse": t.kind = 42; break;
+			case "lightingspecular": t.kind = 43; break;
+			case "wave": t.kind = 44; break;
+			case "const": t.kind = 45; break;
+			case "alphagen": t.kind = 46; break;
+			case "portal": t.kind = 47; break;
+			case "tcgen": t.kind = 48; break;
+			case "base": t.kind = 49; break;
+			case "lightmap": t.kind = 50; break;
+			case "environment": t.kind = 51; break;
+			case "tcmod": t.kind = 52; break;
+			case "scroll": t.kind = 53; break;
+			case "stretch": t.kind = 54; break;
+			case "transform": t.kind = 55; break;
+			case "turb": t.kind = 56; break;
+			case "entitytranslate": t.kind = 57; break;
+			case "alphafunc": t.kind = 58; break;
+			case "gt0": t.kind = 59; break;
+			case "lt128": t.kind = 60; break;
+			case "ge128": t.kind = 61; break;
+			case "map": t.kind = 63; break;
+			case "clampmap": t.kind = 67; break;
+			case "animmap": t.kind = 68; break;
+			case "blendfunc": t.kind = 69; break;
+			case "add": t.kind = 70; break;
+			case "filter": t.kind = 71; break;
+			case "blend": t.kind = 72; break;
+			case "depthfunc": t.kind = 73; break;
+			case "equal": t.kind = 74; break;
+			case "lequal": t.kind = 75; break;
+			case "disable": t.kind = 76; break;
+			case "depthwrite": t.kind = 77; break;
+			case "detail": t.kind = 78; break;
+			case "skyparms": t.kind = 80; break;
+			case "deformvertexes": t.kind = 82; break;
+			case "normal": t.kind = 83; break;
+			case "bulge": t.kind = 84; break;
+			case "autosprite": t.kind = 85; break;
+			case "autosprite2": t.kind = 86; break;
+			case "projectionshadow": t.kind = 87; break;
+			case "fogparms": t.kind = 88; break;
+			case "surfaceparm": t.kind = 89; break;
+			case "alphashadow": t.kind = 90; break;
+			case "areaportal": t.kind = 91; break;
+			case "clusterportal": t.kind = 92; break;
+			case "donotenter": t.kind = 93; break;
+			case "flesh": t.kind = 94; break;
+			case "fog": t.kind = 95; break;
+			case "lava": t.kind = 96; break;
+			case "metalsteps": t.kind = 97; break;
+			case "nodamage": t.kind = 98; break;
+			case "nodlight": t.kind = 99; break;
+			case "nodraw": t.kind = 100; break;
+			case "nodrop": t.kind = 101; break;
+			case "noimpact": t.kind = 102; break;
+			case "nomarks": t.kind = 103; break;
+			case "nolightmap": t.kind = 104; break;
+			case "nosteps": t.kind = 105; break;
+			case "nonsolid": t.kind = 106; break;
+			case "origin": t.kind = 107; break;
+			case "playerclip": t.kind = 108; break;
+			case "slick": t.kind = 109; break;
+			case "slime": t.kind = 110; break;
+			case "structural": t.kind = 111; break;
+			case "trans": t.kind = 112; break;
+			case "water": t.kind = 113; break;
+			case "pointlight": t.kind = 114; break;
+			case "forcefield": t.kind = 115; break;
+			case "shotclip": t.kind = 116; break;
+			case "sky": t.kind = 117; break;
+			case "monsterclip": t.kind = 118; break;
+			case "hint": t.kind = 119; break;
+			case "ladder": t.kind = 120; break;
+			case "dust": t.kind = 121; break;
+			case "botclip": t.kind = 122; break;
+			case "antiportal": t.kind = 123; break;
+			case "lightgrid": t.kind = 124; break;
+			case "cull": t.kind = 125; break;
+			case "front": t.kind = 126; break;
+			case "back": t.kind = 127; break;
+			case "none": t.kind = 128; break;
+			case "sort": t.kind = 129; break;
+			case "opaque": t.kind = 130; break;
+			case "banner": t.kind = 131; break;
+			case "underwater": t.kind = 132; break;
+			case "additive": t.kind = 133; break;
+			case "nearest": t.kind = 134; break;
+			case "nopicmip": t.kind = 135; break;
+			case "nomipmaps": t.kind = 136; break;
+			case "polygonoffset": t.kind = 137; break;
+			case "entitymergable": t.kind = 138; break;
+			case "tesssize": t.kind = 139; break;
+			case "light": t.kind = 140; break;
+			case "qer_editorimage": t.kind = 141; break;
+			case "qer_nocarve": t.kind = 142; break;
+			case "qer_trans": t.kind = 143; break;
+			case "q3map_alphagen": t.kind = 144; break;
+			case "q3map_alphamod": t.kind = 145; break;
+			case "q3map_backshader": t.kind = 146; break;
+			case "q3map_backsplash": t.kind = 147; break;
+			case "q3map_baseshader": t.kind = 148; break;
+			case "q3map_bounce": t.kind = 149; break;
+			case "q3map_bouncescale": t.kind = 150; break;
+			case "q3map_clipmodel": t.kind = 151; break;
+			case "q3map_cloneshader": t.kind = 152; break;
+			case "q3map_colorgen": t.kind = 153; break;
+			case "q3map_colormod": t.kind = 154; break;
+			case "q3map_fogdir": t.kind = 155; break;
+			case "q3map_forcemeta": t.kind = 156; break;
+			case "q3map_forcesunlight": t.kind = 157; break;
+			case "q3map_fur": t.kind = 158; break;
+			case "q3map_globaltexture": t.kind = 159; break;
+			case "q3map_indexed": t.kind = 160; break;
+			case "q3map_invert": t.kind = 161; break;
+			case "q3map_lightimage": t.kind = 162; break;
+			case "q3map_lightmapaxis": t.kind = 163; break;
+			case "q3map_lightmapbrightness": t.kind = 164; break;
+			case "q3map_lightmapfilterradius": t.kind = 165; break;
+			case "q3map_lightmapgamma": t.kind = 166; break;
+			case "q3map_lightmapmergable": t.kind = 167; break;
+			case "q3map_lightmapsampleoffset": t.kind = 168; break;
+			case "q3map_lightmapsamplesize": t.kind = 169; break;
+			case "q3map_lightmapsize": t.kind = 170; break;
+			case "q3map_lightrgb": t.kind = 171; break;
+			case "q3map_lightstyle": t.kind = 172; break;
+			case "q3map_lightsubdivide": t.kind = 173; break;
+			case "q3map_noclip": t.kind = 174; break;
+			case "q3map_nofast": t.kind = 175; break;
+			case "q3map_nofog": t.kind = 176; break;
+			case "q3map_nonplanar": t.kind = 177; break;
+			case "q3map_normalimage": t.kind = 178; break;
+			case "q3map_notjunc": t.kind = 179; break;
+			case "q3map_novertexlight": t.kind = 180; break;
+			case "q3map_novertexshadows": t.kind = 181; break;
+			case "q3map_offset": t.kind = 182; break;
+			case "q3map_patchshadows": t.kind = 183; break;
+			case "q3map_remapshader": t.kind = 184; break;
+			case "q3map_replicate": t.kind = 185; break;
+			case "q3map_rgbgen": t.kind = 186; break;
+			case "q3map_rgbmod": t.kind = 187; break;
+			case "q3map_shadeangle": t.kind = 188; break;
+			case "q3map_skylight": t.kind = 189; break;
+			case "q3map_splotchfix": t.kind = 190; break;
+			case "q3map_stylemarker": t.kind = 191; break;
+			case "q3map_stylemarker2": t.kind = 192; break;
+			case "q3map_sun": t.kind = 193; break;
+			case "q3map_sunext": t.kind = 194; break;
+			case "q3map_sunlight": t.kind = 195; break;
+			case "q3map_surfacelight": t.kind = 196; break;
+			case "q3map_surfacemodel": t.kind = 197; break;
+			case "q3map_tcgen": t.kind = 198; break;
+			case "q3map_tcmod": t.kind = 199; break;
+			case "q3map_terrain": t.kind = 200; break;
+			case "q3map_tesssize": t.kind = 201; break;
+			case "q3map_texturesize": t.kind = 202; break;
+			case "q3map_tracelight": t.kind = 203; break;
+			case "q3map_vertexscale": t.kind = 204; break;
+			case "q3map_vertexshadows": t.kind = 205; break;
+			case "q3map_vlight": t.kind = 206; break;
+			case "q3map_flare": t.kind = 207; break;
+			case "q3map_nolightmap": t.kind = 208; break;
 			default: break;
 		}
 	}
@@ -484,7 +572,7 @@ public class Scanner {
 		while (ch == ' ' ||
 			ch >= 9 && ch <= 10 || ch == 13
 		) NextCh();
-		if (ch == '/' && Comment0() ||ch == '/' && Comment1()) return NextToken();
+		if (ch == '/' && Comment0() ||ch == '/' && Comment1() ||ch == '/' && Comment2()) return NextToken();
 		t = new Token();
 		t.pos = pos; t.col = col; t.line = line; 
 		int state;
@@ -496,7 +584,7 @@ public class Scanner {
 			case -1: { t.kind = eofSym; break; } // NextCh already done
 			case 0: { t.kind = noSym; break; }   // NextCh already done
 			case 1:
-				if (ch >= '-' && ch <= '9' || ch >= 'A' && ch <= 'Z' || ch == '_' || ch >= 'a' && ch <= 'z') {AddCh(); goto case 1;}
+				if (ch >= '-' && ch <= '9' || ch == '_' || ch >= 'a' && ch <= 'z') {AddCh(); goto case 1;}
 				else {t.kind = 1; t.val = new String(tval, 0, tlen); CheckLiteral(); return t;}
 			case 2:
 				if (ch >= '0' && ch <= '9') {AddCh(); goto case 2;}
@@ -506,88 +594,107 @@ public class Scanner {
 				if (ch >= '0' && ch <= '9') {AddCh(); goto case 3;}
 				else {t.kind = 2; break;}
 			case 4:
-				{t.kind = 33; break;}
+				if (ch >= '0' && ch <= '9') {AddCh(); goto case 5;}
+				else {t.kind = noSym; break;}
 			case 5:
-				{t.kind = 34; break;}
+				if (ch >= '0' && ch <= '9') {AddCh(); goto case 6;}
+				else {t.kind = 2; break;}
 			case 6:
-				{t.kind = 54; break;}
+				if (ch >= '0' && ch <= '9') {AddCh(); goto case 6;}
+				else {t.kind = 2; break;}
 			case 7:
-				if (ch == 'i') {AddCh(); goto case 8;}
+				if (ch >= '0' && ch <= '9') {AddCh(); goto case 8;}
 				else {t.kind = noSym; break;}
 			case 8:
-				if (ch == 'g') {AddCh(); goto case 9;}
-				else {t.kind = noSym; break;}
+				if (ch >= '0' && ch <= '9') {AddCh(); goto case 9;}
+				else {t.kind = 2; break;}
 			case 9:
-				if (ch == 'h') {AddCh(); goto case 10;}
-				else {t.kind = noSym; break;}
+				if (ch >= '0' && ch <= '9') {AddCh(); goto case 9;}
+				else {t.kind = 2; break;}
 			case 10:
-				if (ch == 't') {AddCh(); goto case 11;}
-				else {t.kind = noSym; break;}
+				{t.kind = 11; break;}
 			case 11:
-				if (ch == 'm') {AddCh(); goto case 12;}
-				else {t.kind = noSym; break;}
+				{t.kind = 12; break;}
 			case 12:
-				if (ch == 'a') {AddCh(); goto case 13;}
-				else {t.kind = noSym; break;}
+				{t.kind = 62; break;}
 			case 13:
-				if (ch == 'p') {AddCh(); goto case 14;}
+				if (ch == 'i') {AddCh(); goto case 14;}
 				else {t.kind = noSym; break;}
 			case 14:
-				{t.kind = 56; break;}
+				if (ch == 'g') {AddCh(); goto case 15;}
+				else {t.kind = noSym; break;}
 			case 15:
 				if (ch == 'h') {AddCh(); goto case 16;}
 				else {t.kind = noSym; break;}
 			case 16:
-				if (ch == 'i') {AddCh(); goto case 17;}
+				if (ch == 't') {AddCh(); goto case 17;}
 				else {t.kind = noSym; break;}
 			case 17:
-				if (ch == 't') {AddCh(); goto case 18;}
+				if (ch == 'm') {AddCh(); goto case 18;}
 				else {t.kind = noSym; break;}
 			case 18:
-				if (ch == 'e') {AddCh(); goto case 19;}
+				if (ch == 'a') {AddCh(); goto case 19;}
 				else {t.kind = noSym; break;}
 			case 19:
-				if (ch == 'i') {AddCh(); goto case 20;}
+				if (ch == 'p') {AddCh(); goto case 20;}
 				else {t.kind = noSym; break;}
 			case 20:
-				if (ch == 'm') {AddCh(); goto case 21;}
-				else {t.kind = noSym; break;}
+				{t.kind = 64; break;}
 			case 21:
-				if (ch == 'a') {AddCh(); goto case 22;}
+				if (ch == 'h') {AddCh(); goto case 22;}
 				else {t.kind = noSym; break;}
 			case 22:
-				if (ch == 'g') {AddCh(); goto case 23;}
+				if (ch == 'i') {AddCh(); goto case 23;}
 				else {t.kind = noSym; break;}
 			case 23:
-				if (ch == 'e') {AddCh(); goto case 24;}
+				if (ch == 't') {AddCh(); goto case 24;}
 				else {t.kind = noSym; break;}
 			case 24:
-				{t.kind = 57; break;}
+				if (ch == 'e') {AddCh(); goto case 25;}
+				else {t.kind = noSym; break;}
 			case 25:
-				if (ch == 'w') {AddCh(); goto case 26;}
+				if (ch == 'i') {AddCh(); goto case 26;}
 				else {t.kind = noSym; break;}
 			case 26:
-				if (ch == 'h') {AddCh(); goto case 27;}
+				if (ch == 'm') {AddCh(); goto case 27;}
 				else {t.kind = noSym; break;}
 			case 27:
-				if (ch == 'i') {AddCh(); goto case 28;}
+				if (ch == 'a') {AddCh(); goto case 28;}
 				else {t.kind = noSym; break;}
 			case 28:
-				if (ch == 't') {AddCh(); goto case 29;}
+				if (ch == 'g') {AddCh(); goto case 29;}
 				else {t.kind = noSym; break;}
 			case 29:
 				if (ch == 'e') {AddCh(); goto case 30;}
 				else {t.kind = noSym; break;}
 			case 30:
-				{t.kind = 58; break;}
+				{t.kind = 65; break;}
 			case 31:
-				{t.kind = 71; break;}
+				if (ch == 'w') {AddCh(); goto case 32;}
+				else {t.kind = noSym; break;}
 			case 32:
-				if (ch >= '0' && ch <= '9') {AddCh(); goto case 2;}
-				else {t.kind = 74; break;}
+				if (ch == 'h') {AddCh(); goto case 33;}
+				else {t.kind = noSym; break;}
 			case 33:
-				if (ch == 'l') {AddCh(); goto case 7;}
-				else if (ch == 'w') {AddCh(); goto case 15;}
+				if (ch == 'i') {AddCh(); goto case 34;}
+				else {t.kind = noSym; break;}
+			case 34:
+				if (ch == 't') {AddCh(); goto case 35;}
+				else {t.kind = noSym; break;}
+			case 35:
+				if (ch == 'e') {AddCh(); goto case 36;}
+				else {t.kind = noSym; break;}
+			case 36:
+				{t.kind = 66; break;}
+			case 37:
+				{t.kind = 79; break;}
+			case 38:
+				if (ch >= '0' && ch <= '9') {AddCh(); goto case 2;}
+				else if (ch == '.') {AddCh(); goto case 4;}
+				else {t.kind = 81; break;}
+			case 39:
+				if (ch == 'l') {AddCh(); goto case 13;}
+				else if (ch == 'w') {AddCh(); goto case 21;}
 				else {t.kind = noSym; break;}
 
 		}

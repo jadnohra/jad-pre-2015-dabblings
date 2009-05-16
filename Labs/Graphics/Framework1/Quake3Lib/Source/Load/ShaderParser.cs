@@ -9,7 +9,7 @@ public class Parser {
 	public const int _EOF = 0;
 	public const int _path = 1;
 	public const int _number = 2;
-	public const int maxT = 141;
+	public const int maxT = 209;
 
 	const bool T = true;
 	const bool x = false;
@@ -89,7 +89,7 @@ public class Parser {
 		Expect(2);
 	}
 
-	void GeneratorFunction() {
+	void GeneratorFunctionType() {
 		switch (la.kind) {
 		case 3: {
 			Get();
@@ -119,136 +119,109 @@ public class Parser {
 			Get();
 			break;
 		}
-		default: SynErr(142); break;
+		default: SynErr(210); break;
 		}
 	}
 
-	void BlendMode() {
+	void GeneratorFunction() {
+		GeneratorFunctionType();
+		Number();
+		Number();
+		Number();
+		Number();
+	}
+
+	void Q3Map2Func() {
 		switch (la.kind) {
 		case 10: {
 			Get();
-			break;
-		}
-		case 11: {
-			Get();
-			break;
-		}
-		case 12: {
-			Get();
+			Expect(11);
+			Number();
+			Number();
+			Number();
+			Expect(12);
 			break;
 		}
 		case 13: {
 			Get();
+			Expect(11);
+			Number();
+			Number();
+			Number();
+			Expect(12);
 			break;
 		}
 		case 14: {
 			Get();
+			Expect(11);
+			Number();
+			Number();
+			Number();
+			Number();
+			Number();
+			Expect(12);
 			break;
 		}
 		case 15: {
 			Get();
+			Expect(11);
+			Number();
+			Number();
+			Number();
+			Number();
+			Number();
+			Expect(12);
 			break;
 		}
 		case 16: {
 			Get();
+			Number();
 			break;
 		}
 		case 17: {
 			Get();
+			Number();
 			break;
 		}
-		case 18: {
-			Get();
-			break;
-		}
-		case 19: {
-			Get();
-			break;
-		}
-		default: SynErr(143); break;
+		default: SynErr(211); break;
 		}
 	}
 
-	void RgbGen() {
-		Expect(20);
-		switch (la.kind) {
-		case 21: {
+	void Q3Map2TcGenFunc() {
+		if (la.kind == 18) {
 			Get();
-			break;
-		}
-		case 22: {
+			Number();
+			Number();
+		} else if (la.kind == 19) {
 			Get();
-			break;
-		}
-		case 23: {
+			Number();
+			Number();
+		} else SynErr(212);
+	}
+
+	void Q3Map2TcModFunc() {
+		if (la.kind == 20) {
 			Get();
-			break;
-		}
-		case 24: {
+			Number();
+		} else if (la.kind == 16) {
 			Get();
-			break;
-		}
-		case 25: {
-			Get();
-			break;
-		}
-		case 26: {
-			Get();
-			break;
-		}
-		case 27: {
-			Get();
-			break;
-		}
-		case 28: case 29: {
-			if (la.kind == 28) {
+			Number();
+			Number();
+		} else if (la.kind == 21 || la.kind == 22 || la.kind == 23) {
+			if (la.kind == 21) {
+				Get();
+			} else if (la.kind == 22) {
 				Get();
 			} else {
 				Get();
 			}
-			break;
-		}
-		case 30: {
-			Get();
-			break;
-		}
-		case 31: {
-			Get();
-			GeneratorFunction();
 			Number();
 			Number();
-			Number();
-			Number();
-			break;
-		}
-		case 32: {
-			Get();
-			Expect(33);
-			Number();
-			Number();
-			Number();
-			Expect(34);
-			break;
-		}
-		default: SynErr(144); break;
-		}
+		} else SynErr(213);
 	}
 
-	void AlphaGen() {
-		Expect(35);
+	void BlendMode() {
 		switch (la.kind) {
-		case 21: {
-			Get();
-			break;
-		}
-		case 22: {
-			Get();
-			break;
-		}
-		case 23: {
-			Get();
-			break;
-		}
 		case 24: {
 			Get();
 			break;
@@ -279,82 +252,186 @@ public class Parser {
 		}
 		case 31: {
 			Get();
-			GeneratorFunction();
-			Number();
-			Number();
-			Number();
-			Number();
 			break;
 		}
 		case 32: {
 			Get();
-			Number();
+			break;
+		}
+		case 33: {
+			Get();
+			break;
+		}
+		default: SynErr(214); break;
+		}
+	}
+
+	void RgbGen() {
+		Expect(34);
+		switch (la.kind) {
+		case 35: {
+			Get();
 			break;
 		}
 		case 36: {
 			Get();
-			Number();
 			break;
 		}
-		default: SynErr(145); break;
+		case 37: {
+			Get();
+			break;
 		}
-	}
-
-	void TcGen() {
-		Expect(37);
-		if (la.kind == 38) {
+		case 38: {
 			Get();
-		} else if (la.kind == 39) {
+			break;
+		}
+		case 39: {
 			Get();
-		} else if (la.kind == 40) {
+			break;
+		}
+		case 40: {
 			Get();
-		} else if (la.kind == 41) {
+			break;
+		}
+		case 41: {
 			Get();
-			Expect(33);
-			Number();
-			Number();
-			Number();
-			Expect(34);
-			Expect(33);
-			Number();
-			Number();
-			Number();
-			Expect(34);
-		} else SynErr(146);
-	}
-
-	void TcMod() {
-		Expect(42);
-		switch (la.kind) {
+			break;
+		}
+		case 42: {
+			Get();
+			break;
+		}
 		case 43: {
 			Get();
-			Number();
 			break;
 		}
 		case 44: {
 			Get();
-			Number();
-			Number();
+			GeneratorFunction();
 			break;
 		}
 		case 45: {
 			Get();
+			Expect(11);
 			Number();
 			Number();
+			Number();
+			Expect(12);
 			break;
 		}
-		case 46: {
+		default: SynErr(215); break;
+		}
+	}
+
+	void AlphaGen() {
+		Expect(46);
+		switch (la.kind) {
+		case 35: {
+			Get();
+			break;
+		}
+		case 36: {
+			Get();
+			break;
+		}
+		case 37: {
+			Get();
+			break;
+		}
+		case 38: {
+			Get();
+			break;
+		}
+		case 39: {
+			Get();
+			break;
+		}
+		case 40: {
+			Get();
+			break;
+		}
+		case 41: {
+			Get();
+			break;
+		}
+		case 42: {
+			Get();
+			break;
+		}
+		case 43: {
+			Get();
+			break;
+		}
+		case 44: {
 			Get();
 			GeneratorFunction();
-			Number();
-			Number();
-			Number();
+			break;
+		}
+		case 45: {
+			Get();
 			Number();
 			break;
 		}
 		case 47: {
 			Get();
 			Number();
+			break;
+		}
+		default: SynErr(216); break;
+		}
+	}
+
+	void TcGen() {
+		Expect(48);
+		if (la.kind == 49) {
+			Get();
+		} else if (la.kind == 50) {
+			Get();
+		} else if (la.kind == 51) {
+			Get();
+		} else if (la.kind == 18) {
+			Get();
+			Expect(11);
+			Number();
+			Number();
+			Number();
+			Expect(12);
+			Expect(11);
+			Number();
+			Number();
+			Number();
+			Expect(12);
+		} else SynErr(217);
+	}
+
+	void TcMod() {
+		Expect(52);
+		switch (la.kind) {
+		case 20: {
+			Get();
+			Number();
+			break;
+		}
+		case 16: {
+			Get();
+			Number();
+			Number();
+			break;
+		}
+		case 53: {
+			Get();
+			Number();
+			Number();
+			break;
+		}
+		case 54: {
+			Get();
+			GeneratorFunction();
+			break;
+		}
+		case 55: {
+			Get();
+			Number();
 			Number();
 			Number();
 			Number();
@@ -362,7 +439,7 @@ public class Parser {
 			Number();
 			break;
 		}
-		case 48: {
+		case 56: {
 			Get();
 			Number();
 			Number();
@@ -370,50 +447,50 @@ public class Parser {
 			Number();
 			break;
 		}
-		case 49: {
+		case 57: {
 			Get();
 			break;
 		}
-		default: SynErr(147); break;
+		default: SynErr(218); break;
 		}
 	}
 
 	void AlphaFunc() {
-		Expect(50);
-		if (la.kind == 51) {
+		Expect(58);
+		if (la.kind == 59) {
 			Get();
-		} else if (la.kind == 52) {
+		} else if (la.kind == 60) {
 			Get();
-		} else if (la.kind == 53) {
+		} else if (la.kind == 61) {
 			Get();
-		} else SynErr(148);
+		} else SynErr(219);
 	}
 
 	void Stage() {
-		Expect(54);
+		Expect(62);
 		while (StartOf(1)) {
 			switch (la.kind) {
-			case 55: {
+			case 63: {
 				Get();
-				if (la.kind == 56) {
+				if (la.kind == 64) {
 					Get();
-				} else if (la.kind == 57 || la.kind == 58) {
-					if (la.kind == 57) {
+				} else if (la.kind == 65 || la.kind == 66) {
+					if (la.kind == 65) {
 						Get();
 					} else {
 						Get();
 					}
 				} else if (la.kind == 1) {
 					Path();
-				} else SynErr(149);
+				} else SynErr(220);
 				break;
 			}
-			case 59: {
+			case 67: {
 				Get();
 				Path();
 				break;
 			}
-			case 60: {
+			case 68: {
 				Get();
 				Number();
 				Path();
@@ -422,159 +499,113 @@ public class Parser {
 				}
 				break;
 			}
-			case 61: {
+			case 69: {
 				Get();
-				if (la.kind == 62) {
+				if (la.kind == 70) {
 					Get();
-				} else if (la.kind == 63) {
+				} else if (la.kind == 71) {
 					Get();
-				} else if (la.kind == 64) {
+				} else if (la.kind == 72) {
 					Get();
 				} else if (StartOf(2)) {
 					BlendMode();
 					BlendMode();
-				} else SynErr(150);
+				} else SynErr(221);
 				break;
 			}
-			case 20: {
+			case 34: {
 				RgbGen();
 				break;
 			}
-			case 35: {
+			case 46: {
 				AlphaGen();
 				break;
 			}
-			case 37: {
+			case 48: {
 				TcGen();
 				break;
 			}
-			case 42: {
+			case 52: {
 				TcMod();
 				break;
 			}
-			case 50: {
+			case 58: {
 				AlphaFunc();
 				break;
 			}
-			case 65: {
+			case 73: {
 				Get();
-				if (la.kind == 66) {
+				if (la.kind == 74) {
 					Get();
-				} else if (la.kind == 67) {
+				} else if (la.kind == 75) {
 					Get();
-				} else if (la.kind == 68) {
+				} else if (la.kind == 76) {
 					Get();
-				} else SynErr(151);
+				} else SynErr(222);
 				break;
 			}
-			case 69: {
+			case 77: {
 				Get();
 				break;
 			}
-			case 70: {
+			case 78: {
 				Get();
 				break;
 			}
 			}
 		}
-		Expect(71);
+		Expect(79);
 	}
 
 	void SkyParms() {
-		if (la.kind == 72) {
-			Get();
-		} else if (la.kind == 73) {
-			Get();
-		} else SynErr(152);
+		Expect(80);
 		if (la.kind == 1) {
 			Path();
-		} else if (la.kind == 74) {
+		} else if (la.kind == 81) {
 			Get();
-		} else SynErr(153);
+		} else SynErr(223);
 		Number();
 		if (la.kind == 1) {
 			Path();
-		} else if (la.kind == 74) {
+		} else if (la.kind == 81) {
 			Get();
-		} else SynErr(154);
+		} else SynErr(224);
 	}
 
 	void DeformVertexes() {
-		Expect(75);
+		Expect(82);
 		switch (la.kind) {
-		case 31: {
+		case 44: {
 			Get();
 			Number();
-			GeneratorFunction();
-			Number();
-			Number();
-			Number();
-			Number();
+			if (StartOf(3)) {
+				GeneratorFunction();
+			}
 			break;
 		}
-		case 76: {
+		case 83: {
 			Get();
 			Number();
 			if (la.kind == 2) {
 				Number();
 			} else if (StartOf(3)) {
 				GeneratorFunction();
-				Number();
-				Number();
-				Number();
-			} else SynErr(155);
+			} else SynErr(225);
 			break;
 		}
-		case 77: {
+		case 23: {
 			Get();
 			Number();
 			Number();
 			Number();
 			GeneratorFunction();
-			Number();
-			Number();
-			Number();
-			Number();
 			break;
 		}
-		case 78: {
-			Get();
-			Number();
-			Number();
-			Number();
-			break;
-		}
-		case 79: {
-			Get();
-			break;
-		}
-		case 80: {
-			Get();
-			break;
-		}
-		case 81: {
-			Get();
-			break;
-		}
-		default: SynErr(156); break;
-		}
-	}
-
-	void FogParms() {
-		Expect(82);
-		Expect(33);
-		Number();
-		Number();
-		Number();
-		Expect(34);
-		Number();
-	}
-
-	void SurfaceParm() {
-		Expect(83);
-		switch (la.kind) {
 		case 84: {
 			Get();
+			Number();
+			Number();
+			Number();
 			break;
 		}
 		case 85: {
@@ -589,14 +620,23 @@ public class Parser {
 			Get();
 			break;
 		}
-		case 88: {
-			Get();
-			break;
+		default: SynErr(226); break;
 		}
-		case 89: {
-			Get();
-			break;
-		}
+	}
+
+	void FogParms() {
+		Expect(88);
+		Expect(11);
+		Number();
+		Number();
+		Number();
+		Expect(12);
+		Number();
+	}
+
+	void SurfaceParm() {
+		Expect(89);
+		switch (la.kind) {
 		case 90: {
 			Get();
 			break;
@@ -697,168 +737,150 @@ public class Parser {
 			Get();
 			break;
 		}
-		case 70: {
+		case 115: {
 			Get();
 			break;
 		}
-		default: SynErr(157); break;
+		case 116: {
+			Get();
+			break;
+		}
+		case 117: {
+			Get();
+			break;
+		}
+		case 118: {
+			Get();
+			break;
+		}
+		case 119: {
+			Get();
+			break;
+		}
+		case 120: {
+			Get();
+			break;
+		}
+		case 78: {
+			Get();
+			break;
+		}
+		case 121: {
+			Get();
+			break;
+		}
+		case 122: {
+			Get();
+			break;
+		}
+		case 123: {
+			Get();
+			break;
+		}
+		case 124: {
+			Get();
+			break;
+		}
+		default: SynErr(227); break;
 		}
 	}
 
 	void ShaderDecl() {
 		Path();
-		Expect(54);
+		Expect(62);
 		while (StartOf(4)) {
 			switch (la.kind) {
-			case 72: case 73: {
+			case 80: {
 				SkyParms();
 				break;
 			}
-			case 54: {
+			case 62: {
 				Stage();
 				break;
 			}
-			case 75: {
+			case 82: {
 				DeformVertexes();
 				break;
 			}
-			case 82: {
+			case 88: {
 				FogParms();
 				break;
 			}
-			case 115: {
+			case 125: {
 				Get();
-				if (la.kind == 116) {
+				if (la.kind == 126) {
 					Get();
-				} else if (la.kind == 117) {
+				} else if (la.kind == 127) {
 					Get();
-				} else if (la.kind == 68) {
+				} else if (la.kind == 76) {
 					Get();
-				} else if (la.kind == 118) {
+				} else if (la.kind == 128) {
 					Get();
-				} else SynErr(158);
+				} else SynErr(228);
 				break;
 			}
-			case 119: {
+			case 129: {
 				Get();
 				switch (la.kind) {
 				case 2: {
 					Number();
 					break;
 				}
-				case 36: {
+				case 47: {
 					Get();
 					break;
 				}
-				case 111: {
+				case 117: {
 					Get();
 					break;
 				}
-				case 120: {
+				case 130: {
 					Get();
 					break;
 				}
-				case 121: {
+				case 131: {
 					Get();
 					break;
 				}
-				case 122: {
+				case 132: {
 					Get();
 					break;
 				}
-				case 123: {
+				case 133: {
 					Get();
 					break;
 				}
-				case 124: {
+				case 134: {
 					Get();
 					break;
 				}
-				default: SynErr(159); break;
+				default: SynErr(229); break;
 				}
-				break;
-			}
-			case 125: {
-				Get();
-				break;
-			}
-			case 126: {
-				Get();
-				break;
-			}
-			case 127: {
-				Get();
-				break;
-			}
-			case 36: {
-				Get();
-				break;
-			}
-			case 128: {
-				Get();
-				break;
-			}
-			case 129: {
-				Get();
-				Number();
-				break;
-			}
-			case 130: {
-				Get();
-				Path();
-				break;
-			}
-			case 131: {
-				Get();
-				break;
-			}
-			case 132: {
-				Get();
-				Number();
-				Number();
-				Number();
-				Number();
-				Number();
-				Number();
-				break;
-			}
-			case 133: {
-				Get();
-				Number();
-				break;
-			}
-			case 134: {
-				Get();
-				Number();
 				break;
 			}
 			case 135: {
 				Get();
-				Path();
 				break;
 			}
 			case 136: {
 				Get();
-				Number();
 				break;
 			}
 			case 137: {
 				Get();
-				Number();
-				Number();
 				break;
 			}
-			case 83: {
-				SurfaceParm();
+			case 47: {
+				Get();
 				break;
 			}
 			case 138: {
 				Get();
-				Path();
 				break;
 			}
 			case 139: {
 				Get();
+				Number();
 				break;
 			}
 			case 140: {
@@ -866,9 +888,355 @@ public class Parser {
 				Number();
 				break;
 			}
+			case 89: {
+				SurfaceParm();
+				break;
+			}
+			case 141: {
+				Get();
+				Path();
+				break;
+			}
+			case 142: {
+				Get();
+				break;
+			}
+			case 143: {
+				Get();
+				Number();
+				break;
+			}
+			case 144: {
+				Get();
+				Q3Map2Func();
+				break;
+			}
+			case 145: {
+				Get();
+				Q3Map2Func();
+				break;
+			}
+			case 146: {
+				Get();
+				Path();
+				break;
+			}
+			case 147: {
+				Get();
+				Number();
+				Number();
+				break;
+			}
+			case 148: {
+				Get();
+				Path();
+				break;
+			}
+			case 149: {
+				Get();
+				Number();
+				break;
+			}
+			case 150: {
+				Get();
+				Number();
+				break;
+			}
+			case 151: {
+				Get();
+				break;
+			}
+			case 152: {
+				Get();
+				Path();
+				break;
+			}
+			case 153: {
+				Get();
+				break;
+			}
+			case 154: {
+				Get();
+				break;
+			}
+			case 155: {
+				Get();
+				Number();
+				break;
+			}
+			case 156: {
+				Get();
+				break;
+			}
+			case 157: {
+				Get();
+				break;
+			}
+			case 158: {
+				Get();
+				Number();
+				Number();
+				Number();
+				break;
+			}
+			case 159: {
+				Get();
+				break;
+			}
+			case 160: {
+				Get();
+				break;
+			}
+			case 161: {
+				Get();
+				break;
+			}
+			case 162: {
+				Get();
+				Path();
+				break;
+			}
+			case 163: {
+				Get();
+				Number();
+				break;
+			}
+			case 164: {
+				Get();
+				Number();
+				break;
+			}
+			case 165: {
+				Get();
+				Number();
+				Number();
+				break;
+			}
+			case 166: {
+				Get();
+				Number();
+				break;
+			}
+			case 167: {
+				Get();
+				break;
+			}
+			case 168: {
+				Get();
+				Number();
+				break;
+			}
+			case 169: {
+				Get();
+				Number();
+				break;
+			}
+			case 170: {
+				Get();
+				Number();
+				Number();
+				break;
+			}
+			case 171: {
+				Get();
+				Number();
+				Number();
+				Number();
+				break;
+			}
+			case 172: {
+				Get();
+				Number();
+				break;
+			}
+			case 173: {
+				Get();
+				Number();
+				break;
+			}
+			case 174: {
+				Get();
+				break;
+			}
+			case 175: {
+				Get();
+				break;
+			}
+			case 176: {
+				Get();
+				break;
+			}
+			case 177: {
+				Get();
+				break;
+			}
+			case 178: {
+				Get();
+				Path();
+				break;
+			}
+			case 179: {
+				Get();
+				break;
+			}
+			case 180: {
+				Get();
+				break;
+			}
+			case 181: {
+				Get();
+				break;
+			}
+			case 182: {
+				Get();
+				Number();
+				break;
+			}
+			case 183: {
+				Get();
+				break;
+			}
+			case 184: {
+				Get();
+				Number();
+				break;
+			}
+			case 185: {
+				Get();
+				break;
+			}
+			case 186: {
+				Get();
+				break;
+			}
+			case 187: {
+				Get();
+				break;
+			}
+			case 188: {
+				Get();
+				Number();
+				break;
+			}
+			case 189: {
+				Get();
+				Number();
+				Number();
+				break;
+			}
+			case 190: {
+				Get();
+				break;
+			}
+			case 191: {
+				Get();
+				break;
+			}
+			case 192: {
+				Get();
+				break;
+			}
+			case 193: {
+				Get();
+				Number();
+				Number();
+				Number();
+				Number();
+				Number();
+				Number();
+				break;
+			}
+			case 194: {
+				Get();
+				Number();
+				Number();
+				Number();
+				Number();
+				Number();
+				Number();
+				Number();
+				Number();
+				break;
+			}
+			case 195: {
+				Get();
+				break;
+			}
+			case 196: {
+				Get();
+				if (la.kind == 2) {
+					Number();
+				} else if (la.kind == 1) {
+					Path();
+				} else SynErr(230);
+				break;
+			}
+			case 197: {
+				Get();
+				Path();
+				Number();
+				Number();
+				Number();
+				Number();
+				Number();
+				Number();
+				Number();
+				break;
+			}
+			case 198: {
+				Get();
+				Q3Map2TcGenFunc();
+				break;
+			}
+			case 199: {
+				Get();
+				Q3Map2TcModFunc();
+				break;
+			}
+			case 200: {
+				Get();
+				break;
+			}
+			case 201: {
+				Get();
+				Number();
+				break;
+			}
+			case 202: {
+				Get();
+				Number();
+				Number();
+				break;
+			}
+			case 203: {
+				Get();
+				break;
+			}
+			case 204: {
+				Get();
+				Number();
+				break;
+			}
+			case 205: {
+				Get();
+				break;
+			}
+			case 206: {
+				Get();
+				break;
+			}
+			case 207: {
+				Get();
+				Path();
+				break;
+			}
+			case 208: {
+				Get();
+				break;
+			}
 			}
 		}
-		Expect(71);
+		Expect(79);
 	}
 
 	void Q3Shader() {
@@ -889,11 +1257,11 @@ public class Parser {
 	}
 	
 	static readonly bool[,] set = {
-		{T,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x},
-		{x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, T,x,x,x, x,x,x,x, x,x,x,x, x,x,x,T, x,T,x,x, x,x,T,x, x,x,x,x, x,x,T,x, x,x,x,T, x,x,x,T, T,T,x,x, x,T,x,x, x,T,T,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x},
-		{x,x,x,x, x,x,x,x, x,x,T,T, T,T,T,T, T,T,T,T, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x},
-		{x,x,x,T, T,T,T,T, T,T,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x},
-		{x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, T,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,T,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, T,T,x,T, x,x,x,x, x,x,T,T, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,T, x,x,x,T, x,x,x,x, x,T,T,T, T,T,T,T, T,T,T,T, T,T,T,T, T,x,x}
+		{T,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x},
+		{x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,T,x, x,x,x,x, x,x,x,x, x,x,T,x, T,x,x,x, T,x,x,x, x,x,T,x, x,x,x,T, x,x,x,T, T,T,x,x, x,T,x,x, x,T,T,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x},
+		{x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, T,T,T,T, T,T,T,T, T,T,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x},
+		{x,x,x,T, T,T,T,T, T,T,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x},
+		{x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,T, x,x,x,x, x,x,x,x, x,x,x,x, x,x,T,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, T,x,T,x, x,x,x,x, T,T,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,T,x,x, x,T,x,x, x,x,x,T, T,T,T,T, T,T,T,T, T,T,T,T, T,T,T,T, T,T,T,T, T,T,T,T, T,T,T,T, T,T,T,T, T,T,T,T, T,T,T,T, T,T,T,T, T,T,T,T, T,T,T,T, T,T,T,T, T,T,T,T, T,T,T,T, T,T,T,T, T,T,T,T, T,x,x}
 
 	};
 } // end Parser
@@ -917,156 +1285,227 @@ public class Errors {
 			case 7: s = "\"inversesawtooth\" expected"; break;
 			case 8: s = "\"random\" expected"; break;
 			case 9: s = "\"noise\" expected"; break;
-			case 10: s = "\"GL_ZERO\" expected"; break;
-			case 11: s = "\"GL_ONE\" expected"; break;
-			case 12: s = "\"GL_SRC_COLOR\" expected"; break;
-			case 13: s = "\"GL_ONE_MINUS_SRC_COLOR\" expected"; break;
-			case 14: s = "\"GL_DST_COLOR\" expected"; break;
-			case 15: s = "\"GL_ONE_MINUS_DST_COLOR\" expected"; break;
-			case 16: s = "\"GL_SRC_ALPHA\" expected"; break;
-			case 17: s = "\"GL_ONE_MINUS_SRC_ALPHA\" expected"; break;
-			case 18: s = "\"GL_DST_ALPHA\" expected"; break;
-			case 19: s = "\"GL_ONE_MINUS_DST_ALPHA\" expected"; break;
-			case 20: s = "\"rgbGen\" expected"; break;
-			case 21: s = "\"identityLighting\" expected"; break;
-			case 22: s = "\"identity\" expected"; break;
-			case 23: s = "\"entity\" expected"; break;
-			case 24: s = "\"oneMinusEntity\" expected"; break;
-			case 25: s = "\"vertex\" expected"; break;
-			case 26: s = "\"oneMinusVertex\" expected"; break;
-			case 27: s = "\"exactVertex\" expected"; break;
-			case 28: s = "\"lightingDiffuse\" expected"; break;
-			case 29: s = "\"LightingDiffuse\" expected"; break;
-			case 30: s = "\"lightingSpecular\" expected"; break;
-			case 31: s = "\"wave\" expected"; break;
-			case 32: s = "\"const\" expected"; break;
-			case 33: s = "\"(\" expected"; break;
-			case 34: s = "\")\" expected"; break;
-			case 35: s = "\"alphaGen\" expected"; break;
-			case 36: s = "\"portal\" expected"; break;
-			case 37: s = "\"tcGen\" expected"; break;
-			case 38: s = "\"base\" expected"; break;
-			case 39: s = "\"lightmap\" expected"; break;
-			case 40: s = "\"environment\" expected"; break;
-			case 41: s = "\"vector\" expected"; break;
-			case 42: s = "\"tcMod\" expected"; break;
-			case 43: s = "\"rotate\" expected"; break;
-			case 44: s = "\"scale\" expected"; break;
-			case 45: s = "\"scroll\" expected"; break;
-			case 46: s = "\"stretch\" expected"; break;
-			case 47: s = "\"transform\" expected"; break;
-			case 48: s = "\"turb\" expected"; break;
-			case 49: s = "\"entityTranslate\" expected"; break;
-			case 50: s = "\"alphaFunc\" expected"; break;
-			case 51: s = "\"GT0\" expected"; break;
-			case 52: s = "\"LT128\" expected"; break;
-			case 53: s = "\"GE128\" expected"; break;
-			case 54: s = "\"{\" expected"; break;
-			case 55: s = "\"map\" expected"; break;
-			case 56: s = "\"$lightmap\" expected"; break;
-			case 57: s = "\"$whiteimage\" expected"; break;
-			case 58: s = "\"*white\" expected"; break;
-			case 59: s = "\"clampmap\" expected"; break;
-			case 60: s = "\"animMap\" expected"; break;
-			case 61: s = "\"blendFunc\" expected"; break;
-			case 62: s = "\"add\" expected"; break;
-			case 63: s = "\"filter\" expected"; break;
-			case 64: s = "\"blend\" expected"; break;
-			case 65: s = "\"depthFunc\" expected"; break;
-			case 66: s = "\"equal\" expected"; break;
-			case 67: s = "\"lequal\" expected"; break;
-			case 68: s = "\"disable\" expected"; break;
-			case 69: s = "\"depthWrite\" expected"; break;
-			case 70: s = "\"detail\" expected"; break;
-			case 71: s = "\"}\" expected"; break;
-			case 72: s = "\"skyParms\" expected"; break;
-			case 73: s = "\"skyparms\" expected"; break;
-			case 74: s = "\"-\" expected"; break;
-			case 75: s = "\"deformVertexes\" expected"; break;
-			case 76: s = "\"normal\" expected"; break;
-			case 77: s = "\"move\" expected"; break;
-			case 78: s = "\"bulge\" expected"; break;
-			case 79: s = "\"autoSprite\" expected"; break;
-			case 80: s = "\"autoSprite2\" expected"; break;
-			case 81: s = "\"projectionShadow\" expected"; break;
-			case 82: s = "\"fogparms\" expected"; break;
-			case 83: s = "\"surfaceparm\" expected"; break;
-			case 84: s = "\"alphashadow\" expected"; break;
-			case 85: s = "\"areaportal\" expected"; break;
-			case 86: s = "\"clusterportal\" expected"; break;
-			case 87: s = "\"donotenter\" expected"; break;
-			case 88: s = "\"flesh\" expected"; break;
-			case 89: s = "\"fog\" expected"; break;
-			case 90: s = "\"lava\" expected"; break;
-			case 91: s = "\"metalsteps\" expected"; break;
-			case 92: s = "\"nodamage\" expected"; break;
-			case 93: s = "\"nodlight\" expected"; break;
-			case 94: s = "\"nodraw\" expected"; break;
-			case 95: s = "\"nodrop\" expected"; break;
-			case 96: s = "\"noimpact\" expected"; break;
-			case 97: s = "\"nomarks\" expected"; break;
-			case 98: s = "\"nolightmap\" expected"; break;
-			case 99: s = "\"nosteps\" expected"; break;
-			case 100: s = "\"nonsolid\" expected"; break;
-			case 101: s = "\"origin\" expected"; break;
-			case 102: s = "\"playerclip\" expected"; break;
-			case 103: s = "\"slick\" expected"; break;
-			case 104: s = "\"slime\" expected"; break;
-			case 105: s = "\"structural\" expected"; break;
-			case 106: s = "\"trans\" expected"; break;
-			case 107: s = "\"water\" expected"; break;
-			case 108: s = "\"pointlight\" expected"; break;
-			case 109: s = "\"forcefield\" expected"; break;
-			case 110: s = "\"shotclip\" expected"; break;
-			case 111: s = "\"sky\" expected"; break;
-			case 112: s = "\"monsterclip\" expected"; break;
-			case 113: s = "\"hint\" expected"; break;
-			case 114: s = "\"ladder\" expected"; break;
-			case 115: s = "\"cull\" expected"; break;
-			case 116: s = "\"front\" expected"; break;
-			case 117: s = "\"back\" expected"; break;
-			case 118: s = "\"none\" expected"; break;
-			case 119: s = "\"sort\" expected"; break;
-			case 120: s = "\"opaque\" expected"; break;
-			case 121: s = "\"banner\" expected"; break;
-			case 122: s = "\"underwater\" expected"; break;
-			case 123: s = "\"additive\" expected"; break;
-			case 124: s = "\"nearest\" expected"; break;
-			case 125: s = "\"nopicmip\" expected"; break;
-			case 126: s = "\"nomipmaps\" expected"; break;
-			case 127: s = "\"polygonOffset\" expected"; break;
-			case 128: s = "\"entityMergable\" expected"; break;
-			case 129: s = "\"tessSize\" expected"; break;
-			case 130: s = "\"q3map_backshader\" expected"; break;
-			case 131: s = "\"q3map_globaltexture\" expected"; break;
-			case 132: s = "\"q3map_sun\" expected"; break;
-			case 133: s = "\"light\" expected"; break;
-			case 134: s = "\"q3map_surfacelight\" expected"; break;
-			case 135: s = "\"q3map_lightimage\" expected"; break;
-			case 136: s = "\"q3map_lightsubdivide\" expected"; break;
-			case 137: s = "\"q3map_backsplash\" expected"; break;
-			case 138: s = "\"qer_editorimage\" expected"; break;
-			case 139: s = "\"qer_nocarve\" expected"; break;
-			case 140: s = "\"qer_trans\" expected"; break;
-			case 141: s = "??? expected"; break;
-			case 142: s = "invalid GeneratorFunction"; break;
-			case 143: s = "invalid BlendMode"; break;
-			case 144: s = "invalid RgbGen"; break;
-			case 145: s = "invalid AlphaGen"; break;
-			case 146: s = "invalid TcGen"; break;
-			case 147: s = "invalid TcMod"; break;
-			case 148: s = "invalid AlphaFunc"; break;
-			case 149: s = "invalid Stage"; break;
-			case 150: s = "invalid Stage"; break;
-			case 151: s = "invalid Stage"; break;
-			case 152: s = "invalid SkyParms"; break;
-			case 153: s = "invalid SkyParms"; break;
-			case 154: s = "invalid SkyParms"; break;
-			case 155: s = "invalid DeformVertexes"; break;
-			case 156: s = "invalid DeformVertexes"; break;
-			case 157: s = "invalid SurfaceParm"; break;
-			case 158: s = "invalid ShaderDecl"; break;
-			case 159: s = "invalid ShaderDecl"; break;
+			case 10: s = "\"dotproduct\" expected"; break;
+			case 11: s = "\"(\" expected"; break;
+			case 12: s = "\")\" expected"; break;
+			case 13: s = "\"dotproduct2\" expected"; break;
+			case 14: s = "\"dotproductscale\" expected"; break;
+			case 15: s = "\"dotproduct2scale\" expected"; break;
+			case 16: s = "\"scale\" expected"; break;
+			case 17: s = "\"set\" expected"; break;
+			case 18: s = "\"vector\" expected"; break;
+			case 19: s = "\"ivector\" expected"; break;
+			case 20: s = "\"rotate\" expected"; break;
+			case 21: s = "\"translate\" expected"; break;
+			case 22: s = "\"shift\" expected"; break;
+			case 23: s = "\"move\" expected"; break;
+			case 24: s = "\"gl_zero\" expected"; break;
+			case 25: s = "\"gl_one\" expected"; break;
+			case 26: s = "\"gl_src_color\" expected"; break;
+			case 27: s = "\"gl_one_minus_src_color\" expected"; break;
+			case 28: s = "\"gl_dst_color\" expected"; break;
+			case 29: s = "\"gl_one_minus_dst_color\" expected"; break;
+			case 30: s = "\"gl_src_alpha\" expected"; break;
+			case 31: s = "\"gl_one_minus_src_alpha\" expected"; break;
+			case 32: s = "\"gl_dst_alpha\" expected"; break;
+			case 33: s = "\"gl_one_minus_dst_alpha\" expected"; break;
+			case 34: s = "\"rgbgen\" expected"; break;
+			case 35: s = "\"identitylighting\" expected"; break;
+			case 36: s = "\"identity\" expected"; break;
+			case 37: s = "\"entity\" expected"; break;
+			case 38: s = "\"oneminusentity\" expected"; break;
+			case 39: s = "\"vertex\" expected"; break;
+			case 40: s = "\"oneminusvertex\" expected"; break;
+			case 41: s = "\"exactvertex\" expected"; break;
+			case 42: s = "\"lightingdiffuse\" expected"; break;
+			case 43: s = "\"lightingspecular\" expected"; break;
+			case 44: s = "\"wave\" expected"; break;
+			case 45: s = "\"const\" expected"; break;
+			case 46: s = "\"alphagen\" expected"; break;
+			case 47: s = "\"portal\" expected"; break;
+			case 48: s = "\"tcgen\" expected"; break;
+			case 49: s = "\"base\" expected"; break;
+			case 50: s = "\"lightmap\" expected"; break;
+			case 51: s = "\"environment\" expected"; break;
+			case 52: s = "\"tcmod\" expected"; break;
+			case 53: s = "\"scroll\" expected"; break;
+			case 54: s = "\"stretch\" expected"; break;
+			case 55: s = "\"transform\" expected"; break;
+			case 56: s = "\"turb\" expected"; break;
+			case 57: s = "\"entitytranslate\" expected"; break;
+			case 58: s = "\"alphafunc\" expected"; break;
+			case 59: s = "\"gt0\" expected"; break;
+			case 60: s = "\"lt128\" expected"; break;
+			case 61: s = "\"ge128\" expected"; break;
+			case 62: s = "\"{\" expected"; break;
+			case 63: s = "\"map\" expected"; break;
+			case 64: s = "\"$lightmap\" expected"; break;
+			case 65: s = "\"$whiteimage\" expected"; break;
+			case 66: s = "\"*white\" expected"; break;
+			case 67: s = "\"clampmap\" expected"; break;
+			case 68: s = "\"animmap\" expected"; break;
+			case 69: s = "\"blendfunc\" expected"; break;
+			case 70: s = "\"add\" expected"; break;
+			case 71: s = "\"filter\" expected"; break;
+			case 72: s = "\"blend\" expected"; break;
+			case 73: s = "\"depthfunc\" expected"; break;
+			case 74: s = "\"equal\" expected"; break;
+			case 75: s = "\"lequal\" expected"; break;
+			case 76: s = "\"disable\" expected"; break;
+			case 77: s = "\"depthwrite\" expected"; break;
+			case 78: s = "\"detail\" expected"; break;
+			case 79: s = "\"}\" expected"; break;
+			case 80: s = "\"skyparms\" expected"; break;
+			case 81: s = "\"-\" expected"; break;
+			case 82: s = "\"deformvertexes\" expected"; break;
+			case 83: s = "\"normal\" expected"; break;
+			case 84: s = "\"bulge\" expected"; break;
+			case 85: s = "\"autosprite\" expected"; break;
+			case 86: s = "\"autosprite2\" expected"; break;
+			case 87: s = "\"projectionshadow\" expected"; break;
+			case 88: s = "\"fogparms\" expected"; break;
+			case 89: s = "\"surfaceparm\" expected"; break;
+			case 90: s = "\"alphashadow\" expected"; break;
+			case 91: s = "\"areaportal\" expected"; break;
+			case 92: s = "\"clusterportal\" expected"; break;
+			case 93: s = "\"donotenter\" expected"; break;
+			case 94: s = "\"flesh\" expected"; break;
+			case 95: s = "\"fog\" expected"; break;
+			case 96: s = "\"lava\" expected"; break;
+			case 97: s = "\"metalsteps\" expected"; break;
+			case 98: s = "\"nodamage\" expected"; break;
+			case 99: s = "\"nodlight\" expected"; break;
+			case 100: s = "\"nodraw\" expected"; break;
+			case 101: s = "\"nodrop\" expected"; break;
+			case 102: s = "\"noimpact\" expected"; break;
+			case 103: s = "\"nomarks\" expected"; break;
+			case 104: s = "\"nolightmap\" expected"; break;
+			case 105: s = "\"nosteps\" expected"; break;
+			case 106: s = "\"nonsolid\" expected"; break;
+			case 107: s = "\"origin\" expected"; break;
+			case 108: s = "\"playerclip\" expected"; break;
+			case 109: s = "\"slick\" expected"; break;
+			case 110: s = "\"slime\" expected"; break;
+			case 111: s = "\"structural\" expected"; break;
+			case 112: s = "\"trans\" expected"; break;
+			case 113: s = "\"water\" expected"; break;
+			case 114: s = "\"pointlight\" expected"; break;
+			case 115: s = "\"forcefield\" expected"; break;
+			case 116: s = "\"shotclip\" expected"; break;
+			case 117: s = "\"sky\" expected"; break;
+			case 118: s = "\"monsterclip\" expected"; break;
+			case 119: s = "\"hint\" expected"; break;
+			case 120: s = "\"ladder\" expected"; break;
+			case 121: s = "\"dust\" expected"; break;
+			case 122: s = "\"botclip\" expected"; break;
+			case 123: s = "\"antiportal\" expected"; break;
+			case 124: s = "\"lightgrid\" expected"; break;
+			case 125: s = "\"cull\" expected"; break;
+			case 126: s = "\"front\" expected"; break;
+			case 127: s = "\"back\" expected"; break;
+			case 128: s = "\"none\" expected"; break;
+			case 129: s = "\"sort\" expected"; break;
+			case 130: s = "\"opaque\" expected"; break;
+			case 131: s = "\"banner\" expected"; break;
+			case 132: s = "\"underwater\" expected"; break;
+			case 133: s = "\"additive\" expected"; break;
+			case 134: s = "\"nearest\" expected"; break;
+			case 135: s = "\"nopicmip\" expected"; break;
+			case 136: s = "\"nomipmaps\" expected"; break;
+			case 137: s = "\"polygonoffset\" expected"; break;
+			case 138: s = "\"entitymergable\" expected"; break;
+			case 139: s = "\"tesssize\" expected"; break;
+			case 140: s = "\"light\" expected"; break;
+			case 141: s = "\"qer_editorimage\" expected"; break;
+			case 142: s = "\"qer_nocarve\" expected"; break;
+			case 143: s = "\"qer_trans\" expected"; break;
+			case 144: s = "\"q3map_alphagen\" expected"; break;
+			case 145: s = "\"q3map_alphamod\" expected"; break;
+			case 146: s = "\"q3map_backshader\" expected"; break;
+			case 147: s = "\"q3map_backsplash\" expected"; break;
+			case 148: s = "\"q3map_baseshader\" expected"; break;
+			case 149: s = "\"q3map_bounce\" expected"; break;
+			case 150: s = "\"q3map_bouncescale\" expected"; break;
+			case 151: s = "\"q3map_clipmodel\" expected"; break;
+			case 152: s = "\"q3map_cloneshader\" expected"; break;
+			case 153: s = "\"q3map_colorgen\" expected"; break;
+			case 154: s = "\"q3map_colormod\" expected"; break;
+			case 155: s = "\"q3map_fogdir\" expected"; break;
+			case 156: s = "\"q3map_forcemeta\" expected"; break;
+			case 157: s = "\"q3map_forcesunlight\" expected"; break;
+			case 158: s = "\"q3map_fur\" expected"; break;
+			case 159: s = "\"q3map_globaltexture\" expected"; break;
+			case 160: s = "\"q3map_indexed\" expected"; break;
+			case 161: s = "\"q3map_invert\" expected"; break;
+			case 162: s = "\"q3map_lightimage\" expected"; break;
+			case 163: s = "\"q3map_lightmapaxis\" expected"; break;
+			case 164: s = "\"q3map_lightmapbrightness\" expected"; break;
+			case 165: s = "\"q3map_lightmapfilterradius\" expected"; break;
+			case 166: s = "\"q3map_lightmapgamma\" expected"; break;
+			case 167: s = "\"q3map_lightmapmergable\" expected"; break;
+			case 168: s = "\"q3map_lightmapsampleoffset\" expected"; break;
+			case 169: s = "\"q3map_lightmapsamplesize\" expected"; break;
+			case 170: s = "\"q3map_lightmapsize\" expected"; break;
+			case 171: s = "\"q3map_lightrgb\" expected"; break;
+			case 172: s = "\"q3map_lightstyle\" expected"; break;
+			case 173: s = "\"q3map_lightsubdivide\" expected"; break;
+			case 174: s = "\"q3map_noclip\" expected"; break;
+			case 175: s = "\"q3map_nofast\" expected"; break;
+			case 176: s = "\"q3map_nofog\" expected"; break;
+			case 177: s = "\"q3map_nonplanar\" expected"; break;
+			case 178: s = "\"q3map_normalimage\" expected"; break;
+			case 179: s = "\"q3map_notjunc\" expected"; break;
+			case 180: s = "\"q3map_novertexlight\" expected"; break;
+			case 181: s = "\"q3map_novertexshadows\" expected"; break;
+			case 182: s = "\"q3map_offset\" expected"; break;
+			case 183: s = "\"q3map_patchshadows\" expected"; break;
+			case 184: s = "\"q3map_remapshader\" expected"; break;
+			case 185: s = "\"q3map_replicate\" expected"; break;
+			case 186: s = "\"q3map_rgbgen\" expected"; break;
+			case 187: s = "\"q3map_rgbmod\" expected"; break;
+			case 188: s = "\"q3map_shadeangle\" expected"; break;
+			case 189: s = "\"q3map_skylight\" expected"; break;
+			case 190: s = "\"q3map_splotchfix\" expected"; break;
+			case 191: s = "\"q3map_stylemarker\" expected"; break;
+			case 192: s = "\"q3map_stylemarker2\" expected"; break;
+			case 193: s = "\"q3map_sun\" expected"; break;
+			case 194: s = "\"q3map_sunext\" expected"; break;
+			case 195: s = "\"q3map_sunlight\" expected"; break;
+			case 196: s = "\"q3map_surfacelight\" expected"; break;
+			case 197: s = "\"q3map_surfacemodel\" expected"; break;
+			case 198: s = "\"q3map_tcgen\" expected"; break;
+			case 199: s = "\"q3map_tcmod\" expected"; break;
+			case 200: s = "\"q3map_terrain\" expected"; break;
+			case 201: s = "\"q3map_tesssize\" expected"; break;
+			case 202: s = "\"q3map_texturesize\" expected"; break;
+			case 203: s = "\"q3map_tracelight\" expected"; break;
+			case 204: s = "\"q3map_vertexscale\" expected"; break;
+			case 205: s = "\"q3map_vertexshadows\" expected"; break;
+			case 206: s = "\"q3map_vlight\" expected"; break;
+			case 207: s = "\"q3map_flare\" expected"; break;
+			case 208: s = "\"q3map_nolightmap\" expected"; break;
+			case 209: s = "??? expected"; break;
+			case 210: s = "invalid GeneratorFunctionType"; break;
+			case 211: s = "invalid Q3Map2Func"; break;
+			case 212: s = "invalid Q3Map2TcGenFunc"; break;
+			case 213: s = "invalid Q3Map2TcModFunc"; break;
+			case 214: s = "invalid BlendMode"; break;
+			case 215: s = "invalid RgbGen"; break;
+			case 216: s = "invalid AlphaGen"; break;
+			case 217: s = "invalid TcGen"; break;
+			case 218: s = "invalid TcMod"; break;
+			case 219: s = "invalid AlphaFunc"; break;
+			case 220: s = "invalid Stage"; break;
+			case 221: s = "invalid Stage"; break;
+			case 222: s = "invalid Stage"; break;
+			case 223: s = "invalid SkyParms"; break;
+			case 224: s = "invalid SkyParms"; break;
+			case 225: s = "invalid DeformVertexes"; break;
+			case 226: s = "invalid DeformVertexes"; break;
+			case 227: s = "invalid SurfaceParm"; break;
+			case 228: s = "invalid ShaderDecl"; break;
+			case 229: s = "invalid ShaderDecl"; break;
+			case 230: s = "invalid ShaderDecl"; break;
 
 			default: s = "error " + n; break;
 		}
