@@ -19,7 +19,8 @@ TOKENS
 
 
 COMMENTS FROM "/*" TO "*/" NESTED
-COMMENTS FROM "//" TO (cr | lf)
+COMMENTS FROM "//" TO cr
+COMMENTS FROM "//" TO lf
 
 IGNORE cr + lf + tab
 
@@ -322,7 +323,7 @@ ShaderDecl
   | "q3map_sun" Number /*red*/ Number /*green*/ Number /*blue*/ Number /*intensity*/ Number /*degrees*/ Number /*elevation*/
   | "q3map_sunExt" Number /*red*/ Number /*green*/ Number /*blue*/ Number /*intensity*/ Number /*degrees*/ Number /*elevation*/ Number /*deviance*/ Number /*samples*/
   | "q3map_sunlight"
-  | "q3map_surfacelight" Number
+  | "q3map_surfacelight" Path
   | "q3map_surfaceModel" Path /*modelpath*/ Number /*density*/ Number /*odds*/ Number /*minscale*/ Number /*maxscale*/ Number /*minangle*/ Number /*maxangle*/ Number /*oriented*/
   | "q3map_tcGen" Q3Map2TcGenFunc
   | "q3map_tcMod" Q3Map2TcModFunc
