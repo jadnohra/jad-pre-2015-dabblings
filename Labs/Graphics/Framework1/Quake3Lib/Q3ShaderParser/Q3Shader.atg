@@ -15,7 +15,7 @@ CHARACTERS
 
 TOKENS
   path  = letter { letter | digit | '/' | '_' | '.' | '-' }.
-  number = [ '-' ] digit { digit } [ '.' { digit } ].
+  number = ( digit | '-' digit | '-' ) { digit } [ '.' { digit } ].
 
 COMMENTS FROM "/*" TO "*/" NESTED
 COMMENTS FROM "//" TO cr lf
