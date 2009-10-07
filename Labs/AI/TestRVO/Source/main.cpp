@@ -7,8 +7,8 @@
 #include "SDL_opengl.h" 
 
 #define MATH_PIf 3.14159265f
-int SCREEN_WIDTH = 800;
-int SCREEN_HEIGHT = 600;
+int SCREEN_WIDTH = 1024;
+int SCREEN_HEIGHT = 768;
 static const float kGlobalAlphaMul = 0.75f;
 static const float kWorldScale = 20.0f;
 static const bool kLimitBounce = true;
@@ -185,6 +185,23 @@ struct Vector2D
 		*this = kZero;
 	}
 
+	float Length()
+	{
+		return sqrtf(x*x + y*y);
+	}
+
+	Vector2D& Normalize()
+	{
+		float length = Length();
+
+		if (length > 0.0f)
+			(*this = *this * (1.0f / Length()));
+		else
+			Zero();
+
+		return *this;
+	}
+
 	static const Vector2D kZero;
 };
 const Vector2D Vector2D::kZero(0.0f, 0.0f);
@@ -199,10 +216,18 @@ float ToWorld(float v)
 	return v * kWorldScale;
 }
 
-void DrawCircle(const Vector2D& v, float radius, const Color& color, float alpha)
+Vector2D rotate(const Vector2D& v, float rads)
 {
+	return Vector2D(cosf(rads) * v.x - sinf(rads) * v.y, cosf(rads) * v.y + sinf(rads) * v.x);
+}
+
+void DrawCircle(const Vector2D& v, float radius, const Color& color, float alpha = -1.0f)
+{
+	if (alpha < 0.0f)
+		alpha = color.a;
+
 	glColor4f(color.r, color.g, color.b, kGlobalAlphaMul * alpha);
-	glLineWidth(2.0f);
+	glLineWidth(3.0f);
 	glBegin(GL_LINE_LOOP);
 
 	//glBegin(GL_TRIANGLE_FAN);
@@ -216,10 +241,40 @@ void DrawCircle(const Vector2D& v, float radius, const Color& color, float alpha
 	glEnd();
 }
 
-void DrawCircle(const Vector2D& v, float radius, const Color& color)
+
+void DrawLine(const Vector2D& p1, const Vector2D& p2, const Color& color, float alpha = -1.0f)
 {
-	DrawCircle(v, radius, color, color.a);
+	if (alpha < 0.0f)
+		alpha = color.a;
+
+	glColor4f(color.r, color.g, color.b, kGlobalAlphaMul * alpha);
+	glLineWidth(1.0f);
+	glBegin(GL_LINE_LOOP);
+
+	glVertex2f(p1.x, p1.y);
+	glVertex2f(p2.x, p2.y);
+
+	glEnd();
 }
+
+
+void DrawArrow(const Vector2D& p1, const Vector2D& p2, const Color& color, float alpha = -1.0f)
+{
+	DrawLine(p1, p2, color, alpha);
+	
+	float lineLength = (p2 - p1).Length();
+	float headSize = 0.03f * lineLength;
+
+	Vector2D dir1 = (p2 - p1).Normalize();
+	Vector2D dir2 = rotate(dir1, 0.5f * MATH_PIf);
+
+	Vector2D offset1 = dir1 * -(2.0f * headSize) + dir2 * headSize;
+	Vector2D offset2 = dir1 * -(2.0f * headSize) + dir2 * -headSize;
+
+	DrawLine(p2, p2 + offset1, color, alpha);
+	DrawLine(p2, p2 + offset2, color, alpha);
+}
+
 
 class GlobalTime
 {
@@ -423,6 +478,7 @@ public:
 		Vector2D lerpPos = prevUpdatePos + ((pos - prevUpdatePos) * lerp);
 
 		DrawCircle(ToWorld(lerpPos), ToWorld(radius), color);
+		DrawArrow(ToWorld(lerpPos), ToWorld(lerpPos + vel), color);
 	}
 };
 
