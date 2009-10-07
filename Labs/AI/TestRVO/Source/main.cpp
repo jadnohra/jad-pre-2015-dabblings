@@ -221,10 +221,61 @@ void DrawCircle(const Vector2D& v, float radius, const Color& color)
 	DrawCircle(v, radius, color, color.a);
 }
 
+class GlobalTime
+{
+public:
+
+	unsigned int pauseTime;
+	bool isPaused;
+	unsigned int millisAtPauseStart;
+	unsigned int currPauseStartTime;
+
+	GlobalTime()
+	:	pauseTime(SDL_GetTicks())
+	,	isPaused(false)
+	{
+
+	}
+
+	unsigned int GetMillis()
+	{
+		if (isPaused)
+			return millisAtPauseStart;
+
+		return SDL_GetTicks() - pauseTime;
+	}
+
+	void pause()
+	{
+		if (!isPaused)
+		{
+			millisAtPauseStart = GetMillis();
+			isPaused = true;
+			currPauseStartTime = SDL_GetTicks();
+		}
+	}
+
+	void resume()
+	{
+		if (isPaused)
+		{
+			isPaused = false;
+			pauseTime += SDL_GetTicks() - currPauseStartTime;
+		}
+	}
+
+	void stepPaused(unsigned int millis)
+	{
+		currPauseStartTime += millis;
+		millisAtPauseStart += millis;
+	}
+};
+
 class Timer
 {
 public:
 
+	GlobalTime* pGlobalTime;
 	unsigned int sdl_time;
 	unsigned int frame_time;
 	unsigned int frame_index;
@@ -233,10 +284,11 @@ public:
 	float delta_time;
 	float last_returned_time;
 
-	void Start(unsigned int framesPerSec)
+	void Start(GlobalTime& globalTime, unsigned int framesPerSec)
 	{
+		pGlobalTime = &globalTime;
 		frame_time = 1000 / framesPerSec;
-		sdl_time = SDL_GetTicks();
+		sdl_time = pGlobalTime->GetMillis();
 		frame_index = 0;
 		rest_time = 0;
 		delta_frame_index = 0;
@@ -246,7 +298,7 @@ public:
 
 	bool Update()
 	{
-		unsigned int new_sdl_time = SDL_GetTicks();
+		unsigned int new_sdl_time = pGlobalTime->GetMillis();
 		unsigned int elapsed = new_sdl_time - sdl_time;
 
 		if (elapsed >= frame_time)
@@ -431,11 +483,12 @@ int main(int argc, char *argv[])
 
 	is_running &= InitVideo();
 
+	GlobalTime globalTime;
 	Timer renderTimer;
 	Timer updateTimer;
 
-	renderTimer.Start(60);
-	updateTimer.Start(30);
+	renderTimer.Start(globalTime, 60);
+	updateTimer.Start(globalTime, 30);
 
 	AgentManager agents;
 	agents.Add(*(new Agent(Vector2D::kZero, Vector2D(4.0f, -10.0f), 2.0f, Color::kWhite)));
@@ -473,9 +526,38 @@ int main(int argc, char *argv[])
 			SDL_Event input_event;
 			while(SDL_PollEvent(&input_event))
 			{
-				if (input_event.type == SDL_KEYDOWN && input_event.key.keysym.sym == SDLK_ESCAPE) 
+				if (input_event.type == SDL_KEYDOWN) 
 				{
-					is_running = false;
+					switch (input_event.key.keysym.sym)
+					{
+						case SDLK_ESCAPE: 
+						{
+							is_running = false;
+						}
+						break;
+
+						case SDLK_p:
+						{
+							if (globalTime.isPaused)
+							{
+								globalTime.resume();
+							}
+							else
+							{
+								globalTime.pause();
+							}
+							
+						}
+						break;
+
+						case SDLK_o:
+						{
+							globalTime.stepPaused((unsigned int) (1000.0f * updateTimer.GetFrameTime()));
+						}
+						break;
+					}
+
+					
 				}
 				else if (input_event.type == SDL_QUIT) 
 				{
