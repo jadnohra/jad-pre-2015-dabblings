@@ -543,7 +543,7 @@ int main(int argc, char *argv[])
 	Timer renderTimer;
 	Timer updateTimer;
 
-	renderTimer.Start(globalTime, 60);
+	renderTimer.Start(globalTime, 1000);
 	updateTimer.Start(globalTime, 30);
 
 	AgentManager agents;
@@ -551,8 +551,12 @@ int main(int argc, char *argv[])
 	agents.Add(*(new Agent(Vector2D(3.0f, 6.0f), Vector2D(16.5f, 1.5f), 2.5f, Color::kRed)));
 	agents.Add(*(new Agent(Vector2D(-3.0f, 6.0f), Vector2D(2.5f, -15.5f), 1.5f, Color::kBlue)));
 
+	unsigned int fpsLastTime = SDL_GetTicks();
+	unsigned int frameCount = 0;
+
 	while (is_running)
 	{
+		
 		if (renderTimer.Update())
 		{
 			//printf("%f\n", renderTimer.GetTime());
@@ -577,6 +581,7 @@ int main(int argc, char *argv[])
 		
 
 		SDL_Delay(2);
+
 
 		{
 			SDL_Event input_event;
@@ -620,6 +625,15 @@ int main(int argc, char *argv[])
 					is_running = false;
 				}
 			}
+		}
+
+		++frameCount;
+		if (SDL_GetTicks() - fpsLastTime >= 1000)
+		{
+			//printf("%d\n", frameCount);
+
+			frameCount = 0;
+			fpsLastTime = SDL_GetTicks();
 		}
 	}
 
