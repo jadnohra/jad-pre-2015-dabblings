@@ -150,34 +150,39 @@ struct Vector2D
 		return Vector2D(x - mul, y - mul);
 	}
 
-	Vector2D operator*(Vector2D mul) const
+	Vector2D operator*(const Vector2D& mul) const
 	{
 		return Vector2D(x * mul.x, y * mul.y);
 	}
 
-	Vector2D operator+(Vector2D mul) const
+	Vector2D operator+(const Vector2D& mul) const
 	{
 		return Vector2D(x + mul.x, y + mul.y);
 	}
 
-	Vector2D operator-(Vector2D mul) const
+	Vector2D operator-(const Vector2D& mul) const
 	{
 		return Vector2D(x - mul.x, y - mul.y);
 	}
 
-	Vector2D& operator*=(Vector2D mul) 
+	Vector2D& operator*=(const Vector2D& mul) 
 	{
 		return (*this = Vector2D(x * mul.x, y * mul.y));
 	}
 
-	Vector2D& operator+=(Vector2D mul) 
+	Vector2D& operator+=(const Vector2D& mul) 
 	{
 		return (*this = Vector2D(x + mul.x, y + mul.y));
 	}
 
-	Vector2D& operator-=(Vector2D mul) 
+	Vector2D& operator-=(const Vector2D& mul) 
 	{
 		return (*this = Vector2D(x - mul.x, y - mul.y));
+	}
+
+	bool operator==(const Vector2D& comp) const
+	{
+		return x == comp.x && y == comp.y;
 	}
 
 	void Zero()
@@ -206,15 +211,43 @@ struct Vector2D
 };
 const Vector2D Vector2D::kZero(0.0f, 0.0f);
 
-Vector2D ToWorld(const Vector2D& v)
+float Dot(const Vector2D& p1, const Vector2D& p2)
+{
+	return p1.x * p2.x + p1.y * p2.y;
+}
+
+float Distance(const Vector2D& p1, const Vector2D& p2)
+{
+	Vector2D d = p2 - p1;
+
+	return sqrtf(Dot(d, d));
+}
+
+Vector2D WorldToScreen(const Vector2D& v)
 {
 	return (v * kWorldScale) + Vector2D(0.5f * (float) SCREEN_WIDTH, 0.5f * (float) SCREEN_HEIGHT);
 }
 
-float ToWorld(float v)
+float WorldToScreen(float v)
 {
 	return v * kWorldScale;
 }
+
+Vector2D ScreenToWorld(const Vector2D& v)
+{
+	return (v - Vector2D(0.5f * (float) SCREEN_WIDTH, 0.5f * (float) SCREEN_HEIGHT)) * (1.0f / kWorldScale);
+}
+
+Vector2D ScreenToWorldDir(const Vector2D& v)
+{
+	return (v) * (1.0f / kWorldScale);
+}
+
+float ScreenToWorld(float v)
+{
+	return v / kWorldScale;
+}
+
 
 Vector2D rotate(const Vector2D& v, float rads)
 {
@@ -438,7 +471,12 @@ public:
 	}
 
 	virtual const Vector2D& GetPos() { return pos; }
+	virtual const Vector2D& GetVel() { return vel; }
 	virtual float GetRadius() { return radius; }
+
+
+	virtual void SetPos(const Vector2D& position) { pos = position; }
+	virtual void SetVel(const Vector2D& velocity) { vel = velocity; }
 
 	virtual void Update(float time, float dt) 
 	{
@@ -453,7 +491,7 @@ public:
 
 		if (kLimitBounce)
 		{
-			Vector2D worldPos = ToWorld(pos);
+			Vector2D worldPos = WorldToScreen(pos);
 
 			if (worldPos[0] > (float) SCREEN_WIDTH)
 				vel[0] = -vel[0];
@@ -477,8 +515,12 @@ public:
 
 		Vector2D lerpPos = prevUpdatePos + ((pos - prevUpdatePos) * lerp);
 
-		DrawCircle(ToWorld(lerpPos), ToWorld(radius), color);
-		DrawArrow(ToWorld(lerpPos), ToWorld(lerpPos + vel), color);
+		DrawCircle(WorldToScreen(lerpPos), WorldToScreen(radius), color);
+
+		if (!(vel == Vector2D::kZero))
+		{
+			DrawArrow(WorldToScreen(lerpPos), WorldToScreen(lerpPos + (vel * 0.4f)), color);
+		}
 	}
 };
 
@@ -530,6 +572,110 @@ public:
 			(*it)->Draw(time);
 		}
 	}
+
+	Agent* PickAgent(const Vector2D& pos)
+	{
+		for (Agents::iterator it = agents.begin(); it != agents.end(); ++it)
+		{
+			Agent* pAgent = *it;
+			
+			if (Distance(pAgent->GetPos(), pos) <= pAgent->GetRadius())
+			{
+				return pAgent;
+			}
+		}
+
+		return NULL;
+	}
+};
+
+class SceneController
+{
+public:
+
+	AgentManager& m_AgentManager;
+	Agent* m_pAgent;
+	bool m_IsPressed;
+	Uint32 m_StartPressTime;
+	Vector2D m_MoveAvgVel;
+	Vector2D m_AgentCenterOffset;
+
+	SceneController(AgentManager& agentManager)
+	:	m_AgentManager(agentManager)
+	,	m_pAgent(NULL)
+	,	m_IsPressed(false)
+	{
+	}
+
+	void Update()
+	{
+		int x;
+		int y;
+		int relX;
+		int relY;
+
+		if (m_pAgent)
+		{
+			if (SDL_GetMouseState(&x, &y)&SDL_BUTTON(1))
+			{
+				Vector2D worldPos = ScreenToWorld(Vector2D((float) x, (float) y));
+				m_pAgent->SetPos(worldPos + m_AgentCenterOffset);
+
+				SDL_GetRelativeMouseState(&relX, &relY);
+				Vector2D worldPosDiff = ScreenToWorldDir(Vector2D((float) relX, (float) relY));
+
+				if (m_IsPressed)
+				{
+					m_MoveAvgVel += worldPosDiff;
+					//printf("%f,%f\n", m_MoveAvgVel.x, m_MoveAvgVel.y);
+				}
+				else
+				{
+					m_IsPressed = true;
+					m_MoveAvgVel = Vector2D::kZero;
+					m_StartPressTime = SDL_GetTicks();
+				}
+			}
+			else
+			{
+				float pressTime = ((float) (SDL_GetTicks() - m_StartPressTime)) / 1000.0f;
+
+				Vector2D vel = m_MoveAvgVel * (1.0f / pressTime);
+				m_pAgent->SetVel(vel);
+				m_pAgent = NULL;
+				m_IsPressed = false;
+			}
+		}
+	}
+
+	void HandleEvent(const SDL_Event& evt)
+	{
+		if (evt.type == SDL_MOUSEMOTION)
+		{
+			int x = evt.motion.x;
+			int y = evt.motion.y;
+		}
+
+		if (evt.type == SDL_MOUSEBUTTONDOWN)
+		{
+			if (evt.button.button == SDL_BUTTON_LEFT)
+			{
+				int x = evt.motion.x;
+				int y = evt.motion.y;
+
+				Vector2D worldPos = ScreenToWorld(Vector2D((float) x, (float) y));
+				Agent* pAgent = m_AgentManager.PickAgent(worldPos);
+
+				if (pAgent != NULL)
+				{
+					m_pAgent = pAgent;
+
+					m_AgentCenterOffset = m_pAgent->GetPos() - worldPos;
+					m_pAgent->SetVel(Vector2D::kZero);
+				}
+			}
+		}
+	}
 };
 
 
@@ -547,9 +693,11 @@ int main(int argc, char *argv[])
 	updateTimer.Start(globalTime, 30);
 
 	AgentManager agents;
-	agents.Add(*(new Agent(Vector2D::kZero, Vector2D(4.0f, -10.0f), 2.0f, Color::kWhite)));
+	agents.Add(*(new Agent(Vector2D::kZero, Vector2D::kZero/*Vector2D(4.0f, -10.0f)*/, 2.0f, Color::kWhite)));
 	agents.Add(*(new Agent(Vector2D(3.0f, 6.0f), Vector2D(16.5f, 1.5f), 2.5f, Color::kRed)));
 	agents.Add(*(new Agent(Vector2D(-3.0f, 6.0f), Vector2D(2.5f, -15.5f), 1.5f, Color::kBlue)));
+
+	SceneController sceneController(agents);
 
 	unsigned int fpsLastTime = SDL_GetTicks();
 	unsigned int frameCount = 0;
@@ -578,6 +726,7 @@ int main(int argc, char *argv[])
 			}
 		}
 
+		sceneController.Update();
 		
 
 		SDL_Delay(2);
@@ -587,6 +736,8 @@ int main(int argc, char *argv[])
 			SDL_Event input_event;
 			while(SDL_PollEvent(&input_event))
 			{
+				sceneController.HandleEvent(input_event);
+
 				if (input_event.type == SDL_KEYDOWN) 
 				{
 					switch (input_event.key.keysym.sym)
