@@ -14,102 +14,6 @@ static const float kWorldScale = 20.0f;
 static const bool kLimitBounce = true;
 static const float kTimeScale = 1.0f;
 
-bool InitVideo(unsigned int flags = SDL_ANYFORMAT | SDL_OPENGL | SDL_DOUBLEBUF) 
-{
-	int width = SCREEN_WIDTH; 
-	int height = SCREEN_HEIGHT;
-
-	// Load SDL
-	if (SDL_Init(SDL_INIT_VIDEO) != 0) {
-		fprintf(stderr, "Unable to initialize SDL: %s\n", SDL_GetError());
-		return false;
-	}
-	atexit(SDL_Quit); // Clean it up nicely :)
-
-	SDL_Surface* screen = SDL_SetVideoMode(width, height, 32, flags);
-	if (screen == NULL) {
-		fprintf(stderr, "Unable to set video mode: %s\n", SDL_GetError());
-		return false;
-	}
-
-	SDL_GL_SetAttribute(SDL_GL_DOUBLEBUFFER, 1);
-	
-	
-	SDL_GL_SetAttribute(SDL_GL_SWAP_CONTROL, 0); 
-	// This does not seem to work, only the driver settings are usually used...
-	int check2;
-	int check3 = SDL_GL_GetAttribute( SDL_GL_SWAP_CONTROL, &check2 );
-	
-	SDL_GL_SetAttribute(SDL_GL_MULTISAMPLEBUFFERS, 4 );
-	SDL_GL_SetAttribute(SDL_GL_RED_SIZE, 8);
-	SDL_GL_SetAttribute(SDL_GL_GREEN_SIZE, 8);
-	SDL_GL_SetAttribute(SDL_GL_BLUE_SIZE, 8);
-	SDL_GL_SetAttribute(SDL_GL_ALPHA_SIZE, 8);
-	
-	glHint (GL_LINE_SMOOTH_HINT, GL_NICEST);
-	glEnable(GL_POINT_SMOOTH);
-	glEnable(GL_LINE_SMOOTH);
-	glEnable(GL_BLEND);
-	glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
-	glEnable( GL_TEXTURE_2D );
-
-	glClearColor( 0.0f, 0.0f, 0.0f, 0.0f );
-
-	glViewport( 0, 0, width, height );
-
-	glClear( GL_COLOR_BUFFER_BIT );
-
-	glMatrixMode( GL_PROJECTION );
-	glLoadIdentity();
-
-	glOrtho(0.0f, width, height, 0.0f, -1.0f, 1.0f);
-
-	glMatrixMode( GL_MODELVIEW );
-	glLoadIdentity();
-
-	// For 2D pixel precise mode
-	glTranslatef (0.375f, 0.375f, 0.0f);
-
-	return true;
-}
-
-struct Color
-{
-	union
-	{
-		struct 
-		{
-			float v[4];
-		};
-
-		struct 
-		{
-			float r;
-			float g;
-			float b;
-			float a;
-		};
-	};
-
-	Color(float r_ = 1.0f, float g_ = 1.0f, float b_ = 1.0f, float a_ = 1.0f)
-	:	r(r_), g(g_), b(b_), a(a_)
-	{
-	}
-
-	static const Color kBlack;
-	static const Color kWhite;
-	static const Color kRed;
-	static const Color kBlue;
-	static const Color kGreen;
-};
-
-const Color Color::kBlack(0.0f, 0.0f, 0.0f);
-const Color Color::kWhite(1.0f, 1.0f, 1.0f);
-const Color Color::kRed(1.0f, 0.0f, 0.0f);
-const Color Color::kBlue(0.0f, 0.0f, 1.0f);
-const Color Color::kGreen(0.0f, 1.0f, 0.0f);
-
-
 
 struct Vector2D
 {
@@ -195,16 +99,19 @@ struct Vector2D
 		return sqrtf(x*x + y*y);
 	}
 
-	Vector2D& Normalize()
+	void Normalize()
+	{
+		*this = Normalized();
+	}
+
+	Vector2D Normalized()
 	{
 		float length = Length();
 
 		if (length > 0.0f)
-			(*this = *this * (1.0f / Length()));
+			return (*this * (1.0f / length));
 		else
-			Zero();
-
-		return *this;
+			return kZero;
 	}
 
 	static const Vector2D kZero;
@@ -221,6 +128,38 @@ float Distance(const Vector2D& p1, const Vector2D& p2)
 	Vector2D d = p2 - p1;
 
 	return sqrtf(Dot(d, d));
+}
+
+int IntersectLineCircle(const Vector2D& linePos, const Vector2D& lineDir, 
+						const Vector2D& circlePos, float circleRadius,
+						float& t, float & u)
+{
+	Vector2D f = linePos - circlePos;
+
+	float a = Dot(lineDir, lineDir);
+	float b = 2.0f*Dot(f, lineDir);
+	float c = Dot(f, f) - circleRadius*circleRadius;
+
+	float discriminant = b*b-4*a*c;
+	if( discriminant < 0 )
+	{
+	  // no intersection
+		return 0;
+	}
+	else
+	{
+	  // ray didn't totally miss sphere,
+	  // so there is a solution to
+	  // the equation.
+
+
+	  discriminant = sqrtf( discriminant );
+	  t = (-b - discriminant)/(2.0f*a);
+	  u = (-b + discriminant)/(2.0f*a);
+	  
+
+	  return discriminant == 0.0f ? 1 : 2;
+	}
 }
 
 Vector2D WorldToScreen(const Vector2D& v)
@@ -253,6 +192,43 @@ Vector2D rotate(const Vector2D& v, float rads)
 {
 	return Vector2D(cosf(rads) * v.x - sinf(rads) * v.y, cosf(rads) * v.y + sinf(rads) * v.x);
 }
+
+struct Color
+{
+	union
+	{
+		struct 
+		{
+			float v[4];
+		};
+
+		struct 
+		{
+			float r;
+			float g;
+			float b;
+			float a;
+		};
+	};
+
+	Color(float r_ = 1.0f, float g_ = 1.0f, float b_ = 1.0f, float a_ = 1.0f)
+	:	r(r_), g(g_), b(b_), a(a_)
+	{
+	}
+
+	static const Color kBlack;
+	static const Color kWhite;
+	static const Color kRed;
+	static const Color kBlue;
+	static const Color kGreen;
+};
+
+const Color Color::kBlack(0.0f, 0.0f, 0.0f);
+const Color Color::kWhite(1.0f, 1.0f, 1.0f);
+const Color Color::kRed(1.0f, 0.0f, 0.0f);
+const Color Color::kBlue(0.0f, 0.0f, 1.0f);
+const Color Color::kGreen(0.0f, 1.0f, 0.0f);
+
 
 void DrawCircle(const Vector2D& v, float radius, const Color& color, float alpha = -1.0f)
 {
@@ -298,7 +274,7 @@ void DrawArrow(const Vector2D& p1, const Vector2D& p2, const Color& color, float
 	float lineLength = (p2 - p1).Length();
 	float headSize = 0.03f * lineLength;
 
-	Vector2D dir1 = (p2 - p1).Normalize();
+	Vector2D dir1 = (p2 - p1).Normalized();
 	Vector2D dir2 = rotate(dir1, 0.5f * MATH_PIf);
 
 	Vector2D offset1 = dir1 * -(2.0f * headSize) + dir2 * headSize;
@@ -307,6 +283,9 @@ void DrawArrow(const Vector2D& p1, const Vector2D& p2, const Color& color, float
 	DrawLine(p2, p2 + offset1, color, alpha);
 	DrawLine(p2, p2 + offset2, color, alpha);
 }
+
+
+
 
 
 class GlobalTime
@@ -358,6 +337,8 @@ public:
 		millisAtPauseStart += millis;
 	}
 };
+
+
 
 class Timer
 {
@@ -432,8 +413,6 @@ public:
 		return (float) (frame_time) / 1000.0f;
 	}
 };
-
-
 
 
 class Agent
@@ -524,6 +503,8 @@ public:
 	}
 };
 
+
+
 class AgentManager
 {
 public:
@@ -589,12 +570,165 @@ public:
 	}
 };
 
+
+class CollisionAvoidanceManager
+{
+public:
+
+	struct AgentInfo
+	{
+		Agent* pAgent;
+		int priority;
+		bool shouldWait;
+		bool isWaiting;
+		float startWaitTime;
+		Vector2D vel;
+
+		AgentInfo(Agent* pAgent_ = NULL, int priority_ = -1)
+		:	pAgent(pAgent_)
+		,	priority(priority_)
+		{
+			Reset();
+		}
+
+		void Reset()
+		{
+			shouldWait = false;
+			isWaiting = false;
+			startWaitTime = -1.0f;
+		}
+	};
+
+	typedef std::vector<AgentInfo> AgentInfos;
+
+	AgentInfos m_AgentInfos;
+	bool m_AgentInfosIsDirty;
+
+	CollisionAvoidanceManager()
+	: m_AgentInfosIsDirty(false)
+	{
+	}
+
+	void AutoAddAgents(AgentManager& agentMan)
+	{
+		m_AgentInfos.resize(agentMan.agents.size());
+
+		for (int i = 0; i < agentMan.agents.size(); ++i)
+		{
+			m_AgentInfos[i].pAgent = agentMan.agents[i];
+			m_AgentInfos[i].priority = i;
+			m_AgentInfos[i].Reset();
+		}
+	}
+
+	void AddAgent(Agent* pAgent, int priority)
+	{
+		m_AgentInfos.push_back(AgentInfo(pAgent, priority));
+		m_AgentInfosIsDirty = true;
+	}
+
+	static bool HasHigherPriority(const AgentInfo& info, const AgentInfo& compInfo)
+	{
+		return compInfo.priority > info.priority;
+	}
+
+	void UpdateAgentInfos()
+	{
+		std::sort(m_AgentInfos.begin(), m_AgentInfos.end(), HasHigherPriority);
+	}
+
+	void Update(float time, float dt)
+	{
+		UpdateAgentInfos();
+
+		for (int i = 0; i < m_AgentInfos.size(); ++i)
+		{
+			m_AgentInfos[i].shouldWait = false;
+
+			if (!m_AgentInfos[i].isWaiting)
+			{
+				for (int j = i+1; j < m_AgentInfos.size(); ++j)
+				{
+					PerformCollisionAvoidance(m_AgentInfos[i], m_AgentInfos[j], time);
+
+					if (m_AgentInfos[i].shouldWait)
+						break;
+				}
+			}
+		}
+
+		for (int i = 0; i < m_AgentInfos.size(); ++i)
+		{
+			AgentInfo& agentInfo = m_AgentInfos[i];
+
+			if (agentInfo.shouldWait || 
+				(agentInfo.isWaiting && (time - agentInfo.startWaitTime) < 0.5f))
+			{
+				if (agentInfo.isWaiting == false)
+				{
+					agentInfo.vel = agentInfo.pAgent->GetVel();
+					agentInfo.pAgent->SetVel(Vector2D::kZero);
+					agentInfo.isWaiting = true;
+				}
+			}
+			else
+			{
+				if (agentInfo.isWaiting)
+				{
+					agentInfo.isWaiting = false;
+					agentInfo.pAgent->SetVel(agentInfo.vel);
+				}
+			}
+		}
+	}
+
+	void PerformCollisionAvoidance(AgentInfo& lowAgent, AgentInfo& highAgent, float time)
+	{
+		if (lowAgent.shouldWait || lowAgent.pAgent->GetVel() == Vector2D::kZero)
+			return;
+
+		//if (highAgent.pAgent->GetVel() == Vector2D::kZero)
+		//	return;
+
+		Vector2D relVel = lowAgent.pAgent->GetVel() - highAgent.pAgent->GetVel();
+		float relSpeed = relVel.Length();
+
+		if (relSpeed > 0.0f)
+		{
+			Vector2D relVelDir = relVel.Normalized();
+			float t, u;
+
+			if (IntersectLineCircle(lowAgent.pAgent->GetPos(), relVelDir, highAgent.pAgent->GetPos(), lowAgent.pAgent->GetRadius() + highAgent.pAgent->GetRadius(), t, u) > 0) 
+			{
+				if (t < 0.0f)
+					t = u;
+
+				float intersectionT = std::min(t, u);
+
+				float timeUntilCollision = intersectionT / relSpeed;
+
+				if (timeUntilCollision >= 0.0f && timeUntilCollision <= 0.5f)
+				{
+					if (lowAgent.shouldWait == false)
+					{
+						lowAgent.shouldWait = true;
+						lowAgent.startWaitTime = time;
+					}
+				}
+			}
+		}
+	}
+
+};
+
+
 class SceneController
 {
 public:
 
 	AgentManager& m_AgentManager;
-	Agent* m_pAgent;
+	Agent* m_pFocusAgent;
+	Agent* m_pMouseControlledAgent;
 	bool m_IsPressed;
 	Uint32 m_StartPressTime;
 	Vector2D m_MoveAvgVel;
@@ -602,8 +736,9 @@ public:
 
 	SceneController(AgentManager& agentManager)
 	:	m_AgentManager(agentManager)
-	,	m_pAgent(NULL)
+	,	m_pMouseControlledAgent(NULL)
 	,	m_IsPressed(false)
+	,	m_pFocusAgent(NULL)
 	{
 	}
 
@@ -614,12 +749,12 @@ public:
 		int relX;
 		int relY;
 
-		if (m_pAgent)
+		if (m_pMouseControlledAgent)
 		{
 			if (SDL_GetMouseState(&x, &y)&SDL_BUTTON(1))
 			{
 				Vector2D worldPos = ScreenToWorld(Vector2D((float) x, (float) y));
-				m_pAgent->SetPos(worldPos + m_AgentCenterOffset);
+				m_pMouseControlledAgent->SetPos(worldPos + m_AgentCenterOffset);
 
 				SDL_GetRelativeMouseState(&relX, &relY);
 				Vector2D worldPosDiff = ScreenToWorldDir(Vector2D((float) relX, (float) relY));
@@ -641,8 +776,8 @@ public:
 				float pressTime = ((float) (SDL_GetTicks() - m_StartPressTime)) / 1000.0f;
 
 				Vector2D vel = m_MoveAvgVel * (1.0f / pressTime);
-				m_pAgent->SetVel(vel);
-				m_pAgent = NULL;
+				m_pMouseControlledAgent->SetVel(vel);
+				m_pMouseControlledAgent = NULL;
 				m_IsPressed = false;
 			}
 		}
@@ -668,15 +803,79 @@ public:
 
 				if (pAgent != NULL)
 				{
-					m_pAgent = pAgent;
+					m_pMouseControlledAgent = pAgent;
 
-					m_AgentCenterOffset = m_pAgent->GetPos() - worldPos;
-					m_pAgent->SetVel(Vector2D::kZero);
+					m_AgentCenterOffset = m_pMouseControlledAgent->GetPos() - worldPos;
+					m_pMouseControlledAgent->SetVel(Vector2D::kZero);
 				}
 			}
 		}
 	}
 };
+
+
+
+bool InitVideo(unsigned int flags = SDL_ANYFORMAT | SDL_OPENGL | SDL_DOUBLEBUF) 
+{
+	int width = SCREEN_WIDTH; 
+	int height = SCREEN_HEIGHT;
+
+	// Load SDL
+	if (SDL_Init(SDL_INIT_VIDEO) != 0) {
+		fprintf(stderr, "Unable to initialize SDL: %s\n", SDL_GetError());
+		return false;
+	}
+	atexit(SDL_Quit); // Clean it up nicely :)
+
+	SDL_Surface* screen = SDL_SetVideoMode(width, height, 32, flags);
+	if (screen == NULL) {
+		fprintf(stderr, "Unable to set video mode: %s\n", SDL_GetError());
+		return false;
+	}
+
+	SDL_GL_SetAttribute(SDL_GL_DOUBLEBUFFER, 1);
+	
+	
+	SDL_GL_SetAttribute(SDL_GL_SWAP_CONTROL, 0); 
+	// This does not seem to work, only the driver settings are usually used...
+	int check2;
+	int check3 = SDL_GL_GetAttribute( SDL_GL_SWAP_CONTROL, &check2 );
+	
+	SDL_GL_SetAttribute(SDL_GL_MULTISAMPLEBUFFERS, 4 );
+	SDL_GL_SetAttribute(SDL_GL_RED_SIZE, 8);
+	SDL_GL_SetAttribute(SDL_GL_GREEN_SIZE, 8);
+	SDL_GL_SetAttribute(SDL_GL_BLUE_SIZE, 8);
+	SDL_GL_SetAttribute(SDL_GL_ALPHA_SIZE, 8);
+	
+	glHint (GL_LINE_SMOOTH_HINT, GL_NICEST);
+	glEnable(GL_POINT_SMOOTH);
+	glEnable(GL_LINE_SMOOTH);
+	glEnable(GL_BLEND);
+	glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+	glEnable( GL_TEXTURE_2D );
+
+	glClearColor( 0.0f, 0.0f, 0.0f, 0.0f );
+
+	glViewport( 0, 0, width, height );
+
+	glClear( GL_COLOR_BUFFER_BIT );
+
+	glMatrixMode( GL_PROJECTION );
+	glLoadIdentity();
+
+	glOrtho(0.0f, width, height, 0.0f, -1.0f, 1.0f);
+
+	glMatrixMode( GL_MODELVIEW );
+	glLoadIdentity();
+
+	// For 2D pixel precise mode
+	glTranslatef (0.375f, 0.375f, 0.0f);
+
+	return true;
+}
+
+
+
 
 
 int main(int argc, char *argv[])
@@ -693,11 +892,22 @@ int main(int argc, char *argv[])
 	updateTimer.Start(globalTime, 30);
 
 	AgentManager agents;
-	agents.Add(*(new Agent(Vector2D::kZero, Vector2D::kZero/*Vector2D(4.0f, -10.0f)*/, 2.0f, Color::kWhite)));
-	agents.Add(*(new Agent(Vector2D(3.0f, 6.0f), Vector2D(16.5f, 1.5f), 2.5f, Color::kRed)));
-	agents.Add(*(new Agent(Vector2D(-3.0f, 6.0f), Vector2D(2.5f, -15.5f), 1.5f, Color::kBlue)));
+	agents.Add(*(new Agent(Vector2D::kZero, /*Vector2D::kZero*/Vector2D(4.0f, -10.0f), 1.0f, Color::kWhite)));
+	agents.Add(*(new Agent(Vector2D(3.0f, 6.0f), Vector2D(16.5f, 1.5f), 1.2f, Color::kWhite)));
+	agents.Add(*(new Agent(Vector2D(-3.0f, 6.0f), Vector2D(-2.5f, -10.5f), 1.4f, Color::kWhite)));
+	agents.Add(*(new Agent(Vector2D(-6.0f, -3.0f), Vector2D(3.5f, 6.5f), 1.6f, Color::kWhite)));
+	agents.Add(*(new Agent(Vector2D(-3.0f, -6.0f), Vector2D(2.5f, 3.5f), 1.8f, Color::kWhite)));
+	agents.Add(*(new Agent(Vector2D(6.0f, 6.0f), Vector2D(12.5f, -5.5f), 2.0f, Color::kWhite)));
+
+	//agents.Add(*(new Agent(Vector2D(-6.0f, 0.0f), Vector2D(1.0f, 0.0f), 1.0f, Color::kRed)));
+	//agents.Add(*(new Agent(Vector2D::kZero, Vector2D::kZero, 1.0f, Color::kWhite)));
+	
+		
 
 	SceneController sceneController(agents);
+	CollisionAvoidanceManager avoidanceManager;
+
+	avoidanceManager.AutoAddAgents(agents);
 
 	unsigned int fpsLastTime = SDL_GetTicks();
 	unsigned int frameCount = 0;
@@ -722,6 +932,7 @@ int main(int argc, char *argv[])
 			//printf ("%f\n", updateTimer.GetFrameLockedTime());
 			for (unsigned int i = 0; i < frames; ++i)
 			{
+				avoidanceManager.Update(updateTimer.GetFrameLockedTime(), updateTimer.GetFrameTime());
 				agents.Update(updateTimer.GetFrameLockedTime(), updateTimer.GetFrameTime());
 			}
 		}
