@@ -89,12 +89,17 @@ struct Vector2D
 		return x == comp.x && y == comp.y;
 	}
 
+	bool operator!=(const Vector2D& comp) const
+	{
+		return !(*this == comp);
+	}
+
 	void Zero()
 	{
 		*this = kZero;
 	}
 
-	float Length()
+	float Length() const
 	{
 		return sqrtf(x*x + y*y);
 	}
@@ -104,7 +109,7 @@ struct Vector2D
 		*this = Normalized();
 	}
 
-	Vector2D Normalized()
+	Vector2D Normalized() const
 	{
 		float length = Length();
 
@@ -128,6 +133,11 @@ float Distance(const Vector2D& p1, const Vector2D& p2)
 	Vector2D d = p2 - p1;
 
 	return sqrtf(Dot(d, d));
+}
+
+float Randf(float min, float max)
+{
+	return ( 0.1f + (float)rand()/0x7fff )* (max-min) + min;
 }
 
 int IntersectLineCircle(const Vector2D& linePos, const Vector2D& lineDir, 
@@ -571,7 +581,19 @@ public:
 };
 
 
-class CollisionAvoidanceManager
+class ICollisionAvoidanceManager
+{
+public:
+
+	virtual ~ICollisionAvoidanceManager() {}
+
+	virtual void AutoAddAgents(AgentManager& agentMan) = 0;
+	virtual void AddAgent(Agent* pAgent, int priority) = 0;
+	virtual void Update(float time, float dt) = 0;
+};
+
+
+class CollisionAvoidanceManager_SignlePriorityWait : public ICollisionAvoidanceManager
 {
 public:
 
@@ -604,12 +626,12 @@ public:
 	AgentInfos m_AgentInfos;
 	bool m_AgentInfosIsDirty;
 
-	CollisionAvoidanceManager()
+	CollisionAvoidanceManager_SignlePriorityWait()
 	: m_AgentInfosIsDirty(false)
 	{
 	}
 
-	void AutoAddAgents(AgentManager& agentMan)
+	virtual void AutoAddAgents(AgentManager& agentMan)
 	{
 		m_AgentInfos.resize(agentMan.agents.size());
 
@@ -621,7 +643,7 @@ public:
 		}
 	}
 
-	void AddAgent(Agent* pAgent, int priority)
+	virtual void AddAgent(Agent* pAgent, int priority)
 	{
 		m_AgentInfos.push_back(AgentInfo(pAgent, priority));
 		m_AgentInfosIsDirty = true;
@@ -637,7 +659,7 @@ public:
 		std::sort(m_AgentInfos.begin(), m_AgentInfos.end(), HasHigherPriority);
 	}
 
-	void Update(float time, float dt)
+	virtual void Update(float time, float dt)
 	{
 		UpdateAgentInfos();
 
@@ -721,6 +743,324 @@ public:
 
 };
 
+
+class CollisionAvoidanceManager_SingleWaitOrAvoid : public ICollisionAvoidanceManager
+{
+public:
+
+	struct AgentInfo
+	{
+		Agent* pAgent;
+		int priority;
+		bool shouldWait;
+		bool isWaiting;
+		float startWaitTime;
+		Vector2D vel;
+
+		AgentInfo(Agent* pAgent_ = NULL, int priority_ = -1)
+		:	pAgent(pAgent_)
+		,	priority(priority_)
+		{
+			Reset();
+		}
+
+		void Reset()
+		{
+			shouldWait = false;
+			isWaiting = false;
+			startWaitTime = -1.0f;
+		}
+	};
+
+	enum AvoidStrategy
+	{
+		NONE, LOW_WAIT, HIGH_WAIT, LOW_AVOID, HIGH_AVOID
+	};
+
+	typedef std::vector<AgentInfo> AgentInfos;
+
+	AgentInfos m_AgentInfos;
+	bool m_AgentInfosIsDirty;
+
+	CollisionAvoidanceManager_SingleWaitOrAvoid()
+	: m_AgentInfosIsDirty(false)
+	{
+	}
+
+	virtual void AutoAddAgents(AgentManager& agentMan)
+	{
+		m_AgentInfos.resize(agentMan.agents.size());
+
+		for (int i = 0; i < agentMan.agents.size(); ++i)
+		{
+			m_AgentInfos[i].pAgent = agentMan.agents[i];
+			m_AgentInfos[i].priority = i;
+			m_AgentInfos[i].Reset();
+		}
+	}
+
+	virtual void AddAgent(Agent* pAgent, int priority)
+	{
+		m_AgentInfos.push_back(AgentInfo(pAgent, priority));
+		m_AgentInfosIsDirty = true;
+	}
+
+	static bool HasHigherPriority(const AgentInfo& info, const AgentInfo& compInfo)
+	{
+		return compInfo.priority > info.priority;
+	}
+
+	void UpdateAgentInfos()
+	{
+		std::sort(m_AgentInfos.begin(), m_AgentInfos.end(), HasHigherPriority);
+	}
+
+	virtual void Update(float time, float dt)
+	{
+		UpdateAgentInfos();
+
+		for (int i = 0; i < m_AgentInfos.size(); ++i)
+		{
+			m_AgentInfos[i].shouldWait = false;
+		}
+
+		for (int i = 0; i < m_AgentInfos.size(); ++i)
+		{
+			for (int j = i+1; j < m_AgentInfos.size(); ++j)
+			{
+				PerformCollisionAvoidance(m_AgentInfos[i], m_AgentInfos[j], time);
+
+				if (m_AgentInfos[i].shouldWait)
+					break;
+			}
+		}
+
+		for (int i = 0; i < m_AgentInfos.size(); ++i)
+		{
+			AgentInfo& agentInfo = m_AgentInfos[i];
+
+			if (agentInfo.shouldWait || 
+				(agentInfo.isWaiting && (time - agentInfo.startWaitTime) < 0.5f))
+			{
+				if (agentInfo.isWaiting == false)
+				{
+					agentInfo.vel = agentInfo.pAgent->GetVel();
+					agentInfo.pAgent->SetVel(Vector2D::kZero);
+					agentInfo.isWaiting = true;
+				}
+			}
+			else
+			{
+				if (agentInfo.isWaiting)
+				{
+					agentInfo.isWaiting = false;
+					agentInfo.pAgent->SetVel(agentInfo.vel);
+				}
+			}
+		}
+	}
+
+	void PerformCollisionAvoidance(AgentInfo& lowAgent, AgentInfo& highAgent, float time)
+	{
+		Vector2D avoidVel;
+		AvoidStrategy strategy = DetectCollisionAvoidance(lowAgent, highAgent, time, avoidVel);
+
+		switch (strategy)
+		{
+			case LOW_WAIT:
+			{
+				Wait(lowAgent, time);
+			}
+			break;
+
+			case HIGH_WAIT:
+			{
+				Wait(highAgent, time);
+			}
+			break;
+
+			case LOW_AVOID:
+			{
+				Avoid(lowAgent, highAgent, avoidVel, time);
+			}
+			break;
+
+			case HIGH_AVOID:
+			{
+				Avoid(highAgent, lowAgent, avoidVel, time);
+			}
+			break;
+		}
+	}
+
+	void Wait(AgentInfo& agent, float time)
+	{
+		if (agent.shouldWait == false)
+		{
+			agent.shouldWait = true;
+			agent.startWaitTime = time;
+		}
+	}
+
+	void Avoid(AgentInfo& agent, AgentInfo& avoided, const Vector2D& avoidVel, float time)
+	{
+		agent.shouldWait = false;
+		agent.startWaitTime = -1.0f;
+
+		agent.pAgent->SetVel(avoidVel);
+	}
+
+	Vector2D& GetAvoidVel(AgentInfo& agent, AgentInfo& avoided, Vector2D& avoidVel)
+	{
+		float speed;
+		speed = Randf(-10.0f, 10.0f);
+
+		Vector2D dir;
+
+		while (dir == Vector2D::kZero)
+		{
+			dir = Vector2D(Randf(0.0f, 1.0f), Randf(0.0f, 1.0f));
+		}
+
+		avoidVel = dir.Normalized() * speed;
+		return avoidVel;
+	}
+
+	const Vector2D& GetOriginalVel(AgentInfo& agent)
+	{
+		if (agent.isWaiting)
+		{
+			return agent.vel;
+		}
+
+		return agent.pAgent->GetVel();
+	}
+
+	AvoidStrategy DetectCollisionAvoidance(AgentInfo& lowAgent, AgentInfo& highAgent, float time, Vector2D& avoidVel)
+	{
+		const float lookAheadTime = 0.25f;
+
+		if (GetOriginalVel(lowAgent) == Vector2D::kZero
+			&& GetOriginalVel(highAgent) == Vector2D::kZero)
+		{
+			return NONE;
+		}
+
+		AvoidStrategy strategy = NONE;
+
+		float timeUntilCollision;
+
+		if (GetCollisionTime(lowAgent, GetOriginalVel(lowAgent), 
+							 highAgent, GetOriginalVel(highAgent), timeUntilCollision))
+		{
+			if (timeUntilCollision <= lookAheadTime)
+			{
+				if (GetOriginalVel(lowAgent) != Vector2D::kZero
+					&& GetOriginalVel(highAgent) != Vector2D::kZero
+					)
+				{
+					if (!GetCollisionTime(lowAgent, Vector2D::kZero, 
+						 highAgent, GetOriginalVel(highAgent), timeUntilCollision)
+						 || timeUntilCollision > lookAheadTime)
+					{
+						strategy = LOW_WAIT;
+					}
+					else if (!GetCollisionTime(lowAgent, GetAvoidVel(lowAgent, highAgent, avoidVel), 
+							highAgent, GetOriginalVel(highAgent), timeUntilCollision)
+							|| timeUntilCollision > lookAheadTime)
+					{
+						strategy = LOW_AVOID;
+					}
+					else if (!GetCollisionTime(lowAgent, GetOriginalVel(lowAgent), 
+							highAgent, Vector2D::kZero, timeUntilCollision)
+							|| timeUntilCollision > lookAheadTime)
+					{
+						strategy = HIGH_WAIT;
+					}
+					else
+					{
+						strategy = NONE;
+
+						for (int i = 0; i < 10; ++i)
+						{
+							if (!GetCollisionTime(lowAgent, GetOriginalVel(lowAgent), 
+								highAgent, GetAvoidVel(highAgent, lowAgent, avoidVel), timeUntilCollision)
+								|| timeUntilCollision > lookAheadTime)
+							{
+								strategy = HIGH_AVOID;
+								break;
+							}
+						}
+					}
+				} 
+				else if (GetOriginalVel(lowAgent) != Vector2D::kZero)
+				{
+					strategy = NONE;
+
+					for (int i = 0; i < 10; ++i)
+					{
+						if (!GetCollisionTime(lowAgent, GetAvoidVel(lowAgent, highAgent, avoidVel), 
+							highAgent, GetOriginalVel(highAgent), timeUntilCollision)
+							|| timeUntilCollision > lookAheadTime)
+						{
+							strategy = LOW_AVOID;
+							break;
+						}
+					}
+				}
+				else  if (GetOriginalVel(highAgent) != Vector2D::kZero)
+				{
+					strategy = NONE;
+
+					for (int i = 0; i < 10; ++i)
+					{
+						if (!GetCollisionTime(lowAgent, GetOriginalVel(lowAgent), 
+							highAgent, GetAvoidVel(highAgent, lowAgent, avoidVel), timeUntilCollision)
+							|| timeUntilCollision > lookAheadTime)
+						{
+							strategy = HIGH_AVOID;
+							break;
+						}
+					}
+				}
+			}
+		}
+
+		return strategy;
+	}
+
+	bool GetCollisionTime(AgentInfo& lowAgent, const Vector2D& lowAgentVel, 
+						  AgentInfo& highAgent, const Vector2D& highAgentVel, float& timeUntilCollision)
+	{
+		AvoidStrategy strategy = NONE;
+
+		Vector2D relVel = lowAgentVel - highAgentVel;
+		float relSpeed = relVel.Length();
+
+		if (relSpeed > 0.0f)
+		{
+			Vector2D relVelDir = relVel.Normalized();
+			float t, u;
+
+			if (IntersectLineCircle(lowAgent.pAgent->GetPos(), relVelDir, highAgent.pAgent->GetPos(), lowAgent.pAgent->GetRadius() + highAgent.pAgent->GetRadius(), t, u) > 0) 
+			{
+				if (t < 0.0f)
+					t = u;
+
+				float intersectionT = std::min(t, u);
+
+				timeUntilCollision = intersectionT / relSpeed;
+
+				if (timeUntilCollision >= 0.0f)
+				{
+					return true;
+				}
+			}
+		}
+
+		return false;
+	}
+};
 
 class SceneController
 {
@@ -892,20 +1232,22 @@ int main(int argc, char *argv[])
 	updateTimer.Start(globalTime, 30);
 
 	AgentManager agents;
-	agents.Add(*(new Agent(Vector2D::kZero, /*Vector2D::kZero*/Vector2D(4.0f, -10.0f), 1.0f, Color::kWhite)));
+	
+	agents.Add(*(new Agent(Vector2D::kZero, Vector2D(4.0f, -10.0f), 1.0f, Color::kWhite)));
 	agents.Add(*(new Agent(Vector2D(3.0f, 6.0f), Vector2D(16.5f, 1.5f), 1.2f, Color::kWhite)));
 	agents.Add(*(new Agent(Vector2D(-3.0f, 6.0f), Vector2D(-2.5f, -10.5f), 1.4f, Color::kWhite)));
 	agents.Add(*(new Agent(Vector2D(-6.0f, -3.0f), Vector2D(3.5f, 6.5f), 1.6f, Color::kWhite)));
 	agents.Add(*(new Agent(Vector2D(-3.0f, -6.0f), Vector2D(2.5f, 3.5f), 1.8f, Color::kWhite)));
 	agents.Add(*(new Agent(Vector2D(6.0f, 6.0f), Vector2D(12.5f, -5.5f), 2.0f, Color::kWhite)));
+	
 
-	//agents.Add(*(new Agent(Vector2D(-6.0f, 0.0f), Vector2D(1.0f, 0.0f), 1.0f, Color::kRed)));
-	//agents.Add(*(new Agent(Vector2D::kZero, Vector2D::kZero, 1.0f, Color::kWhite)));
+	//agents.Add(*(new Agent(Vector2D(-6.0f, 0.0f), Vector2D(1.0f, 0.0f), 1.0f, Color::kWhite)));
+	//agents.Add(*(new Agent(Vector2D::kZero, Vector2D::kZero, 1.4f, Color::kWhite)));
 	
 		
 
 	SceneController sceneController(agents);
-	CollisionAvoidanceManager avoidanceManager;
+	ICollisionAvoidanceManager& avoidanceManager = *(new CollisionAvoidanceManager_SingleWaitOrAvoid());
 
 	avoidanceManager.AutoAddAgents(agents);
 
@@ -998,6 +1340,8 @@ int main(int argc, char *argv[])
 			fpsLastTime = SDL_GetTicks();
 		}
 	}
+
+	delete &(avoidanceManager);
 
 	return 0;
 }
