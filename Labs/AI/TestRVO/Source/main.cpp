@@ -532,7 +532,7 @@ public:
 			{
 				Vector2D dir = vect.Normalized();
 
-				if (Dot(dir, GetVel().Normalized()) < 0.95f)
+				if (Dot(dir, GetVel().Normalized()) < 0.98f)
 				{
 					float speed = std::max(2.0f, GetVel().Length());
 
@@ -555,7 +555,7 @@ public:
 	}
 
 
-	virtual void Draw(float time) 
+	virtual void Draw(float time, Agent* pFocusAgent) 
 	{
 		float lerp = (time - prevUpdateTime) / (updateTime - prevUpdateTime);
 
@@ -592,15 +592,30 @@ public:
 
 		DrawCircle(WorldToScreen(lerpPos), WorldToScreen(lerpRadius), lerpColor);
 
+		if (pFocusAgent == this)
+		{
+			Color col = lerpColor;
+
+			col.a *= 0.25f;
+			DrawCircle(WorldToScreen(lerpPos), WorldToScreen(lerpRadius * 0.66f), col);
+
+			col.a *= 0.25f;
+			DrawCircle(WorldToScreen(lerpPos), WorldToScreen(lerpRadius * 0.33f), col);
+		}
+
 		if (!(vel == Vector2D::kZero))
 		{
 			DrawArrow(WorldToScreen(lerpPos), WorldToScreen(lerpPos + (vel * kVelDrawScale)), lerpColor);
 		}
 
+		
+
 		if (hasGoal)
 		{
-			lerpColor.a = 0.2f;
-			DrawLine(WorldToScreen(lerpPos), WorldToScreen(goalPos), lerpColor);
+			Color col = lerpColor;
+
+			col.a = 0.2f;
+			DrawLine(WorldToScreen(lerpPos), WorldToScreen(goalPos), col);
 		}
 	}
 };
@@ -648,11 +663,11 @@ public:
 
 	}
 
-	void Draw(float time) 
+	void Draw(float time, Agent* pFocusAgent) 
 	{
 		for (Agents::iterator it = agents.begin(); it != agents.end(); ++it)
 		{
-			(*it)->Draw(time);
+			(*it)->Draw(time, pFocusAgent);
 		}
 	}
 
@@ -1909,6 +1924,8 @@ public:
 
 		if (m_pLeftMouseControlledAgent)
 		{
+			m_pFocusAgent = m_pLeftMouseControlledAgent;
+
 			if (SDL_GetMouseState(&x, &y)&SDL_BUTTON(SDL_BUTTON_LEFT))
 			{
 				Vector2D worldPos = ScreenToWorld(Vector2D((float) x, (float) y));
@@ -1944,6 +1961,10 @@ public:
 				m_pLeftMouseControlledAgent = NULL;
 				m_IsLeftPressed = false;
 			}
+		}
+		else
+		{
+			m_pFocusAgent = NULL;
 		}
 
 		if (m_pRightMouseControlledAgent)
@@ -2201,7 +2222,7 @@ int main(int argc, char *argv[])
 
 			glClearColor(0.0, 0.0, 0.0, 1.0f);
 			glClear( GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-			agents.Draw(renderTimer.GetTime() - updateTimer.GetFrameTime());
+			agents.Draw(renderTimer.GetTime() - updateTimer.GetFrameTime(), sceneController.m_pFocusAgent);
 			sceneController.Draw();
 			SDL_GL_SwapBuffers();
 		}
