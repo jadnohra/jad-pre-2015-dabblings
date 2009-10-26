@@ -10,7 +10,7 @@
 int SCREEN_WIDTH = 1024;
 int SCREEN_HEIGHT = 768;
 static const float kGlobalAlphaMul = 0.75f;
-static const float kWorldScale = 20.0f;
+static float kWorldScale = 12.0f;
 static const bool kLimitBounce = true;
 static const float kTimeScale = 1.0f;
 static const float kVelDrawScale = 0.4f;
@@ -246,7 +246,7 @@ void DrawCircle(const Vector2D& v, float radius, const Color& color, float alpha
 		alpha = color.a;
 
 	glColor4f(color.r, color.g, color.b, kGlobalAlphaMul * alpha);
-	glLineWidth(3.0f);
+	glLineWidth(std::min(3.0f, std::max(1.25f, kWorldScale / 6))  /*3.0f*/);
 	glBegin(GL_LINE_LOOP);
 
 	//glBegin(GL_TRIANGLE_FAN);
@@ -2021,6 +2021,16 @@ public:
 
 		if (evt.type == SDL_MOUSEBUTTONDOWN)
 		{
+			if (evt.button.button == SDL_BUTTON_WHEELDOWN)
+			{
+				kWorldScale = std::max(1.0f, kWorldScale - 0.5f);
+			}
+
+			if (evt.button.button == SDL_BUTTON_WHEELUP)
+			{
+				kWorldScale = std::min(40.0f, kWorldScale + 0.5f);
+			}
+
 			if (evt.button.button == SDL_BUTTON_LEFT)
 			{
 				int x = evt.motion.x;
