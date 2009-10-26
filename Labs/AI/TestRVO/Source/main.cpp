@@ -432,6 +432,8 @@ public:
 	Vector2D pos;
 	Vector2D vel;
 	float radius;
+	bool hasGoal;
+	Vector2D goalPos;
 
 	float updateTime;
 	Vector2D prevUpdatePos;
@@ -440,6 +442,9 @@ public:
 
 	bool isAgitated;
 	float agitation;
+
+	bool isControlledByAvoidance;
+	float lastControlledByAvoidanceTime;
 
 	Agent()
 	{
@@ -463,16 +468,23 @@ public:
 		vel = vel_; 
 		pos = pos_;
 		color = color_;
+		hasGoal = false;
+
+		isControlledByAvoidance = false;
+		lastControlledByAvoidanceTime = -1.0f;
 	}
 
 	virtual void Agitate()			 { isAgitated = true; }
 	virtual const Vector2D& GetPos() { return pos; }
 	virtual const Vector2D& GetVel() { return vel; }
 	virtual float GetRadius() { return radius; }
+	virtual void NotifyControlledByAvoidance() { isControlledByAvoidance = true; }
 
 
 	virtual void SetPos(const Vector2D& position) { pos = position; }
 	virtual void SetVel(const Vector2D& velocity) { vel = velocity; }
+
+	virtual void SetGoal(const Vector2D& pos, float speed) { goalPos = pos; hasGoal = true; SetVel((goalPos - GetPos()).Normalized() * speed); }
 
 	virtual void Update(float time, float dt) 
 	{
@@ -498,6 +510,35 @@ public:
 				vel[1] = -vel[1];
 			else if (worldPos[1] < 0.0f)
 				vel[1] = -vel[1];
+		}
+
+		if (isControlledByAvoidance)
+		{
+			isControlledByAvoidance = false;
+			lastControlledByAvoidanceTime = time;
+		}
+
+		if (hasGoal && (time - lastControlledByAvoidanceTime) > 1.0f)
+		{
+			Vector2D vect = goalPos - GetPos();
+			float dist = vect.Length();
+
+			if (dist <= 0.2f)
+			{
+				SetVel(Vector2D::kZero);
+				hasGoal = false;
+			}
+			else
+			{
+				Vector2D dir = vect.Normalized();
+
+				if (Dot(dir, GetVel().Normalized()) < 0.95f)
+				{
+					float speed = std::max(2.0f, GetVel().Length());
+
+					SetVel(dir * speed);
+				}
+			}
 		}
 
 		if (isAgitated)
@@ -554,6 +595,12 @@ public:
 		if (!(vel == Vector2D::kZero))
 		{
 			DrawArrow(WorldToScreen(lerpPos), WorldToScreen(lerpPos + (vel * kVelDrawScale)), lerpColor);
+		}
+
+		if (hasGoal)
+		{
+			lerpColor.a = 0.2f;
+			DrawLine(WorldToScreen(lerpPos), WorldToScreen(goalPos), lerpColor);
 		}
 	}
 };
@@ -1629,6 +1676,8 @@ public:
 			if (agentInfo.shouldWait || 
 				(agentInfo.isWaiting && (time - agentInfo.startWaitTime) < 0.5f))
 			{
+				agentInfo.pAgent->NotifyControlledByAvoidance();
+
 				if (agentInfo.isWaiting == false)
 				{
 					agentInfo.vel = agentInfo.pAgent->GetVel();
@@ -1680,7 +1729,8 @@ public:
 		// Very simple random conditions here
 
 		float minSpeed = std::max(1.0f, GetOriginalVel(agent).Length()); 
-		float speed = minSpeed * Randf(1.0f, 1.5f);
+		float speed = std::min(15.0f, minSpeed * Randf(0.8f, 1.2f));
+
 
 		Vector2D dir;
 		
@@ -1831,7 +1881,12 @@ public:
 	Vector2D m_MoveAvgVel;
 	Vector2D m_AgentCenterOffset;
 	Vector2D m_StartRightClickPos;
-	Vector2D m_DrawVelVector;
+	Vector2D m_RightDragPos;
+	bool m_RightDragShift;
+
+	
+	Color mDrawArrowColor;
+	Vector2D mDrawArrow;
 	
 	SceneController(AgentManager& agentManager, ICollisionAvoidanceManager* pAvoidanceMan)
 	:	m_AgentManager(agentManager)
@@ -1840,6 +1895,7 @@ public:
 	,	m_pRightMouseControlledAgent(NULL)
 	,	m_IsLeftPressed(false)
 	,	m_IsRightPressed(false)
+	,	m_RightDragShift(false)
 	,	m_pFocusAgent(NULL)
 	{
 	}
@@ -1895,12 +1951,37 @@ public:
 			if (SDL_GetMouseState(&x, &y)&SDL_BUTTON(SDL_BUTTON_RIGHT))
 			{
 				Vector2D worldPos = ScreenToWorld(Vector2D((float) x, (float) y));
+				m_RightDragPos = worldPos;
 
-				m_DrawVelVector = worldPos - m_pRightMouseControlledAgent->GetPos();
+				mDrawArrow = worldPos - m_pRightMouseControlledAgent->GetPos();
+				
+				Uint8 *keystate = SDL_GetKeyState(NULL);
+				if (keystate[SDLK_RSHIFT] || keystate[SDLK_LSHIFT])
+				{
+					m_RightDragShift = true;
+					mDrawArrowColor = Color::kGreen;
+
+					float length = std::min(mDrawArrow.Length(), 10.0f);
+					mDrawArrow = mDrawArrow.Normalized() * length;
+				}
+				else
+				{
+					m_RightDragShift = false;
+					mDrawArrowColor = Color::kBlue;
+				}
 			}
 			else
 			{
-				m_pRightMouseControlledAgent->SetVel(m_DrawVelVector * (1.0f / kVelDrawScale));
+				if (m_RightDragShift)
+				{
+					m_pRightMouseControlledAgent->SetVel(mDrawArrow * (1.0f / kVelDrawScale));
+					
+				}
+				else
+				{
+					m_pRightMouseControlledAgent->SetGoal(m_RightDragPos, 5.0f);
+				}
+				
 				if (m_pAvoidanceManager)
 					m_pAvoidanceManager->ResetAgentState(m_pRightMouseControlledAgent);
 				m_pRightMouseControlledAgent = NULL;
@@ -1977,7 +2058,7 @@ public:
 		if (m_pRightMouseControlledAgent)
 		{
 			DrawArrow(WorldToScreen(m_pRightMouseControlledAgent->GetPos()), 
-						WorldToScreen(m_pRightMouseControlledAgent->GetPos() + m_DrawVelVector), Color::kGreen, 0.5f);
+						WorldToScreen(m_pRightMouseControlledAgent->GetPos() + mDrawArrow), mDrawArrowColor, 0.5f);
 		}
 	}
 };
@@ -2067,12 +2148,22 @@ void CreateTestCase2(AgentManager& agents)
 	agents.Add(*(new Agent(Vector2D(0.0f, -6.0f), Vector2D(0.0f, 1.0f), 1.0f, Color::kWhite)));
 }
 
-void CreateTestCrossing4(AgentManager& agents)
+void CreateTestCrossing4(AgentManager& agents, float speed = 3.0f)
 {
-	agents.Add(*(new Agent(Vector2D(-10.0f, -15.0f), (Vector2D(10.0f, 5.0f) - Vector2D(-10.0f, -15.0f)).Normalized() * 3.0f, 1.0f, Color::kWhite)));
-	agents.Add(*(new Agent(Vector2D(-5.0f, -15.0f),(Vector2D(0.0f, 5.0f) - Vector2D(-5.0f, -15.0f)).Normalized() * 3.0f, 1.0f, Color::kWhite)));
-	agents.Add(*(new Agent(Vector2D(0.0f, -15.0f), (Vector2D(-5.0f, 5.0f) - Vector2D(0.0f, -15.0f)).Normalized() * 3.0f, 1.0f, Color::kWhite)));
-	agents.Add(*(new Agent(Vector2D(5.0f, -15.0f), (Vector2D(-10.0f, 5.0f) - Vector2D(5.0f, -15.0f)).Normalized() * 3.0f, 1.0f, Color::kWhite)));
+	Agent* pAgent1 = new Agent(Vector2D(-10.0f, -15.0f), Vector2D::kZero, 1.0f, Color::kWhite);
+	Agent* pAgent2 = new Agent(Vector2D(-5.0f, -15.0f), Vector2D::kZero, 1.0f, Color::kWhite);
+	Agent* pAgent3 = new Agent(Vector2D(0.0f, -15.0f), Vector2D::kZero, 1.0f, Color::kWhite);
+	Agent* pAgent4 = new Agent(Vector2D(5.0f, -15.0f), Vector2D::kZero, 1.0f, Color::kWhite);
+
+	pAgent1->SetGoal(Vector2D(pAgent4->GetPos().x, 15.0f), speed);
+	pAgent2->SetGoal(Vector2D(pAgent3->GetPos().x, 15.0f), speed);
+	pAgent3->SetGoal(Vector2D(pAgent2->GetPos().x, 15.0f), speed);
+	pAgent4->SetGoal(Vector2D(pAgent1->GetPos().x, 15.0f), speed);
+
+	agents.Add(*pAgent1);
+	agents.Add(*pAgent2);
+	agents.Add(*pAgent3);
+	agents.Add(*pAgent4);
 }
 
 
