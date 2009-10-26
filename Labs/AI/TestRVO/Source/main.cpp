@@ -13,7 +13,7 @@ static const float kGlobalAlphaMul = 0.75f;
 static const float kWorldScale = 20.0f;
 static const bool kLimitBounce = true;
 static const float kTimeScale = 1.0f;
-
+static const float kVelDrawScale = 0.4f;
 
 struct Vector2D
 {
@@ -553,7 +553,7 @@ public:
 
 		if (!(vel == Vector2D::kZero))
 		{
-			DrawArrow(WorldToScreen(lerpPos), WorldToScreen(lerpPos + (vel * 0.4f)), lerpColor);
+			DrawArrow(WorldToScreen(lerpPos), WorldToScreen(lerpPos + (vel * kVelDrawScale)), lerpColor);
 		}
 	}
 };
@@ -1677,14 +1677,16 @@ public:
 
 	Vector2D& GetAvoidVel(AgentInfo& agent, AgentInfo& avoided, Vector2D& avoidVel)
 	{
-		float speed;
-		speed = Randf(-10.0f, 10.0f);
+		// Very simple random conditions here
+
+		float minSpeed = std::max(1.0f, GetOriginalVel(agent).Length()); 
+		float speed = minSpeed * Randf(1.0f, 1.5f);
 
 		Vector2D dir;
-
+		
 		while (dir == Vector2D::kZero)
 		{
-			dir = Vector2D(Randf(0.0f, 1.0f), Randf(0.0f, 1.0f));
+			dir = Vector2D(Randf(-1.0f, 1.0f), Randf(-1.0f, 1.0f));
 		}
 
 		avoidVel = dir.Normalized() * speed;
@@ -1821,17 +1823,23 @@ public:
 	AgentManager& m_AgentManager;
 	ICollisionAvoidanceManager* m_pAvoidanceManager;
 	Agent* m_pFocusAgent;
-	Agent* m_pMouseControlledAgent;
-	bool m_IsPressed;
+	Agent* m_pLeftMouseControlledAgent;
+	Agent* m_pRightMouseControlledAgent;
+	bool m_IsLeftPressed;
+	bool m_IsRightPressed;
 	Uint32 m_StartPressTime;
 	Vector2D m_MoveAvgVel;
 	Vector2D m_AgentCenterOffset;
-
+	Vector2D m_StartRightClickPos;
+	Vector2D m_DrawVelVector;
+	
 	SceneController(AgentManager& agentManager, ICollisionAvoidanceManager* pAvoidanceMan)
 	:	m_AgentManager(agentManager)
 	,	m_pAvoidanceManager(pAvoidanceMan)
-	,	m_pMouseControlledAgent(NULL)
-	,	m_IsPressed(false)
+	,	m_pLeftMouseControlledAgent(NULL)
+	,	m_pRightMouseControlledAgent(NULL)
+	,	m_IsLeftPressed(false)
+	,	m_IsRightPressed(false)
 	,	m_pFocusAgent(NULL)
 	{
 	}
@@ -1843,27 +1851,27 @@ public:
 		int relX;
 		int relY;
 
-		if (m_pMouseControlledAgent)
+		if (m_pLeftMouseControlledAgent)
 		{
-			if (SDL_GetMouseState(&x, &y)&SDL_BUTTON(1))
+			if (SDL_GetMouseState(&x, &y)&SDL_BUTTON(SDL_BUTTON_LEFT))
 			{
 				Vector2D worldPos = ScreenToWorld(Vector2D((float) x, (float) y));
 
-				m_pMouseControlledAgent->SetPos(worldPos + m_AgentCenterOffset);
+				m_pLeftMouseControlledAgent->SetPos(worldPos + m_AgentCenterOffset);
 				if (m_pAvoidanceManager)
-					m_pAvoidanceManager->ResetAgentState(m_pMouseControlledAgent);
+					m_pAvoidanceManager->ResetAgentState(m_pLeftMouseControlledAgent);
 
 				SDL_GetRelativeMouseState(&relX, &relY);
 				Vector2D worldPosDiff = ScreenToWorldDir(Vector2D((float) relX, (float) relY));
 
-				if (m_IsPressed)
+				if (m_IsLeftPressed)
 				{
 					m_MoveAvgVel += worldPosDiff;
 					//printf("%f,%f\n", m_MoveAvgVel.x, m_MoveAvgVel.y);
 				}
 				else
 				{
-					m_IsPressed = true;
+					m_IsLeftPressed = true;
 					m_MoveAvgVel = Vector2D::kZero;
 					m_StartPressTime = SDL_GetTicks();
 				}
@@ -1873,11 +1881,30 @@ public:
 				float pressTime = ((float) (SDL_GetTicks() - m_StartPressTime)) / 1000.0f;
 
 				Vector2D vel = m_MoveAvgVel * (1.0f / pressTime);
-				m_pMouseControlledAgent->SetVel(vel);
+				//m_pLeftMouseControlledAgent->SetVel(vel);
 				if (m_pAvoidanceManager)
-					m_pAvoidanceManager->ResetAgentState(m_pMouseControlledAgent);
-				m_pMouseControlledAgent = NULL;
-				m_IsPressed = false;
+					m_pAvoidanceManager->ResetAgentState(m_pLeftMouseControlledAgent);
+				
+				m_pLeftMouseControlledAgent = NULL;
+				m_IsLeftPressed = false;
+			}
+		}
+
+		if (m_pRightMouseControlledAgent)
+		{
+			if (SDL_GetMouseState(&x, &y)&SDL_BUTTON(SDL_BUTTON_RIGHT))
+			{
+				Vector2D worldPos = ScreenToWorld(Vector2D((float) x, (float) y));
+
+				m_DrawVelVector = worldPos - m_pRightMouseControlledAgent->GetPos();
+			}
+			else
+			{
+				m_pRightMouseControlledAgent->SetVel(m_DrawVelVector * (1.0f / kVelDrawScale));
+				if (m_pAvoidanceManager)
+					m_pAvoidanceManager->ResetAgentState(m_pRightMouseControlledAgent);
+				m_pRightMouseControlledAgent = NULL;
+				m_IsRightPressed = false;
 			}
 		}
 	}
@@ -1902,16 +1929,34 @@ public:
 
 				if (pAgent != NULL)
 				{
-					m_pMouseControlledAgent = pAgent;
+					m_pLeftMouseControlledAgent = pAgent;
 
-					m_AgentCenterOffset = m_pMouseControlledAgent->GetPos() - worldPos;
-					m_pMouseControlledAgent->SetVel(Vector2D::kZero);
+					m_AgentCenterOffset = m_pLeftMouseControlledAgent->GetPos() - worldPos;
+					m_pLeftMouseControlledAgent->SetVel(Vector2D::kZero);
 					if (m_pAvoidanceManager)
-						m_pAvoidanceManager->ResetAgentState(m_pMouseControlledAgent);
+						m_pAvoidanceManager->ResetAgentState(m_pLeftMouseControlledAgent);
 				}
 			}
 
 			if (evt.button.button == SDL_BUTTON_RIGHT)
+			{
+				int x = evt.motion.x;
+				int y = evt.motion.y;
+
+				m_StartRightClickPos = ScreenToWorld(Vector2D((float) x, (float) y));
+				Agent* pAgent = m_AgentManager.PickAgent(m_StartRightClickPos);
+
+				if (pAgent != NULL)
+				{
+					m_pRightMouseControlledAgent = pAgent;
+
+					m_pRightMouseControlledAgent->SetVel(Vector2D::kZero);
+					if (m_pAvoidanceManager)
+						m_pAvoidanceManager->ResetAgentState(m_pRightMouseControlledAgent);
+				}
+			}
+
+			if (evt.button.button == SDL_BUTTON_MIDDLE)
 			{
 				int x = evt.motion.x;
 				int y = evt.motion.y;
@@ -1924,6 +1969,15 @@ public:
 				if (m_pAvoidanceManager)
 					m_pAvoidanceManager->AddAgent(pAgent, m_AgentManager.agents.size());
 			}
+		}
+	}
+
+	void Draw()
+	{
+		if (m_pRightMouseControlledAgent)
+		{
+			DrawArrow(WorldToScreen(m_pRightMouseControlledAgent->GetPos()), 
+						WorldToScreen(m_pRightMouseControlledAgent->GetPos() + m_DrawVelVector), Color::kGreen, 0.5f);
 		}
 	}
 };
@@ -2057,6 +2111,7 @@ int main(int argc, char *argv[])
 			glClearColor(0.0, 0.0, 0.0, 1.0f);
 			glClear( GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 			agents.Draw(renderTimer.GetTime() - updateTimer.GetFrameTime());
+			sceneController.Draw();
 			SDL_GL_SwapBuffers();
 		}
 
