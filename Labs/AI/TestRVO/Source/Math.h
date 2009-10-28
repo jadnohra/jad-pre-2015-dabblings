@@ -3,32 +3,19 @@
 
 #include <math.h>
 #include <stdlib.h>
+#include "Box2D.h"
 
 #define MATH_PIf 3.14159265f
 
-struct Vector2D
+struct Vector2D : public b2Vec2
 {
-	union
-	{
-		struct 
-		{
-			float v[2];
-		};
-
-		struct 
-		{
-			float x;
-			float y;
-		};
-	};
-
-
 	Vector2D(float v0 = 0.0f, float v1 = 0.0f)
-		:	x(v0), y(v1)
 	{
+		x = v0;
+		y = v1;
 	}
 
-	float& operator[](int index) { return v[index]; }
+	float& operator[](int index) { return index == 0 ? x : y; }
 
 	Vector2D operator*(float mul) const
 	{

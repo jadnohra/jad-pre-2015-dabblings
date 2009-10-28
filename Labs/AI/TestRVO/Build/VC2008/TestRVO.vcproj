@@ -41,7 +41,7 @@
 			<Tool
 				Name="VCCLCompilerTool"
 				Optimization="0"
-				AdditionalIncludeDirectories="..\..\..\3rdParty\SDL-1.2.13\include"
+				AdditionalIncludeDirectories="..\..\..\3rdParty\SDL-1.2.13\include;..\..\..\3rdParty\Box2D_v2.0.1\Include\"
 				PreprocessorDefinitions="WIN32;_DEBUG;_CONSOLE"
 				MinimalRebuild="true"
 				BasicRuntimeChecks="3"
@@ -62,10 +62,10 @@
 			/>
 			<Tool
 				Name="VCLinkerTool"
-				AdditionalDependencies="opengl32.lib glu32.lib SDL.lib SDLmain.lib"
+				AdditionalDependencies="opengl32.lib glu32.lib SDL.lib SDLmain.lib box2d_d.lib"
 				OutputFile="$(OutDir)\$(ProjectName)_d.exe"
 				LinkIncremental="2"
-				AdditionalLibraryDirectories="..\..\..\3rdParty\SDL-1.2.13\lib"
+				AdditionalLibraryDirectories="..\..\..\3rdParty\SDL-1.2.13\lib;..\..\..\3rdParty\Box2D_v2.0.1\Library"
 				GenerateDebugInformation="true"
 				SubSystem="1"
 				RandomizedBaseAddress="1"
@@ -119,7 +119,7 @@
 			/>
 			<Tool
 				Name="VCCLCompilerTool"
-				AdditionalIncludeDirectories="..\..\..\3rdParty\SDL-1.2.13\include"
+				AdditionalIncludeDirectories="..\..\..\3rdParty\SDL-1.2.13\include;..\..\..\3rdParty\Box2D_v2.0.1\Include\"
 				PreprocessorDefinitions="WIN32;NDEBUG;_CONSOLE"
 				RuntimeLibrary="2"
 				UsePrecompiledHeader="0"
@@ -138,10 +138,10 @@
 			/>
 			<Tool
 				Name="VCLinkerTool"
-				AdditionalDependencies="opengl32.lib glu32.lib SDL.lib SDLmain.lib"
+				AdditionalDependencies="opengl32.lib glu32.lib SDL.lib SDLmain.lib box2d.lib"
 				OutputFile="$(OutDir)\$(ProjectName).exe"
 				LinkIncremental="1"
-				AdditionalLibraryDirectories="..\..\..\3rdParty\SDL-1.2.13\lib"
+				AdditionalLibraryDirectories="..\..\..\3rdParty\SDL-1.2.13\lib;..\..\..\3rdParty\Box2D_v2.0.1\Library"
 				GenerateDebugInformation="true"
 				SubSystem="1"
 				OptimizeReferences="2"
