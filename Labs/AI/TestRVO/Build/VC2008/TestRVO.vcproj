@@ -177,7 +177,55 @@
 	</References>
 	<Files>
 		<File
+			RelativePath="..\..\Source\Agent.cpp"
+			>
+		</File>
+		<File
+			RelativePath="..\..\Source\Agent.h"
+			>
+		</File>
+		<File
+			RelativePath="..\..\Source\App.h"
+			>
+		</File>
+		<File
+			RelativePath="..\..\Source\CollisionAvoidanceManager.h"
+			>
+		</File>
+		<File
 			RelativePath="..\..\Source\main.cpp"
+			>
+		</File>
+		<File
+			RelativePath="..\..\Source\Math.cpp"
+			>
+		</File>
+		<File
+			RelativePath="..\..\Source\Math.h"
+			>
+		</File>
+		<File
+			RelativePath="..\..\Source\Renderer.cpp"
+			>
+		</File>
+		<File
+			RelativePath="..\..\Source\Renderer.h"
+			>
+		</File>
+		<File
+			RelativePath="..\..\Source\Time.h"
+			>
+		</File>
+		<File
+			RelativePath="..\..\Source\World.cpp"
+			>
+		</File>
+		<File
+			RelativePath="..\..\Source\World.h"
+			>
+		</File>
+		<File
+			RelativePath="..\..\Source\WorldController.h"
 			>
 		</File>
 	</Files>
