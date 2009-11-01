@@ -214,11 +214,11 @@
 			>
 		</File>
 		<File
-			RelativePath="..\..\Source\Time.h"
+			RelativePath="..\..\Source\Terrain.h"
 			>
 		</File>
 		<File
-			RelativePath="..\..\Source\WaypointGraph.h"
+			RelativePath="..\..\Source\Time.h"
 			>
 		</File>
 		<File

@@ -29,6 +29,11 @@ struct Color
 	{
 	}
 
+	Color(int r_, int g_, int b_, int a_ = 255)
+		:	r((float)r_ / 255.0f), g((float)g_ / 255.0f), b((float)b_ / 255.0f), a((float)a_ / 255.0f)
+	{
+	}
+
 	static const Color kBlack;
 	static const Color kWhite;
 	static const Color kRed;
@@ -154,6 +159,15 @@ public:
 		glEnd();
 	}
 
+	void DrawQuad(const Vector2D& p1, const Vector2D& p2, 
+				  const Vector2D& p3, const Vector2D& p4, 
+				  const Color& color, float alpha = -1.0f)
+	{
+		DrawLine(p1, p2, color, alpha);
+		DrawLine(p2, p3, color, alpha);
+		DrawLine(p3, p4, color, alpha);
+		DrawLine(p4, p1, color, alpha);
+	}
 
 	void DrawArrow(const Vector2D& p1, const Vector2D& p2, const Color& color, float alpha = -1.0f)
 	{

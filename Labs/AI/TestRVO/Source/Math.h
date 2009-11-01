@@ -100,7 +100,11 @@ struct Vector2D : public b2Vec2
 	static const Vector2D kZero;
 };
 
-
+struct Circle
+{
+	Vector2D pos;
+	float radius;
+};
 
 inline float Dot(const Vector2D& p1, const Vector2D& p2)
 {

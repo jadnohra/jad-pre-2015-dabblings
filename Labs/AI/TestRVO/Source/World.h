@@ -8,6 +8,7 @@
 class ICollisionAvoidanceManager;
 class Agent;
 class App;
+class Terrain;
 
 class World
 {
@@ -17,6 +18,7 @@ public:
 	Agents mAgents;
 	Renderer mRenderer;
 	ICollisionAvoidanceManager* mAvoidanceManager;
+	Terrain* mTerrain;
 
 	World();
 	~World();
