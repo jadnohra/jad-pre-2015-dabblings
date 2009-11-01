@@ -6,7 +6,6 @@
 	ProjectGUID="{15F724A8-162F-41AF-9228-A0C57F41EDB9}"
 	RootNamespace="TestRVO"
 	Keyword="Win32Proj"
-	TargetFrameworkVersion="131072"
 	>
 	<Platforms>
 		<Platform
@@ -41,7 +40,7 @@
 			<Tool
 				Name="VCCLCompilerTool"
 				Optimization="0"
-				AdditionalIncludeDirectories="..\..\..\3rdParty\SDL-1.2.13\include"
+				AdditionalIncludeDirectories="..\..\..\3rdParty\SDL-1.2.13\include;..\..\..\3rdParty\Box2D_v2.0.1\include;"
 				PreprocessorDefinitions="WIN32;_DEBUG;_CONSOLE"
 				MinimalRebuild="true"
 				BasicRuntimeChecks="3"
@@ -62,14 +61,12 @@
 			/>
 			<Tool
 				Name="VCLinkerTool"
-				AdditionalDependencies="opengl32.lib glu32.lib SDL.lib SDLmain.lib"
+				AdditionalDependencies="opengl32.lib glu32.lib SDL.lib SDLmain.lib box2d_d.lib"
 				OutputFile="$(OutDir)\$(ProjectName)_d.exe"
 				LinkIncremental="2"
-				AdditionalLibraryDirectories="..\..\..\3rdParty\SDL-1.2.13\lib"
+				AdditionalLibraryDirectories="..\..\..\3rdParty\SDL-1.2.13\lib;..\..\..\3rdParty\Box2D_v2.0.1\library;"
 				GenerateDebugInformation="true"
 				SubSystem="1"
-				RandomizedBaseAddress="1"
-				DataExecutionPrevention="0"
 				TargetMachine="1"
 			/>
 			<Tool
@@ -89,6 +86,9 @@
 			/>
 			<Tool
 				Name="VCAppVerifierTool"
+			/>
+			<Tool
+				Name="VCWebDeploymentTool"
 			/>
 			<Tool
 				Name="VCPostBuildEventTool"
@@ -119,7 +119,7 @@
 			/>
 			<Tool
 				Name="VCCLCompilerTool"
-				AdditionalIncludeDirectories="..\..\..\3rdParty\SDL-1.2.13\include"
+				AdditionalIncludeDirectories="..\..\..\3rdParty\SDL-1.2.13\include;..\..\..\3rdParty\Box2D_v2.0.1\include;"
 				PreprocessorDefinitions="WIN32;NDEBUG;_CONSOLE"
 				RuntimeLibrary="2"
 				UsePrecompiledHeader="0"
@@ -138,16 +138,14 @@
 			/>
 			<Tool
 				Name="VCLinkerTool"
-				AdditionalDependencies="opengl32.lib glu32.lib SDL.lib SDLmain.lib"
+				AdditionalDependencies="opengl32.lib glu32.lib SDL.lib SDLmain.lib box2d.lib"
 				OutputFile="$(OutDir)\$(ProjectName).exe"
 				LinkIncremental="1"
-				AdditionalLibraryDirectories="..\..\..\3rdParty\SDL-1.2.13\lib"
+				AdditionalLibraryDirectories="..\..\..\3rdParty\SDL-1.2.13\lib;..\..\..\3rdParty\Box2D_v2.0.1\library;"
 				GenerateDebugInformation="true"
 				SubSystem="1"
 				OptimizeReferences="2"
 				EnableCOMDATFolding="2"
-				RandomizedBaseAddress="1"
-				DataExecutionPrevention="0"
 				TargetMachine="1"
 			/>
 			<Tool
@@ -169,6 +167,9 @@
 				Name="VCAppVerifierTool"
 			/>
 			<Tool
+				Name="VCWebDeploymentTool"
+			/>
+			<Tool
 				Name="VCPostBuildEventTool"
 			/>
 		</Configuration>
@@ -177,7 +178,59 @@
 	</References>
 	<Files>
 		<File
+			RelativePath="..\..\Source\Agent.cpp"
+			>
+		</File>
+		<File
+			RelativePath="..\..\Source\Agent.h"
+			>
+		</File>
+		<File
+			RelativePath="..\..\Source\App.h"
+			>
+		</File>
+		<File
+			RelativePath="..\..\Source\CollisionAvoidanceManager.h"
+			>
+		</File>
+		<File
 			RelativePath="..\..\Source\main.cpp"
+			>
+		</File>
+		<File
+			RelativePath="..\..\Source\Math.cpp"
+			>
+		</File>
+		<File
+			RelativePath="..\..\Source\Math.h"
+			>
+		</File>
+		<File
+			RelativePath="..\..\Source\Renderer.cpp"
+			>
+		</File>
+		<File
+			RelativePath="..\..\Source\Renderer.h"
+			>
+		</File>
+		<File
+			RelativePath="..\..\Source\Time.h"
+			>
+		</File>
+		<File
+			RelativePath="..\..\Source\WaypointGraph.h"
+			>
+		</File>
+		<File
+			RelativePath="..\..\Source\World.cpp"
+			>
+		</File>
+		<File
+			RelativePath="..\..\Source\World.h"
+			>
+		</File>
+		<File
+			RelativePath="..\..\Source\WorldController.h"
 			>
 		</File>
 	</Files>

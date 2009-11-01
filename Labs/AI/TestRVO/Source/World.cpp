@@ -3,7 +3,9 @@
 #include "CollisionAvoidanceManager.h"
 #include "Time.h"
 #include "WorldController.h"
+#include "WaypointGraph.h"
 #include "App.h"
+
 
 World::World()
 : mAvoidanceManager(new CollisionAvoidanceManager_RobustWait_ReactiveDeadlockResolve())
@@ -87,6 +89,14 @@ void World::MainLoop(App& app)
 
 	is_running &= mRenderer.InitVideo();
 
+	Terrain terrain;
+	b2AABB terrain_limits;
+	terrain_limits.lowerBound.Set(-100, -100);
+	terrain_limits.upperBound.Set(100, 100);
+	terrain.Init(terrain_limits, 4.0f, 10.0f);
+
+	WorldController worldController(*this, mAvoidanceManager);
+
 	GlobalTime globalTime;
 	Timer renderTimer;
 	Timer updateTimer;
@@ -94,10 +104,7 @@ void World::MainLoop(App& app)
 	renderTimer.Start(globalTime, 1000);
 	updateTimer.Start(globalTime, 30);
 
-	//CreateTestCrossing4(mAgents);
 	
-	WorldController worldController(*this, mAvoidanceManager);
-
 	unsigned int fpsLastTime = SDL_GetTicks();
 	unsigned int frameCount = 0;
 
@@ -111,6 +118,7 @@ void World::MainLoop(App& app)
 
 			glClearColor(0.0, 0.0, 0.0, 1.0f);
 			glClear( GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+			terrain.DrawWaypoints(*this, Color(0.0f, 0.0f, 0.5f));
 			Draw(renderTimer.GetTime() - updateTimer.GetFrameTime(), worldController.mpFocusAgent);
 			worldController.Draw();
 			app.Draw(*this);

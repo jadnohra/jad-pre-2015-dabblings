@@ -118,13 +118,13 @@ public:
 	}
 
 
-	void DrawCircle(const Vector2D& v, float radius, const Color& color, float alpha = -1.0f)
+	void DrawCircle(const Vector2D& v, float radius, const Color& color, float alpha = -1.0f, bool thin = false)
 	{
 		if (alpha < 0.0f)
 			alpha = color.a;
 
 		glColor4f(color.r, color.g, color.b, mGlobalAlphaMul * alpha);
-		glLineWidth(std::min(3.0f, std::max(1.25f, mWorldScale / 6))  /*3.0f*/);
+		glLineWidth(thin ? 1.0f : std::min(3.0f, std::max(1.25f, mWorldScale / 6)));
 		glBegin(GL_LINE_LOOP);
 
 		//glBegin(GL_TRIANGLE_FAN);
