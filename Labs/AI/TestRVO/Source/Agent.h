@@ -4,8 +4,9 @@
 #include "Math.h"
 #include "Renderer.h"
 #include "World.h"
+#include "Terrain.h"
 
-class Agent
+class Agent : public TerrainAgent
 {
 public:
 
@@ -58,6 +59,11 @@ public:
 
 		mIsControlledByAvoidance = false;
 		mLastControlledByAvoidanceTime = -1.0f;
+	}
+
+	virtual Circle GetTerrainShape() 
+	{
+		return Circle(mPos, mRadius);
 	}
 
 	virtual void Agitate()			 { mIsAgitated = true; }

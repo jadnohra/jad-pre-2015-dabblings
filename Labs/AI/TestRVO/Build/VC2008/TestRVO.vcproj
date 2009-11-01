@@ -213,6 +213,10 @@
 			>
 		</File>
 		<File
+			RelativePath="..\..\Source\Terrain.h"
+			>
+		</File>
+		<File
 			RelativePath="..\..\Source\Time.h"
 			>
 		</File>

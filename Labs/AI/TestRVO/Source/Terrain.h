@@ -9,6 +9,12 @@ struct Waypoint
 {
 	Vector2D pos;
 	float radius;
+
+	bool IsStillInside(const Circle& circle) const { return false; }
+	bool IsInside(const Circle& circle) const { return false; }
+
+	bool IsStillInsideLink(const Circle& circle, const Waypoint& neighbor) const { return false; }
+	bool IsInsideLink(const Circle& circle, const Waypoint& neighbor) const { return false; }
 };
 
 template <typename NodeT>
@@ -22,22 +28,33 @@ public:
 		int nodeIndex;
 	};
 
-	typedef std::vector<int> NodeLinks;
+	typedef std::vector<int> LinkIndices;
+
+	struct NodeLinks
+	{
+		int nodeIndex;
+		LinkIndices links;
+	};
+	
 	typedef std::vector<NodeLinks> Links;
 	typedef std::vector<Node> Nodes;
 
 	Nodes mNodes;
 	Links mLinks;
 
-	Node& AddNode()
+	int AddNode()
 	{
 		int index = (int) mNodes.size();
 		mNodes.push_back(Node());
 		mNodes.back().nodeIndex = index;
 		mNodes.back().linksIndex = -1;
-		return mNodes.back();
+		return index;
 	}
 
+	void LinkNode(int from, int to)
+	{
+		LinkNode(mNodes[from], mNodes[to]);
+	}
 
 	void LinkNode(Node& from, Node& to)
 	{
@@ -45,11 +62,12 @@ public:
 		{
 			from.linksIndex = (int) mLinks.size();
 			mLinks.push_back(NodeLinks());
+			mLinks.back().nodeIndex = from.nodeIndex;
 		}
 		
 		NodeLinks& nodeLinks = mLinks[from.linksIndex];
 
-		nodeLinks.push_back(to.nodeIndex);
+		nodeLinks.links.push_back(to.nodeIndex);
 	}
 };
 
@@ -64,18 +82,26 @@ class Terrain
 {
 public:
 
+	struct LinkAddress
+	{
+		int linksIndex;
+		int indexInLinks;
+	};
+
 	struct AgentLocation
 	{
-
+		int waypoints[2];
+		LinkAddress links[2];
 	};
 
 	struct AgentInfo
 	{
-		TerrainAgent* mAgent;
+		TerrainAgent* agent;
+		AgentLocation location;
 	};
 
 	typedef NodeGraph<Waypoint> WaypointGraph;
-	typedef vector<AgentInfo> AgentInfos;
+	typedef std::vector<AgentInfo> AgentInfos;
 	
 
 	b2AABB mLimits;
@@ -93,11 +119,106 @@ public:
 		mUseTangentsForLinks = inUseTangentsForLinks;
 	}
 
-	AgentInfo& AddAgent(TerrainAgent* pAgent)
+	int AddAgent(TerrainAgent* pAgent)
 	{
+		int agentIndex = (int) mAgentInfos.size();
 		mAgentInfos.push_back(AgentInfo());
-		mAgentInfos.back().mAgent = pAgent;
-		return mAgentInfos.back();
+		mAgentInfos.back().agent = pAgent;
+		return agentIndex;
+	}
+
+	virtual void Update(float time, float dt) 
+	{
+		for (size_t i=0; i < mAgentInfos.size(); ++i)
+		{
+			AgentInfo& agentInfo = mAgentInfos[i];
+
+			Circle shape = agentInfo.agent->GetTerrainShape();
+	
+			int kept_waypoint_count = 0;
+			int old_waypoint_count = 0;
+			int kept_waypoints[2];
+			
+			for (int i = 0; i < 2; ++i)
+			{
+				if (agentInfo.location.waypoints[i] != -1)
+				{
+					++old_waypoint_count;
+
+					WaypointGraph::Node& node = mWaypointGraph.mNodes[agentInfo.location.waypoints[i]];
+
+					if (node.IsStillInside(shape))
+					{
+						kept_waypoints[kept_waypoint_count++] = agentInfo.location.waypoints[i];
+					}
+				}
+			}
+
+			int kept_link_count = 0;
+			int old_link_count = 0;
+			LinkAddress kept_links[2];
+			
+			for (int i = 0; i < 2; ++i)
+			{
+				if (agentInfo.location.links[i].linksIndex != -1)
+				{
+					++old_link_count;
+
+					const LinkAddress& linkAddress = agentInfo.location.links[i];
+					const WaypointGraph::NodeLinks& links = mWaypointGraph.mLinks[linkAddress.linksIndex];
+					int neighbor = links.links[linkAddress.indexInLinks];
+					const WaypointGraph::Node& node = mWaypointGraph.mNodes[links.nodeIndex];
+
+					if (node.IsStillInsideLink(shape, mWaypointGraph.mNodes[neighbor]))
+					{
+						kept_links[kept_link_count++] = agentInfo.location.links[i];
+					}
+				}
+			}
+
+
+
+			int update_waypoints[2];
+			int update_waypoint_count = 0;
+
+			if (kept_waypoint_count != 2)
+			{
+				if (kept_waypoint_count == 0)
+				{
+					//CONTINUE HERE
+					if (old_link_count == 0)
+					{
+						// Search!
+						for (size_t i = 0; i < mWaypointGraph.mNodes.size(); ++i)
+						{
+							const WaypointGraph::Node& wpt_node = mWaypointGraph.mNodes[i];
+						}
+					}
+					else
+					{
+						// search nodes at links
+					}
+				}
+
+				if (kept_waypoint_count == 1)
+				{
+					update_waypoints[update_waypoint_count++] = kept_waypoints[0];
+
+					WaypointGraph::Node& node = mWaypointGraph.mNodes[kept_waypoints[0]];
+					const WaypointGraph::NodeLinks& links = mWaypointGraph.mLinks[node.linksIndex];
+
+					for (size_t i=0; i<links.links.size(); ++i)
+					{
+						const WaypointGraph::Node& neighbor_wpt_node = mWaypointGraph.mNodes[links.links[i]];
+
+						if (neighbor_wpt_node.IsInside(shape))
+						{
+							update_waypoints[update_waypoint_count++] = neighbor_wpt_node.nodeIndex;
+						}
+					}
+				}
+			}
+		}
 	}
 
 	void StartBuild()
@@ -127,7 +248,8 @@ public:
 		{
 			for (int x = 0; x < waypoint_count_x; ++x)
 			{
-				WaypointGraph::Node& node = mWaypointGraph.AddNode();
+				int node_index = mWaypointGraph.AddNode();
+				WaypointGraph::Node& node = mWaypointGraph.mNodes[node_index];
 				node.radius = inWaypointRadius;
 				node.pos.x = offset_x + (float) x * inWaypointGridSpacing;
 				node.pos.y = offset_y + (float) y * inWaypointGridSpacing;
@@ -198,9 +320,9 @@ public:
 				const WaypointGraph::Node& wpt_node = mWaypointGraph.mNodes[i];
 				const WaypointGraph::NodeLinks& links = mWaypointGraph.mLinks[wpt_node.linksIndex];
 
-				for (size_t i=0; i<links.size(); ++i)
+				for (size_t i=0; i<links.links.size(); ++i)
 				{
-					const WaypointGraph::Node& neighbor_wpt_node = mWaypointGraph.mNodes[links[i]];
+					const WaypointGraph::Node& neighbor_wpt_node = mWaypointGraph.mNodes[links.links[i]];
 
 					Vector2D quad[4];
 

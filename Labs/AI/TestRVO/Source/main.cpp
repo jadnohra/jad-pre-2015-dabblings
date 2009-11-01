@@ -60,35 +60,53 @@ class MainApp : public App
 		world.mTerrain->StartBuild();
 		{
 			Terrain::WaypointGraph& graph = world.mTerrain->mWaypointGraph;
-			typedef Terrain::WaypointGraph::Node& Node;
+			typedef Terrain::WaypointGraph::Node Node;
+						
+			int node1_index = graph.AddNode();
+			{
+				Node& node1 = graph.mNodes[node1_index];
+				node1.pos = Vector2D(-10.0f, -10.0f);
+				node1.radius = 4.0f;
+			}
 			
-			Node& node1 = graph.AddNode();
-			node1.pos = Vector2D(-10.0f, -10.0f);
-			node1.pos = 4.0f;
-			
-			Node& node2 = graph.AddNode();
-			node2.pos = Vector2D(10.0f, -10.0f);
-			node2.pos = 4.0f;
+			int node2_index = graph.AddNode();
+			{
+				Node& node2 = graph.mNodes[node2_index];
+				node2.pos = Vector2D(10.0f, -10.0f);
+				node2.radius = 4.0f;
+			}
 
-			Node& node3 = graph.AddNode();
-			node3.pos = Vector2D(10.0f, -10.0f);
-			node3.pos = 4.0f;
+			int node3_index = graph.AddNode();
+			{
+				Node& node3 = graph.mNodes[node3_index];
+				node3.pos = Vector2D(10.0f, 10.0f);
+				node3.radius = 4.0f;
+			}
 
-			Node& node4 = graph.AddNode();
-			node4.pos = Vector2D(10.0f, -10.0f);
-			node4.pos = 4.0f;
+			int node4_index = graph.AddNode();
+			{
+				Node& node4 = graph.mNodes[node4_index];
+				node4.pos = Vector2D(-10.0f, 10.0f);
+				node4.radius = 4.0f;
+			}
 
-			graph.LinkNode(node1, node2);
-			graph.LinkNode(node2, node1);
+			graph.LinkNode(graph.mNodes[node1_index], graph.mNodes[node2_index]);
+			graph.LinkNode(graph.mNodes[node2_index], graph.mNodes[node1_index]);
 
-			graph.LinkNode(node2, node3);
-			graph.LinkNode(node3, node2);
+			graph.LinkNode(graph.mNodes[node2_index], graph.mNodes[node3_index]);
+			graph.LinkNode(graph.mNodes[node3_index], graph.mNodes[node2_index]);
 
-			graph.LinkNode(node3, node4);
-			graph.LinkNode(node4, node3);
+			graph.LinkNode(graph.mNodes[node3_index], graph.mNodes[node4_index]);
+			graph.LinkNode(graph.mNodes[node4_index], graph.mNodes[node3_index]);
 
-			graph.LinkNode(node4, node1);
-			graph.LinkNode(node1, node4);
+			graph.LinkNode(graph.mNodes[node4_index], graph.mNodes[node1_index]);
+			graph.LinkNode(graph.mNodes[node1_index], graph.mNodes[node4_index]);
+
+			graph.LinkNode(graph.mNodes[node1_index], graph.mNodes[node3_index]);
+			graph.LinkNode(graph.mNodes[node3_index], graph.mNodes[node1_index]);
+
+			graph.LinkNode(graph.mNodes[node2_index], graph.mNodes[node4_index]);
+			graph.LinkNode(graph.mNodes[node4_index], graph.mNodes[node2_index]);
 		}
 		world.mTerrain->EndBuild();
 

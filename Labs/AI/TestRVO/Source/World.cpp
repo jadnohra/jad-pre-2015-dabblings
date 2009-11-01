@@ -113,7 +113,9 @@ void World::MainLoop(App& app)
 
 	while (is_running)
 	{
-		if (renderTimer.Update())
+		unsigned int startFrame;
+		
+		if (renderTimer.Update(startFrame))
 		{
 			//printf("%f\n", renderTimer.GetTime());
 
@@ -125,17 +127,22 @@ void World::MainLoop(App& app)
 			app.Draw(*this);
 			SDL_GL_SwapBuffers();
 		}
+	
 
-		if (updateTimer.Update())
+		if (updateTimer.Update(startFrame))
 		{
 			unsigned int frames = updateTimer.GetDeltaFrameIndex();
+			float dt = updateTimer.GetFrameTime();
 
 			//printf ("%f\n", updateTimer.GetFrameLockedTime());
-			for (unsigned int i = 0; i < frames; ++i)
+			for (unsigned int i = 0, frame = startFrame; i < frames; ++i)
 			{
-				mAvoidanceManager->Update(updateTimer.GetFrameLockedTime(), updateTimer.GetFrameTime());
-				Update(updateTimer.GetFrameLockedTime(), updateTimer.GetFrameTime());
-				if (!app.Update(*this, updateTimer.GetFrameLockedTime(), updateTimer.GetFrameTime()))
+				float t = updateTimer.GetFrameSyncedTime(frame);
+				
+				mAvoidanceManager->Update(t, dt);
+				Update(t, dt);
+				mTerrain->Update(t, dt);
+				if (!app.Update(*this, t, dt))
 				{
 					is_running = false;
 					break;

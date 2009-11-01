@@ -80,7 +80,7 @@ public:
 		last_returned_time = 0.0f;
 	}
 
-	bool Update()
+	bool Update(unsigned int& outStartFrame)
 	{
 		unsigned int new_sdl_time = pGlobalTime->GetMillis();
 		unsigned int elapsed = new_sdl_time - sdl_time;
@@ -88,6 +88,7 @@ public:
 		if (elapsed >= frame_time)
 		{
 			delta_frame_index = elapsed / frame_time;
+			outStartFrame = frame_index;
 			frame_index += delta_frame_index;
 			rest_time = elapsed - (delta_frame_index * frame_time);
 
@@ -99,14 +100,19 @@ public:
 		return false;
 	}
 
-	float GetFrameLockedTime()
+	float GetFrameSyncedTime()
 	{
 		return (float) (frame_index * frame_time) / 1000.0f;
 	}
 
+	float GetFrameSyncedTime(unsigned int inFrameIndex)
+	{
+		return (float) (inFrameIndex * frame_time) / 1000.0f;
+	}
+
 	float GetTime()
 	{
-		float curr_time = (GetFrameLockedTime() + ((float) rest_time / 1000.0f));
+		float curr_time = (GetFrameSyncedTime() + ((float) rest_time / 1000.0f));
 
 		delta_time = last_returned_time - curr_time;
 		last_returned_time = curr_time;

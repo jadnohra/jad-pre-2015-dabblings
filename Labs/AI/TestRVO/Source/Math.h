@@ -104,6 +104,12 @@ struct Circle
 {
 	Vector2D pos;
 	float radius;
+
+	Circle(const Vector2D& inPos, float inRadius)
+	:	pos(inPos)
+	,	radius(inRadius)
+	{
+	}
 };
 
 inline float Dot(const Vector2D& p1, const Vector2D& p2)
