@@ -11,6 +11,7 @@ public:
 
 	World& mWorld;
 	ICollisionAvoidanceManager* mpAvoidanceManager;
+	int mFocusAgentIndex;
 	Agent* mpFocusAgent;
 	Agent* mpLeftMouseControlledAgent;
 	Agent* mpRightMouseControlledAgent;
@@ -36,6 +37,7 @@ public:
 	,	mIsRightPressed(false)
 	,	mRightDragShift(false)
 	,	mpFocusAgent(NULL)
+	,	mFocusAgentIndex(-1)
 	{
 	}
 
@@ -48,8 +50,6 @@ public:
 
 		if (mpLeftMouseControlledAgent)
 		{
-			mpFocusAgent = mpLeftMouseControlledAgent;
-
 			if (SDL_GetMouseState(&x, &y)&SDL_BUTTON(SDL_BUTTON_LEFT))
 			{
 				Vector2D worldPos = mWorld.ScreenToWorld(Vector2D((float) x, (float) y));
@@ -86,10 +86,7 @@ public:
 				mIsLeftPressed = false;
 			}
 		}
-		else
-		{
-			mpFocusAgent = NULL;
-		}
+		
 
 		if (mpRightMouseControlledAgent)
 		{
@@ -204,6 +201,23 @@ public:
 
 				if (mpAvoidanceManager)
 					mpAvoidanceManager->AddAgent(pAgent, (int) mWorld.mAgents.size());
+			}
+		}
+
+		if (evt.type == SDL_KEYUP)
+		{
+			if (evt.key.keysym.sym == SDLK_KP_PLUS)
+			{
+				if (mFocusAgentIndex + 1 == mWorld.mAgents.size())
+				{
+					mFocusAgentIndex = -1;
+					mpFocusAgent = NULL;
+				}
+				else
+				{
+					mFocusAgentIndex = ((mFocusAgentIndex + 1) % (int) mWorld.mAgents.size());
+					mpFocusAgent = mWorld.mAgents[mFocusAgentIndex];
+				}
 			}
 		}
 	}

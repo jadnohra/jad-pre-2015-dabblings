@@ -117,11 +117,16 @@ inline float Dot(const Vector2D& p1, const Vector2D& p2)
 	return p1.x * p2.x + p1.y * p2.y;
 }
 
-inline float Distance(const Vector2D& p1, const Vector2D& p2)
+inline float DistanceSquared(const Vector2D& p1, const Vector2D& p2)
 {
 	Vector2D d = p2 - p1;
 
-	return sqrtf(Dot(d, d));
+	return Dot(d, d);
+}
+
+inline float Distance(const Vector2D& p1, const Vector2D& p2)
+{
+	return sqrtf(DistanceSquared(p1, p2));
 }
 
 inline float Randf(float min, float max)
@@ -134,6 +139,16 @@ int IntersectLineCircle(const Vector2D& linePos, const Vector2D& lineDir,
 						const Vector2D& circlePos, float circleRadius,
 						float& t, float & u);
 
+
+inline float DistancePointLineSquared(const Vector2D& linePos, const Vector2D& lineDir, 
+						const Vector2D& point)
+{
+	Vector2D diff = point - linePos;
+	float u = Dot(diff, lineDir) / Dot(lineDir, lineDir);
+	Vector2D closestPt = linePos + (lineDir * u);
+
+	return DistanceSquared(closestPt, point);
+}
 
 inline Vector2D rotate(const Vector2D& v, float rads)
 {

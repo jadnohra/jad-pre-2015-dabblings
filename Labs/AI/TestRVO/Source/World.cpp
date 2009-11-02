@@ -122,6 +122,10 @@ void World::MainLoop(App& app)
 			glClearColor(0.0, 0.0, 0.0, 1.0f);
 			glClear( GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 			mTerrain->DrawWaypoints(*this, true, Color(0.0f, 0.0f, 0.5f), Color(0.0f, 0.0f, 0.4f));
+
+			if (worldController.mpFocusAgent)
+				mTerrain->DrawTerrainInfo(*this, worldController.mpFocusAgent, Color(0.5f, 0.5f, 0.5f), Color(0.5f, 0.5f, 0.5f));
+
 			Draw(renderTimer.GetTime() - updateTimer.GetFrameTime(), worldController.mpFocusAgent);
 			worldController.Draw();
 			app.Draw(*this);

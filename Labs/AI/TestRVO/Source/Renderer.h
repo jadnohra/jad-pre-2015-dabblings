@@ -129,7 +129,7 @@ public:
 			alpha = color.a;
 
 		glColor4f(color.r, color.g, color.b, mGlobalAlphaMul * alpha);
-		glLineWidth(thin ? 1.0f : std::min(3.0f, std::max(1.25f, mWorldScale / 6)));
+		glLineWidth(thin ? 0.7f : std::min(3.0f, std::max(1.25f, mWorldScale / 6)));
 		glBegin(GL_LINE_LOOP);
 
 		//glBegin(GL_TRIANGLE_FAN);
@@ -144,13 +144,13 @@ public:
 	}
 
 
-	void DrawLine(const Vector2D& p1, const Vector2D& p2, const Color& color, float alpha = -1.0f)
+	void DrawLine(const Vector2D& p1, const Vector2D& p2, const Color& color, float alpha = -1.0f, bool thin = false)
 	{
 		if (alpha < 0.0f)
 			alpha = color.a;
 
 		glColor4f(color.r, color.g, color.b, mGlobalAlphaMul * alpha);
-		glLineWidth(1.0f);
+		glLineWidth(thin ? 0.7f : 1.0f);
 		glBegin(GL_LINE_LOOP);
 
 		glVertex2f(p1.x, p1.y);
@@ -161,12 +161,12 @@ public:
 
 	void DrawQuad(const Vector2D& p1, const Vector2D& p2, 
 				  const Vector2D& p3, const Vector2D& p4, 
-				  const Color& color, float alpha = -1.0f)
+				  const Color& color, float alpha = -1.0f, bool thin = false)
 	{
-		DrawLine(p1, p2, color, alpha);
-		DrawLine(p2, p3, color, alpha);
-		DrawLine(p3, p4, color, alpha);
-		DrawLine(p4, p1, color, alpha);
+		DrawLine(p1, p2, color, alpha, thin);
+		DrawLine(p2, p3, color, alpha, thin);
+		DrawLine(p3, p4, color, alpha, thin);
+		DrawLine(p4, p1, color, alpha, thin);
 	}
 
 	void DrawArrow(const Vector2D& p1, const Vector2D& p2, const Color& color, float alpha = -1.0f)

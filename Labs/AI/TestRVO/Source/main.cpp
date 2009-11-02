@@ -58,6 +58,7 @@ class MainApp : public App
 		terrain_limits.upperBound.Set(40, 40);
 		world.mTerrain->Init(terrain_limits, false);
 		world.mTerrain->StartBuild();
+		
 		{
 			Terrain::WaypointGraph& graph = world.mTerrain->mWaypointGraph;
 			typedef Terrain::WaypointGraph::Node Node;
@@ -111,8 +112,24 @@ class MainApp : public App
 		world.mTerrain->EndBuild();
 
 		Agent* pAgent1 = new Agent(&world, Vector2D(0.0f, -10.0f), Vector2D::kZero, 1.0f, Color::kWhite);
-
 		pAgent1->SetGoal(Vector2D(0.0f, 10.0f), speed);
+		world.mTerrain->AddAgent(pAgent1);
+
+		world.Add(*pAgent1);
+	}
+
+
+	void CreateTestTerrain2(World& world, float speed = 3.0f)
+	{
+		b2AABB terrain_limits;
+		terrain_limits.lowerBound.Set(-20, -20);
+		terrain_limits.upperBound.Set(20, 20);
+		world.mTerrain->Init(terrain_limits, false);
+		world.mTerrain->AutoBuild(4.0f, 8.0f);
+		
+		Agent* pAgent1 = new Agent(&world, Vector2D(0.0f, -10.0f), Vector2D::kZero, 1.0f, Color::kWhite);
+		pAgent1->SetGoal(Vector2D(0.0f, 10.0f), speed);
+		world.mTerrain->AddAgent(pAgent1);
 
 		world.Add(*pAgent1);
 	}
@@ -121,7 +138,8 @@ class MainApp : public App
 	virtual void OnStart(World& world)
 	{
 		//CreateTestCrossing4(world);
-		CreateTestTerrain1(world);
+		//CreateTestTerrain1(world);
+		CreateTestTerrain2(world);
 	}
 };
 

@@ -10,11 +10,70 @@ struct Waypoint
 	Vector2D pos;
 	float radius;
 
-	bool IsStillInside(const Circle& circle) const { return false; }
-	bool IsInside(const Circle& circle) const { return false; }
+	static void CreateLinkQuad(const Waypoint& inWpt1, const Waypoint& inWpt2, bool inUseTangentsForLinks, Vector2D* outQuad)
+	{
+		if (inUseTangentsForLinks)
+		{
+		}
+		else
+		{
+			Vector2D diff = inWpt2.pos - inWpt1.pos;
+			Vector2D diff_normal = rotate(diff.Normalized(), 0.5f * MATH_PIf);
 
-	bool IsStillInsideLink(const Circle& circle, const Waypoint& neighbor) const { return false; }
-	bool IsInsideLink(const Circle& circle, const Waypoint& neighbor) const { return false; }
+			int point_index = 0;
+
+			outQuad[point_index++] = inWpt1.pos + diff_normal * (-inWpt1.radius);
+			outQuad[point_index++] = inWpt1.pos + diff_normal * (inWpt1.radius);
+			outQuad[point_index++] = inWpt2.pos + diff_normal * (inWpt2.radius);
+			outQuad[point_index++] = inWpt2.pos + diff_normal * (-inWpt2.radius);
+		}
+	}
+
+	bool IsStillInside(const Circle& circle) const 
+	{ 
+		return IsInside(circle); 
+	}
+	
+	bool IsInside(const Circle& circle) const 
+	{ 
+		return Distance(pos, circle.pos) <= radius - circle.radius;
+	}
+
+	bool IsStillInsideLink(const Circle& circle, const Waypoint& neighbor, bool inUseTangentsForLinks) const 
+	{ 
+		return IsInsideLink(circle, neighbor, inUseTangentsForLinks); 
+	}
+	
+	bool IsInsideLink(const Circle& circle, const Waypoint& neighbor, bool inUseTangentsForLinks) const 
+	{ 
+		Vector2D quad[4];
+
+		CreateLinkQuad(*this, neighbor, inUseTangentsForLinks, quad);
+
+		for (int i=0; i<4; ++i)
+		{
+			const Vector2D& pt1 = quad[i];
+			const Vector2D& pt2 = quad[(i+1) % 4];
+			const Vector2D& pt3 = quad[(i+2) % 4];
+			
+			Vector2D dir = pt2 - pt1;
+
+			float dot1 = Dot(dir, circle.pos - pt1);
+			float dot2 = Dot(dir, pt3 - pt1);
+			
+			if (dot1 < 0.0f && dot2 > 0.0f)
+				return false;
+			if (dot1 > 0.0f && dot2 < 0.0f)
+				return false;
+			
+			float dist = sqrtf(DistancePointLineSquared(pt1, dir, circle.pos));
+
+			if (dist < circle.radius)
+				return false;
+		}
+
+		return true; 
+	}
 };
 
 template <typename NodeT>
@@ -86,12 +145,40 @@ public:
 	{
 		int linksIndex;
 		int indexInLinks;
+		int linkFrom;
+		int linkTo;
+
+		LinkAddress(int inLinksIndex = -1, int inIndexInLinks = -1, int inLinkFrom = -1, int inLinkTo = -1)
+		:	linksIndex(inLinksIndex)
+		,	indexInLinks(inIndexInLinks)
+		,	linkFrom(inLinkFrom)
+		,	linkTo(inLinkTo)
+		{
+			if (linkFrom > linkTo)
+			{
+				int temp = linkTo;
+				linkTo = linkFrom;
+				linkFrom = temp;
+			}
+		}
+
+		inline bool operator==(const LinkAddress& address) const
+		{
+			return linkFrom == address.linkFrom
+					&& linkTo == address.linkTo;
+		}
 	};
 
 	struct AgentLocation
 	{
 		int waypoints[2];
 		LinkAddress links[2];
+
+		AgentLocation()
+		{
+			waypoints[0] = -1;
+			waypoints[1] = -1;
+		}
 	};
 
 	struct AgentInfo
@@ -125,6 +212,17 @@ public:
 		mAgentInfos.push_back(AgentInfo());
 		mAgentInfos.back().agent = pAgent;
 		return agentIndex;
+	}
+
+	template<typename T>
+	static bool IsIn(T inTestVal, T* inCandidates, int inCandidateCount)
+	{
+		for (int i = 0; i < inCandidateCount; ++i)
+		{
+			if (inTestVal == inCandidates[i])
+				return true;
+		}
+		return false;
 	}
 
 	virtual void Update(float time, float dt) 
@@ -169,54 +267,202 @@ public:
 					int neighbor = links.links[linkAddress.indexInLinks];
 					const WaypointGraph::Node& node = mWaypointGraph.mNodes[links.nodeIndex];
 
-					if (node.IsStillInsideLink(shape, mWaypointGraph.mNodes[neighbor]))
+					if (node.IsStillInsideLink(shape, mWaypointGraph.mNodes[neighbor], mUseTangentsForLinks))
 					{
 						kept_links[kept_link_count++] = agentInfo.location.links[i];
 					}
 				}
 			}
 
-
-
 			int update_waypoints[2];
 			int update_waypoint_count = 0;
 
-			if (kept_waypoint_count != 2)
+			for (int i = 0; i < kept_waypoint_count; ++i)
 			{
-				if (kept_waypoint_count == 0)
+				update_waypoints[update_waypoint_count++] = kept_waypoints[i];
+			}
+
+			if (update_waypoint_count != 2)
+			{
+				// we have space left for waypoints.
+				
+				if (old_link_count != 0)
 				{
-					//CONTINUE HERE
-					if (old_link_count == 0)
+					// we had some links, try their waypoints.
+					for (int i = 0; i < 2; ++i)
 					{
-						// Search!
+						if (agentInfo.location.links[i].linksIndex != -1)
+						{
+							const LinkAddress& linkAddress = agentInfo.location.links[i];
+							const WaypointGraph::NodeLinks& links = mWaypointGraph.mLinks[linkAddress.linksIndex];
+							int node = links.nodeIndex;
+							int neighbor = links.links[linkAddress.indexInLinks];
+							
+							if (!IsIn(node, update_waypoints, update_waypoint_count)
+								&& mWaypointGraph.mNodes[node].IsInside(shape))
+							{
+								update_waypoints[update_waypoint_count++] = node;
+							}
+							else if (!IsIn(neighbor, update_waypoints, update_waypoint_count)
+									 && mWaypointGraph.mNodes[neighbor].IsInside(shape))
+							{
+								update_waypoints[update_waypoint_count++] = neighbor;
+							}
+						}
+
+						if (update_waypoint_count == 2)
+							break;
+					}
+				}
+
+				if (update_waypoint_count != 2)
+				{
+					if (update_waypoint_count == 0)
+					{
+						// Full search, we have no spatial search, could be useful
 						for (size_t i = 0; i < mWaypointGraph.mNodes.size(); ++i)
 						{
 							const WaypointGraph::Node& wpt_node = mWaypointGraph.mNodes[i];
+
+							if (wpt_node.IsInside(shape))
+							{
+								update_waypoints[update_waypoint_count++] = wpt_node.nodeIndex;
+								break;
+							}
+						}
+					}
+
+					if (update_waypoint_count == 1)
+					{
+						// Search neighbors, we have no spatial search, could be useful (for nodes that are close but not neighbors)
+						WaypointGraph::Node& node = mWaypointGraph.mNodes[update_waypoints[0]];
+
+						if (node.linksIndex >= 0)
+						{
+							const WaypointGraph::NodeLinks& links = mWaypointGraph.mLinks[node.linksIndex];
+
+							for (size_t i=0; i<links.links.size(); ++i)
+							{
+								int neighbor_index = links.links[i];
+								const WaypointGraph::Node& neighbor_wpt_node = mWaypointGraph.mNodes[neighbor_index];
+
+								if (neighbor_wpt_node.IsInside(shape))
+								{
+									update_waypoints[update_waypoint_count++] = neighbor_index;
+									break;
+								}
+							}
+						}
+					}
+				}
+			}
+
+			LinkAddress update_links[2];
+			int update_link_count = 0;
+
+			for (int i = 0; i < kept_link_count; ++i)
+			{
+				update_links[update_link_count++] = kept_links[i];
+			}
+	
+			if (update_link_count != 2)
+			{
+				// we have space left for links.
+
+				if (old_waypoint_count != 0)
+				{
+					// we had some waypoints, try their links.
+					for (int i = 0; i < 2; ++i)
+					{
+						if (agentInfo.location.waypoints[i] != -1)
+						{
+							WaypointGraph::Node& node = mWaypointGraph.mNodes[agentInfo.location.waypoints[i]];
+
+							if (node.linksIndex >= 0)
+							{
+								const WaypointGraph::NodeLinks& links = mWaypointGraph.mLinks[node.linksIndex];
+
+								for (size_t j=0; j<links.links.size(); ++j)
+								{
+									int neighbor_index = links.links[j];
+									const WaypointGraph::Node& neighbor_wpt_node = mWaypointGraph.mNodes[neighbor_index];
+
+									LinkAddress testLinkAddress(node.linksIndex, (int)j, node.nodeIndex, neighbor_index);
+
+									if (!IsIn(testLinkAddress, update_links, update_link_count)
+										&& node.IsInsideLink(shape, neighbor_wpt_node, mUseTangentsForLinks))
+									{
+										update_links[update_link_count++] = testLinkAddress;
+										break;
+									}
+								}
+
+							}
+						}
+
+						if (update_link_count == 2)
+							break;
+					}
+				}
+
+				if (update_link_count != 2)
+				{
+					if (update_link_count == 1)
+					{
+						// search links from our link's waypoints
+						const WaypointGraph::NodeLinks& node_links = mWaypointGraph.mLinks[update_links[0].linksIndex];
+						int relevant_nodes[] = { node_links.nodeIndex, node_links.links[update_links[0].indexInLinks] };
+
+						for (int i = 0; i < 2; ++i)
+						{
+							WaypointGraph::Node& node = mWaypointGraph.mNodes[relevant_nodes[i]];
+
+							if (node.linksIndex >= 0)
+							{
+								const WaypointGraph::NodeLinks& links = mWaypointGraph.mLinks[node.linksIndex];
+
+								for (size_t j=0; j<links.links.size(); ++j)
+								{
+									int neighbor_index = links.links[j];
+									const WaypointGraph::Node& neighbor_wpt_node = mWaypointGraph.mNodes[neighbor_index];
+
+									LinkAddress testLinkAddress(node.linksIndex, (int) j, node.nodeIndex, neighbor_index);
+
+									if (!IsIn(testLinkAddress, update_links, update_link_count)
+										&& node.IsInsideLink(shape, neighbor_wpt_node, mUseTangentsForLinks))
+									{
+										update_links[update_link_count++] = testLinkAddress;
+										break;
+									}
+								}
+
+								if (update_link_count == 2)
+									break;
+							}
 						}
 					}
 					else
 					{
-						// search nodes at links
+						// we do not do full search for links (we could)... we give up
+
 					}
 				}
+			}
 
-				if (kept_waypoint_count == 1)
-				{
-					update_waypoints[update_waypoint_count++] = kept_waypoints[0];
+			for (int i = 0; i < 2; ++i)
+			{
+				agentInfo.location.waypoints[i] = -1;
+				agentInfo.location.links[i].linksIndex = -1;
+			}
 
-					WaypointGraph::Node& node = mWaypointGraph.mNodes[kept_waypoints[0]];
-					const WaypointGraph::NodeLinks& links = mWaypointGraph.mLinks[node.linksIndex];
+			for (int i = 0; i < update_waypoint_count; ++i)
+			{
+				agentInfo.location.waypoints[i] = update_waypoints[i];
+			}
 
-					for (size_t i=0; i<links.links.size(); ++i)
-					{
-						const WaypointGraph::Node& neighbor_wpt_node = mWaypointGraph.mNodes[links.links[i]];
-
-						if (neighbor_wpt_node.IsInside(shape))
-						{
-							update_waypoints[update_waypoint_count++] = neighbor_wpt_node.nodeIndex;
-						}
-					}
-				}
+			for (int i = 0; i < update_link_count; ++i)
+			{
+				agentInfo.location.links[i] = update_links[i];
 			}
 		}
 	}
@@ -266,13 +512,16 @@ public:
 				{
 					if (ny >= 0 && ny < waypoint_count_y)
 					{
-						for (int nx = x-1; nx < x+1; ++nx)
+						for (int nx = x-1; nx <= x+1; ++nx)
 						{
 							if (nx >= 0 && nx < waypoint_count_x)
 							{
-								WaypointGraph::Node& neighbor = mWaypointGraph.mNodes[start_index + (ny*waypoint_count_x + nx)];
+								if (ny != y || nx != x)
+								{
+									WaypointGraph::Node& neighbor = mWaypointGraph.mNodes[start_index + (ny*waypoint_count_x + nx)];
 
-								mWaypointGraph.LinkNode(node, neighbor);
+									mWaypointGraph.LinkNode(node, neighbor);
+								}
 							}
 						}
 					}
@@ -283,29 +532,10 @@ public:
 		EndBuild();
 	}
 
-	void CreateLinkQuad(const Waypoint& inWpt1, const Waypoint& inWpt2, Vector2D* outQuad)
-	{
-		if (mUseTangentsForLinks)
-		{
-		}
-		else
-		{
-			Vector2D diff = inWpt2.pos - inWpt1.pos;
-			Vector2D diff_normal = rotate(diff.Normalized(), 0.5f * MATH_PIf);
-
-			int point_index = 0;
-
-			outQuad[point_index++] = inWpt1.pos + diff_normal * (-inWpt1.radius);
-			outQuad[point_index++] = inWpt1.pos + diff_normal * (inWpt1.radius);
-			outQuad[point_index++] = inWpt2.pos + diff_normal * (inWpt2.radius);
-			outQuad[point_index++] = inWpt2.pos + diff_normal * (-inWpt2.radius);
-		}
-	}
-
 	void DrawLink(World& inWorld, Renderer& inRenderer, Vector2D* inQuad, const Color& inColor)
 	{
-		inRenderer.DrawLine(inWorld.WorldToScreen(inQuad[1]), inWorld.WorldToScreen(inQuad[2]), inColor);
-		inRenderer.DrawLine(inWorld.WorldToScreen(inQuad[3]), inWorld.WorldToScreen(inQuad[0]), inColor);
+		inRenderer.DrawLine(inWorld.WorldToScreen(inQuad[1]), inWorld.WorldToScreen(inQuad[2]), inColor, -1.0f, true);
+		inRenderer.DrawLine(inWorld.WorldToScreen(inQuad[3]), inWorld.WorldToScreen(inQuad[0]), inColor, -1.0f, true);
 	}
 
 
@@ -318,16 +548,20 @@ public:
 			for (size_t i = 0; i < mWaypointGraph.mNodes.size(); ++i)
 			{
 				const WaypointGraph::Node& wpt_node = mWaypointGraph.mNodes[i];
-				const WaypointGraph::NodeLinks& links = mWaypointGraph.mLinks[wpt_node.linksIndex];
 
-				for (size_t i=0; i<links.links.size(); ++i)
+				if (wpt_node.linksIndex >= 0)
 				{
-					const WaypointGraph::Node& neighbor_wpt_node = mWaypointGraph.mNodes[links.links[i]];
+					const WaypointGraph::NodeLinks& links = mWaypointGraph.mLinks[wpt_node.linksIndex];
 
-					Vector2D quad[4];
+					for (size_t i=0; i<links.links.size(); ++i)
+					{
+						const WaypointGraph::Node& neighbor_wpt_node = mWaypointGraph.mNodes[links.links[i]];
 
-					CreateLinkQuad(wpt_node, neighbor_wpt_node, quad);
-					DrawLink(inWorld, renderer, quad, inLinkColor);
+						Vector2D quad[4];
+
+						Waypoint::CreateLinkQuad(wpt_node, neighbor_wpt_node, mUseTangentsForLinks, quad);
+						DrawLink(inWorld, renderer, quad, inLinkColor);
+					}
 				}
 			}
 		}
@@ -340,6 +574,48 @@ public:
 		}
 	}
 
+
+	void DrawTerrainInfo(World& inWorld, const TerrainAgent* pAgent, const Color& inColor, const Color& inLinkColor)
+	{
+		for (size_t i=0; i < mAgentInfos.size(); ++i)
+		{
+			AgentInfo& agentInfo = mAgentInfos[i];
+
+			if (agentInfo.agent == pAgent)
+			{
+				DrawTerrainInfo(inWorld, agentInfo, inColor, inLinkColor);
+				break;
+			}
+		}
+	}
+
+	void DrawTerrainInfo(World& inWorld, const AgentInfo& agentInfo, const Color& inColor, const Color& inLinkColor)
+	{
+		Renderer& renderer = inWorld.GetRenderer();
+
+		for (int i = 0; i < 2; ++i)
+		{
+			if (agentInfo.location.links[i].linksIndex != -1)
+			{
+				const WaypointGraph::NodeLinks& links = mWaypointGraph.mLinks[agentInfo.location.links[i].linksIndex];
+				int neighbor = links.links[agentInfo.location.links[i].indexInLinks];
+
+				Vector2D quad[4];
+
+				Waypoint::CreateLinkQuad(mWaypointGraph.mNodes[links.nodeIndex], mWaypointGraph.mNodes[neighbor], mUseTangentsForLinks, quad);
+				DrawLink(inWorld, renderer, quad, inLinkColor);
+			}
+		}
+
+		for (int i = 0; i < 2; ++i)
+		{
+			if (agentInfo.location.waypoints[i] != -1)
+			{
+				const WaypointGraph::Node& wpt_node = mWaypointGraph.mNodes[agentInfo.location.waypoints[i]];
+				renderer.DrawCircle(inWorld.WorldToScreen(wpt_node.pos), inWorld.WorldToScreen(wpt_node.radius), inColor, -1.0f, true);
+			}
+		}
+	}
 };
 
 #endif
