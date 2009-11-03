@@ -13,6 +13,7 @@ public:
 	virtual bool Update(World& world, float time, float dt) { return true; }
 	virtual void Draw(World& world) {}
 
+	//http://colorschemedesigner.com/
 	virtual Color GetBackgroundColor(World& world) { return Color::kBlack; }
 	virtual Color GetDefaultAgentColor(World& world) { return Color::kWhite; }
 	virtual Color GetTerrainElementColor(World& world) { return Color(0.0f, 0.0f, 0.5f); }
