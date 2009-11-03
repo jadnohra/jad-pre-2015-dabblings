@@ -144,13 +144,13 @@ public:
 	}
 
 
-	void DrawLine(const Vector2D& p1, const Vector2D& p2, const Color& color, float alpha = -1.0f, bool thin = false)
+	void DrawLine(const Vector2D& p1, const Vector2D& p2, const Color& color, float alpha = -1.0f, float width = 1.0f)
 	{
 		if (alpha < 0.0f)
 			alpha = color.a;
 
 		glColor4f(color.r, color.g, color.b, mGlobalAlphaMul * alpha);
-		glLineWidth(thin ? 0.7f : 1.0f);
+		glLineWidth(width);
 		glBegin(GL_LINE_LOOP);
 
 		glVertex2f(p1.x, p1.y);
@@ -161,12 +161,18 @@ public:
 
 	void DrawQuad(const Vector2D& p1, const Vector2D& p2, 
 				  const Vector2D& p3, const Vector2D& p4, 
-				  const Color& color, float alpha = -1.0f, bool thin = false)
+				  const Color& color, float alpha = -1.0f, float width = 1.0f, bool cross = false)
 	{
-		DrawLine(p1, p2, color, alpha, thin);
-		DrawLine(p2, p3, color, alpha, thin);
-		DrawLine(p3, p4, color, alpha, thin);
-		DrawLine(p4, p1, color, alpha, thin);
+		DrawLine(p1, p2, color, alpha, width);
+		DrawLine(p2, p3, color, alpha, width);
+		DrawLine(p3, p4, color, alpha, width);
+		DrawLine(p4, p1, color, alpha, width);
+
+		if (cross)
+		{
+			DrawLine(p1, p3, color, alpha, 0.5f * width);
+			DrawLine(p2, p4, color, alpha, 0.5f * width);
+		}
 	}
 
 	void DrawArrow(const Vector2D& p1, const Vector2D& p2, const Color& color, float alpha = -1.0f)

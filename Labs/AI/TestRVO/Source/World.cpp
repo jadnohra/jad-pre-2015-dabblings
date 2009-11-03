@@ -10,6 +10,7 @@
 World::World()
 : mAvoidanceManager(new CollisionAvoidanceManager_RobustWait_ReactiveDeadlockResolve())
 , mTerrain(new Terrain())
+, mApp(NULL)	
 {
 }
 
@@ -32,6 +33,11 @@ void World::Add(Agent& agent)
 	if (mAvoidanceManager)
 	{
 		mAvoidanceManager->AddAgent(&agent, (int) mAgents.size());
+	}
+
+	if (mTerrain)
+	{
+		mTerrain->AddAgent(&agent);
 	}
 }
 
@@ -88,6 +94,8 @@ Agent* World::PickAgent(const Vector2D& pos)
 void World::MainLoop(App& app)
 {
 	bool is_running = true;
+	bool draw_terrain = false;
+	mApp = &app;
 
 	is_running &= mRenderer.InitVideo();
 
@@ -119,12 +127,22 @@ void World::MainLoop(App& app)
 		{
 			//printf("%f\n", renderTimer.GetTime());
 
-			glClearColor(0.0, 0.0, 0.0, 1.0f);
+			Color clear_color = app.GetBackgroundColor(*this);
+			Color terrain_el_color = app.GetTerrainElementColor(*this);
+			Color active_terrain_el_color = app.GetFocusedTerrainElementColor(*this);
+			Color obstacle_color = app.GetObstacleColor(*this);
+
+			glClearColor(clear_color.r, clear_color.g, clear_color.b, 1.0f);
+
 			glClear( GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-			mTerrain->DrawWaypoints(*this, true, Color(0.0f, 0.0f, 0.5f), Color(0.0f, 0.0f, 0.4f));
+
+			if (draw_terrain)
+				mTerrain->DrawWaypoints(*this, true, terrain_el_color, terrain_el_color);
+
+			mTerrain->DrawObstacles(*this, obstacle_color, 3.0f);
 
 			if (worldController.mpFocusAgent)
-				mTerrain->DrawTerrainInfo(*this, worldController.mpFocusAgent, Color(0.5f, 0.5f, 0.5f), Color(0.5f, 0.5f, 0.5f));
+				mTerrain->DrawTerrainInfo(*this, worldController.mpFocusAgent, active_terrain_el_color, active_terrain_el_color);
 
 			Draw(renderTimer.GetTime() - updateTimer.GetFrameTime(), worldController.mpFocusAgent);
 			worldController.Draw();
@@ -185,6 +203,12 @@ void World::MainLoop(App& app)
 								globalTime.pause();
 							}
 							
+						}
+						break;
+
+						case SDLK_w:
+						{
+							draw_terrain = !draw_terrain;
 						}
 						break;
 

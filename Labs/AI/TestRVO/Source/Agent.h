@@ -191,17 +191,15 @@ public:
 		{
 			Color col = lerpColor;
 
-			col.a *= 0.25f;
+			col.a *= 0.5f;
 			renderer.DrawCircle(mWorld->WorldToScreen(lerpPos), mWorld->WorldToScreen(lerpRadius * 0.66f), col);
 
-			col.a *= 0.25f;
+			col.a *= 0.5f;
 			renderer.DrawCircle(mWorld->WorldToScreen(lerpPos), mWorld->WorldToScreen(lerpRadius * 0.33f), col);
 		}
 
 		if (!(mVel == Vector2D::kZero))
 		{
-			
-
 			renderer.DrawArrow(mWorld->WorldToScreen(lerpPos), mWorld->WorldToScreen(lerpPos + (mVel * kVelDrawScale)), lerpColor);
 		}
 

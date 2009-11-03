@@ -141,11 +141,14 @@ int IntersectLineCircle(const Vector2D& linePos, const Vector2D& lineDir,
 
 
 inline float DistancePointLineSquared(const Vector2D& linePos, const Vector2D& lineDir, 
-						const Vector2D& point)
+									const Vector2D& point, float* pU = NULL)
 {
 	Vector2D diff = point - linePos;
 	float u = Dot(diff, lineDir) / Dot(lineDir, lineDir);
 	Vector2D closestPt = linePos + (lineDir * u);
+
+	if (pU)
+		*pU = u;
 
 	return DistanceSquared(closestPt, point);
 }
@@ -153,6 +156,17 @@ inline float DistancePointLineSquared(const Vector2D& linePos, const Vector2D& l
 inline Vector2D rotate(const Vector2D& v, float rads)
 {
 	return Vector2D(cosf(rads) * v.x - sinf(rads) * v.y, cosf(rads) * v.y + sinf(rads) * v.x);
+}
+
+inline void CreateBoxQuad(const b2AABB& inBox, Vector2D* outQuad)
+{
+	int point_index = 0;
+
+	outQuad[point_index++] = Vector2D(inBox.lowerBound.x, inBox.lowerBound.y);
+	outQuad[point_index++] = Vector2D(inBox.lowerBound.x, inBox.upperBound.y);
+	outQuad[point_index++] = Vector2D(inBox.upperBound.x, inBox.upperBound.y);
+	outQuad[point_index++] = Vector2D(inBox.upperBound.x, inBox.lowerBound.y);
+
 }
 
 #endif

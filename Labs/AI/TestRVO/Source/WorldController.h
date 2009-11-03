@@ -4,6 +4,7 @@
 #include "World.h"
 #include "CollisionAvoidanceManager.h"
 #include "Agent.h"
+#include "App.h"
 
 class WorldController
 {
@@ -22,7 +23,11 @@ public:
 	Vector2D mAgentCenterOffset;
 	Vector2D mStartRightClickPos;
 	Vector2D mRightDragPos;
+	Vector2D mStartMiddleDragPos;
 	bool mRightDragShift;
+	bool mMiddleDragShift;
+	bool mDoDrawBox;
+	b2AABB mDrawBox;
 
 	
 	Color mDrawArrowColor;
@@ -38,6 +43,8 @@ public:
 	,	mRightDragShift(false)
 	,	mpFocusAgent(NULL)
 	,	mFocusAgentIndex(-1)
+	,	mMiddleDragShift(false)
+	,	mDoDrawBox(false)
 	{
 	}
 
@@ -130,6 +137,23 @@ public:
 				mIsRightPressed = false;
 			}
 		}
+
+		if (mMiddleDragShift)
+		{
+			if (SDL_GetMouseState(&x, &y))
+			{
+				if (mWorld.mTerrain)
+				{
+					Vector2D worldPos = mWorld.ScreenToWorld(Vector2D((float) x, (float) y));
+					Vector2D size = worldPos - mStartMiddleDragPos;
+
+					mDrawBox.lowerBound.Set(mStartMiddleDragPos.x, mStartMiddleDragPos.y);
+					mDrawBox.upperBound.Set(mStartMiddleDragPos.x + size.x, mStartMiddleDragPos.y + size.y);
+
+					mDoDrawBox = true;
+				}
+			}
+		}
 	}
 
 	void HandleEvent(const SDL_Event& evt)
@@ -196,11 +220,65 @@ public:
 
 				Vector2D worldPos = mWorld.ScreenToWorld(Vector2D((float) x, (float) y));
 
-				Agent* pAgent = new Agent(&mWorld, worldPos, Vector2D(0.0f, 0.0f), 1.0f, Color::kWhite);
-				mWorld.Add(*(pAgent));
+				Uint8 *keystate = SDL_GetKeyState(NULL);
+				if (keystate[SDLK_RSHIFT] || keystate[SDLK_LSHIFT])
+				{
+					mStartMiddleDragPos = worldPos;
+					mMiddleDragShift = true;
+				}
+				else
+				{
+					Agent* pAgent = new Agent(&mWorld, worldPos, Vector2D(0.0f, 0.0f), 1.0f, mWorld.mApp->GetDefaultAgentColor(mWorld));
+					mWorld.Add(*(pAgent));
 
-				if (mpAvoidanceManager)
-					mpAvoidanceManager->AddAgent(pAgent, (int) mWorld.mAgents.size());
+					if (mpAvoidanceManager)
+						mpAvoidanceManager->AddAgent(pAgent, (int) mWorld.mAgents.size());
+
+				}
+			}
+		}
+
+		if (evt.type == SDL_MOUSEBUTTONUP)
+		{
+			if (evt.button.button == SDL_BUTTON_MIDDLE)
+			{
+				if (mMiddleDragShift)
+				{
+					if (mWorld.mTerrain)
+					{
+						mMiddleDragShift = false;
+						mDoDrawBox = false;
+
+						int x = evt.motion.x;
+						int y = evt.motion.y;
+
+						Vector2D worldPos = mWorld.ScreenToWorld(Vector2D((float) x, (float) y));
+						Vector2D size = worldPos - mStartMiddleDragPos;
+
+						if (fabs(size.x) < 1.0f)
+						{
+							if (size.x >= 0.0f)
+								size.x = 1.0f;
+							else
+								size.x = -1.0f;
+						}
+
+						if (fabs(size.y) < 1.0f)
+						{
+							if (size.y >= 0.0f)
+								size.y = 1.0f;
+							else
+								size.y = -1.0f;
+						}
+
+						b2AABB box;
+
+						box.lowerBound.Set(mStartMiddleDragPos.x, mStartMiddleDragPos.y);
+						box.upperBound.Set(mStartMiddleDragPos.x + size.x, mStartMiddleDragPos.y + size.y);
+
+						mWorld.mTerrain->AddStaticObstacle(box, true);
+					}
+				}
 			}
 		}
 
@@ -229,6 +307,19 @@ public:
 			mWorld.GetRenderer().DrawArrow(mWorld.WorldToScreen(mpRightMouseControlledAgent->GetPos()), 
 											mWorld.WorldToScreen(mpRightMouseControlledAgent->GetPos() + mDrawArrow), mDrawArrowColor, 0.5f);
 		}
+
+		if (mDoDrawBox)
+		{
+			Vector2D quad[4];
+			CreateBoxQuad(mDrawBox, quad);
+
+			mWorld.GetRenderer().DrawQuad(mWorld.WorldToScreen(quad[0]), 
+										mWorld.WorldToScreen(quad[1]), 
+										mWorld.WorldToScreen(quad[2]), 
+										mWorld.WorldToScreen(quad[3]), Color::kGreen, -1.0f, 1.0f, true);
+		}
+
+		
 	}
 };
 

@@ -9,6 +9,7 @@ struct Waypoint
 {
 	Vector2D pos;
 	float radius;
+	float origRadius;
 
 	static void CreateLinkQuad(const Waypoint& inWpt1, const Waypoint& inWpt2, bool inUseTangentsForLinks, Vector2D* outQuad)
 	{
@@ -74,6 +75,59 @@ struct Waypoint
 
 		return true; 
 	}
+
+	float GetAABBlockedRadius(const b2AABB& box, float inRadius)
+	{ 
+		Vector2D quad[4];
+
+		CreateBoxQuad(box, quad);
+
+		bool is_inside = true;
+
+		for (int i=0; i<4; ++i)
+		{
+			// TODO fixed for quads reduced to triangles or lines!
+			const Vector2D& pt1 = quad[i];
+			const Vector2D& pt2 = quad[(i+1) % 4];
+			const Vector2D& pt3 = quad[(i+2) % 4];
+
+			Vector2D dir = pt2 - pt1;
+
+			float dot1 = Dot(dir, pos - pt1);
+			float dot2 = Dot(dir, pt3 - pt1);
+
+			if ((dot1 < 0.0f && dot2 > 0.0f) || (dot1 > 0.0f && dot2 < 0.0f))
+			{
+				is_inside = false;
+				break;
+			}
+		}
+
+		if (is_inside)
+			return 0.0f;
+
+		float ret = inRadius;
+		float dist;
+
+		for (int i=0; i<4; ++i)
+		{
+			const Vector2D& pt1 = quad[i];
+			const Vector2D& pt2 = quad[(i+1) % 4];
+			Vector2D dir = pt2 - pt1;
+
+			float u;
+			dist = sqrtf(DistancePointLineSquared(pt1, dir, pos, &u));
+
+			if (u >= 0.0f && u <= 1.0f && dist < ret)
+				ret = dist;
+
+			dist = Distance(pos, quad[i]);
+			if (dist < ret)
+				ret = dist;
+		}
+
+		return ret; 
+	}
 };
 
 template <typename NodeT>
@@ -137,6 +191,7 @@ public:
 	virtual Circle GetTerrainShape() = 0;
 };
 
+
 class Terrain
 {
 public:
@@ -187,14 +242,21 @@ public:
 		AgentLocation location;
 	};
 
+	struct ObstacleInfo
+	{
+		b2AABB box;
+	};
+
 	typedef NodeGraph<Waypoint> WaypointGraph;
 	typedef std::vector<AgentInfo> AgentInfos;
+	typedef std::vector<ObstacleInfo> ObstacleInfos;
 	
 
 	b2AABB mLimits;
 	WaypointGraph mWaypointGraph;
 	bool mUseTangentsForLinks;
 	AgentInfos mAgentInfos;
+	ObstacleInfos mObstacleInfos;
 
 	Terrain()
 	{
@@ -212,6 +274,39 @@ public:
 		mAgentInfos.push_back(AgentInfo());
 		mAgentInfos.back().agent = pAgent;
 		return agentIndex;
+	}
+
+	int AddStaticObstacle(const b2AABB& inBox, bool inDirectUpdate = false)
+	{
+		int index = (int) mObstacleInfos.size();
+		mObstacleInfos.push_back(ObstacleInfo());
+		mObstacleInfos.back().box = inBox;
+
+		if (inDirectUpdate)
+			UpdateStaticObstacle(mObstacleInfos.back());
+
+		return index;
+	}
+
+	void UpdateStaticObstacles()
+	{
+		for (size_t i=0; i < mObstacleInfos.size(); ++i)
+		{
+			UpdateStaticObstacle(mObstacleInfos[i]);
+		}
+	}
+
+	void UpdateStaticObstacle(const ObstacleInfo& obstacleInfo)
+	{
+		for (size_t i = 0; i < mWaypointGraph.mNodes.size(); ++i)
+		{
+			WaypointGraph::Node& wpt_node = mWaypointGraph.mNodes[i];
+
+			float new_radius = wpt_node.GetAABBlockedRadius(obstacleInfo.box, wpt_node.origRadius);
+
+			if (new_radius < wpt_node.radius)
+				wpt_node.radius = new_radius;
+		}
 	}
 
 	template<typename T>
@@ -407,6 +502,36 @@ public:
 
 				if (update_link_count != 2)
 				{
+
+					if (update_link_count == 0)
+					{
+						for (size_t i=0; i<mWaypointGraph.mLinks.size(); ++i)
+						{
+							const WaypointGraph::NodeLinks& links = mWaypointGraph.mLinks[i];
+
+							for (size_t j=0; j<links.links.size(); ++j)
+							{
+								int neighbor_index = links.links[j];
+								const WaypointGraph::Node& wpt_node = mWaypointGraph.mNodes[links.nodeIndex];
+								const WaypointGraph::Node& neighbor_wpt_node = mWaypointGraph.mNodes[neighbor_index];
+
+								if (wpt_node.IsInsideLink(shape, neighbor_wpt_node, mUseTangentsForLinks))
+								{
+									update_waypoints[update_waypoint_count++] = neighbor_index;
+									break;
+								}
+							}
+
+							if (update_waypoint_count == 1)
+								break;
+						}
+
+						//this code and all searching code can be improved with modular functions
+						// and a code on top that detects if a function found anything new then using 
+						// others recursively
+						//e.g we might find some new waypoints connected to this link...
+					}
+
 					if (update_link_count == 1)
 					{
 						// search links from our link's waypoints
@@ -443,8 +568,7 @@ public:
 					}
 					else
 					{
-						// we do not do full search for links (we could)... we give up
-
+						
 					}
 				}
 			}
@@ -496,6 +620,7 @@ public:
 			{
 				int node_index = mWaypointGraph.AddNode();
 				WaypointGraph::Node& node = mWaypointGraph.mNodes[node_index];
+				node.origRadius = inWaypointRadius;
 				node.radius = inWaypointRadius;
 				node.pos.x = offset_x + (float) x * inWaypointGridSpacing;
 				node.pos.y = offset_y + (float) y * inWaypointGridSpacing;
@@ -532,10 +657,10 @@ public:
 		EndBuild();
 	}
 
-	void DrawLink(World& inWorld, Renderer& inRenderer, Vector2D* inQuad, const Color& inColor)
+	void DrawLink(World& inWorld, Renderer& inRenderer, Vector2D* inQuad, const Color& inColor, float inLineWidth = 0.7f)
 	{
-		inRenderer.DrawLine(inWorld.WorldToScreen(inQuad[1]), inWorld.WorldToScreen(inQuad[2]), inColor, -1.0f, true);
-		inRenderer.DrawLine(inWorld.WorldToScreen(inQuad[3]), inWorld.WorldToScreen(inQuad[0]), inColor, -1.0f, true);
+		inRenderer.DrawLine(inWorld.WorldToScreen(inQuad[1]), inWorld.WorldToScreen(inQuad[2]), inColor, -1.0f, inLineWidth);
+		inRenderer.DrawLine(inWorld.WorldToScreen(inQuad[3]), inWorld.WorldToScreen(inQuad[0]), inColor, -1.0f, inLineWidth);
 	}
 
 
@@ -583,13 +708,30 @@ public:
 
 			if (agentInfo.agent == pAgent)
 			{
-				DrawTerrainInfo(inWorld, agentInfo, inColor, inLinkColor);
+				DrawTerrainInfo(inWorld, agentInfo, inColor, inLinkColor, 3.0f);
 				break;
 			}
 		}
 	}
 
-	void DrawTerrainInfo(World& inWorld, const AgentInfo& agentInfo, const Color& inColor, const Color& inLinkColor)
+	void DrawObstacles(World& inWorld, const Color& inColor, float inLineWidth = 0.7f)
+	{
+		Renderer& renderer = inWorld.GetRenderer();
+		Vector2D quad[4];
+
+		for (size_t i=0; i < mObstacleInfos.size(); ++i)
+		{
+			ObstacleInfo& obstacleInfo = mObstacleInfos[i];
+
+			CreateBoxQuad(obstacleInfo.box, quad);
+			renderer.DrawQuad(inWorld.WorldToScreen(quad[0]), 
+							  inWorld.WorldToScreen(quad[1]), 
+							  inWorld.WorldToScreen(quad[2]), 
+							  inWorld.WorldToScreen(quad[3]), inColor, -1.0f, inLineWidth, true);
+		}
+	}
+
+	void DrawTerrainInfo(World& inWorld, const AgentInfo& agentInfo, const Color& inColor, const Color& inLinkColor, float inLineWidth = 0.7f)
 	{
 		Renderer& renderer = inWorld.GetRenderer();
 
@@ -603,7 +745,7 @@ public:
 				Vector2D quad[4];
 
 				Waypoint::CreateLinkQuad(mWaypointGraph.mNodes[links.nodeIndex], mWaypointGraph.mNodes[neighbor], mUseTangentsForLinks, quad);
-				DrawLink(inWorld, renderer, quad, inLinkColor);
+				DrawLink(inWorld, renderer, quad, inLinkColor, inLineWidth);
 			}
 		}
 
@@ -612,7 +754,7 @@ public:
 			if (agentInfo.location.waypoints[i] != -1)
 			{
 				const WaypointGraph::Node& wpt_node = mWaypointGraph.mNodes[agentInfo.location.waypoints[i]];
-				renderer.DrawCircle(inWorld.WorldToScreen(wpt_node.pos), inWorld.WorldToScreen(wpt_node.radius), inColor, -1.0f, true);
+				renderer.DrawCircle(inWorld.WorldToScreen(wpt_node.pos), inWorld.WorldToScreen(wpt_node.radius), inColor, -1.0f);
 			}
 		}
 	}
