@@ -189,6 +189,14 @@
 			>
 		</File>
 		<File
+			RelativePath="..\..\Source\AStar.h"
+			>
+		</File>
+		<File
+			RelativePath="..\..\Source\AStar.inl"
+			>
+		</File>
+		<File
 			RelativePath="..\..\Source\CollisionAvoidanceManager.h"
 			>
 		</File>

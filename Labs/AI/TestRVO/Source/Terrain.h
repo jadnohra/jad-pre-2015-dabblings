@@ -632,7 +632,7 @@ public:
 
 								if (wpt_node.IsInsideLink(shape, neighbor_wpt_node, mUseTangentsForLinks))
 								{
-									update_links[update_link_count++] = LinkAddress(i, (int) j, wpt_node.nodeIndex, neighbor_index);;
+									update_links[update_link_count++] = LinkAddress((int) i, (int) j, wpt_node.nodeIndex, neighbor_index);;
 									break;
 								}
 							}
