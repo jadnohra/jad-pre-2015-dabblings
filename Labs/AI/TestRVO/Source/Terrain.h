@@ -797,8 +797,10 @@ public:
 
 						Vector2D quad[4];
 
-						Waypoint::CreateLinkQuad(wpt_node, neighbor_wpt_node, mUseTangentsForLinks, quad);
-						DrawLink(inWorld, renderer, quad, inLinkColor, 0.3f);
+						int quad_point_count = Waypoint::CreateLinkQuad(wpt_node, neighbor_wpt_node, mUseTangentsForLinks, quad);
+
+						if (quad_point_count >= 3)
+							DrawLink(inWorld, renderer, quad, inLinkColor, 0.3f);
 					}
 				}
 			}
@@ -857,7 +859,7 @@ public:
 
 				Vector2D quad[4];
 
-				Waypoint::CreateLinkQuad(mWaypointGraph.mNodes[links.nodeIndex], mWaypointGraph.mNodes[neighbor], mUseTangentsForLinks, quad);
+				int quad_point_count = Waypoint::CreateLinkQuad(mWaypointGraph.mNodes[links.nodeIndex], mWaypointGraph.mNodes[neighbor], mUseTangentsForLinks, quad);
 				DrawLink(inWorld, renderer, quad, inLinkColor, inLineWidth);
 			}
 		}
