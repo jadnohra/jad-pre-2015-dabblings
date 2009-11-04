@@ -113,19 +113,48 @@ struct Waypoint
 
 		float min_radius_sq = FLT_MAX;
 
+		bool curr_side_set = false;
+		float curr_side = 0.0f;
+
 		for (int i=0; i<4; ++i)
 		{
 			float u;
 			float dist_sq = DistancePointLineSquared(pos, lineDir, quad[i], &u);
 
-			if (u >- 0.0f && u <= 1.0f && dist_sq < min_radius_sq)
-				min_radius_sq = dist_sq;
+			if (u >= 0.0f && u <= 1.0f)
+			{
+				if (dist_sq < min_radius_sq)
+					min_radius_sq = dist_sq;
+
+				float point_side = GetPointSideOfLine(pos, lineDir, quad[i]);
+
+				if (point_side == 0.0f) //line center touches box 
+					return 0.0f;
+
+				if (curr_side_set == false)
+				{
+					curr_side_set = true;
+					curr_side = point_side;
+				}
+				else
+				{
+					//line center inside box 
+
+					if ((point_side > 0.0 && curr_side < 0.0f)
+						|| (point_side < 0.0 && curr_side > 0.0f))
+						return 0.0f;
+				}
+			}
 		}
 
 		if (min_radius_sq < inRadius * inRadius 
 			|| min_radius_sq < inNeighborRadius * inNeighborRadius)
 		{
-			return sqrtf(min_radius_sq);
+			float min_radius  = sqrtf(min_radius_sq);
+			min_radius = std::min(min_radius, inRadius);
+			min_radius = std::min(min_radius, inNeighborRadius);
+
+			return min_radius;
 		}
 
 		return -1.0f;
@@ -382,7 +411,7 @@ public:
 					int neighbor_index = links.links[i];
 					const WaypointGraph::Node& neighbor_wpt_node = mWaypointGraph.mNodes[neighbor_index];
 
-					float test_radius = wpt_node.GetAABBlockedRadiusForLink(obstacleInfo.box, neighbor_wpt_node, wpt_node.origRadius, neighbor_wpt_node.origRadius, mUseTangentsForLinks);
+					float test_radius = wpt_node.GetAABBlockedRadiusForLink(obstacleInfo.box, neighbor_wpt_node, wpt_node.radius, neighbor_wpt_node.origRadius, mUseTangentsForLinks);
 
 					if (test_radius >= 0.0f && (test_radius < wpt_node.radius))
 					{

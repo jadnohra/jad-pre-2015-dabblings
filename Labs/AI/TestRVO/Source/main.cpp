@@ -67,7 +67,7 @@ class MainApp : public App
 			{
 				Node& node1 = graph.mNodes[node1_index];
 				node1.pos = Vector2D(-10.0f, -10.0f);
-				node1.origRadius = 1.0f;
+				node1.origRadius = 4.0f;
 				node1.radius = 4.0f;
 			}
 			
@@ -75,15 +75,16 @@ class MainApp : public App
 			{
 				Node& node2 = graph.mNodes[node2_index];
 				node2.pos = Vector2D(10.0f, -10.0f);
-				node2.origRadius = 1.0f;
+				node2.origRadius = 4.0f;
 				node2.radius = 4.0f;
 			}
 
+			
 			int node3_index = graph.AddNode();
 			{
 				Node& node3 = graph.mNodes[node3_index];
 				node3.pos = Vector2D(10.0f, 10.0f);
-				node3.origRadius = 1.0f;
+				node3.origRadius = 4.0f;
 				node3.radius = 4.0f;
 			}
 
@@ -91,13 +92,15 @@ class MainApp : public App
 			{
 				Node& node4 = graph.mNodes[node4_index];
 				node4.pos = Vector2D(-10.0f, 10.0f);
-				node4.origRadius = 1.0f;
+				node4.origRadius = 4.0f;
 				node4.radius = 4.0f;
 			}
+			
 
 			graph.LinkNode(graph.mNodes[node1_index], graph.mNodes[node2_index]);
 			graph.LinkNode(graph.mNodes[node2_index], graph.mNodes[node1_index]);
 
+			
 			graph.LinkNode(graph.mNodes[node2_index], graph.mNodes[node3_index]);
 			graph.LinkNode(graph.mNodes[node3_index], graph.mNodes[node2_index]);
 
@@ -112,6 +115,7 @@ class MainApp : public App
 
 			graph.LinkNode(graph.mNodes[node2_index], graph.mNodes[node4_index]);
 			graph.LinkNode(graph.mNodes[node4_index], graph.mNodes[node2_index]);
+		
 		}
 		world.mTerrain->EndBuild();
 
