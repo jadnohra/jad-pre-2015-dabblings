@@ -106,6 +106,8 @@ struct Waypoint
 
 	float GetAABBlockedRadiusForLink(const b2AABB& box, const Waypoint& neighbor, float inRadius, float inNeighborRadius, bool inUseTangentsForLinks) const 
 	{ 
+		// This function is hacked together and not really correct. needs fixing
+
 		Vector2D lineDir = neighbor.pos - pos;
 		
 		Vector2D quad[4];
