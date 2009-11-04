@@ -148,14 +148,18 @@ class MainApp : public App
 	}
 
 
-	virtual void OnStart(World& world)
+	virtual int OnStart(World& world, int version)
 	{
-		//CreateTestCrossing4(world);
-		//CreateTestTerrain1(world);
-		//CreateTestTerrain2(world, 4.0f, 8.0f, false);
-		//CreateTestTerrain2(world, 3.0f, 10.0f, false);
-		//CreateTestTerrain2(world, 2.0f, 15.0f, true);
-		CreateTestTerrain2(world, 2.0f, 15.0f, false);
+		switch (version)
+		{
+			case 0: CreateTestCrossing4(world); break;
+			case 1: CreateTestTerrain1(world); break;
+			case 2: CreateTestTerrain2(world, 4.0f, 8.0f, false); break;
+			case 3: CreateTestTerrain2(world, 3.0f, 10.0f, false); break;
+			default: CreateTestTerrain2(world, 2.0f, 15.0f, true); return 4;
+		}
+
+		return version;
 	}
 };
 

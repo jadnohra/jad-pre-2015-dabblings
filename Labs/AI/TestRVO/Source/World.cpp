@@ -8,13 +8,25 @@
 
 
 World::World()
-: mAvoidanceManager(new CollisionAvoidanceManager_RobustWait_ReactiveDeadlockResolve())
-, mTerrain(new Terrain())
+: mAvoidanceManager(NULL)
+, mTerrain(NULL)
 , mApp(NULL)	
 {
 }
 
 World::~World()
+{
+	EndRun();
+}
+
+void World::StartRun()
+{
+	mAvoidanceManager = new CollisionAvoidanceManager_RobustWait_ReactiveDeadlockResolve();
+	mTerrain = new Terrain();
+}
+
+
+void World::EndRun()
 {
 	for (Agents::iterator it = mAgents.begin(); it != mAgents.end(); ++it)
 	{
@@ -22,8 +34,9 @@ World::~World()
 		delete pAgent;
 	}
 
-	delete mAvoidanceManager;
-	delete mTerrain;
+	mAgents.clear();
+	delete mAvoidanceManager; mAvoidanceManager = NULL;
+	delete mTerrain; mTerrain = NULL;
 }
 
 void World::Add(Agent& agent)
@@ -93,17 +106,35 @@ Agent* World::PickAgent(const Vector2D& pos)
 
 void World::MainLoop(App& app)
 {
-	bool is_running = true;
-	bool draw_terrain = false;
 	mApp = &app;
 
-	is_running &= mRenderer.InitVideo();
+	if (mRenderer.InitVideo())
+	{
+		int version = 0;
+
+		do 
+		{
+			StartRun();
+
+			version = MainLoopRun(version);
+
+			EndRun();
+
+		} while (version >= 0);
+	}
+}
+
+
+int World::MainLoopRun(int version)
+{
+	bool is_running = true;
+	bool draw_terrain = true;
 
 	b2AABB terrain_limits;
 	terrain_limits.lowerBound.Set(-100, -100);
 	terrain_limits.upperBound.Set(100, 100);
 	mTerrain->Init(terrain_limits, false);
-	
+
 	WorldController worldController(*this, mAvoidanceManager);
 
 	GlobalTime globalTime;
@@ -113,24 +144,24 @@ void World::MainLoop(App& app)
 	renderTimer.Start(globalTime, 1000);
 	updateTimer.Start(globalTime, 30);
 
-	
+
 	unsigned int fpsLastTime = SDL_GetTicks();
 	unsigned int frameCount = 0;
 
-	app.OnStart(*this);
+	version = mApp->OnStart(*this, version);
 
 	while (is_running)
 	{
 		unsigned int startFrame;
-		
+
 		if (renderTimer.Update(startFrame))
 		{
 			//printf("%f\n", renderTimer.GetTime());
 
-			Color clear_color = app.GetBackgroundColor(*this);
-			Color terrain_el_color = app.GetTerrainElementColor(*this);
-			Color active_terrain_el_color = app.GetFocusedTerrainElementColor(*this);
-			Color obstacle_color = app.GetObstacleColor(*this);
+			Color clear_color = mApp->GetBackgroundColor(*this);
+			Color terrain_el_color = mApp->GetTerrainElementColor(*this);
+			Color active_terrain_el_color = mApp->GetFocusedTerrainElementColor(*this);
+			Color obstacle_color = mApp->GetObstacleColor(*this);
 
 			glClearColor(clear_color.r, clear_color.g, clear_color.b, 1.0f);
 
@@ -146,10 +177,10 @@ void World::MainLoop(App& app)
 
 			Draw(renderTimer.GetTime() - updateTimer.GetFrameTime(), worldController.mpFocusAgent);
 			worldController.Draw();
-			app.Draw(*this);
+			mApp->Draw(*this);
 			SDL_GL_SwapBuffers();
 		}
-	
+
 
 		if (updateTimer.Update(startFrame))
 		{
@@ -160,11 +191,11 @@ void World::MainLoop(App& app)
 			for (unsigned int i = 0, frame = startFrame; i < frames; ++i)
 			{
 				float t = updateTimer.GetFrameSyncedTime(frame);
-				
+
 				mAvoidanceManager->Update(t, dt);
 				Update(t, dt);
 				mTerrain->Update(t, dt);
-				if (!app.Update(*this, t, dt))
+				if (!mApp->Update(*this, t, dt))
 				{
 					is_running = false;
 					break;
@@ -173,7 +204,7 @@ void World::MainLoop(App& app)
 		}
 
 		worldController.Update();
-		
+
 		SDL_Delay(2);
 
 		{
@@ -186,13 +217,31 @@ void World::MainLoop(App& app)
 				{
 					switch (input_event.key.keysym.sym)
 					{
-						case SDLK_ESCAPE: 
+					case SDLK_ESCAPE: 
 						{
+							version = -1;
 							is_running = false;
 						}
 						break;
 
-						case SDLK_p:
+					case SDLK_PAGEUP:
+						{
+							if (version > 0)
+								--version;
+							
+							is_running = false;
+						}
+						break;
+
+					case SDLK_PAGEDOWN:
+						{
+							++version;
+
+							is_running = false;
+						}
+						break;
+
+					case SDLK_p:
 						{
 							if (globalTime.isPaused)
 							{
@@ -202,27 +251,28 @@ void World::MainLoop(App& app)
 							{
 								globalTime.pause();
 							}
-							
+
 						}
 						break;
 
-						case SDLK_w:
+					case SDLK_w:
 						{
 							draw_terrain = !draw_terrain;
 						}
 						break;
 
-						case SDLK_o:
+					case SDLK_o:
 						{
 							globalTime.stepPaused((unsigned int) (1000.0f * updateTimer.GetFrameTime()));
 						}
 						break;
 					}
 
-					
+
 				}
 				else if (input_event.type == SDL_QUIT) 
 				{
+					version = -1;
 					is_running = false;
 				}
 			}
@@ -238,5 +288,7 @@ void World::MainLoop(App& app)
 		}
 	}
 
-	app.OnEnd(*this);
+	mApp->OnEnd(*this);
+
+	return version;
 }

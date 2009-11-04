@@ -60,6 +60,12 @@ public:
 	}
 	
 	void MainLoop(App& app);
+
+protected:
+
+	void StartRun();
+	void EndRun();
+	int MainLoopRun(int version);
 };
 
 

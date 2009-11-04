@@ -5,6 +5,12 @@
 #include "Math.h"
 #include "World.h"
 
+
+// TODO 3 links at the same time!!!! 
+// 1 left 1 down 1 diagonal!
+// maybe only 1 wpt at a time + restrict waypoint gen?
+
+
 struct Waypoint
 {
 	Vector2D pos;
@@ -61,7 +67,7 @@ struct Waypoint
 
 		int unique_point_count = CreateLinkQuad(*this, neighbor, inUseTangentsForLinks, quad);
 
-		if (unique_point_count < 2)
+		if (unique_point_count <= 2)
 			return false;
 
 		Vector2D poly_center = Vector2D::kZero;
@@ -378,7 +384,7 @@ public:
 
 					float test_radius = wpt_node.GetAABBlockedRadiusForLink(obstacleInfo.box, neighbor_wpt_node, wpt_node.origRadius, neighbor_wpt_node.origRadius, mUseTangentsForLinks);
 
-					if (test_radius >= 0.0f)
+					if (test_radius >= 0.0f && (test_radius < wpt_node.radius))
 					{
 						wpt_node.radius = test_radius;
 					}
@@ -595,12 +601,12 @@ public:
 
 								if (wpt_node.IsInsideLink(shape, neighbor_wpt_node, mUseTangentsForLinks))
 								{
-									update_waypoints[update_waypoint_count++] = neighbor_index;
+									update_links[update_link_count++] = LinkAddress(i, (int) j, wpt_node.nodeIndex, neighbor_index);;
 									break;
 								}
 							}
 
-							if (update_waypoint_count == 1)
+							if (update_link_count == 1)
 								break;
 						}
 
