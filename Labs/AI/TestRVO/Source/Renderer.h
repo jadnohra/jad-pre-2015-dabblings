@@ -95,9 +95,12 @@ public:
 		SDL_GL_SetAttribute(SDL_GL_BLUE_SIZE, 8);
 		SDL_GL_SetAttribute(SDL_GL_ALPHA_SIZE, 8);
 		
-		glHint (GL_LINE_SMOOTH_HINT, GL_NICEST);
 		glEnable(GL_POINT_SMOOTH);
+		glHint (GL_POINT_SMOOTH_HINT, GL_NICEST);
 		glEnable(GL_LINE_SMOOTH);
+		glHint (GL_LINE_SMOOTH_HINT, GL_NICEST);
+		glEnable(GL_POLYGON_SMOOTH);
+		glHint (GL_POLYGON_SMOOTH_HINT, GL_NICEST);
 		glEnable(GL_BLEND);
 		glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 		glEnable( GL_TEXTURE_2D );
@@ -133,7 +136,7 @@ public:
 		glBegin(GL_LINE_LOOP);
 
 		//glBegin(GL_TRIANGLE_FAN);
-		//glVertex2f(pos[0], pos[1]);
+		//glVertex2f(v.x, v.y);
 
 		for (float angle = 0.0f; angle <= 2.0f * MATH_PIf; angle += (2.0f * MATH_PIf) / 32.0f)
 		{

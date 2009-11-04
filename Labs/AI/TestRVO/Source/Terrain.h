@@ -11,8 +11,10 @@ struct Waypoint
 	float radius;
 	float origRadius;
 
-	static void CreateLinkQuad(const Waypoint& inWpt1, const Waypoint& inWpt2, bool inUseTangentsForLinks, Vector2D* outQuad)
+	static int CreateLinkQuad(const Waypoint& inWpt1, const Waypoint& inWpt2, bool inUseTangentsForLinks, Vector2D* outQuad)
 	{
+		int unique_point_count = 4;
+
 		if (inUseTangentsForLinks)
 		{
 		}
@@ -27,7 +29,15 @@ struct Waypoint
 			outQuad[point_index++] = inWpt1.pos + diff_normal * (inWpt1.radius);
 			outQuad[point_index++] = inWpt2.pos + diff_normal * (inWpt2.radius);
 			outQuad[point_index++] = inWpt2.pos + diff_normal * (-inWpt2.radius);
+
+			if (inWpt1.radius == 0.0f)
+				--unique_point_count;
+
+			if (inWpt2.radius == 0.0f)
+				--unique_point_count;
 		}
+
+		return unique_point_count;
 	}
 
 	bool IsStillInside(const Circle& circle) const 
@@ -49,62 +59,112 @@ struct Waypoint
 	{ 
 		Vector2D quad[4];
 
-		CreateLinkQuad(*this, neighbor, inUseTangentsForLinks, quad);
+		int unique_point_count = CreateLinkQuad(*this, neighbor, inUseTangentsForLinks, quad);
+
+		if (unique_point_count < 2)
+			return false;
+
+		Vector2D poly_center = Vector2D::kZero;
+
+		for (int i=0; i<4; ++i)
+		{
+			poly_center = poly_center + (quad[i] * 0.25f);
+		}
 
 		for (int i=0; i<4; ++i)
 		{
 			const Vector2D& pt1 = quad[i];
-			const Vector2D& pt2 = quad[(i+1) % 4];
-			const Vector2D& pt3 = quad[(i+2) % 4];
+			Vector2D pt2 = quad[(i+1) % 4];
 			
 			Vector2D dir = pt2 - pt1;
 
-			float dot1 = Dot(dir, circle.pos - pt1);
-			float dot2 = Dot(dir, pt3 - pt1);
-			
-			if (dot1 < 0.0f && dot2 > 0.0f)
-				return false;
-			if (dot1 > 0.0f && dot2 < 0.0f)
-				return false;
-			
-			float dist = sqrtf(DistancePointLineSquared(pt1, dir, circle.pos));
+			if (dir != Vector2D::kZero)
+			{
+				float dot1 = GetPointSideOfLine(pt1, dir, circle.pos);
+				float dot2 = GetPointSideOfLine(pt1, dir, poly_center); 
 
-			if (dist < circle.radius)
-				return false;
+				if (dot1 < 0.0f && dot2 > 0.0f)
+					return false;
+				if (dot1 > 0.0f && dot2 < 0.0f)
+					return false;
+
+				float dist = sqrtf(DistancePointLineSquared(pt1, dir, circle.pos));
+
+				if (dist < circle.radius)
+					return false;
+			}
 		}
 
 		return true; 
+	}
+
+	float GetAABBlockedRadiusForLink(const b2AABB& box, const Waypoint& neighbor, float inRadius, float inNeighborRadius, bool inUseTangentsForLinks) const 
+	{ 
+		Vector2D lineDir = neighbor.pos - pos;
+		
+		Vector2D quad[4];
+		CreateBoxQuad(box, quad);
+
+		float min_radius_sq = FLT_MAX;
+
+		for (int i=0; i<4; ++i)
+		{
+			float u;
+			float dist_sq = DistancePointLineSquared(pos, lineDir, quad[i], &u);
+
+			if (u >- 0.0f && u <= 1.0f && dist_sq < min_radius_sq)
+				min_radius_sq = dist_sq;
+		}
+
+		if (min_radius_sq < inRadius * inRadius 
+			|| min_radius_sq < inNeighborRadius * inNeighborRadius)
+		{
+			return sqrtf(min_radius_sq);
+		}
+
+		return -1.0f;
 	}
 
 	float GetAABBlockedRadius(const b2AABB& box, float inRadius)
 	{ 
 		Vector2D quad[4];
 
-		CreateBoxQuad(box, quad);
+		int unique_point_count = CreateBoxQuad(box, quad);
 
-		bool is_inside = true;
-
-		for (int i=0; i<4; ++i)
+		if (unique_point_count >= 3)
 		{
-			// TODO fixed for quads reduced to triangles or lines!
-			const Vector2D& pt1 = quad[i];
-			const Vector2D& pt2 = quad[(i+1) % 4];
-			const Vector2D& pt3 = quad[(i+2) % 4];
+			bool is_inside = true;
 
-			Vector2D dir = pt2 - pt1;
+			Vector2D poly_center = Vector2D::kZero;
 
-			float dot1 = Dot(dir, pos - pt1);
-			float dot2 = Dot(dir, pt3 - pt1);
-
-			if ((dot1 < 0.0f && dot2 > 0.0f) || (dot1 > 0.0f && dot2 < 0.0f))
+			for (int i=0; i<4; ++i)
 			{
-				is_inside = false;
-				break;
+				poly_center = poly_center + (quad[i] * 0.25f);
 			}
-		}
 
-		if (is_inside)
-			return 0.0f;
+			for (int i=0; i<4; ++i)
+			{
+				const Vector2D& pt1 = quad[i];
+				const Vector2D& pt2 = quad[(i+1) % 4];
+
+				Vector2D dir = pt2 - pt1;
+
+				if (dir != Vector2D::kZero)
+				{
+					float dot1 = GetPointSideOfLine(pt1, dir, pos);
+					float dot2 = GetPointSideOfLine(pt1, dir, poly_center); 
+
+					if ((dot1 < 0.0f && dot2 > 0.0f) || (dot1 > 0.0f && dot2 < 0.0f))
+					{
+						is_inside = false;
+						break;
+					}
+				}
+			}
+
+			if (is_inside)
+				return 0.0f;
+		}
 
 		float ret = inRadius;
 		float dist;
@@ -306,6 +366,24 @@ public:
 
 			if (new_radius < wpt_node.radius)
 				wpt_node.radius = new_radius;
+
+			if (wpt_node.linksIndex >= 0)
+			{
+				const WaypointGraph::NodeLinks& links = mWaypointGraph.mLinks[wpt_node.linksIndex];
+
+				for (size_t i=0; i<links.links.size(); ++i)
+				{
+					int neighbor_index = links.links[i];
+					const WaypointGraph::Node& neighbor_wpt_node = mWaypointGraph.mNodes[neighbor_index];
+
+					float test_radius = wpt_node.GetAABBlockedRadiusForLink(obstacleInfo.box, neighbor_wpt_node, wpt_node.origRadius, neighbor_wpt_node.origRadius, mUseTangentsForLinks);
+
+					if (test_radius >= 0.0f)
+					{
+						wpt_node.radius = test_radius;
+					}
+				}
+			}
 		}
 	}
 
@@ -685,7 +763,7 @@ public:
 						Vector2D quad[4];
 
 						Waypoint::CreateLinkQuad(wpt_node, neighbor_wpt_node, mUseTangentsForLinks, quad);
-						DrawLink(inWorld, renderer, quad, inLinkColor);
+						DrawLink(inWorld, renderer, quad, inLinkColor, 0.3f);
 					}
 				}
 			}

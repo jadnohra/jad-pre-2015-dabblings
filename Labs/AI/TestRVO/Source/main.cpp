@@ -4,17 +4,6 @@
 
 class MainApp : public App
 {
-	/*
-	virtual Color GetBackgroundColor(World& world) { return Color::kWhite; }
-	virtual Color GetDefaultAgentColor(World& world) { return Color::kBlack; }
-	virtual Color GetTerrainElementColor(World& world) { return Color(0.8f, 0.8f, 0.8f); }
-	virtual Color GetFocusedTerrainElementColor(World& world) { return Color(0.5f, 0.8f, 0.8f); }
-	*/
-	virtual Color GetBackgroundColor(World& world) { return Color(5,125,159); }
-	virtual Color GetDefaultAgentColor(World& world) { return Color(21,51,173); }
-	virtual Color GetTerrainElementColor(World& world) { return Color(191,148,48); }
-	virtual Color GetFocusedTerrainElementColor(World& world) { return Color(0, 191, 0); }
-
 	void CreateTestCaseRandom(World& world)
 	{
 
@@ -163,9 +152,10 @@ class MainApp : public App
 	{
 		//CreateTestCrossing4(world);
 		//CreateTestTerrain1(world);
-		//CreateTestTerrain2(world, 4.0f, 8.0f);
+		//CreateTestTerrain2(world, 4.0f, 8.0f, false);
 		//CreateTestTerrain2(world, 3.0f, 10.0f, false);
-		CreateTestTerrain2(world, 2.0f, 15.0f, true);
+		//CreateTestTerrain2(world, 2.0f, 15.0f, true);
+		CreateTestTerrain2(world, 2.0f, 15.0f, false);
 	}
 };
 
