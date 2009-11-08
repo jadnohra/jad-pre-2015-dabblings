@@ -124,6 +124,9 @@ class MainApp : public App
 		world.mTerrain->AddAgent(pAgent1);
 
 		world.Add(*pAgent1);
+
+		Path test;
+		test.
 	}
 
 

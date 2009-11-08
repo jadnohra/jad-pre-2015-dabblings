@@ -1,6 +1,4 @@
 // single file version of my AIGameDev A* implementation
-#ifndef ASTAR_H
-#define ASTAR_H 
 
 /******************************************************************************
  * This file is part of The AI Sandbox.
@@ -12,7 +10,12 @@
  *                  and education only.  For details, see the LICENSING file.
  *****************************************************************************/
 
-#include <algorithm.h>
+#ifndef ASTAR_H
+#define ASTAR_H 
+
+#include <algorithm>
+#include <vector>
+#include <map>
 
 enum PathSearchStatus 
 {
@@ -206,7 +209,7 @@ public:
 	 * @param includeFirst	A flag indicating if the start node should be included
 	 * @param includeLast	A flag indicating if the last node (goal node if the search is complete) should be included 
 	 */
-	void extractReversePath(vector<GraphIndex>& nodes, bool includeStart = true, bool includeLast = true); 
+	void extractReversePath(std::vector<GraphIndex>& nodes, bool includeStart = true, bool includeLast = true); 
 
 	/**
 	 * Extracts the best path (in reverse) from start node to an arbitrary node.
@@ -215,7 +218,7 @@ public:
 	 * @param nodes			A vector of node pointers that will be filled with the current path's nodes
 	 * @param nodeIndex		The path's end node.
 	 */
-	void extractReversePathAt(vector<GraphIndex>& nodes, GraphIndex nodeIndex); 
+	void extractReversePathAt(std::vector<GraphIndex>& nodes, GraphIndex nodeIndex); 
 	
 	/**
 	 * returns an iterator that begins at the goal node
@@ -751,8 +754,8 @@ protected:
 	// Internal types.
 	// ----------------------------------------------------------------------------
 
-	typedef vector<State> States;
-	typedef vector<Index> StateIndices;
+	typedef std::vector<State> States;
+	typedef std::vector<Index> StateIndices;
 	typedef StateIndices OpenHeap;
 
 public:
@@ -857,13 +860,13 @@ public:
 	/**
 	 * Extracts the nodes in the open list, used for debugging
 	 */
-	void extractOpenList(vector<GraphIndex>& nodes) const;
+	void extractOpenList(std::vector<GraphIndex>& nodes) const;
 	
 
 	/**
 	 * Extracts the nodes in the closed list, used for debugging
 	 */
-	void extractClosedList(vector<GraphIndex>& nodes) const;
+	void extractClosedList(std::vector<GraphIndex>& nodes) const;
 	
 	/**
 	 * Initializes the container perparing it for a new search
@@ -920,8 +923,8 @@ protected:
 	OpenHeap m_openHeap;
 };
 
-#include "AStar.inl"
-
 }
+
+#include "AStar.inl"
 
 #endif

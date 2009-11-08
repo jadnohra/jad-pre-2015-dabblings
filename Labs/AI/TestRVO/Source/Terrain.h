@@ -4,6 +4,7 @@
 #include <vector>
 #include "Math.h"
 #include "World.h"
+#include "AStar.h"
 
 
 // TODO 3 links at the same time!!!! 
@@ -225,6 +226,11 @@ struct Waypoint
 
 		return ret; 
 	}
+
+	bool operator==(const Waypoint& comp) const
+	{
+		return pos == comp.pos && radius == comp.radius && origRadius == comp.origRadius;
+	}
 };
 
 template <typename NodeT>
@@ -236,6 +242,11 @@ public:
 	{
 		int linksIndex;
 		int nodeIndex;
+
+		bool operator==(const Node& comp) const
+		{
+			return nodeIndex == comp.nodeIndex;
+		}
 	};
 
 	typedef std::vector<int> LinkIndices;
@@ -248,6 +259,11 @@ public:
 	
 	typedef std::vector<NodeLinks> Links;
 	typedef std::vector<Node> Nodes;
+	typedef int Edge;
+	typedef int Index;
+	typedef LinkIndices EdgeIndices;
+
+	enum { InvalidIndex = -1 };
 
 	Nodes mNodes;
 	Links mLinks;
@@ -279,6 +295,83 @@ public:
 
 		nodeLinks.links.push_back(to.nodeIndex);
 	}
+
+	const Node& getNode(int index) { return mNodes[index]; } 
+	const Edge& getEdge(const int& index) { return index; } 
+	const EdgeIndices& getEdgeIndices(int nodeIndex) { return mLinks[getNode(nodeIndex).linksIndex].links; }
+};
+
+
+template<typename Graph>
+class NodeGraphView
+{
+public:
+
+	// ----------------------------------------------------------------------------
+	// Type aliases.
+	// ----------------------------------------------------------------------------
+
+	typedef typename Graph::Node Node;
+	typedef typename Graph::Edge Edge;
+	typedef typename Graph::Index Index;
+	typedef typename Graph::EdgeIndices EdgeIndices;
+
+public:
+
+	// ----------------------------------------------------------------------------
+	// Concept types.
+	// ----------------------------------------------------------------------------
+
+	struct EdgeIterator;
+	typedef void* LiveNodeIterator;
+
+public:
+
+	// ----------------------------------------------------------------------------
+	// Concept functions.
+	// ----------------------------------------------------------------------------
+
+	bool isCompatible(Graph& graph) { return true; }
+	const Node& node(Graph& graph, const Index& nodeIndex) const { return graph.getNode(nodeIndex); }
+	const Edge& edge(Graph& graph, const EdgeIterator& edgeIter) { return graph.getEdge(*(edgeIter.m_curr)); }
+	const Index edgeIndex(const EdgeIterator& edgeIter) { return *(edgeIter.m_curr); }
+	EdgeIterator edgeIterator(Graph& graph, const Index& nodeIndex) { return EdgeIterator((edgeIndices(graph, nodeIndex))); }
+	bool isAtEnd(EdgeIterator& iter) { return iter.m_curr == iter.m_edgeIndices.end(); }
+	bool hasEdge(EdgeIterator& iter) { return !isAtEnd(iter); }
+	void nextEdge(EdgeIterator& iter) { ++iter.m_curr; }
+
+	LiveNodeIterator liveNodeIterator() { return NULL; }
+	const Node* getLiveNode(LiveNodeIterator& iter) { return NULL; }
+	Index getLiveNodeIndex(LiveNodeIterator& iter) { return InvalidNodeIndex; }
+	void nextLiveNode(LiveNodeIterator& iter) {}
+
+protected:
+
+	const EdgeIndices& edgeIndices(Graph& graph, const Index& nodeIndex) 
+	{ 
+		return graph.getEdgeIndices(nodeIndex); 
+	}
+
+public:
+
+	// ----------------------------------------------------------------------------
+	// Concept types implementations.
+	// ----------------------------------------------------------------------------
+
+	struct EdgeIterator 
+	{
+		typedef typename Graph::EdgeIndices EdgeIndices;
+		typedef typename EdgeIndices::const_iterator EdgeIndicesIter;
+
+		EdgeIterator(const EdgeIndices& edgeIndices) 
+		:	m_edgeIndices(edgeIndices) 
+		,	m_curr(m_edgeIndices.begin())
+		{
+		}
+
+		const EdgeIndices& m_edgeIndices;
+		EdgeIndicesIter m_curr;
+	};
 };
 
 class TerrainAgent
@@ -288,6 +381,96 @@ public:
 	virtual Circle GetTerrainShape() = 0;
 };
 
+typedef NodeGraph<Waypoint> WaypointGraph;
+
+
+class PathCostEval
+{
+public:
+
+	/// flag indicating the Heuristic's admissibility
+	/// (true might allow a faster search)
+	enum { IsAdmissibleHeuristic = true };
+
+	/// flag indicating if the Evalutor can break ties using breakTie
+	enum { CanBreakTies = false };
+
+	/// The type used as Path Cost Value
+	typedef float CostValue;
+
+public:
+
+	/**
+	 * Gets the Path cost 'g' between 2 Nodes connected by an Edge
+	 *
+	 * @return				The path cost ('g')
+	 */
+	template<typename Node, typename Edge, typename EdgeIndex>
+	CostValue getEdgeCost(const Node& source, const Edge& edge, EdgeIndex edgeIndex);
+	
+	/**
+	 * Gets the Heuristic Path cost 'h' between 2 Nodes connected
+	 *
+	 * @return				The heuristic path cost ('h')
+	 */
+	template<typename Node>
+	CostValue getHeuristicCost(const Node& from, const Node& to);
+
+	/**
+	 * Breaks a tie between two nodes having the same g+h cost.
+	 *
+	 * @param stateManager		The node state manager. 
+	 * @param refStateIndex      The reference node's state index
+	 * @param compStateIndex     The compared node's state index
+	 *
+	 * @return			true if comp is strictly better than ref
+	 */
+	template<typename NodeStateManager, typename NodeStateIndex>
+	bool breakTie(NodeStateManager& stateManager, 
+					NodeStateIndex refStateIndex, NodeStateIndex compStateIndex) 
+	{
+		if (CanBreakTies)
+		{
+			//this breaks the tie using h
+			return stateManager.h(compStateIndex) < stateManager.h(refStateIndex);
+		}
+		
+		return false;
+	}
+};
+
+class Path
+{
+public:
+
+	typedef astar::AStarState<WaypointGraph, PathCostEval, NodeGraphView<WaypointGraph>> AStarState;
+
+	bool Find(WaypointGraph& waypoints, int from, int to)
+	{
+		AStarState state;
+		PathCostEval pathCostEval;
+
+		state.init(waypoints, pathCostEval);
+		PathSearchInitStatus initStatus = state.initSearch(from, to);
+		if (initStatus == PathSearchInitOK)
+		{
+			PathSearchStatus status;
+
+			do
+			{
+				status = AStarAlgorithm::step(state);
+			}
+			while (status == PathSearching);
+
+			return status == PathSearching;
+		}
+		else
+		{
+			return (initStatus == PathSearchInitSameNode);
+		}
+		return false;
+	}
+};
 
 class Terrain
 {

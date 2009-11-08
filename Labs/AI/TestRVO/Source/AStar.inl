@@ -75,6 +75,7 @@ template<typename State, typename NodeInfo, typename EdgeIterator>
 void AStarAlgorithm::expand(State& state, NodeInfo& current, EdgeIterator& edgeIter) 
 {
 	typedef typename State::CostValue CostValue;
+	using namespace astar;
 
 	const CostValue gCurrent = state.g(current);
 	State::NodeState stateResult;
@@ -119,7 +120,7 @@ void AStarAlgorithm::expand(State& state, NodeInfo& current, EdgeIterator& edgeI
 	}
 }
 
-
+namespace astar {
 
 template <typename G, typename PCE, typename GV, typename NSM> 
 AStarState<G, PCE, GV, NSM>::AStarState() 
@@ -209,7 +210,7 @@ PathSearchInitStatus AStarState<G, PCE, GV, NSM>::initSearch(GraphIndex startNod
 }
 
 template <typename G, typename PCE, typename GV, typename NSM> 
-void AStarState<G, PCE, GV, NSM>::extractReversePath(vector<GraphIndex>& nodes, bool includeStart, bool includeLast) 
+void AStarState<G, PCE, GV, NSM>::extractReversePath(std::vector<GraphIndex>& nodes, bool includeStart, bool includeLast) 
 {
 	size_t index = 0;
 
@@ -236,7 +237,7 @@ void AStarState<G, PCE, GV, NSM>::extractReversePath(vector<GraphIndex>& nodes, 
 }
 
 template <typename G, typename PCE, typename GV, typename NSM> 
-void AStarState<G, PCE, GV, NSM>::extractReversePathAt(vector<GraphIndex>& nodes, GraphIndex node)
+void AStarState<G, PCE, GV, NSM>::extractReversePathAt(std::vector<GraphIndex>& nodes, GraphIndex node)
 {
 	ListIterator nodeStateIt;
 
@@ -888,7 +889,7 @@ NodeStatus NodeStateManager<G, CV, GP>::getNodeStatus(const GraphIndex& nodeInde
 }
 
 template <typename G, typename CV, typename GP>
-void NodeStateManager<G, CV, GP>::extractOpenList(vector<GraphIndex>& nodes) const
+void NodeStateManager<G, CV, GP>::extractOpenList(std::vector<GraphIndex>& nodes) const
 {
 	nodes.clear();
 	nodes.reserve(openListSize());
@@ -900,7 +901,7 @@ void NodeStateManager<G, CV, GP>::extractOpenList(vector<GraphIndex>& nodes) con
 }
 
 template <typename G, typename CV, typename GP>
-void NodeStateManager<G, CV, GP>:: extractClosedList(vector<GraphIndex>& nodes) const
+void NodeStateManager<G, CV, GP>:: extractClosedList(std::vector<GraphIndex>& nodes) const
 {
 	nodes.clear();
 	nodes.reserve(closedListSize());
@@ -911,5 +912,7 @@ void NodeStateManager<G, CV, GP>:: extractClosedList(vector<GraphIndex>& nodes) 
 			nodes.push_back(nodeIndex(state(i)));
 	}
 }
+
+} //namespace astar
 
 #endif
