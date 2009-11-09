@@ -12,13 +12,23 @@
 // maybe only 1 wpt at a time + restrict waypoint gen?
 
 
+struct WaypointLink
+{
+	float minRadius;
+
+	WaypointLink()
+		: minRadius(FLT_MAX)
+	{}
+
+};
+
 struct Waypoint
 {
 	Vector2D pos;
 	float radius;
 	float origRadius;
 
-	static int CreateLinkQuad(const Waypoint& inWpt1, const Waypoint& inWpt2, bool inUseTangentsForLinks, Vector2D* outQuad)
+	static int CreateLinkQuad(const Waypoint& inWpt1, const Waypoint& inWpt2, WaypointLink* pWptLink, bool inUseTangentsForLinks, Vector2D* outQuad)
 	{
 		int unique_point_count = 4;
 
@@ -32,16 +42,29 @@ struct Waypoint
 
 			int point_index = 0;
 
-			outQuad[point_index++] = inWpt1.pos + diff_normal * (-inWpt1.radius);
-			outQuad[point_index++] = inWpt1.pos + diff_normal * (inWpt1.radius);
-			outQuad[point_index++] = inWpt2.pos + diff_normal * (inWpt2.radius);
-			outQuad[point_index++] = inWpt2.pos + diff_normal * (-inWpt2.radius);
+			if (pWptLink && pWptLink->minRadius != FLT_MAX)
+			{
+				outQuad[point_index++] = inWpt1.pos + diff_normal * (-pWptLink->minRadius);
+				outQuad[point_index++] = inWpt1.pos + diff_normal * (pWptLink->minRadius);
+				outQuad[point_index++] = inWpt2.pos + diff_normal * (pWptLink->minRadius);
+				outQuad[point_index++] = inWpt2.pos + diff_normal * (-pWptLink->minRadius);
 
-			if (inWpt1.radius == 0.0f)
-				--unique_point_count;
+				if (pWptLink->minRadius <= 0.0f)
+					unique_point_count = 1;
+			}
+			else
+			{
+				outQuad[point_index++] = inWpt1.pos + diff_normal * (-inWpt1.radius);
+				outQuad[point_index++] = inWpt1.pos + diff_normal * (inWpt1.radius);
+				outQuad[point_index++] = inWpt2.pos + diff_normal * (inWpt2.radius);
+				outQuad[point_index++] = inWpt2.pos + diff_normal * (-inWpt2.radius);
 
-			if (inWpt2.radius == 0.0f)
-				--unique_point_count;
+				if (inWpt1.radius == 0.0f)
+					--unique_point_count;
+
+				if (inWpt2.radius == 0.0f)
+					--unique_point_count;
+			}
 		}
 
 		return unique_point_count;
@@ -281,10 +304,6 @@ struct Waypoint
 	}
 };
 
-struct WaypointLink
-{
-	int targetWaypointIndex;
-};
 
 template <typename NodeT, typename EdgeT>
 class NodeGraph
@@ -712,7 +731,8 @@ public:
 
 					if (test_radius >= 0.0f && (test_radius < wpt_node.radius))
 					{
-						wpt_node.radius = test_radius;
+						links.nodeEdges[i].minRadius = test_radius;
+						//wpt_node.radius = test_radius;
 					}
 				}
 			}
