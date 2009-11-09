@@ -28,7 +28,7 @@ struct Waypoint
 	float radius;
 	float origRadius;
 
-	static int CreateLinkQuad(const Waypoint& inWpt1, const Waypoint& inWpt2, WaypointLink* pWptLink, bool inUseTangentsForLinks, Vector2D* outQuad)
+	static int CreateLinkQuad(const Waypoint& inWpt1, const Waypoint& inWpt2, const WaypointLink* pWptLink, bool inUseTangentsForLinks, Vector2D* outQuad)
 	{
 		int unique_point_count = 4;
 
@@ -85,16 +85,16 @@ struct Waypoint
 		return Distance(pt, pos) <= radius;
 	}
 
-	bool IsStillInsideLink(const Circle& circle, const Waypoint& neighbor, bool inUseTangentsForLinks) const 
+	bool IsStillInsideLink(const Circle& circle, const Waypoint& neighbor, const WaypointLink* pWptLink, bool inUseTangentsForLinks) const 
 	{ 
-		return IsInsideLink(circle, neighbor, inUseTangentsForLinks); 
+		return IsInsideLink(circle, neighbor, pWptLink, inUseTangentsForLinks); 
 	}
 	
-	bool IsInsideLink(const Circle& circle, const Waypoint& neighbor, bool inUseTangentsForLinks) const 
+	bool IsInsideLink(const Circle& circle, const Waypoint& neighbor, const WaypointLink* pWptLink, bool inUseTangentsForLinks) const 
 	{ 
 		Vector2D quad[4];
 
-		int unique_point_count = CreateLinkQuad(*this, neighbor, inUseTangentsForLinks, quad);
+		int unique_point_count = CreateLinkQuad(*this, neighbor, pWptLink, inUseTangentsForLinks, quad);
 
 		if (unique_point_count <= 2)
 			return false;
@@ -133,11 +133,11 @@ struct Waypoint
 		return true; 
 	}
 
-	bool IsInsideLink(const Vector2D& pt, const Waypoint& neighbor, bool inUseTangentsForLinks) const 
+	bool IsInsideLink(const Vector2D& pt, const Waypoint& neighbor, const WaypointLink* pWptLink, bool inUseTangentsForLinks) const 
 	{ 
 		Vector2D quad[4];
 
-		int unique_point_count = CreateLinkQuad(*this, neighbor, inUseTangentsForLinks, quad);
+		int unique_point_count = CreateLinkQuad(*this, neighbor, pWptLink, inUseTangentsForLinks, quad);
 
 		if (unique_point_count <= 2)
 			return false;
@@ -192,6 +192,16 @@ struct Waypoint
 
 		for (int i=0; i<4; ++i)
 		{
+			if (quad[i] != quad[(i+1)%4])
+			{
+				Vector2D inters;
+
+				if (IntersectSegments(quad[i],quad[(i+1)%4], pos, neighbor.pos, inters))
+				{
+					return 0.0f;
+				}
+			}
+
 			float u;
 			float dist_sq = DistancePointLineSquared(pos, lineDir, quad[i], &u);
 
@@ -720,7 +730,7 @@ public:
 
 			if (wpt_node.linksIndex >= 0)
 			{
-				const WaypointGraph::NodeLinks& links = mWaypointGraph.mLinks[wpt_node.linksIndex];
+				WaypointGraph::NodeLinks& links = mWaypointGraph.mLinks[wpt_node.linksIndex];
 
 				for (size_t i=0; i<links.nodeEdges.size(); ++i)
 				{
@@ -729,7 +739,7 @@ public:
 
 					float test_radius = wpt_node.GetAABBlockedRadiusForLink(obstacleInfo.box, neighbor_wpt_node, wpt_node.radius, neighbor_wpt_node.origRadius, mUseTangentsForLinks);
 
-					if (test_radius >= 0.0f && (test_radius < wpt_node.radius))
+					if (test_radius >= 0.0f && (test_radius < wpt_node.origRadius))
 					{
 						links.nodeEdges[i].minRadius = test_radius;
 						//wpt_node.radius = test_radius;
@@ -765,7 +775,7 @@ public:
 				const WaypointGraph::Node& wpt_node = mWaypointGraph.mNodes[links.nodeIndex];
 				const WaypointGraph::Node& neighbor_wpt_node = mWaypointGraph.mNodes[neighbor_index];
 
-				if (wpt_node.IsInsideLink(inPos, neighbor_wpt_node, mUseTangentsForLinks))
+				if (wpt_node.IsInsideLink(inPos, neighbor_wpt_node, &links.nodeEdges[j], mUseTangentsForLinks))
 				{
 					outWpt = (int) links.nodeIndex;
 					outLink = (int) j;
@@ -828,10 +838,11 @@ public:
 
 					const LinkAddress& linkAddress = agentInfo.location.links[i];
 					const WaypointGraph::NodeLinks& links = mWaypointGraph.mLinks[linkAddress.linksIndex];
-					int neighbor = links.nodeEdges[linkAddress.indexInLinks].targetNodeIndex;
+					const WaypointGraph::Edge& link = links.nodeEdges[linkAddress.indexInLinks];
+					int neighbor = link.targetNodeIndex;
 					const WaypointGraph::Node& node = mWaypointGraph.mNodes[links.nodeIndex];
 
-					if (node.IsStillInsideLink(shape, mWaypointGraph.mNodes[neighbor], mUseTangentsForLinks))
+					if (node.IsStillInsideLink(shape, mWaypointGraph.mNodes[neighbor], &link, mUseTangentsForLinks))
 					{
 						kept_links[kept_link_count++] = agentInfo.location.links[i];
 					}
@@ -954,7 +965,7 @@ public:
 									LinkAddress testLinkAddress(node.linksIndex, (int)j, node.nodeIndex, neighbor_index);
 
 									if (!IsIn(testLinkAddress, update_links, update_link_count)
-										&& node.IsInsideLink(shape, neighbor_wpt_node, mUseTangentsForLinks))
+										&& node.IsInsideLink(shape, neighbor_wpt_node, &links.nodeEdges[j], mUseTangentsForLinks))
 									{
 										update_links[update_link_count++] = testLinkAddress;
 										break;
@@ -980,11 +991,12 @@ public:
 
 							for (size_t j=0; j<links.nodeEdges.size(); ++j)
 							{
-								int neighbor_index = links.nodeEdges[j].targetNodeIndex;
+								const WaypointGraph::Edge& link = links.nodeEdges[j];
+								int neighbor_index = link.targetNodeIndex;
 								const WaypointGraph::Node& wpt_node = mWaypointGraph.mNodes[links.nodeIndex];
 								const WaypointGraph::Node& neighbor_wpt_node = mWaypointGraph.mNodes[neighbor_index];
 
-								if (wpt_node.IsInsideLink(shape, neighbor_wpt_node, mUseTangentsForLinks))
+								if (wpt_node.IsInsideLink(shape, neighbor_wpt_node, &link, mUseTangentsForLinks))
 								{
 									update_links[update_link_count++] = LinkAddress((int) i, (int) j, wpt_node.nodeIndex, neighbor_index);;
 									break;
@@ -1017,13 +1029,14 @@ public:
 
 								for (size_t j=0; j<links.nodeEdges.size(); ++j)
 								{
-									int neighbor_index = links.nodeEdges[j].targetNodeIndex;
+									const WaypointGraph::Edge& link = links.nodeEdges[j];
+									int neighbor_index = link.targetNodeIndex;
 									const WaypointGraph::Node& neighbor_wpt_node = mWaypointGraph.mNodes[neighbor_index];
 
 									LinkAddress testLinkAddress(node.linksIndex, (int) j, node.nodeIndex, neighbor_index);
 
 									if (!IsIn(testLinkAddress, update_links, update_link_count)
-										&& node.IsInsideLink(shape, neighbor_wpt_node, mUseTangentsForLinks))
+										&& node.IsInsideLink(shape, neighbor_wpt_node, &link, mUseTangentsForLinks))
 									{
 										update_links[update_link_count++] = testLinkAddress;
 										break;
@@ -1153,7 +1166,7 @@ public:
 
 						Vector2D quad[4];
 
-						int quad_point_count = Waypoint::CreateLinkQuad(wpt_node, neighbor_wpt_node, mUseTangentsForLinks, quad);
+						int quad_point_count = Waypoint::CreateLinkQuad(wpt_node, neighbor_wpt_node, &links.nodeEdges[i], mUseTangentsForLinks, quad);
 
 						if (quad_point_count >= 3)
 							DrawLink(inWorld, renderer, quad, inLinkColor, 0.3f);
@@ -1211,11 +1224,12 @@ public:
 			if (agentInfo.location.links[i].linksIndex != -1)
 			{
 				const WaypointGraph::NodeLinks& links = mWaypointGraph.mLinks[agentInfo.location.links[i].linksIndex];
-				int neighbor = links.nodeEdges[agentInfo.location.links[i].indexInLinks].targetNodeIndex;
+				const WaypointGraph::Edge& link = links.nodeEdges[agentInfo.location.links[i].indexInLinks];
+				int neighbor = link.targetNodeIndex;
 
 				Vector2D quad[4];
 
-				int quad_point_count = Waypoint::CreateLinkQuad(mWaypointGraph.mNodes[links.nodeIndex], mWaypointGraph.mNodes[neighbor], mUseTangentsForLinks, quad);
+				int quad_point_count = Waypoint::CreateLinkQuad(mWaypointGraph.mNodes[links.nodeIndex], mWaypointGraph.mNodes[neighbor], &link, mUseTangentsForLinks, quad);
 				DrawLink(inWorld, renderer, quad, inLinkColor, inLineWidth);
 			}
 		}
