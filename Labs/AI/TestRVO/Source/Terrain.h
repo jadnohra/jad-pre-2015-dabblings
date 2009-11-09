@@ -490,9 +490,11 @@ public:
 public:
 
 	const WaypointGraph& mGraph;
+	float mObjectRadius;
 
-	WaypointPathCostEval(const WaypointGraph& graph)
+	WaypointPathCostEval(const WaypointGraph& graph, float objRadius)
 	: mGraph(graph)
+	, mObjectRadius(objRadius)
 	{
 
 	}
@@ -505,6 +507,13 @@ public:
 	template<typename Node, typename Edge, typename EdgeIndex>
 	CostValue getEdgeCost(const Node& source, const Edge& edge, EdgeIndex edgeIndex)
 	{
+		if (source.radius <= mObjectRadius)
+			return FLT_MAX;
+		if (edge.minRadius <= mObjectRadius)
+			return FLT_MAX;
+		if (mGraph.getNode(edge).radius <= mObjectRadius)
+			return FLT_MAX;
+
 		return Distance(source.pos, mGraph.getNode(edge).pos);
 	}
 	
@@ -555,13 +564,16 @@ public:
 
 	Path() : mpWaypoints(NULL) {}
 
-	bool Find(WaypointGraph& waypoints, int from, int to)
+	bool Find(WaypointGraph& waypoints, int from, int to, float objRadius)
 	{
 		AStarState state;
-		WaypointPathCostEval pathCostEval(waypoints);
+		WaypointPathCostEval pathCostEval(waypoints, objRadius);
 
 		mpWaypoints = &waypoints;
 		mPathNodes.clear();
+
+		if (waypoints.mNodes[to].radius < objRadius)
+			return false;
 
 		state.init(waypoints, pathCostEval);
 		PathSearchInitStatus initStatus = state.initSearch(from, to);
@@ -739,7 +751,7 @@ public:
 
 					float test_radius = wpt_node.GetAABBlockedRadiusForLink(obstacleInfo.box, neighbor_wpt_node, wpt_node.radius, neighbor_wpt_node.origRadius, mUseTangentsForLinks);
 
-					if (test_radius >= 0.0f && (test_radius < wpt_node.origRadius))
+					if (test_radius >= 0.0f && (test_radius < wpt_node.origRadius) && (test_radius < links.nodeEdges[i].minRadius))
 					{
 						links.nodeEdges[i].minRadius = test_radius;
 						//wpt_node.radius = test_radius;

@@ -160,9 +160,9 @@ public:
 									}
 									else
 									{
-										if (path.Find(terrain.mWaypointGraph, start_wpt, end_wpt))
+										if (path.Find(terrain.mWaypointGraph, start_wpt, end_wpt, mpRightMouseControlledAgent->GetRadius()))
 										{
-											mpRightMouseControlledAgent->SetPath(path, 5.0f);
+											mpRightMouseControlledAgent->SetPath(path, 7.5f);
 										}
 									}
 								}
