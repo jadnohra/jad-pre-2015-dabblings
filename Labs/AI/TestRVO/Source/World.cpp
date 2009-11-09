@@ -162,6 +162,7 @@ int World::MainLoopRun(int version)
 			Color terrain_el_color = mApp->GetTerrainElementColor(*this);
 			Color active_terrain_el_color = mApp->GetFocusedTerrainElementColor(*this);
 			Color obstacle_color = mApp->GetObstacleColor(*this);
+			Color path_color = mApp->GetPathColor(*this);
 
 			glClearColor(clear_color.r, clear_color.g, clear_color.b, 1.0f);
 
@@ -173,7 +174,10 @@ int World::MainLoopRun(int version)
 			mTerrain->DrawObstacles(*this, obstacle_color, 3.0f);
 
 			if (worldController.mpFocusAgent)
+			{
 				mTerrain->DrawTerrainInfo(*this, worldController.mpFocusAgent, active_terrain_el_color, active_terrain_el_color);
+				mTerrain->DrawPath(*this, worldController.mpFocusAgent, path_color, 0.1f);
+			}
 
 			Draw(renderTimer.GetTime() - updateTimer.GetFrameTime(), worldController.mpFocusAgent);
 			worldController.Draw();

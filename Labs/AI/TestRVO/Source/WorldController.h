@@ -5,6 +5,7 @@
 #include "CollisionAvoidanceManager.h"
 #include "Agent.h"
 #include "App.h"
+#include "Terrain.h"
 
 class WorldController
 {
@@ -124,11 +125,54 @@ public:
 				if (mRightDragShift)
 				{
 					mpRightMouseControlledAgent->SetVel(mDrawArrow * (1.0f / Agent::kVelDrawScale));
-					
 				}
 				else
 				{
-					mpRightMouseControlledAgent->SetGoal(mRightDragPos, 5.0f);
+					Vector2D worldPos = mRightDragPos;
+
+					if (mWorld.mTerrain && !mWorld.mTerrain->mWaypointGraph.mNodes.empty())
+					{
+						Terrain& terrain = *mWorld.mTerrain;
+
+						Path path;
+
+						int start_wpt;
+						int start_link;
+
+						if (terrain.Pick(mpRightMouseControlledAgent->GetPos(), start_wpt, start_link))
+						{
+							int end_wpt;
+							int end_link;
+
+							if (terrain.Pick(worldPos, end_wpt, end_link))
+							{
+								Path path;
+
+								if (start_link >= 0)
+								{
+
+								}
+								else
+								{
+									if (end_link >= 0)
+									{
+
+									}
+									else
+									{
+										if (path.Find(terrain.mWaypointGraph, start_wpt, end_wpt))
+										{
+											mpRightMouseControlledAgent->SetPath(path, 5.0f);
+										}
+									}
+								}
+							}
+						}
+					}
+					else
+					{
+						mpRightMouseControlledAgent->SetGoal(mRightDragPos, 5.0f);
+					}
 				}
 				
 				if (mpAvoidanceManager)

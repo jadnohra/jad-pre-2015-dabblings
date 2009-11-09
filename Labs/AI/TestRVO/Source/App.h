@@ -18,6 +18,7 @@ public:
 	virtual Color GetTerrainElementColor(World& world) { return Color(40, 40, 40); }
 	virtual Color GetFocusedTerrainElementColor(World& world) { return Color(120, 140, 120); }
 	virtual Color GetObstacleColor(World& world) { return Color(100, 100, 140); }
+	virtual Color GetPathColor(World& world) { return Color(144, 64, 213); }
 };
 
 #endif

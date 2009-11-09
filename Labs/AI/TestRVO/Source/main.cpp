@@ -60,8 +60,8 @@ class MainApp : public App
 		world.mTerrain->StartBuild();
 		
 		{
-			Terrain::WaypointGraph& graph = world.mTerrain->mWaypointGraph;
-			typedef Terrain::WaypointGraph::Node Node;
+			WaypointGraph& graph = world.mTerrain->mWaypointGraph;
+			typedef WaypointGraph::Node Node;
 						
 			int node1_index = graph.AddNode();
 			{
@@ -125,8 +125,8 @@ class MainApp : public App
 
 		world.Add(*pAgent1);
 
-		Path test;
-		test.
+		//Path test;
+		//test.Find(world.mTerrain->mWaypointGraph, 0, 2);
 	}
 
 

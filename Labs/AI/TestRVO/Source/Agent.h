@@ -19,6 +19,11 @@ public:
 	bool mHasGoal;
 	Vector2D mGoalPos;
 
+	bool mHasPath;
+	Path mPath;
+	int mIndexInPath;
+	float mPathSpeed;
+
 	float mUpdateTime;
 	Vector2D mPrevUpdatePos;
 	float mPrevUpdateTime;
@@ -56,6 +61,7 @@ public:
 		mPos = pos_;
 		mColor = color_;
 		mHasGoal = false;
+		mHasPath = false;
 
 		mIsControlledByAvoidance = false;
 		mLastControlledByAvoidanceTime = -1.0f;
@@ -64,6 +70,11 @@ public:
 	virtual Circle GetTerrainShape() 
 	{
 		return Circle(mPos, mRadius);
+	}
+
+	virtual const Path* GetPath() 
+	{ 
+		return mHasPath ? &mPath : NULL; 
 	}
 
 	virtual void Agitate()			 { mIsAgitated = true; }
@@ -77,6 +88,54 @@ public:
 	virtual void SetVel(const Vector2D& velocity) { mVel = velocity; }
 
 	virtual void SetGoal(const Vector2D& pos, float speed) { mGoalPos = pos; mHasGoal = true; SetVel((mGoalPos - GetPos()).Normalized() * speed); }
+	
+	virtual void SetPath(const Path& path, float speed)
+	{
+		mPath = path;
+		mHasPath = true;
+		mIndexInPath = -1;
+		mPathSpeed = speed;
+
+		UpdatePath();
+	}
+
+	void UpdatePath(float time = 0.0f)
+	{
+		if (mHasPath && (mIndexInPath == -1 || (time - mLastControlledByAvoidanceTime) > 1.0f))
+		{
+			if (mIndexInPath == -1)
+			{
+				if (mPath.Length() <= 1)
+				{
+					mHasPath = false;
+					mHasGoal = false;
+					mVel.SetZero();
+				}
+				else
+				{
+					mIndexInPath = 0;
+					SetGoal(mPath.GetPoint(mIndexInPath), mPathSpeed);
+				}
+			}
+			else
+			{
+				if (!mHasGoal)
+				{
+					if (mIndexInPath + 1 < mPath.Length())
+					{
+						++mIndexInPath;
+						SetGoal(mPath.GetPoint(mIndexInPath), mPathSpeed);
+					}
+					else
+					{
+						mHasPath = false;
+						mVel.SetZero();
+					}
+				}
+			}
+		}
+	}
+	
 
 	virtual void Update(float time, float dt) 
 	{
@@ -112,28 +171,37 @@ public:
 			mLastControlledByAvoidanceTime = time;
 		}
 
-		if (mHasGoal && (time - mLastControlledByAvoidanceTime) > 1.0f)
-		{
-			Vector2D vect = mGoalPos - GetPos();
-			float dist = vect.Length();
+		UpdatePath(time);
 
-			if (dist <= 0.2f)
-			{
-				SetVel(Vector2D::kZero);
-				mHasGoal = false;
-			}
-			else
-			{
-				Vector2D dir = vect.Normalized();
+		do {
 
-				if (Dot(dir, GetVel().Normalized()) < 0.98f)
+			if (mHasGoal && (time - mLastControlledByAvoidanceTime) > 1.0f)
+			{
+				Vector2D vect = mGoalPos - GetPos();
+				float dist = vect.Length();
+
+				if (dist <= 0.2f)
 				{
-					float speed = std::max(2.0f, GetVel().Length());
+					SetVel(Vector2D::kZero);
+					mHasGoal = false;
 
-					SetVel(dir * speed);
+					if (mHasPath)
+						UpdatePath(time);
+				}
+				else
+				{
+					Vector2D dir = vect.Normalized();
+
+					if (Dot(dir, GetVel().Normalized()) < 0.98f)
+					{
+						float speed = std::max(2.0f, GetVel().Length());
+
+						SetVel(dir * speed);
+					}
 				}
 			}
-		}
+
+		} while (mHasPath && !mHasGoal); // make sure we update goal and not set velocity to zero if we are following a path
 
 		if (mIsAgitated)
 		{
@@ -209,8 +277,8 @@ public:
 		{
 			Color col = lerpColor;
 
-			col.a = 0.2f;
-			renderer.DrawLine(mWorld->WorldToScreen(lerpPos), mWorld->WorldToScreen(mGoalPos), col);
+			col.a = (mHasPath && pFocusAgent == this) ? 0.7f : 0.2f;
+			renderer.DrawLine(mWorld->WorldToScreen(lerpPos), mWorld->WorldToScreen(mGoalPos), col, -1.0f, (mHasPath && pFocusAgent == this) ? 1.5f : 1.0f);
 		}
 	}
 };
