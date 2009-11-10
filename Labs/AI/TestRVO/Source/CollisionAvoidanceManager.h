@@ -390,4 +390,226 @@ public:
 	}
 };
 
+
+class CollisionAvoidanceManager_DiscereteSearch : public ICollisionAvoidanceManager
+{
+public:
+
+	struct AgentInfo
+	{
+		Agent* pAgent;
+		int priority;
+		int obstacleInfoIndex;
+		int avoidanceGroupIndex;
+
+		AgentInfo(Agent* pAgent_ = NULL, int priority_ = -1, int obstacleInfoIndex_ = -1)
+			:	pAgent(pAgent_)
+			,	priority(priority_)
+			,	obstacleInfoIndex(obstacleInfoIndex_)
+		{
+		}
+
+		void Reset()
+		{
+		}
+	};
+
+	struct AvoidanceGroup
+	{
+		typedef std::vector<int> Agents;
+		Agents agents;
+		Agents newRsolveAgents;
+	};
+
+	typedef std::vector<AgentInfo> AgentInfos;
+	typedef std::vector<AvoidanceGroup> AvoidanceGroups;
+
+	AgentInfos m_AgentInfos;
+	bool m_AgentInfosIsDirty;
+
+
+	virtual ~CollisionAvoidanceManager_DiscereteSearch() {}
+
+	virtual void AddAgent(Agent* pAgent, int priority)
+	{
+		m_AgentInfos.push_back(AgentInfo(pAgent, priority, (int) m_AgentInfos.size()));
+		m_AgentInfosIsDirty = true;
+	}
+
+	virtual void RemoveAgent(Agent* pAgent) 
+	{
+		ResetAgentState(pAgent);
+		for (size_t i = 0; i < m_AgentInfos.size(); ++i)
+		{
+			if (m_AgentInfos[i].pAgent == pAgent)
+			{
+				m_AgentInfos[i].pAgent = NULL;
+				m_AgentInfosIsDirty = true;
+			}
+		}
+	}
+
+	virtual void ResetAgentState(Agent* pAgent)
+	{
+	}
+
+	void UpdateAgentInfos()
+	{
+		if (m_AgentInfosIsDirty)
+		{
+			//std::sort(m_AgentInfos.begin(), m_AgentInfos.end(), HasHigherPriority);
+			m_AgentInfosIsDirty = false;
+		}
+	}
+
+	virtual void Update(float time, float dt)
+	{
+		UpdateAgentInfos();
+		AvoidanceGroups avoidanceGroups;
+
+		for (size_t i = 0; i < m_AgentInfos.size(); ++i)
+		{
+			if (m_AgentInfos[i].pAgent)
+			{
+				m_AgentInfos[i].avoidanceGroupIndex = -1;
+
+				for (size_t j = 0; j < m_AgentInfos.size(); ++j)
+				{
+					if (i != j && m_AgentInfos[j].pAgent)
+					{
+						const float lookAheadTime = 0.25f;
+
+						if (WillCollide(m_AgentInfos[i], m_AgentInfos[i].pAgent->GetVel(),
+										m_AgentInfos[j], m_AgentInfos[j].pAgent->GetVel(),
+										lookAheadTime))
+						{
+							if (m_AgentInfos[i].avoidanceGroupIndex == -1
+								&& m_AgentInfos[j].avoidanceGroupIndex == -1)
+							{
+								int groupIndex = (int) avoidanceGroups.size();
+								avoidanceGroups.push_back(AvoidanceGroup());
+								avoidanceGroups[groupIndex].agents.push_back((int)i);
+								avoidanceGroups[groupIndex].agents.push_back((int)j);
+							}
+							else if (m_AgentInfos[i].avoidanceGroupIndex != -1
+									&& m_AgentInfos[j].avoidanceGroupIndex != -1)
+							{
+								if (m_AgentInfos[i].avoidanceGroupIndex != m_AgentInfos[j].avoidanceGroupIndex)
+								{
+									AvoidanceGroup* pMergeGroup;
+									AvoidanceGroup* pMergedGroup;
+									int mergeGroupIndex;
+
+									if (avoidanceGroups[m_AgentInfos[i].avoidanceGroupIndex].agents.size() > 
+										avoidanceGroups[m_AgentInfos[j].avoidanceGroupIndex].agents.size())
+									{
+										mergeGroupIndex = m_AgentInfos[i].avoidanceGroupIndex;
+										pMergeGroup = &avoidanceGroups[m_AgentInfos[i].avoidanceGroupIndex];
+										pMergedGroup = &avoidanceGroups[m_AgentInfos[j].avoidanceGroupIndex];
+									}
+									else
+									{
+										mergeGroupIndex = m_AgentInfos[j].avoidanceGroupIndex;
+										pMergeGroup = &avoidanceGroups[m_AgentInfos[j].avoidanceGroupIndex];
+										pMergedGroup = &avoidanceGroups[m_AgentInfos[i].avoidanceGroupIndex];
+									}
+									
+									pMergeGroup->agents.insert(pMergeGroup->agents.end(), pMergedGroup->agents.begin(), pMergedGroup->agents.end());
+									pMergedGroup->agents.clear();
+
+									m_AgentInfos[i].avoidanceGroupIndex = mergeGroupIndex;
+									m_AgentInfos[j].avoidanceGroupIndex = mergeGroupIndex;
+								}
+							}
+							else
+							{
+								if (m_AgentInfos[i].avoidanceGroupIndex != -1)
+								{
+									m_AgentInfos[j].avoidanceGroupIndex = m_AgentInfos[i].avoidanceGroupIndex;
+									avoidanceGroups[m_AgentInfos[i].avoidanceGroupIndex].agents.push_back((int) j);
+								}
+								else
+								{
+									m_AgentInfos[i].avoidanceGroupIndex = m_AgentInfos[j].avoidanceGroupIndex;
+									avoidanceGroups[m_AgentInfos[j].avoidanceGroupIndex].agents.push_back((int) i);
+								}
+							}
+						}
+					}
+				}
+			}
+		}
+
+		bool groupsHaveChanged = false;
+		int iterationCount = 0;
+
+		do 
+		{
+			for (size_t i = 0; i < avoidanceGroups.size(); ++i)
+			{
+				AvoidanceGroup& group = avoidanceGroups[i];
+
+				ResolveGroup(group);
+
+				if (!group.agents.empty())
+				{
+					if (!group.newRsolveAgents.empty())
+					{
+						// TODO
+						//groupsHaveChanged = true;
+					}
+				}
+			}
+
+		} while (groupsHaveChanged && iterationCount < 10);
+	}
+
+
+	void ResolveGroup(AvoidanceGroup& group)
+	{
+
+	}
+
+
+	bool WillCollide(AgentInfo& testAgent, const Vector2D& testAgentVel, AgentInfo& obstacleAgent, const Vector2D& obstacleAgentVel, float lookAheadTime)
+	{
+		float timeUntilCollision;
+
+		return (GetCollisionTime(testAgent, testAgentVel, 
+				obstacleAgent, obstacleAgentVel, timeUntilCollision)
+				&& (timeUntilCollision <= lookAheadTime));
+	}
+
+
+	bool GetCollisionTime(AgentInfo& lowAgent, const Vector2D& lowAgentVel, 
+						  AgentInfo& highAgent, const Vector2D& highAgentVel, float& timeUntilCollision)
+	{
+		Vector2D relVel = lowAgentVel - highAgentVel;
+		float relSpeed = relVel.Length();
+
+		if (relSpeed > 0.0f)
+		{
+			Vector2D relVelDir = relVel.Normalized();
+			float t, u;
+
+			if (IntersectLineCircle(lowAgent.pAgent->GetPos(), relVelDir, highAgent.pAgent->GetPos(), lowAgent.pAgent->GetRadius() + highAgent.pAgent->GetRadius(), t, u) > 0) 
+			{
+				if (t < 0.0f)
+					t = u;
+
+				float intersectionT = std::min(t, u);
+
+				timeUntilCollision = intersectionT / relSpeed;
+
+				if (timeUntilCollision >= 0.0f)
+				{
+					return true;
+				}
+			}
+		}
+
+		return false;
+	}
+};
+
 #endif
