@@ -1256,6 +1256,20 @@ public:
 		}
 	}
 
+	const AgentInfo* FindAgentInfo(const TerrainAgent* pAgent)
+	{
+		for (size_t i=0; i < mAgentInfos.size(); ++i)
+		{
+			if (mAgentInfos[i].agent == pAgent)
+			{
+				return &(mAgentInfos[i]);
+			}
+		}
+
+		return NULL;
+	}
+	
+
 	void DrawPath(World& inWorld, const TerrainAgent* pAgent, const Color& inColor, float inLineWidth = 0.7f)
 	{
 		for (size_t i=0; i < mAgentInfos.size(); ++i)
@@ -1297,6 +1311,55 @@ public:
 			}
 		}
 	}
+
+	int IntersectLineFromInside(const AgentLocation& loc, const Vector2D& lineOrig, const Vector2D& lineDir, 
+						Vector2D& outSegmentStart, Vector2D& outSegmentEnd)
+	{
+		// TODO!!!!! for now only check each wpt or link without using union!!
+
+		for (int i = 0; i < 2; ++i)
+		{
+			if (loc.waypoints[i] >= 0)
+			{
+				float t, u;
+				int inter_count = IntersectLineCircle(lineOrig, lineDir, 
+										mWaypointGraph.getNode(loc.waypoints[i]).pos, mWaypointGraph.getNode(loc.waypoints[i]).radius, t, u);
+
+				if (inter_count > 0)
+				{
+					if (inter_count == 2)
+					{
+						if ((t >= 0.0f && u < 0.0f)
+							|| (t < 0.0f && u >= 0.0f))
+						{
+							outSegmentStart = lineOrig + lineDir * t;
+							outSegmentEnd = lineOrig + lineDir * u;
+							return 2;
+						}
+					}
+				}
+			}
+
+			if (loc.links[i].linksIndex >= 0)
+			{
+				Vector2D quad[4];
+
+				Waypoint::CreateLinkQuad(mWaypointGraph.getNode(loc.links[i].linkFrom), 
+										mWaypointGraph.getNode(loc.links[i].linkTo), 
+										&mWaypointGraph.mLinks[loc.links[i].linksIndex].nodeEdges[loc.links[i].indexInLinks],
+										mUseTangentsForLinks, quad);
+
+				for (int i = 0; i < 4; ++i)
+				{
+				}
+			}
+		}
+		
+		
+
+		return 0;
+	}
+
 };
 
 #endif

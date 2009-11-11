@@ -418,15 +418,20 @@ public:
 	{
 		typedef std::vector<int> Agents;
 		Agents agents;
-		Agents newRsolveAgents;
+		Agents newResolveAgents;
 	};
 
 	typedef std::vector<AgentInfo> AgentInfos;
 	typedef std::vector<AvoidanceGroup> AvoidanceGroups;
 
+	World& mWorld;
 	AgentInfos m_AgentInfos;
 	bool m_AgentInfosIsDirty;
 
+	CollisionAvoidanceManager_DiscereteSearch(World& world)
+		: mWorld(world)
+	{
+	}
 
 	virtual ~CollisionAvoidanceManager_DiscereteSearch() {}
 
@@ -467,6 +472,8 @@ public:
 		UpdateAgentInfos();
 		AvoidanceGroups avoidanceGroups;
 
+		const float lookAheadTime = 0.25f;
+
 		for (size_t i = 0; i < m_AgentInfos.size(); ++i)
 		{
 			if (m_AgentInfos[i].pAgent)
@@ -477,8 +484,6 @@ public:
 				{
 					if (i != j && m_AgentInfos[j].pAgent)
 					{
-						const float lookAheadTime = 0.25f;
-
 						if (WillCollide(m_AgentInfos[i], m_AgentInfos[i].pAgent->GetVel(),
 										m_AgentInfos[j], m_AgentInfos[j].pAgent->GetVel(),
 										lookAheadTime))
@@ -549,11 +554,11 @@ public:
 			{
 				AvoidanceGroup& group = avoidanceGroups[i];
 
-				ResolveGroup(group);
+				ResolveGroup(group, lookAheadTime);
 
 				if (!group.agents.empty())
 				{
-					if (!group.newRsolveAgents.empty())
+					if (!group.newResolveAgents.empty())
 					{
 						// TODO
 						//groupsHaveChanged = true;
@@ -565,9 +570,110 @@ public:
 	}
 
 
-	void ResolveGroup(AvoidanceGroup& group)
+	void ResolveGroup(AvoidanceGroup& group, float lookAheadTime)
 	{
+		for (size_t i = 0; i < group.agents.size(); ++i)
+		{
+			AgentInfo& agent = m_AgentInfos[group.agents[i]];
+			
+			int collider;
+			Vector2D collisionPoint;
+			
+			if (FindEarliestCollider(agent, group, lookAheadTime, collider, collisionPoint))
+			{
+				ResolveCollision(agent, m_AgentInfos[group.agents[collider]], collisionPoint, group, lookAheadTime);
+			}
+		}
+	}
 
+	class CollisionResolveOptionGenerator
+	{
+	public:
+
+		World& world;
+		AgentInfo& agent;
+		AgentInfo& collider;
+		AvoidanceGroup& group;
+		float lookAheadTime;
+		Vector2D collisionPoint;
+		int nextOptionIndex;
+		bool IsValid;
+		Vector2D optionSegmentStart;
+		Vector2D optionSegmentEnd;
+
+		CollisionResolveOptionGenerator(World& world_, AgentInfo& agent_, AgentInfo& collider_, Vector2D& collisionPoint_, AvoidanceGroup& group_, float lookAheadTime_)
+			:	world(world_)
+			,	agent(agent_)
+			,	collider(collider_)
+			,	group(group_)
+			,	lookAheadTime(lookAheadTime_)
+			,	collisionPoint(collisionPoint_)
+			,	nextOptionIndex(0)
+			,	IsValid(true)
+		{
+			const Terrain::AgentInfo* pAgentInfo = world.mTerrain->FindAgentInfo(agent.pAgent);
+
+			if (pAgentInfo)
+			{
+				SetOptionSegment(pAgentInfo->location);
+			}
+			else
+			{
+				IsValid = false;
+			}
+		}
+
+		void SetOptionSegment(const Terrain::AgentLocation& loc)
+		{
+			Vector2D dir = rotate90(collisionPoint - agent.pAgent->GetPos());
+
+			if (world.mTerrain->IntersectLine(loc, collisionPoint, dir, optionSegmentStart, optionSegmentEnd) != 2)
+				IsValid = false;
+		}
+
+		virtual bool GetNextOption(Vector2D& optionPoint, bool& hasOptionVel, Vector2D& optionVel)
+		{
+			if (!IsValid)
+				return false;
+
+			hasOptionVel = false;
+			const Terrain::AgentInfo* pAgentInfo = world.mTerrain->FindAgentInfo(agent.pAgent);
+
+			
+		}
+	};
+
+	void ResolveCollision(AgentInfo& agent, AgentInfo& collider, const Vector2D& collisionPoint, AvoidanceGroup& group, float lookAheadTime)
+	{
+	}
+
+	bool FindEarliestCollider(AgentInfo& agent, AvoidanceGroup& group, float lookAheadTime, int& earliestCollider, Vector2D& collisionPoint)
+	{
+		earliestCollider = -1;
+		float earliestCollisionTime;
+
+		for (size_t i = 0; i < group.agents.size(); ++i)
+		{
+			AgentInfo& collider = m_AgentInfos[group.agents[i]];
+
+			if (&collider != &agent)
+			{	float timeUntilCollision;
+
+				if (GetCollisionTime(agent, agent.pAgent->GetVel(), 
+					collider, collider.pAgent->GetVel(), timeUntilCollision)
+					&& (timeUntilCollision <= lookAheadTime))
+				{
+					if (earliestCollider == -1 || timeUntilCollision < earliestCollisionTime)
+					{
+						earliestCollider = (int) i;
+						earliestCollisionTime = timeUntilCollision;
+						collisionPoint = agent.pAgent->GetPos() + (agent.pAgent->GetVel() * timeUntilCollision);
+					}
+				}
+			}
+		}
+
+		return (earliestCollider != -1);
 	}
 
 
