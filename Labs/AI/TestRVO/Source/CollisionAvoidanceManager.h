@@ -414,11 +414,26 @@ public:
 		}
 	};
 
+	struct AvoidanceOption
+	{
+		Vector2D point;
+		bool hasVel;
+		Vector2D vel;
+	};
+
+	struct AgentAvoidanceOption : public AvoidanceOption
+	{
+		int agentIndex;
+	};
+
 	struct AvoidanceGroup
 	{
 		typedef std::vector<int> Agents;
+		typedef std::vector<AgentAvoidanceOption> Options;
+
 		Agents agents;
 		Agents newResolveAgents;
+		Options avoidanceSolutions;
 	};
 
 	typedef std::vector<AgentInfo> AgentInfos;
@@ -567,6 +582,18 @@ public:
 			}
 
 		} while (groupsHaveChanged && iterationCount < 10);
+
+		for (size_t i = 0; i < avoidanceGroups.size(); ++i)
+		{
+			AvoidanceGroup& group = avoidanceGroups[i];
+
+			for (size_t j = 0; j < group.avoidanceSolutions.size(); ++j)
+			{
+				const AgentAvoidanceOption& solution = group.avoidanceSolutions[j];
+
+				m_AgentInfos[solution.agentIndex].pAgent->AddAvoidanceSolutionToPath(solution.point, solution.hasVel ? & solution.vel : NULL);
+			}
+		}
 	}
 
 
@@ -590,28 +617,32 @@ public:
 	{
 	public:
 
-		World& world;
+		CollisionAvoidanceManager_DiscereteSearch& manager;
 		AgentInfo& agent;
 		AgentInfo& collider;
 		AvoidanceGroup& group;
 		float lookAheadTime;
 		Vector2D collisionPoint;
 		int nextOptionIndex;
-		bool IsValid;
+		int nextOptionLeftIndex;
+		int nextOptionRightIndex;
+		int optionCountPerSide;
 		Vector2D optionSegmentStart;
 		Vector2D optionSegmentEnd;
 
-		CollisionResolveOptionGenerator(World& world_, AgentInfo& agent_, AgentInfo& collider_, Vector2D& collisionPoint_, AvoidanceGroup& group_, float lookAheadTime_)
-			:	world(world_)
+		CollisionResolveOptionGenerator(CollisionAvoidanceManager_DiscereteSearch& manager_, AgentInfo& agent_, AgentInfo& collider_, const Vector2D& collisionPoint_, AvoidanceGroup& group_, float lookAheadTime_)
+			:	manager(manager_)
 			,	agent(agent_)
 			,	collider(collider_)
 			,	group(group_)
 			,	lookAheadTime(lookAheadTime_)
 			,	collisionPoint(collisionPoint_)
 			,	nextOptionIndex(0)
-			,	IsValid(true)
+			,	nextOptionLeftIndex(0)
+			,	nextOptionRightIndex(0)
+			,	optionCountPerSide(0)
 		{
-			const Terrain::AgentInfo* pAgentInfo = world.mTerrain->FindAgentInfo(agent.pAgent);
+			const Terrain::AgentInfo* pAgentInfo = manager.mWorld.mTerrain->FindAgentInfo(agent.pAgent);
 
 			if (pAgentInfo)
 			{
@@ -619,7 +650,7 @@ public:
 			}
 			else
 			{
-				IsValid = false;
+				optionCountPerSide = 0;
 			}
 		}
 
@@ -627,24 +658,156 @@ public:
 		{
 			Vector2D dir = rotate90(collisionPoint - agent.pAgent->GetPos());
 
-			if (world.mTerrain->IntersectLine(loc, collisionPoint, dir, optionSegmentStart, optionSegmentEnd) != 2)
-				IsValid = false;
+			if (manager.mWorld.mTerrain->IntersectLineFromInside(loc, collisionPoint, dir, optionSegmentStart, optionSegmentEnd) != 2)
+			{
+				optionCountPerSide = 0;
+				return;
+			}
+
+			optionCountPerSide = (int) (Distance(optionSegmentEnd, optionSegmentStart) / (0.5f * agent.pAgent->GetRadius()));
+
+			if (optionCountPerSide > 5)
+				optionCountPerSide = 5;
 		}
 
-		virtual bool GetNextOption(Vector2D& optionPoint, bool& hasOptionVel, Vector2D& optionVel)
+		virtual bool GetNextOption(AvoidanceOption& option)
 		{
-			if (!IsValid)
+			if (nextOptionIndex >= (2 * optionCountPerSide) + 1)
 				return false;
 
-			hasOptionVel = false;
-			const Terrain::AgentInfo* pAgentInfo = world.mTerrain->FindAgentInfo(agent.pAgent);
+			option.hasVel = false;
+			const Terrain::AgentInfo* pAgentInfo = manager.mWorld.mTerrain->FindAgentInfo(agent.pAgent);
 
-			
+			Vector2D optionCenter = (optionSegmentStart + optionSegmentEnd) * 0.5f;
+
+			if (nextOptionRightIndex == 0 && nextOptionLeftIndex == 0 && nextOptionIndex == 0)
+			{
+				++nextOptionIndex;
+				option.point = optionCenter;
+				return true;
+			}
+
+			if (nextOptionRightIndex == nextOptionLeftIndex)
+			{
+				option.point = optionCenter + ((optionSegmentEnd - optionCenter) * ((float) (nextOptionRightIndex + 1) / (float) (optionCountPerSide + 1)));
+				++nextOptionRightIndex;
+			}
+			else
+			{
+				option.point = optionCenter + ((optionSegmentStart - optionCenter) * ((float) (nextOptionRightIndex + 1) / (float) (optionCountPerSide + 1)));
+				++nextOptionLeftIndex;
+			}
+
+			++nextOptionIndex;
+			return true;
 		}
 	};
 
-	void ResolveCollision(AgentInfo& agent, AgentInfo& collider, const Vector2D& collisionPoint, AvoidanceGroup& group, float lookAheadTime)
+	class CollisionResolveOptionScorer
 	{
+	public:
+
+		CollisionAvoidanceManager_DiscereteSearch& manager;
+		AgentInfo& agent;
+		AgentInfo& collider;
+		AvoidanceGroup& group;
+		float lookAheadTime;
+		Vector2D collisionPoint;
+		
+		CollisionResolveOptionScorer(CollisionAvoidanceManager_DiscereteSearch& manager_, AgentInfo& agent_, AgentInfo& collider_, const Vector2D& collisionPoint_, AvoidanceGroup& group_, float lookAheadTime_)
+			:	manager(manager_)
+			,	agent(agent_)
+			,	collider(collider_)
+			,	group(group_)
+			,	lookAheadTime(lookAheadTime_)
+			,	collisionPoint(collisionPoint_)
+		{
+		}
+
+		virtual float ScoreOption(const AvoidanceOption& option)
+		{
+			Vector2D option_agent_vel = ((option.point - agent.pAgent->GetPos()).Normalized() * agent.pAgent->GetVel().Length());
+
+			float collision_score = 0.0f;
+			float safety_score = 0.0f;
+			
+			for (size_t i = 0; i < group.agents.size(); ++i)
+			{
+				AgentInfo& collider = manager.m_AgentInfos[group.agents[i]];
+
+				if (&collider != &agent)
+				{	
+					if (collider.pAgent->GetVel() != Vector2D::kZero)
+					{
+						// we could use the unnormalized + response curve
+						safety_score += 3.0f * (1.0f - Dot((option.point - collider.pAgent->GetPos()).Normalized(), collider.pAgent->GetVel()));
+					}
+					else
+					{
+						// use orientation
+					}
+
+					{
+						float timeUntilCollision;
+
+						if (manager.GetCollisionTime(agent, option_agent_vel, 
+													collider, collider.pAgent->GetVel(), timeUntilCollision))
+						{
+							float penalty = 10.0f * (1.0f / timeUntilCollision);
+							if (penalty > 100.0f)
+								penalty = 100.0f;
+
+							collision_score -= penalty;
+						}
+					}
+				}
+			}
+
+			// we could use the unnormalized + response curve
+			float deviation_score = 5.0f * (Dot(option_agent_vel.Normalized(), agent.pAgent->GetVel().Normalized()));
+			
+			return collision_score + safety_score + deviation_score;
+		}
+	};
+
+	bool ResolveCollision(AgentInfo& agent, AgentInfo& collider, const Vector2D& collisionPoint, AvoidanceGroup& group, float lookAheadTime)
+	{
+		CollisionResolveOptionGenerator generator(*this, agent, collider, collisionPoint, group, lookAheadTime);
+		CollisionResolveOptionScorer scorer(*this, agent, collider, collisionPoint, group, lookAheadTime);
+
+		AgentAvoidanceOption option;
+		option.agentIndex = -1;
+
+		// Lazy hack
+		for (size_t i = 0; i < group.agents.size(); ++i)
+		{
+			if (&m_AgentInfos[group.agents[i]] == &agent)
+			{
+				option.agentIndex = (int) i;
+				break;
+			}
+		}
+		
+		bool has_best_option = false;
+		float best_score = -FLT_MAX;
+		AgentAvoidanceOption best_option;
+		
+		while (generator.GetNextOption(option))
+		{
+			float score = scorer.ScoreOption(option);
+
+			if (!has_best_option || score > best_score)
+			{
+				has_best_option = true;
+				best_score = score;
+				best_option = option;
+			}
+		}
+
+		if (has_best_option)
+			group.avoidanceSolutions.push_back(best_option);
+
+		return has_best_option;
 	}
 
 	bool FindEarliestCollider(AgentInfo& agent, AvoidanceGroup& group, float lookAheadTime, int& earliestCollider, Vector2D& collisionPoint)
@@ -657,7 +820,8 @@ public:
 			AgentInfo& collider = m_AgentInfos[group.agents[i]];
 
 			if (&collider != &agent)
-			{	float timeUntilCollision;
+			{	
+				float timeUntilCollision;
 
 				if (GetCollisionTime(agent, agent.pAgent->GetVel(), 
 					collider, collider.pAgent->GetVel(), timeUntilCollision)

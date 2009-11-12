@@ -139,64 +139,57 @@ int IntersectLineCircle(const Vector2D& linePos, const Vector2D& lineDir,
 						const Vector2D& circlePos, float circleRadius,
 						float& t, float & u);
 
+
 inline bool IntersectLines(const Vector2D& seg1Pt1, const Vector2D& seg1Pt2, 
 							const Vector2D& seg2Pt1, const Vector2D& seg2Pt2, float& r, float& s)
 {
-	get this from the web
-	   
-	float rnum = ((seg1Pt1.y-seg2Pt1.y)*(seg2Pt2.x-seg2Pt1.x)-(seg1Pt1.x-seg2Pt1.x)*(seg2Pt2.y-seg2Pt1.y));
-	float rdenom = ((seg1Pt2.x-seg1Pt1.x)*(seg2Pt2.y-seg2Pt1.y)-(seg1Pt2.y-seg1Pt1.y)*(seg2Pt2.x-seg2Pt1.x));
-	float snum = (seg1Pt1.y-seg2Pt1.y)*(seg1Pt2.x-seg1Pt1.x)-(seg1Pt1.x-seg2Pt1.x)*(seg1Pt2.y-seg1Pt1.y));
-	float sdenom = (seg1Pt2.x-seg1Pt1.x)*(seg2Pt2.y-seg2Pt1.y)-(seg1Pt2.y-seg1Pt1.y)*(seg2Pt2.x-seg2Pt1.x);
-
-	if (rnum == 0.0f && sdenom == 0.0f)
-	{
-		inters = seg1Pt1;
-		return true;
-	}
+	float denom = (seg1Pt2.x-seg1Pt1.x)*(seg2Pt2.y-seg2Pt1.y)-(seg1Pt2.y-seg1Pt1.y)*(seg2Pt2.x-seg2Pt1.x);
 	
-	r = ( rnum
-				/);
-
-	s = (
-				/ sdenom;
-
-	if (s < 0.0f || s > 1.0f)
+	if (denom == 0.0f)
 		return false;
 
-	inters = seg1Pt1+((seg1Pt2-seg1Pt1)*r);
-
+	r = ((seg1Pt1.y-seg2Pt1.y)*(seg2Pt2.x-seg2Pt1.x)-(seg1Pt1.x-seg2Pt1.x)*(seg2Pt2.y-seg2Pt1.y)) / denom;
+	s = ((seg1Pt1.y-seg2Pt1.y)*(seg1Pt2.x-seg1Pt1.x)-(seg1Pt1.x-seg2Pt1.x)*(seg1Pt2.y-seg1Pt1.y)) / denom;
+	
 	return true;
 }
+
+
+inline bool IntersectLineSegment(const Vector2D& line1Pt1, const Vector2D& line1Pt2, 
+								 const Vector2D& seg2Pt1, const Vector2D& seg2Pt2, Vector2D& inters)
+{
+
+	float t, u;
+
+	if (IntersectLines(line1Pt1, line1Pt2, seg2Pt1, seg2Pt2, t, u))
+	{
+		if (u >= 0.0f && u <= 1.0f)
+		{
+			inters = line1Pt1+((line1Pt2-line1Pt1)*t);
+			return true;
+		}
+	}
+
+	return false;
+}
+
 
 inline bool IntersectSegments(const Vector2D& seg1Pt1, const Vector2D& seg1Pt2, 
 							  const Vector2D& seg2Pt1, const Vector2D& seg2Pt2, Vector2D& inters)
 {
-	   
-	float rnum = ((seg1Pt1.y-seg2Pt1.y)*(seg2Pt2.x-seg2Pt1.x)-(seg1Pt1.x-seg2Pt1.x)*(seg2Pt2.y-seg2Pt1.y));
-	float sdenom = (seg1Pt2.x-seg1Pt1.x)*(seg2Pt2.y-seg2Pt1.y)-(seg1Pt2.y-seg1Pt1.y)*(seg2Pt2.x-seg2Pt1.x);
-
-	if (rnum == 0.0f && sdenom == 0.0f)
-	{
-		inters = seg1Pt1;
-		return true;
-	}
 	
-	float r = ( rnum
-				/ ((seg1Pt2.x-seg1Pt1.x)*(seg2Pt2.y-seg2Pt1.y)-(seg1Pt2.y-seg1Pt1.y)*(seg2Pt2.x-seg2Pt1.x)));
+	float t, u;
 
-	if (r < 0.0f || r > 1.0f)
-		return false;
+	if (IntersectLines(seg1Pt1, seg1Pt2, seg2Pt1, seg2Pt2, t, u))
+	{
+		if ((t >= 0.0f && t <= 1.0f) && (u >= 0.0f && u <= 1.0f))
+		{
+			inters = seg1Pt1+((seg1Pt2-seg1Pt1)*t);
+			return true;
+		}
+	}
 
-	float s = ((seg1Pt1.y-seg2Pt1.y)*(seg1Pt2.x-seg1Pt1.x)-(seg1Pt1.x-seg2Pt1.x)*(seg1Pt2.y-seg1Pt1.y))
-				/ sdenom;
-
-	if (s < 0.0f || s > 1.0f)
-		return false;
-
-	inters = seg1Pt1+((seg1Pt2-seg1Pt1)*r);
-
-	return true;
+	return false;
 }
 
 inline float DistancePointLineSquared(const Vector2D& linePos, const Vector2D& lineDir, 

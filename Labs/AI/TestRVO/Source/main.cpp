@@ -1,11 +1,13 @@
 #include "Agent.h"
 #include "Terrain.h"
 #include "App.h"
+#include "CollisionAvoidanceManager.h"
 
 class MainApp : public App
 {
-	void CreateTestCaseRandom(World& world)
+	void CreateTestCaseRandom(World& world, ICollisionAvoidanceManager*& pOutCollAvoidManager)
 	{
+		pOutCollAvoidManager = new CollisionAvoidanceManager_RobustWait_ReactiveDeadlockResolve();
 
 		world.Add(*(new Agent(&world, Vector2D::kZero, Vector2D(4.0f, -10.0f), 1.0f, GetDefaultAgentColor(world))));
 		world.Add(*(new Agent(&world, Vector2D(3.0f, 6.0f), Vector2D(16.5f, 1.5f), 1.1f, GetDefaultAgentColor(world))));
@@ -15,20 +17,26 @@ class MainApp : public App
 		world.Add(*(new Agent(&world, Vector2D(6.0f, 6.0f), Vector2D(12.5f, -5.5f), 1.5f, GetDefaultAgentColor(world))));
 	}
 
-	void CreateTestCase1(World& world)
+	void CreateTestCase1(World& world, ICollisionAvoidanceManager*& pOutCollAvoidManager)
 	{
+		pOutCollAvoidManager = new CollisionAvoidanceManager_RobustWait_ReactiveDeadlockResolve();
+
 		world.Add(*(new Agent(&world, Vector2D(-6.0f, 0.0f), Vector2D(1.0f, 0.0f), 1.0f, GetDefaultAgentColor(world))));
 		world.Add(*(new Agent(&world, Vector2D::kZero, Vector2D::kZero, 1.4f, GetDefaultAgentColor(world))));
 	}
 
-	void CreateTestCase2(World& world)
+	void CreateTestCase2(World& world, ICollisionAvoidanceManager*& pOutCollAvoidManager)
 	{
+		pOutCollAvoidManager = new CollisionAvoidanceManager_RobustWait_ReactiveDeadlockResolve();
+
 		world.Add(*(new Agent(&world, Vector2D(-6.0f, 0.0f), Vector2D(1.5f, 0.0f), 1.0f, Color::kBlue)));
 		world.Add(*(new Agent(&world, Vector2D(0.0f, -6.0f), Vector2D(0.0f, 1.0f), 1.0f, GetDefaultAgentColor(world))));
 	}
 
-	void CreateTestCrossing4(World& world, float speed = 3.0f)
+	void CreateTestCrossing4(World& world, ICollisionAvoidanceManager*& pOutCollAvoidManager, float speed = 3.0f)
 	{
+		pOutCollAvoidManager = new CollisionAvoidanceManager_RobustWait_ReactiveDeadlockResolve();
+
 		b2AABB terrain_limits;
 		terrain_limits.lowerBound.Set(-40, -40);
 		terrain_limits.upperBound.Set(40, 40);
@@ -51,8 +59,10 @@ class MainApp : public App
 		world.Add(*pAgent4);
 	}
 
-	void CreateTestTerrain1(World& world, float speed = 3.0f)
+	void CreateTestTerrain1(World& world, ICollisionAvoidanceManager*& pOutCollAvoidManager, float speed = 3.0f)
 	{
+		pOutCollAvoidManager = new CollisionAvoidanceManager_DiscereteSearch(world);
+
 		b2AABB terrain_limits;
 		terrain_limits.lowerBound.Set(-40, -40);
 		terrain_limits.upperBound.Set(40, 40);
@@ -130,8 +140,10 @@ class MainApp : public App
 	}
 
 
-	void CreateTestTerrain2(World& world, float radius, float separation, bool obstacles, float speed = 3.0f)
+	void CreateTestTerrain2(World& world, float radius, float separation, bool obstacles, ICollisionAvoidanceManager*& pOutCollAvoidManager, float speed = 3.0f)
 	{
+		pOutCollAvoidManager = new CollisionAvoidanceManager_DiscereteSearch(world);
+
 		b2AABB terrain_limits;
 		terrain_limits.lowerBound.Set(-40, -40);
 		terrain_limits.upperBound.Set(40, 40);
@@ -155,15 +167,15 @@ class MainApp : public App
 	}
 
 
-	virtual int OnStart(World& world, int version)
+	virtual int OnStart(World& world, int version, ICollisionAvoidanceManager*& pOutCollAvoidManager)
 	{
 		switch (version)
 		{
-			case 0: CreateTestCrossing4(world); break;
-			case 1: CreateTestTerrain1(world); break;
-			case 2: CreateTestTerrain2(world, 4.0f, 8.0f, false); break;
-			case 3: CreateTestTerrain2(world, 3.0f, 10.0f, false); break;
-			default: CreateTestTerrain2(world, 2.0f, 15.0f, true); return 4;
+			case 0: CreateTestCrossing4(world, pOutCollAvoidManager); break;
+			case 1: CreateTestTerrain1(world, pOutCollAvoidManager); break;
+			case 2: CreateTestTerrain2(world, 4.0f, 8.0f, false, pOutCollAvoidManager); break;
+			case 3: CreateTestTerrain2(world, 3.0f, 10.0f, false, pOutCollAvoidManager); break;
+			default: CreateTestTerrain2(world, 2.0f, 15.0f, true, pOutCollAvoidManager); return 4;
 		}
 
 		return version;

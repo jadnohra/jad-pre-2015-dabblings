@@ -83,7 +83,6 @@ public:
 	virtual float GetRadius() { return mRadius; }
 	virtual void NotifyControlledByAvoidance() { mIsControlledByAvoidance = true; }
 
-
 	virtual void SetPos(const Vector2D& position) { mPos = position; }
 	virtual void SetVel(const Vector2D& velocity) { mVel = velocity; }
 
@@ -99,9 +98,23 @@ public:
 		UpdatePath();
 	}
 
+	virtual void AddAvoidanceSolutionToPath(const Vector2D& point, const Vector2D* pVel)
+	{
+		// TODO support pVel
+
+		if (mHasPath)
+		{
+			mPath.mPathNodes.insert(mPath.mPathNodes.begin() + mIndexInPath, PathNode(-1, point));
+			
+			--mIndexInPath; // for updatePath to work correctly
+			mHasGoal = false;
+			UpdatePath();
+		}
+	}
+
 	void UpdatePath(float time = 0.0f)
 	{
-		if (mHasPath && (mIndexInPath == -1 || (time - mLastControlledByAvoidanceTime) > 1.0f))
+		if (mHasPath && (mIndexInPath == -1 || mLastControlledByAvoidanceTime < 0.0f || (time - mLastControlledByAvoidanceTime) > 1.0f))
 		{
 			if (mIndexInPath == -1)
 			{

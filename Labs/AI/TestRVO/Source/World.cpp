@@ -21,7 +21,6 @@ World::~World()
 
 void World::StartRun()
 {
-	mAvoidanceManager = new CollisionAvoidanceManager_RobustWait_ReactiveDeadlockResolve();
 	mTerrain = new Terrain();
 }
 
@@ -148,7 +147,7 @@ int World::MainLoopRun(int version)
 	unsigned int fpsLastTime = SDL_GetTicks();
 	unsigned int frameCount = 0;
 
-	version = mApp->OnStart(*this, version);
+	version = mApp->OnStart(*this, version, mAvoidanceManager);
 
 	while (is_running)
 	{

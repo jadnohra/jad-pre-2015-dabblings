@@ -7,7 +7,7 @@ class App
 {
 public:
 
-	virtual int OnStart(World& world, int version) { return version; }
+	virtual int OnStart(World& world, int version, ICollisionAvoidanceManager*& pOutCollAvoidManager) { return version; }
 	virtual void OnEnd(World& world) {}
 
 	virtual bool Update(World& world, float time, float dt) { return true; }

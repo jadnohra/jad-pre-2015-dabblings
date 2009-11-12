@@ -551,13 +551,29 @@ public:
 	}
 };
 
+struct PathNode
+{
+	int wptIndex;
+	Vector2D pos;
+
+	PathNode(int wptIndex_, const Vector2D& pos_)
+		:	wptIndex(wptIndex_), pos(pos_)
+	{
+
+	}
+
+	PathNode(int wptIndex_)
+		:	wptIndex(wptIndex_)
+	{
+	}
+};
 
 class Path
 {
 public:
 
 	typedef astar::AStarState<WaypointGraph, WaypointPathCostEval, NodeGraphView<WaypointGraph>> AStarState;
-	typedef std::vector<int> PathNodes;
+	typedef std::vector<PathNode> PathNodes;
 
 	PathNodes mPathNodes;
 	WaypointGraph* mpWaypoints;
@@ -589,8 +605,16 @@ public:
 
 			if (status == PathSearchFound)
 			{
-				state.extractReversePath(mPathNodes);
-				std::reverse(mPathNodes.begin(), mPathNodes.end());
+				std::vector<int> tempPath;
+
+				state.extractReversePath(tempPath);
+				std::reverse(tempPath.begin(), tempPath.end());
+
+				mPathNodes.reserve(tempPath.size());
+				for (size_t i = 0; i < tempPath.size(); ++i)
+				{
+					mPathNodes.push_back(PathNode(tempPath[i], waypoints.getNode(tempPath[i]).pos));
+				}
 			}
 			
 			return status == PathSearchFound;
@@ -612,8 +636,9 @@ public:
 	}
 
 	int Length() const { return (int) mPathNodes.size(); }
-	int GetNode(int index) const { return mPathNodes[index]; }
-	Vector2D GetPoint(int index) const { return mpWaypoints->getNode(mPathNodes[index]).pos; }
+	const PathNode& GetNode(int index) const { return mPathNodes[index]; }
+	PathNode& GetNode(int index) { return mPathNodes[index]; }
+	Vector2D GetPoint(int index) const { return mPathNodes[index].pos; }
 };
 
 
@@ -1346,17 +1371,40 @@ public:
 
 				Waypoint::CreateLinkQuad(mWaypointGraph.getNode(loc.links[i].linkFrom), 
 										mWaypointGraph.getNode(loc.links[i].linkTo), 
-										&mWaypointGraph.mLinks[loc.links[i].linksIndex].nodeEdges[loc.links[i].indexInLinks],
+										&(mWaypointGraph.mLinks[loc.links[i].linksIndex].nodeEdges[loc.links[i].indexInLinks]),
 										mUseTangentsForLinks, quad);
+
+				float min_t = FLT_MAX;
+				float max_t = -FLT_MAX;
 
 				for (int i = 0; i < 4; ++i)
 				{
+					float t, u;
+
+					if (IntersectLines(lineOrig, lineDir, quad[i], quad[(i+1)%4], t, u)
+						&& (u >= 0.0f && u <= 1.0f))
+					{
+						if (t <= 0.0f)
+						{
+							min_t = t;
+						}
+
+						if (t >= 0.0f)
+						{
+							max_t = t;
+						}
+					}
+				}
+
+				if (min_t <= 0.0f && max_t >= 0.0f)
+				{
+					outSegmentStart = lineOrig + lineDir * min_t;
+					outSegmentEnd = lineOrig + lineDir * max_t;
+					return 2;
 				}
 			}
 		}
 		
-		
-
 		return 0;
 	}
 
