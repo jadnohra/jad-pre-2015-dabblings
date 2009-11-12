@@ -647,7 +647,7 @@ class TerrainAgent
 public:
 
 	virtual Circle GetTerrainShape() = 0;
-	virtual const Path* GetPath() { return NULL; }
+	virtual const Path* GetPath(int& currToIndex, bool& hasTempAvoidPt, Vector2D& currTempAvoidancePt) { return NULL; }
 };
 
 
@@ -1313,11 +1313,24 @@ public:
 	{
 		if (agentInfo.agent)
 		{
-			const Path* pPath = agentInfo.agent->GetPath();
+			int currToIndex; bool hasTempAvoidPt; Vector2D currTempAvoidancePt;
+
+			const Path* pPath = agentInfo.agent->GetPath(currToIndex, hasTempAvoidPt, currTempAvoidancePt);
 
 			if (pPath)
 			{
 				DrawPath(inWorld, *pPath, inColor, inLineWidth);
+
+				if (hasTempAvoidPt)
+				{
+					Renderer& renderer = inWorld.GetRenderer();
+
+					renderer.DrawLine(inWorld.WorldToScreen(agentInfo.agent->GetTerrainShape().pos), 
+										inWorld.WorldToScreen(currTempAvoidancePt), inColor, -1.0f, inLineWidth);
+
+					renderer.DrawLine(inWorld.WorldToScreen(currTempAvoidancePt), 
+										inWorld.WorldToScreen(pPath->GetPoint(currToIndex)), inColor, -1.0f, inLineWidth);
+				}
 			}
 		}
 	}

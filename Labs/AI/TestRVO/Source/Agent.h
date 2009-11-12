@@ -23,6 +23,8 @@ public:
 	Path mPath;
 	int mIndexInPath;
 	float mPathSpeed;
+	bool mHasPathTempAvoidancePos;
+	Vector2D mPathTempAvoidancePos;
 
 	float mUpdateTime;
 	Vector2D mPrevUpdatePos;
@@ -62,6 +64,7 @@ public:
 		mColor = color_;
 		mHasGoal = false;
 		mHasPath = false;
+		mHasPathTempAvoidancePos = false;
 
 		mIsControlledByAvoidance = false;
 		mLastControlledByAvoidanceTime = -1.0f;
@@ -72,9 +75,12 @@ public:
 		return Circle(mPos, mRadius);
 	}
 
-	virtual const Path* GetPath() 
+	virtual const Path* GetPath(int& currToIndex, bool& hasTempAvoidPt, Vector2D& currTempAvoidancePt) 
 	{ 
-		return mHasPath ? &mPath : NULL; 
+		currToIndex = mIndexInPath;
+		hasTempAvoidPt = mHasPathTempAvoidancePos;
+		currTempAvoidancePt = mPathTempAvoidancePos;
+		return (mHasPath && mIndexInPath >= 0 )? &mPath : NULL; 
 	}
 
 	virtual void Agitate()			 { mIsAgitated = true; }
@@ -98,17 +104,25 @@ public:
 		UpdatePath();
 	}
 
-	virtual void AddAvoidanceSolutionToPath(const Vector2D& point, const Vector2D* pVel)
+	virtual void AddAvoidanceSolutionToPath(const Vector2D& point, const Vector2D* pVel, bool replacePathPoint)
 	{
-		// TODO support pVel
-
 		if (mHasPath)
 		{
-			mPath.mPathNodes.insert(mPath.mPathNodes.begin() + mIndexInPath, PathNode(-1, point));
-			
-			--mIndexInPath; // for updatePath to work correctly
-			mHasGoal = false;
-			UpdatePath();
+			// TODO support pVel
+
+			if (replacePathPoint)
+			{
+				mPath.mPathNodes.insert(mPath.mPathNodes.begin() + (mIndexInPath + 1), PathNode(-1, point));
+				mHasPathTempAvoidancePos = false;
+				mHasGoal = false;
+				UpdatePath();
+			}
+			else
+			{
+				mHasPathTempAvoidancePos = true;
+				mPathTempAvoidancePos = point;
+				SetGoal(mPathTempAvoidancePos, mPathSpeed);
+			}
 		}
 	}
 
@@ -126,17 +140,26 @@ public:
 				}
 				else
 				{
-					mIndexInPath = 0;
-					SetGoal(mPath.GetPoint(mIndexInPath), mPathSpeed);
+					if (mHasPathTempAvoidancePos)
+					{
+						SetGoal(mPathTempAvoidancePos, mPathSpeed);
+					}
+					else
+					{
+						mIndexInPath = 0;
+						SetGoal(mPath.GetPoint(mIndexInPath), mPathSpeed);
+					}
 				}
 			}
 			else
 			{
 				if (!mHasGoal)
 				{
-					if (mIndexInPath + 1 < mPath.Length())
+					if (mIndexInPath + 1 < mPath.Length() || mHasPathTempAvoidancePos)
 					{
-						++mIndexInPath;
+						if (!mHasPathTempAvoidancePos)
+							++mIndexInPath;
+
 						SetGoal(mPath.GetPoint(mIndexInPath), mPathSpeed);
 					}
 					else
@@ -144,6 +167,8 @@ public:
 						mHasPath = false;
 						mVel.SetZero();
 					}
+
+					mHasPathTempAvoidancePos = false;
 				}
 			}
 		}

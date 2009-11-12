@@ -424,6 +424,7 @@ public:
 	struct AgentAvoidanceOption : public AvoidanceOption
 	{
 		int agentIndex;
+		bool replacePointInPath;
 	};
 
 	struct AvoidanceGroup
@@ -491,6 +492,11 @@ public:
 
 		for (size_t i = 0; i < m_AgentInfos.size(); ++i)
 		{
+			m_AgentInfos[i].avoidanceGroupIndex = -1;
+		}
+
+		for (size_t i = 0; i < m_AgentInfos.size(); ++i)
+		{
 			if (m_AgentInfos[i].pAgent)
 			{
 				m_AgentInfos[i].avoidanceGroupIndex = -1;
@@ -510,6 +516,8 @@ public:
 								avoidanceGroups.push_back(AvoidanceGroup());
 								avoidanceGroups[groupIndex].agents.push_back((int)i);
 								avoidanceGroups[groupIndex].agents.push_back((int)j);
+								m_AgentInfos[i].avoidanceGroupIndex = groupIndex;
+								m_AgentInfos[j].avoidanceGroupIndex = groupIndex;
 							}
 							else if (m_AgentInfos[i].avoidanceGroupIndex != -1
 									&& m_AgentInfos[j].avoidanceGroupIndex != -1)
@@ -591,7 +599,7 @@ public:
 			{
 				const AgentAvoidanceOption& solution = group.avoidanceSolutions[j];
 
-				m_AgentInfos[solution.agentIndex].pAgent->AddAvoidanceSolutionToPath(solution.point, solution.hasVel ? & solution.vel : NULL);
+				m_AgentInfos[solution.agentIndex].pAgent->AddAvoidanceSolutionToPath(solution.point, solution.hasVel ? & solution.vel : NULL, solution.replacePointInPath);
 			}
 		}
 	}
@@ -785,6 +793,18 @@ public:
 			{
 				option.agentIndex = (int) i;
 				break;
+			}
+		}
+
+		option.replacePointInPath = false;
+		if (agent.pAgent->mHasPath && agent.pAgent->mIndexInPath >= 0)
+		{
+			float test_dist = agent.pAgent->GetRadius() + collider.pAgent->GetRadius();
+			test_dist += test_dist * 0.1f;
+
+			if (Distance(agent.pAgent->mPath.GetPoint(agent.pAgent->mIndexInPath), collisionPoint) <= test_dist)
+			{
+				option.replacePointInPath = true;
 			}
 		}
 		
