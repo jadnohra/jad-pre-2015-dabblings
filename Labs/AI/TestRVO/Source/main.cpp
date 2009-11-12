@@ -139,6 +139,28 @@ class MainApp : public App
 		//test.Find(world.mTerrain->mWaypointGraph, 0, 2);
 	}
 
+	void SetAgentPath(World& world, Agent* pAgent, Vector2D& pos, float speed)
+	{
+		int start_wpt;
+		int start_link;
+
+		if (world.mTerrain->Pick(pAgent->GetPos(), start_wpt, start_link)
+			&& start_wpt >= 0)
+		{
+			int end_wpt;
+			int end_link;
+
+			if (world.mTerrain->Pick(pos, end_wpt, end_link)
+				&& end_wpt >= 0)
+			{
+				Path path;
+				if (path.Find(world.mTerrain->mWaypointGraph, start_wpt, end_wpt, pAgent->GetRadius()))
+				{
+					pAgent->SetPath(path, speed);
+				}
+			}
+		}
+	}
 
 	void CreateTestTerrain2(World& world, float radius, float separation, bool obstacles, ICollisionAvoidanceManager*& pOutCollAvoidManager, float speed = 3.0f)
 	{
@@ -160,10 +182,13 @@ class MainApp : public App
 			world.mTerrain->UpdateStaticObstacles();
 		}
 
-		Agent* pAgent1 = new Agent(&world, Vector2D(0.0f, -10.0f), Vector2D::kZero, 1.0f, GetDefaultAgentColor(world));
-		pAgent1->SetGoal(Vector2D(0.0f, 10.0f), speed);
-
+		Agent* pAgent1 = new Agent(&world, Vector2D(-10.0f, -3.0f), Vector2D::kZero, 1.0f, GetDefaultAgentColor(world));
 		world.Add(*pAgent1);
+		SetAgentPath(world, pAgent1, Vector2D(10.0f, -3.0f), speed);
+
+		Agent* pAgent2 = new Agent(&world, Vector2D(15.0f, -3.0f), Vector2D::kZero, 1.0f, GetDefaultAgentColor(world));
+		world.Add(*pAgent2);
+		SetAgentPath(world, pAgent2, Vector2D(-10.0f, -3.0f), speed);
 	}
 
 
@@ -173,8 +198,8 @@ class MainApp : public App
 		{
 			case 0: CreateTestCrossing4(world, pOutCollAvoidManager); break;
 			case 1: CreateTestTerrain1(world, pOutCollAvoidManager); break;
-			case 2: CreateTestTerrain2(world, 4.0f, 8.0f, false, pOutCollAvoidManager); break;
-			case 3: CreateTestTerrain2(world, 3.0f, 10.0f, false, pOutCollAvoidManager); break;
+			case 2: CreateTestTerrain2(world, 4.0f, 8.0f, false, pOutCollAvoidManager, 7.0f); break;
+			case 3: CreateTestTerrain2(world, 3.0f, 10.0f, false, pOutCollAvoidManager, 7.0f); break;
 			default: CreateTestTerrain2(world, 2.0f, 15.0f, true, pOutCollAvoidManager); return 4;
 		}
 

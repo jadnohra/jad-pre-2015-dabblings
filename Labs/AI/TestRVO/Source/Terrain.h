@@ -1351,7 +1351,7 @@ public:
 	}
 
 	int IntersectLineFromInside(const AgentLocation& loc, const Vector2D& lineOrig, const Vector2D& lineDir, 
-						Vector2D& outSegmentStart, Vector2D& outSegmentEnd)
+								Vector2D& outSegmentStart, Vector2D& outSegmentEnd, float pointRadius)
 	{
 		// TODO!!!!! for now only check each wpt or link without using union!!
 
@@ -1370,8 +1370,22 @@ public:
 						if ((t >= 0.0f && u < 0.0f)
 							|| (t < 0.0f && u >= 0.0f))
 						{
-							outSegmentStart = lineOrig + lineDir * t;
-							outSegmentEnd = lineOrig + lineDir * u;
+							outSegmentStart = (lineOrig + lineDir * t);
+							outSegmentEnd = (lineOrig + lineDir * u);
+
+							if (pointRadius != 0.0f)
+							{
+								if (t >= 0.0f)
+									outSegmentStart = outSegmentStart - (lineDir.Normalized() * pointRadius);
+								else
+									outSegmentStart = outSegmentStart + (lineDir.Normalized() * pointRadius);
+
+								if (u >= 0.0f)
+									outSegmentEnd = outSegmentEnd - (lineDir.Normalized() * pointRadius);
+								else
+									outSegmentEnd = outSegmentEnd + (lineDir.Normalized() * pointRadius);
+							}
+
 							return 2;
 						}
 					}
@@ -1411,8 +1425,22 @@ public:
 
 				if (min_t <= 0.0f && max_t >= 0.0f)
 				{
-					outSegmentStart = lineOrig + lineDir * min_t;
-					outSegmentEnd = lineOrig + lineDir * max_t;
+					outSegmentStart = (lineOrig + lineDir * min_t);
+					outSegmentEnd = (lineOrig + lineDir * max_t);
+
+					if (pointRadius != 0.0f)
+					{
+						if (min_t >= 0.0f)
+							outSegmentStart = outSegmentStart - (lineDir.Normalized() * pointRadius);
+						else
+							outSegmentStart = outSegmentStart + (lineDir.Normalized() * pointRadius);
+
+						if (max_t >= 0.0f)
+							outSegmentEnd = outSegmentEnd - (lineDir.Normalized() * pointRadius);
+						else
+							outSegmentEnd = outSegmentEnd + (lineDir.Normalized() * pointRadius);
+					}
+
 					return 2;
 				}
 			}

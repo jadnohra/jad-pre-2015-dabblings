@@ -401,6 +401,8 @@ public:
 		int priority;
 		int obstacleInfoIndex;
 		int avoidanceGroupIndex;
+		bool hasModifiedVel;
+		Vector2D modifiedVel;
 
 		AgentInfo(Agent* pAgent_ = NULL, int priority_ = -1, int obstacleInfoIndex_ = -1)
 			:	pAgent(pAgent_)
@@ -435,6 +437,26 @@ public:
 		Agents agents;
 		Agents newResolveAgents;
 		Options avoidanceSolutions;
+
+		AvoidanceGroup()
+		{
+
+		}
+
+		AvoidanceGroup(const AvoidanceGroup& ref)
+		{
+			agents = ref.agents;
+			newResolveAgents = ref.newResolveAgents;
+			avoidanceSolutions = ref.avoidanceSolutions;
+		}
+
+		void AddAgent(int index)
+		{
+			if (std::find(agents.begin(), agents.end(), index) == agents.end())
+			{
+				agents.push_back(index);
+			}
+		}
 	};
 
 	typedef std::vector<AgentInfo> AgentInfos;
@@ -493,6 +515,7 @@ public:
 		for (size_t i = 0; i < m_AgentInfos.size(); ++i)
 		{
 			m_AgentInfos[i].avoidanceGroupIndex = -1;
+			m_AgentInfos[i].hasModifiedVel = false;
 		}
 
 		for (size_t i = 0; i < m_AgentInfos.size(); ++i)
@@ -514,8 +537,8 @@ public:
 							{
 								int groupIndex = (int) avoidanceGroups.size();
 								avoidanceGroups.push_back(AvoidanceGroup());
-								avoidanceGroups[groupIndex].agents.push_back((int)i);
-								avoidanceGroups[groupIndex].agents.push_back((int)j);
+								avoidanceGroups[groupIndex].AddAgent((int)i);
+								avoidanceGroups[groupIndex].AddAgent((int)j);
 								m_AgentInfos[i].avoidanceGroupIndex = groupIndex;
 								m_AgentInfos[j].avoidanceGroupIndex = groupIndex;
 							}
@@ -527,6 +550,8 @@ public:
 									AvoidanceGroup* pMergeGroup;
 									AvoidanceGroup* pMergedGroup;
 									int mergeGroupIndex;
+
+									// TODO duplicates!!
 
 									if (avoidanceGroups[m_AgentInfos[i].avoidanceGroupIndex].agents.size() > 
 										avoidanceGroups[m_AgentInfos[j].avoidanceGroupIndex].agents.size())
@@ -554,12 +579,12 @@ public:
 								if (m_AgentInfos[i].avoidanceGroupIndex != -1)
 								{
 									m_AgentInfos[j].avoidanceGroupIndex = m_AgentInfos[i].avoidanceGroupIndex;
-									avoidanceGroups[m_AgentInfos[i].avoidanceGroupIndex].agents.push_back((int) j);
+									avoidanceGroups[m_AgentInfos[i].avoidanceGroupIndex].AddAgent((int) j);
 								}
 								else
 								{
 									m_AgentInfos[i].avoidanceGroupIndex = m_AgentInfos[j].avoidanceGroupIndex;
-									avoidanceGroups[m_AgentInfos[j].avoidanceGroupIndex].agents.push_back((int) i);
+									avoidanceGroups[m_AgentInfos[j].avoidanceGroupIndex].AddAgent((int) i);
 								}
 							}
 						}
@@ -666,7 +691,7 @@ public:
 		{
 			Vector2D dir = rotate90(collisionPoint - agent.pAgent->GetPos());
 
-			if (manager.mWorld.mTerrain->IntersectLineFromInside(loc, collisionPoint, dir, optionSegmentStart, optionSegmentEnd) != 2)
+			if (manager.mWorld.mTerrain->IntersectLineFromInside(loc, collisionPoint, dir, optionSegmentStart, optionSegmentEnd, agent.pAgent->GetRadius()) != 2)
 			{
 				optionCountPerSide = 0;
 				return;
@@ -735,6 +760,7 @@ public:
 		virtual float ScoreOption(const AvoidanceOption& option)
 		{
 			Vector2D option_agent_vel = ((option.point - agent.pAgent->GetPos()).Normalized() * agent.pAgent->GetVel().Length());
+			Vector2D collider_vel = collider.hasModifiedVel ? collider.modifiedVel : collider.pAgent->GetVel();
 
 			float collision_score = 0.0f;
 			float safety_score = 0.0f;
@@ -745,10 +771,10 @@ public:
 
 				if (&collider != &agent)
 				{	
-					if (collider.pAgent->GetVel() != Vector2D::kZero)
+					if (collider_vel != Vector2D::kZero)
 					{
 						// we could use the unnormalized + response curve
-						safety_score += 3.0f * (1.0f - Dot((option.point - collider.pAgent->GetPos()).Normalized(), collider.pAgent->GetVel()));
+						safety_score += 5.0f * (1.0f - Dot((option.point - collider.pAgent->GetPos()).Normalized(), collider_vel.Normalized()));
 					}
 					else
 					{
@@ -759,7 +785,7 @@ public:
 						float timeUntilCollision;
 
 						if (manager.GetCollisionTime(agent, option_agent_vel, 
-													collider, collider.pAgent->GetVel(), timeUntilCollision))
+													collider, collider_vel, timeUntilCollision))
 						{
 							float penalty = 10.0f * (1.0f / timeUntilCollision);
 							if (penalty > 100.0f)
@@ -825,7 +851,11 @@ public:
 		}
 
 		if (has_best_option)
+		{
 			group.avoidanceSolutions.push_back(best_option);
+			m_AgentInfos[best_option.agentIndex].hasModifiedVel = true;
+			m_AgentInfos[best_option.agentIndex].modifiedVel = ((best_option.point - agent.pAgent->GetPos()).Normalized() * agent.pAgent->GetVel().Length());
+		}
 
 		return has_best_option;
 	}
