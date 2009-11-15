@@ -477,6 +477,7 @@ public:
 	virtual void AddAgent(Agent* pAgent, int priority)
 	{
 		m_AgentInfos.push_back(AgentInfo(pAgent, priority, (int) m_AgentInfos.size()));
+		m_AgentInfos.back().priority = (int) (m_AgentInfos.size() - 1);
 		m_AgentInfosIsDirty = true;
 	}
 
@@ -692,19 +693,73 @@ public:
 		{
 			Vector2D dir = rotate90(collisionPoint - agent.pAgent->GetPos());
 
-			if (manager.mWorld.mTerrain->IntersectLineFromInside(loc, collisionPoint, dir, optionSegmentStart, optionSegmentEnd, agent.pAgent->GetRadius()) != 2)
+			int currToIndex; 
+			bool hasTempAvoidPt;
+			Vector2D currTempAvoidancePt;
+
+			const Path* pPath = agent.pAgent->GetPath(currToIndex, hasTempAvoidPt, currTempAvoidancePt);
+			if (pPath == NULL)
 			{
 				optionCountPerSide = 0;
 				return;
 			}
 
-			//manager.mWorld.mRenderer.DrawCircle(manager.mWorld.WorldToScreen(optionSegmentStart), manager.mWorld.WorldToScreen(agent.pAgent->GetRadius()), Color::kGreen, 0.5f, true);
-			//manager.mWorld.mRenderer.DrawCircle(manager.mWorld.WorldToScreen(optionSegmentEnd), manager.mWorld.WorldToScreen(agent.pAgent->GetRadius()), Color::kGreen, 0.5f, false);
+			Terrain::NavigableNodes pathNodes;
+			
+			int start_node = std::max(0, (currToIndex > 0 ? currToIndex - 1 : currToIndex));
+			
+			while (start_node > 0 && pPath->GetNode(start_node).wptIndex == -1)
+				--start_node;
 
-			optionCountPerSide = (int) (Distance(optionSegmentEnd, optionSegmentStart) / (0.5f * agent.pAgent->GetRadius()));
+			pathNodes.push_back(Terrain::NavigableNode(pPath->GetNode(start_node).wptIndex));
 
-			if (optionCountPerSide > 5)
-				optionCountPerSide = 5;
+			int next_node_1 = start_node + 1;
+
+			while (next_node_1 < pPath->Length() && pPath->GetNode(next_node_1).wptIndex == -1)
+				++next_node_1;
+
+			if (next_node_1 < pPath->Length())
+			{				
+				int next_wpt = pPath->GetNode(next_node_1).wptIndex;
+				Terrain::LinkAddress linkAddress;
+
+				manager.mWorld.mTerrain->FindLinkAddress(pPath->GetNode(start_node).wptIndex, next_wpt, linkAddress);
+
+				pathNodes.push_back(Terrain::NavigableNode(linkAddress));
+				pathNodes.push_back(Terrain::NavigableNode(next_wpt));
+			}
+
+			int next_node_2 = next_node_1 + 1;
+			while (next_node_2 < pPath->Length() && pPath->GetNode(next_node_2).wptIndex == -1)
+				++next_node_2;
+
+			if (next_node_2 < pPath->Length())
+			{
+				int next_wpt = pPath->GetNode(next_node_2).wptIndex;
+				Terrain::LinkAddress linkAddress;
+
+				manager.mWorld.mTerrain->FindLinkAddress(pPath->GetNode(next_node_1).wptIndex, next_wpt, linkAddress);
+
+				pathNodes.push_back(Terrain::NavigableNode(linkAddress));
+			}
+			
+			int dummy;
+
+			// we could start with points that are further from collision point by the sum of the radiuses if waiting is not an option
+
+			if (manager.mWorld.mTerrain->IntersectRayWithNavigableNodes(collisionPoint, dir, agent.pAgent->GetRadius(), pathNodes, optionSegmentEnd, dummy)
+				&& manager.mWorld.mTerrain->IntersectRayWithNavigableNodes(collisionPoint, dir * -1.0f, agent.pAgent->GetRadius(), pathNodes, optionSegmentStart, dummy))
+			{
+				//manager.mWorld.mRenderer.DrawCircle(manager.mWorld.WorldToScreen(optionSegmentStart), manager.mWorld.WorldToScreen(agent.pAgent->GetRadius()), Color::kGreen, 0.5f, true);
+				//manager.mWorld.mRenderer.DrawCircle(manager.mWorld.WorldToScreen(optionSegmentEnd), manager.mWorld.WorldToScreen(agent.pAgent->GetRadius()), Color::kGreen, 0.5f, false);
+
+				float dist = Distance(optionSegmentEnd, optionSegmentStart);
+				optionCountPerSide = (int) ((0.5f * dist) / (0.75f * agent.pAgent->GetRadius())); // this is naive
+				//optionCountPerSide = 10; // this is naive
+
+				//if (optionCountPerSide > 5)
+				//	optionCountPerSide = 5;
+			}
 		}
 
 		virtual bool GetNextOption(AvoidanceOption& option)
@@ -768,6 +823,7 @@ public:
 
 			float collision_score = 0.0f;
 			float safety_score = 0.0f;
+			float comfort_zone_score = 0.0f;
 			
 			for (size_t i = 0; i < group.agents.size(); ++i)
 			{
@@ -783,6 +839,11 @@ public:
 					else
 					{
 						// use orientation
+					}
+
+					{
+						Vector2D collider_pos_at_coll_time = collider.pAgent->GetPos() + collider_vel * lookAheadTime; // use collision time instead
+						comfort_zone_score += 5.0f * (Distance(collider_pos_at_coll_time, collisionPoint) - (collider.pAgent->GetRadius() + agent.pAgent->GetRadius()));
 					}
 
 					{
@@ -802,9 +863,13 @@ public:
 			}
 
 			// we could use the unnormalized + response curve
-			float deviation_score = 5.0f * (Dot(option_agent_vel.Normalized(), agent.pAgent->GetVel().Normalized()));
+			float deviation_score = 0.0f;
+			{
+				deviation_score = -5.0f * Distance(option.point, collisionPoint);
+			}
 			
-			return collision_score + safety_score + deviation_score;
+			
+			return collision_score + safety_score + deviation_score + comfort_zone_score;
 		}
 	};
 
@@ -852,7 +917,10 @@ public:
 				best_score = score;
 				best_option = option;
 			}
-			mWorld.mRenderer.DrawCircle(mWorld.WorldToScreen(option.point), mWorld.WorldToScreen(agent.pAgent->GetRadius()), Color::kGreen, 0.5f, true);
+			if (agent.priority == 0)
+				mWorld.mRenderer.DrawCircle(mWorld.WorldToScreen(option.point), mWorld.WorldToScreen(agent.pAgent->GetRadius()), Color::kGreen, 0.5f, true);
+			else
+				mWorld.mRenderer.DrawCircle(mWorld.WorldToScreen(option.point), mWorld.WorldToScreen(agent.pAgent->GetRadius()), Color::kRed, 0.5f, true);
 		}
 
 		if (has_best_option)
@@ -878,15 +946,18 @@ public:
 			{	
 				float timeUntilCollision;
 
-				if (GetCollisionTime(agent, agent.pAgent->GetVel(), 
-					collider, collider.pAgent->GetVel(), timeUntilCollision)
-					&& (timeUntilCollision <= lookAheadTime))
+				Vector2D agent_vel = agent.hasModifiedVel ? agent.modifiedVel : agent.pAgent->GetVel();
+				Vector2D collider_vel = collider.hasModifiedVel ? collider.modifiedVel : collider.pAgent->GetVel();
+
+				if (GetCollisionTime(agent, agent_vel, 
+					collider, collider_vel, timeUntilCollision)
+					/*&& (timeUntilCollision <= lookAheadTime)*/)
 				{
 					if (earliestCollider == -1 || timeUntilCollision < earliestCollisionTime)
 					{
 						earliestCollider = (int) i;
 						earliestCollisionTime = timeUntilCollision;
-						collisionPoint = agent.pAgent->GetPos() + (agent.pAgent->GetVel() * timeUntilCollision);
+						collisionPoint = agent.pAgent->GetPos() + (agent_vel * timeUntilCollision);
 					}
 				}
 			}

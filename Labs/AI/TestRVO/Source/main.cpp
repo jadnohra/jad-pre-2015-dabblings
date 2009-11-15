@@ -182,6 +182,7 @@ class MainApp : public App
 			world.mTerrain->UpdateStaticObstacles();
 		}
 
+		/*
 		Agent* pAgent1 = new Agent(&world, Vector2D(-10.0f, -3.0f), Vector2D::kZero, 1.0f, GetDefaultAgentColor(world));
 		world.Add(*pAgent1);
 		SetAgentPath(world, pAgent1, Vector2D(10.0f, -3.0f), speed);
@@ -189,6 +190,7 @@ class MainApp : public App
 		Agent* pAgent2 = new Agent(&world, Vector2D(15.0f, -3.0f), Vector2D::kZero, 1.0f, GetDefaultAgentColor(world));
 		world.Add(*pAgent2);
 		SetAgentPath(world, pAgent2, Vector2D(-10.0f, -3.0f), speed);
+		*/
 	}
 
 
@@ -198,9 +200,71 @@ class MainApp : public App
 		{
 			case 0: CreateTestCrossing4(world, pOutCollAvoidManager); break;
 			case 1: CreateTestTerrain1(world, pOutCollAvoidManager); break;
-			case 2: CreateTestTerrain2(world, 4.0f, 8.0f, false, pOutCollAvoidManager, 7.0f); break;
-			case 3: CreateTestTerrain2(world, 3.0f, 10.0f, false, pOutCollAvoidManager, 7.0f); break;
-			default: CreateTestTerrain2(world, 2.0f, 15.0f, true, pOutCollAvoidManager); return 4;
+			case 2: 
+				{
+					float speed = 7.0f;
+					CreateTestTerrain2(world, 4.0f, 8.0f, false, pOutCollAvoidManager, speed); 
+
+					Agent* pAgent1 = new Agent(&world, Vector2D(-10.0f, -3.0f), Vector2D::kZero, 1.0f, GetDefaultAgentColor(world));
+					world.Add(*pAgent1);
+					SetAgentPath(world, pAgent1, Vector2D(10.0f, -3.0f), speed);
+
+					Agent* pAgent2 = new Agent(&world, Vector2D(15.0f, -3.0f), Vector2D::kZero, 1.0f, GetDefaultAgentColor(world));
+					world.Add(*pAgent2);
+					SetAgentPath(world, pAgent2, Vector2D(-10.0f, -3.0f), speed);
+
+				} break;
+			case 3: 
+				{
+					float speed = 7.0f;
+					CreateTestTerrain2(world, 3.0f, 10.0f, false, pOutCollAvoidManager, speed); 
+
+					Agent* pAgent1 = new Agent(&world, Vector2D(-10.0f, -3.0f), Vector2D::kZero, 1.0f, GetDefaultAgentColor(world));
+					world.Add(*pAgent1);
+					SetAgentPath(world, pAgent1, Vector2D(10.0f, -3.0f), speed);
+
+					Agent* pAgent2 = new Agent(&world, Vector2D(15.0f, -3.0f), Vector2D::kZero, 1.0f, GetDefaultAgentColor(world));
+					world.Add(*pAgent2);
+					SetAgentPath(world, pAgent2, Vector2D(-10.0f, -3.0f), speed);
+
+				} break;
+				
+				
+			case 4: 
+				{
+					float speed = 7.0f;
+					CreateTestTerrain2(world, 10.0f, 15.0f, false, pOutCollAvoidManager, speed); 
+
+					Agent* pAgent1 = new Agent(&world, Vector2D(-20.0f, -3.0f), Vector2D::kZero, 1.0f, GetDefaultAgentColor(world));
+					world.Add(*pAgent1);
+					SetAgentPath(world, pAgent1, Vector2D(10.0f, -3.0f), speed);
+
+					Agent* pAgent2 = new Agent(&world, Vector2D(10.0f, -3.0f), Vector2D::kZero, 1.0f, GetDefaultAgentColor(world));
+					world.Add(*pAgent2);
+					SetAgentPath(world, pAgent2, Vector2D(-20.0f, -3.0f), speed);
+
+				} break;
+				
+			case 5: 
+				{
+					float speed = 7.0f;
+					CreateTestTerrain2(world, 10.0f, 15.0f, false, pOutCollAvoidManager, speed); 
+
+					Agent* pAgent1 = new Agent(&world, Vector2D(-20.0f, -3.0f), Vector2D::kZero, 1.0f, GetDefaultAgentColor(world));
+					world.Add(*pAgent1);
+					SetAgentPath(world, pAgent1, Vector2D(10.0f, -3.0f), speed);
+
+					Agent* pAgent2 = new Agent(&world, Vector2D(10.0f, -3.0f), Vector2D::kZero, 1.0f, GetDefaultAgentColor(world));
+					world.Add(*pAgent2);
+					SetAgentPath(world, pAgent2, Vector2D(-20.0f, -3.0f), speed);
+
+
+					Agent* pAgent3 = new Agent(&world, Vector2D(-5.0f, -16.0f), Vector2D::kZero, 1.0f, GetDefaultAgentColor(world));
+					world.Add(*pAgent3);
+					SetAgentPath(world, pAgent3, Vector2D(-5.0f,15.0f), speed);
+
+				} break;
+			default: CreateTestTerrain2(world, 2.0f, 15.0f, true, pOutCollAvoidManager); return 6;
 		}
 
 		return version;

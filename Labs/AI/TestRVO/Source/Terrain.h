@@ -700,6 +700,120 @@ public:
 		}
 	};
 
+	struct NavigableNode
+	{
+		int waypoint;
+		LinkAddress link;
+
+		NavigableNode(int wpt)
+		{
+			waypoint = wpt;
+		}
+
+		NavigableNode(const LinkAddress& link_)
+		{
+			waypoint = -1;
+			link = link_;
+		}
+
+		bool Contains(Terrain& terrain, const Vector2D& point, float radius) const
+		{
+			if (waypoint != -1)
+			{
+				return terrain.mWaypointGraph.getNode(waypoint).IsInside(Circle(point, radius));
+			}
+			else
+			{
+				WaypointLink* pWptLink = terrain.GetWptLink(link);
+				return terrain.mWaypointGraph.getNode(link.linkFrom).IsInsideLink(Circle(point, radius), terrain.mWaypointGraph.getNode(link.linkTo), pWptLink, terrain.mUseTangentsForLinks);
+			}
+		}
+
+		bool IntersectRay(Terrain& terrain, const Vector2D& rayOrig, const Vector2D& rayDir, float pointRadius, Vector2D& outIntersectionPoint) const
+		{
+			if (waypoint != -1)
+			{
+				float t, u;
+				int inter_count = IntersectLineCircle(rayOrig, rayDir, 
+														terrain.mWaypointGraph.getNode(waypoint).pos, 
+														std::max(0.0f, terrain.mWaypointGraph.getNode(waypoint).radius - pointRadius), t, u);
+
+				if (inter_count > 0)
+				{
+					float inter_t = -1.0f;
+
+					if (t > 0.0f)
+					{
+						inter_t = t;
+					}
+					else if (u > 0.0f)
+					{
+						inter_t = u;
+					}
+					else if (t >= 0.0f)
+					{
+						inter_t = t;
+					}
+					else if (u >= 0.0f)
+					{
+						inter_t = u;
+					}
+
+					if (inter_t >= 0.0f)
+					{
+						outIntersectionPoint = rayOrig + (rayDir * inter_t);
+						return true;
+					}
+				}
+			}
+			else
+			{
+				Vector2D quad[4];
+				WaypointLink* pWptLink = terrain.GetWptLink(link);
+				Waypoint::CreateLinkQuad(terrain.mWaypointGraph.getNode(link.linkFrom),
+										 terrain.mWaypointGraph.getNode(link.linkTo),
+										 pWptLink,
+										 terrain.mUseTangentsForLinks,
+										 pointRadius, quad);
+				float min_t = FLT_MAX;
+				float non_zero_min_t = FLT_MAX;
+				
+				for (int i = 0; i < 4; ++i)
+				{
+					float t, u;
+
+					if (IntersectLines(rayOrig, rayOrig + rayDir, quad[i], quad[(i+1)%4], t, u)
+						&& (u >= 0.0f && u <= 1.0f))
+					{
+						if (t >= 0.0f && t <= min_t)
+							min_t = t;
+
+						if (t > 0.0f && t <= min_t)
+							non_zero_min_t = t;
+					}
+				}
+
+				if (non_zero_min_t != FLT_MAX)
+				{
+					outIntersectionPoint = rayOrig + rayDir * non_zero_min_t;
+					return true;
+				}
+				else
+				{
+					if (min_t != FLT_MAX)
+					{
+						outIntersectionPoint = rayOrig + rayDir * min_t;
+						return true;
+					}
+				}
+			}
+
+			return false;
+		}
+	};
+
+	typedef std::vector<NavigableNode> NavigableNodes;
+
 	struct AgentInfo
 	{
 		TerrainAgent* agent;
@@ -758,6 +872,38 @@ public:
 			UpdateStaticObstacle(mObstacleInfos[i]);
 		}
 	}
+
+	WaypointLink* GetWptLink(const LinkAddress& address) 
+	{
+		WaypointGraph::NodeLinks& links = mWaypointGraph.mLinks[address.linksIndex];
+		return &(links.nodeEdges[address.indexInLinks]);
+	}
+	
+	bool FindLinkAddress(int fromWptIndex, int toWptIndex, LinkAddress& linkAddress)
+	{
+		int linksIndex = mWaypointGraph.getNode(fromWptIndex).linksIndex;
+
+		if (linksIndex >= 0)
+		{
+			WaypointGraph::NodeLinks& links = mWaypointGraph.mLinks[linksIndex];
+
+			for (size_t i = 0; i < links.nodeEdges.size(); ++i)
+			{
+				if (links.nodeEdges[i].targetNodeIndex == toWptIndex)
+				{
+					linkAddress.linkFrom = fromWptIndex;
+					linkAddress.linkTo = toWptIndex;
+					linkAddress.linksIndex = linksIndex;
+					linkAddress.indexInLinks = (int) i;
+					return true;
+				}
+			}
+
+		}
+
+		return false;
+	}
+
 
 	void UpdateStaticObstacle(const ObstacleInfo& obstacleInfo)
 	{
@@ -1445,6 +1591,55 @@ public:
 		}
 		
 		return 0;
+	}
+
+
+	bool IntersectRayWithNavigableNodes(const Vector2D& rayOrig, const Vector2D& rayDir, float pointRadius,
+										const NavigableNodes& nodes, Vector2D& outIntersectionPoint, int& outItersectionNode)
+	{
+		outItersectionNode = -1;
+		typedef std::vector<int> Ints;
+		Ints unprocessedNodes;
+		int unprocessedNodeCount = (int) nodes.size();
+		Vector2D nextRayOrig = rayOrig;
+
+		unprocessedNodes.resize(nodes.size());
+
+		for (size_t i = 0; i < nodes.size(); ++i)
+			unprocessedNodes[i] = (int) i;
+
+		while (unprocessedNodeCount > 0)
+		{
+			int containingNode = -1;
+
+			for (size_t i = 0; i < unprocessedNodes.size(); ++i)
+			{
+				if (unprocessedNodes[i] >= 0)
+				{
+					if (nodes[unprocessedNodes[i]].Contains(*this, nextRayOrig, pointRadius))
+					{
+						containingNode = (int) i;
+						break;
+					}
+				}
+			}
+
+			if (containingNode != -1)
+			{
+				outItersectionNode = containingNode;
+				nodes[unprocessedNodes[containingNode]].IntersectRay(*this, nextRayOrig, rayDir, pointRadius, outIntersectionPoint);
+				nextRayOrig = outIntersectionPoint;
+
+				unprocessedNodes[containingNode] = -1;
+				--unprocessedNodeCount;
+			}
+			else
+			{
+				break;
+			}
+		}
+
+		return outItersectionNode != -1;
 	}
 
 };
