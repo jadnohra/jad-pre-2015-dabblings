@@ -164,8 +164,8 @@ int World::MainLoopRun(int version)
 			Color path_color = mApp->GetPathColor(*this);
 
 			glClearColor(clear_color.r, clear_color.g, clear_color.b, 1.0f);
-
 			glClear( GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+			mRenderer.BeginRender();
 
 			if (draw_terrain)
 				mTerrain->DrawWaypoints(*this, true, terrain_el_color, terrain_el_color);
@@ -181,7 +181,7 @@ int World::MainLoopRun(int version)
 			Draw(renderTimer.GetTime() - updateTimer.GetFrameTime(), worldController.mpFocusAgent);
 			worldController.Draw();
 			mApp->Draw(*this);
-			SDL_GL_SwapBuffers();
+			
 		}
 
 
@@ -207,6 +207,10 @@ int World::MainLoopRun(int version)
 		}
 
 		worldController.Update();
+
+		mRenderer.EndRender();
+
+		SDL_GL_SwapBuffers();
 
 		SDL_Delay(2);
 

@@ -2,6 +2,7 @@
 #define RENDERER_H
 
 #include <algorithm>
+#include <vector>
 #include "SDL.h"
 #include "SDL_opengl.h" 
 #include "Math.h"
@@ -50,6 +51,60 @@ public:
 	int mScreenHeight;
 	float mGlobalAlphaMul;
 	float mWorldScale;
+	bool mIsRendering;
+
+	struct RenderCircle
+	{
+		Vector2D v;
+		float radius;
+		Color color;
+		float alpha; 
+		bool thin;
+
+		RenderCircle()
+		{
+		}
+
+		RenderCircle(const Vector2D& v_, float radius_, const Color& color_, float alpha_ = -1.0f, bool thin_ = false)
+		:	v(v_)
+		,	radius(radius_)
+		,	color(color_)
+		,	alpha(alpha_)
+		,	thin(thin_)
+		{
+		}
+	};
+
+	struct RenderLine
+	{
+		Vector2D p1;
+		Vector2D p2;
+		Color color;
+		float alpha;
+		float width;
+
+		RenderLine()
+		{
+		}
+
+		RenderLine(const Vector2D& p1_, const Vector2D& p2_, const Color& color_, float alpha_ = -1.0f, float width_ = 1.0f)
+			:	p1(p1_)
+			,	p2(p2_)
+			,	color(color_)
+			,	alpha(alpha_)
+			,	width(width_)
+		{
+		}
+		
+	};
+
+	
+	typedef std::vector<RenderCircle> RenderCircles;
+	typedef std::vector<RenderLine> RenderLines;
+
+
+	RenderCircles mRenderCircles;
+	RenderLines mRenderLines;
 
 	Renderer()
 	{
@@ -58,6 +113,33 @@ public:
 
 		mGlobalAlphaMul = 0.75f;
 		mWorldScale = 12.0f;
+		mIsRendering = false;
+	}
+
+	void BeginRender() 
+	{ 
+		mIsRendering = true; 
+	}
+
+	void EndRender() 
+	{ 
+		for (size_t i = 0; i <  mRenderCircles.size(); ++i)
+		{
+			RenderCircle& circle = mRenderCircles[i];
+
+			DrawCircle(circle.v, circle.radius, circle.color, circle.alpha, circle.thin);
+		}
+		mRenderCircles.clear();
+
+		for (size_t i = 0; i <  mRenderLines.size(); ++i)
+		{
+			RenderLine& line = mRenderLines[i];
+
+			DrawLine(line.p1, line.p2, line.color, line.alpha, line.width);
+		}
+		mRenderLines.clear();
+
+		mIsRendering = false; 
 	}
 
 	int GetScreenWidth() { return mScreenWidth; }
@@ -128,6 +210,12 @@ public:
 
 	void DrawCircle(const Vector2D& v, float radius, const Color& color, float alpha = -1.0f, bool thin = false)
 	{
+		if (!mIsRendering)
+		{
+			mRenderCircles.push_back(RenderCircle(v, radius, color, alpha, thin));
+			return;
+		}
+
 		if (alpha < 0.0f)
 			alpha = color.a;
 
@@ -149,6 +237,12 @@ public:
 
 	void DrawLine(const Vector2D& p1, const Vector2D& p2, const Color& color, float alpha = -1.0f, float width = 1.0f)
 	{
+		if (!mIsRendering)
+		{
+			mRenderLines.push_back(RenderLine(p1, p2, color, alpha, width));
+			return;
+		}
+
 		if (alpha < 0.0f)
 			alpha = color.a;
 

@@ -28,7 +28,7 @@ struct Waypoint
 	float radius;
 	float origRadius;
 
-	static int CreateLinkQuad(const Waypoint& inWpt1, const Waypoint& inWpt2, const WaypointLink* pWptLink, bool inUseTangentsForLinks, Vector2D* outQuad)
+	static int CreateLinkQuad(const Waypoint& inWpt1, const Waypoint& inWpt2, const WaypointLink* pWptLink, bool inUseTangentsForLinks, float inShrinkRadius, Vector2D* outQuad)
 	{
 		int unique_point_count = 4;
 
@@ -44,25 +44,30 @@ struct Waypoint
 
 			if (pWptLink && pWptLink->minRadius != FLT_MAX)
 			{
-				outQuad[point_index++] = inWpt1.pos + diff_normal * (-pWptLink->minRadius);
-				outQuad[point_index++] = inWpt1.pos + diff_normal * (pWptLink->minRadius);
-				outQuad[point_index++] = inWpt2.pos + diff_normal * (pWptLink->minRadius);
-				outQuad[point_index++] = inWpt2.pos + diff_normal * (-pWptLink->minRadius);
+				float radius = std::max(0.0f, (pWptLink->minRadius - inShrinkRadius));
 
-				if (pWptLink->minRadius <= 0.0f)
+				outQuad[point_index++] = inWpt1.pos + diff_normal * (-radius);
+				outQuad[point_index++] = inWpt1.pos + diff_normal * (radius);
+				outQuad[point_index++] = inWpt2.pos + diff_normal * (radius);
+				outQuad[point_index++] = inWpt2.pos + diff_normal * (-radius);
+
+				if (radius <= 0.0f)
 					unique_point_count = 1;
 			}
 			else
 			{
-				outQuad[point_index++] = inWpt1.pos + diff_normal * (-inWpt1.radius);
-				outQuad[point_index++] = inWpt1.pos + diff_normal * (inWpt1.radius);
-				outQuad[point_index++] = inWpt2.pos + diff_normal * (inWpt2.radius);
-				outQuad[point_index++] = inWpt2.pos + diff_normal * (-inWpt2.radius);
+				float radius1 = std::max(0.0f, (inWpt1.radius - inShrinkRadius));
+				float radius2 = std::max(0.0f, (inWpt2.radius - inShrinkRadius));
 
-				if (inWpt1.radius == 0.0f)
+				outQuad[point_index++] = inWpt1.pos + diff_normal * (-radius1);
+				outQuad[point_index++] = inWpt1.pos + diff_normal * (radius1);
+				outQuad[point_index++] = inWpt2.pos + diff_normal * (radius2);
+				outQuad[point_index++] = inWpt2.pos + diff_normal * (-radius2);
+
+				if (radius1 == 0.0f)
 					--unique_point_count;
 
-				if (inWpt2.radius == 0.0f)
+				if (radius2 == 0.0f)
 					--unique_point_count;
 			}
 		}
@@ -94,7 +99,7 @@ struct Waypoint
 	{ 
 		Vector2D quad[4];
 
-		int unique_point_count = CreateLinkQuad(*this, neighbor, pWptLink, inUseTangentsForLinks, quad);
+		int unique_point_count = CreateLinkQuad(*this, neighbor, pWptLink, inUseTangentsForLinks, 0.0f, quad);
 
 		if (unique_point_count <= 2)
 			return false;
@@ -137,7 +142,7 @@ struct Waypoint
 	{ 
 		Vector2D quad[4];
 
-		int unique_point_count = CreateLinkQuad(*this, neighbor, pWptLink, inUseTangentsForLinks, quad);
+		int unique_point_count = CreateLinkQuad(*this, neighbor, pWptLink, inUseTangentsForLinks, 0.0f, quad);
 
 		if (unique_point_count <= 2)
 			return false;
@@ -1203,7 +1208,7 @@ public:
 
 						Vector2D quad[4];
 
-						int quad_point_count = Waypoint::CreateLinkQuad(wpt_node, neighbor_wpt_node, &links.nodeEdges[i], mUseTangentsForLinks, quad);
+						int quad_point_count = Waypoint::CreateLinkQuad(wpt_node, neighbor_wpt_node, &links.nodeEdges[i], mUseTangentsForLinks, 0.0f, quad);
 
 						if (quad_point_count >= 3)
 							DrawLink(inWorld, renderer, quad, inLinkColor, 0.3f);
@@ -1266,7 +1271,7 @@ public:
 
 				Vector2D quad[4];
 
-				int quad_point_count = Waypoint::CreateLinkQuad(mWaypointGraph.mNodes[links.nodeIndex], mWaypointGraph.mNodes[neighbor], &link, mUseTangentsForLinks, quad);
+				int quad_point_count = Waypoint::CreateLinkQuad(mWaypointGraph.mNodes[links.nodeIndex], mWaypointGraph.mNodes[neighbor], &link, mUseTangentsForLinks, 0.0f, quad);
 				DrawLink(inWorld, renderer, quad, inLinkColor, inLineWidth);
 			}
 		}
@@ -1357,6 +1362,50 @@ public:
 
 		for (int i = 0; i < 2; ++i)
 		{
+			if (loc.links[i].linksIndex >= 0)
+			{
+				Vector2D quad[4];
+
+				Waypoint::CreateLinkQuad(mWaypointGraph.getNode(loc.links[i].linkFrom), 
+					mWaypointGraph.getNode(loc.links[i].linkTo), 
+					&(mWaypointGraph.mLinks[loc.links[i].linksIndex].nodeEdges[loc.links[i].indexInLinks]),
+					mUseTangentsForLinks, pointRadius, quad);
+
+				float min_t = FLT_MAX;
+				float max_t = -FLT_MAX;
+
+				for (int i = 0; i < 4; ++i)
+				{
+					float t, u;
+
+					if (IntersectLines(lineOrig, lineOrig + lineDir, quad[i], quad[(i+1)%4], t, u)
+						&& (u >= 0.0f && u <= 1.0f))
+					{
+						if (t <= 0.0f)
+						{
+							min_t = t;
+						}
+
+						if (t >= 0.0f)
+						{
+							max_t = t;
+						}
+					}
+				}
+
+				if (min_t <= 0.0f && max_t >= 0.0f)
+				{
+					outSegmentStart = (lineOrig + (lineDir * min_t));
+					outSegmentEnd = (lineOrig + (lineDir * max_t));
+
+					return 2;
+				}
+			}
+		}
+
+
+		for (int i = 0; i < 2; ++i)
+		{
 			if (loc.waypoints[i] >= 0)
 			{
 				float t, u;
@@ -1392,58 +1441,7 @@ public:
 				}
 			}
 
-			if (loc.links[i].linksIndex >= 0)
-			{
-				Vector2D quad[4];
-
-				Waypoint::CreateLinkQuad(mWaypointGraph.getNode(loc.links[i].linkFrom), 
-										mWaypointGraph.getNode(loc.links[i].linkTo), 
-										&(mWaypointGraph.mLinks[loc.links[i].linksIndex].nodeEdges[loc.links[i].indexInLinks]),
-										mUseTangentsForLinks, quad);
-
-				float min_t = FLT_MAX;
-				float max_t = -FLT_MAX;
-
-				for (int i = 0; i < 4; ++i)
-				{
-					float t, u;
-
-					if (IntersectLines(lineOrig, lineDir, quad[i], quad[(i+1)%4], t, u)
-						&& (u >= 0.0f && u <= 1.0f))
-					{
-						if (t <= 0.0f)
-						{
-							min_t = t;
-						}
-
-						if (t >= 0.0f)
-						{
-							max_t = t;
-						}
-					}
-				}
-
-				if (min_t <= 0.0f && max_t >= 0.0f)
-				{
-					outSegmentStart = (lineOrig + lineDir * min_t);
-					outSegmentEnd = (lineOrig + lineDir * max_t);
-
-					if (pointRadius != 0.0f)
-					{
-						if (min_t >= 0.0f)
-							outSegmentStart = outSegmentStart - (lineDir.Normalized() * pointRadius);
-						else
-							outSegmentStart = outSegmentStart + (lineDir.Normalized() * pointRadius);
-
-						if (max_t >= 0.0f)
-							outSegmentEnd = outSegmentEnd - (lineDir.Normalized() * pointRadius);
-						else
-							outSegmentEnd = outSegmentEnd + (lineDir.Normalized() * pointRadius);
-					}
-
-					return 2;
-				}
-			}
+			
 		}
 		
 		return 0;

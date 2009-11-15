@@ -3,6 +3,7 @@
 
 #include "World.h"
 #include "Agent.h"
+#include "Renderer.h"
 
 class ICollisionAvoidanceManager
 {
@@ -697,6 +698,9 @@ public:
 				return;
 			}
 
+			//manager.mWorld.mRenderer.DrawCircle(manager.mWorld.WorldToScreen(optionSegmentStart), manager.mWorld.WorldToScreen(agent.pAgent->GetRadius()), Color::kGreen, 0.5f, true);
+			//manager.mWorld.mRenderer.DrawCircle(manager.mWorld.WorldToScreen(optionSegmentEnd), manager.mWorld.WorldToScreen(agent.pAgent->GetRadius()), Color::kGreen, 0.5f, false);
+
 			optionCountPerSide = (int) (Distance(optionSegmentEnd, optionSegmentStart) / (0.5f * agent.pAgent->GetRadius()));
 
 			if (optionCountPerSide > 5)
@@ -727,7 +731,7 @@ public:
 			}
 			else
 			{
-				option.point = optionCenter + ((optionSegmentStart - optionCenter) * ((float) (nextOptionRightIndex + 1) / (float) (optionCountPerSide + 1)));
+				option.point = optionCenter + ((optionSegmentStart - optionCenter) * ((float) (nextOptionLeftIndex + 1) / (float) (optionCountPerSide + 1)));
 				++nextOptionLeftIndex;
 			}
 
@@ -848,6 +852,7 @@ public:
 				best_score = score;
 				best_option = option;
 			}
+			mWorld.mRenderer.DrawCircle(mWorld.WorldToScreen(option.point), mWorld.WorldToScreen(agent.pAgent->GetRadius()), Color::kGreen, 0.5f, true);
 		}
 
 		if (has_best_option)
