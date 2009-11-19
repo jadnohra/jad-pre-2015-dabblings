@@ -2,6 +2,7 @@
 #define TEST_VEHICLE_H
 
 #include <Physics/Vehicle/hkpVehicleInstance.h>
+#include <Physics/Vehicle/Steering/Default/hkpVehicleDefaultSteering.h>
 #include <Physics/Collide/Shape/Convex/ConvexVertices/hkpConvexVerticesShape.h>
 
 #include "VehicleApiUtils.h"
@@ -94,6 +95,92 @@ public:
 		}
 	}
 
+	class Steering : public hkpVehicleSteering 
+	{
+	public:
+
+		hkpVehicleSteering* m_pOrig;
+
+		Steering(hkpVehicleSteering* pOrig)
+		{
+			m_pOrig = pOrig;
+		}
+
+		virtual void calcSteering (const hkReal deltaTime, const hkpVehicleInstance *vehicle, const hkpVehicleDriverInput::FilteredDriverInputOutput &filteredInfoOutput, SteeringAnglesOutput &steeringOutput)
+		{
+			m_pOrig->calcSteering (deltaTime, vehicle, filteredInfoOutput, steeringOutput);
+
+			if (steeringOutput.m_mainSteeringAngle != 0.0f)
+			{
+				printf("wheel-steer: %f, %f, %f\n", steeringOutput.m_mainSteeringAngle, steeringOutput.m_wheelsSteeringAngle[0], steeringOutput.m_wheelsSteeringAngle[1]);
+				int x = 0;
+			}
+		}
+	};
+
+	class DifferentialSteeringSteering : public hkpVehicleSteering 
+	{
+	public:
+
+		hkpVehicleSteering* m_pOrig;
+
+		DifferentialSteeringSteering(hkpVehicleSteering* pOrig)
+		{
+			m_pOrig = pOrig;
+		}
+
+		virtual void calcSteering (const hkReal deltaTime, const hkpVehicleInstance *vehicle, const hkpVehicleDriverInput::FilteredDriverInputOutput &filteredInfoOutput, SteeringAnglesOutput &steeringOutput)
+		{
+			m_pOrig->calcSteering (deltaTime, vehicle, filteredInfoOutput, steeringOutput);
+
+			//if (steeringOutput.m_mainSteeringAngle != 0.0f)
+			{
+				steeringOutput.m_wheelsSteeringAngle[0] = 0.0f;
+				steeringOutput.m_wheelsSteeringAngle[1] = 0.0f;
+				steeringOutput.m_wheelsSteeringAngle[2] = 0.0f;
+				steeringOutput.m_wheelsSteeringAngle[3] = 0.0f;
+				int x = 0;
+			}
+		}
+	};
+
+	
+
+	class DifferentialSteeringTransmission : public hkpVehicleTransmission  
+	{
+	public:
+
+		hkpVehicleDriverInputAnalogStatus* m_pDevStatus;
+		hkpVehicleTransmission* m_pOrig;
+
+		DifferentialSteeringTransmission(hkpVehicleTransmission* pOrig, hkpVehicleDriverInputAnalogStatus* pDevStatus)
+		{
+			m_pOrig = pOrig;
+			m_pDevStatus = pDevStatus;
+		}
+		
+		virtual void  calcTransmission (const hkReal deltaTime, const hkpVehicleInstance *vehicle, TransmissionOutput &transmissionOut)
+		{
+			 m_pOrig->calcTransmission (deltaTime, vehicle, transmissionOut);
+
+			 if (m_pDevStatus->m_positionX != 0.0f)
+			 {
+				 //transmissionOut.m_numWheelsTramsmittedTorque = 4;
+
+				 //transmissionOut.m_wheelsTransmittedTorque[0] = -transmissionOut.m_wheelsTransmittedTorque[0];
+				 //transmissionOut.m_wheelsTransmittedTorque[1] = -transmissionOut.m_wheelsTransmittedTorque[1];
+				 //transmissionOut.m_wheelsTransmittedTorque[2] = -transmissionOut.m_wheelsTransmittedTorque[2];
+				 //transmissionOut.m_wheelsTransmittedTorque[3] = -transmissionOut.m_wheelsTransmittedTorque[3];
+
+				 //transmissionOut.m_wheelsTransmittedTorque[2] = transmissionOut.m_wheelsTransmittedTorque[0];
+				 //transmissionOut.m_wheelsTransmittedTorque[1] = -transmissionOut.m_wheelsTransmittedTorque[0];
+				 //transmissionOut.m_wheelsTransmittedTorque[3] = transmissionOut.m_wheelsTransmittedTorque[1];
+			 }
+		}
+	};
+
+	
+
 	void Create(hkpWorld* world)
 	{
 
@@ -138,6 +225,8 @@ public:
 		VehicleSetup setup;
 		setup.buildVehicle(world, *m_vehicle );
 
+		m_vehicle->m_steering			= new DifferentialSteeringSteering(m_vehicle->m_steering);
+		m_vehicle->m_transmission		= new DifferentialSteeringTransmission(m_vehicle->m_transmission, (hkpVehicleDriverInputAnalogStatus*)m_vehicle->m_deviceStatus);
 
 		///[integrationWithSDK]
 		/// Actions are the interface between user controllable behavior of the physical simulation and the Havok core. 
@@ -165,7 +254,6 @@ public:
 		if (deviceStatus->m_positionX != 0.0f || deviceStatus->m_positionY != 0.0f)
 		{
 			m_vehicle->getChassis()->activate();
-			int x = 0;
 		}
 
 		/*
