@@ -118,6 +118,71 @@ public:
 		}
 	};
 
+	class TestAngleSteering : public hkpVehicleSteering 
+	{
+	public:
+
+		hkpVehicleSteering* m_pOrig;
+		hkpVehicleDefaultSuspension* m_pSusp;
+		hkVector4 mCenterPos;
+		float m_OnSpotAngle[16];
+
+		TestAngleSteering(hkpVehicleInstance* pVehicle, hkpVehicleSteering* pOrig)
+		{
+			m_pOrig = pOrig;
+			m_pSusp = (hkpVehicleDefaultSuspension*) pVehicle->m_suspension;
+
+			Init();
+		}
+
+		void Init()
+		{
+			hkVector4 center_pos;
+			center_pos.setZero4();
+
+			float wheel_factor = 1.0f / ((float) m_pSusp->m_wheelParams.getSize());
+			for (int i = 0; i < m_pSusp->m_wheelParams.getSize(); ++i)
+			{
+				hkVector4 pos = m_pSusp->m_wheelParams[i].m_hardpointChassisSpace;
+				pos.mul4(wheel_factor);
+				center_pos.add4(pos);
+			}
+
+			mCenterPos = center_pos;
+			Vector2D right(1.0f, 0.0f);
+
+			for (int i = 0; i < m_pSusp->m_wheelParams.getSize(); ++i)
+			{
+				hkVector4 pos = m_pSusp->m_wheelParams[i].m_hardpointChassisSpace;
+				hkVector4 dir = pos;
+				dir.sub4(mCenterPos);
+
+				Vector2D normal2D(dir(0), dir(2));
+				normal2D.Normalize();
+
+				Vector2D dir2D = rotate90(normal2D);
+				
+				m_OnSpotAngle[i] = SignedAngle(dir2D, right);
+			}
+		}
+
+		virtual void calcSteering (const hkReal deltaTime, const hkpVehicleInstance *vehicle, const hkpVehicleDriverInput::FilteredDriverInputOutput &filteredInfoOutput, SteeringAnglesOutput &steeringOutput)
+		{
+			m_pOrig->calcSteering (deltaTime, vehicle, filteredInfoOutput, steeringOutput);
+
+			for (int i = 0; i < m_pSusp->m_wheelParams.getSize(); ++i)
+			{
+				steeringOutput.m_wheelsSteeringAngle[i] = m_OnSpotAngle[i];
+			}
+
+			//if (steeringOutput.m_mainSteeringAngle != 0.0f)
+			//{
+			//	printf("wheel-steer: %f, %f, %f\n", steeringOutput.m_mainSteeringAngle, steeringOutput.m_wheelsSteeringAngle[0], steeringOutput.m_wheelsSteeringAngle[1]);
+			//	int x = 0;
+			//}
+		}
+	};
+
 	class DifferentialSteeringSteering : public hkpVehicleSteering 
 	{
 	public:
@@ -172,9 +237,9 @@ public:
 				 //transmissionOut.m_wheelsTransmittedTorque[2] = -transmissionOut.m_wheelsTransmittedTorque[2];
 				 //transmissionOut.m_wheelsTransmittedTorque[3] = -transmissionOut.m_wheelsTransmittedTorque[3];
 
-				 //transmissionOut.m_wheelsTransmittedTorque[2] = transmissionOut.m_wheelsTransmittedTorque[0];
-				 //transmissionOut.m_wheelsTransmittedTorque[1] = -transmissionOut.m_wheelsTransmittedTorque[0];
-				 //transmissionOut.m_wheelsTransmittedTorque[3] = transmissionOut.m_wheelsTransmittedTorque[1];
+				 transmissionOut.m_wheelsTransmittedTorque[2] = transmissionOut.m_wheelsTransmittedTorque[0];
+				 transmissionOut.m_wheelsTransmittedTorque[1] = -transmissionOut.m_wheelsTransmittedTorque[0];
+				 transmissionOut.m_wheelsTransmittedTorque[3] = transmissionOut.m_wheelsTransmittedTorque[1];
 			 }
 		}
 	};
@@ -225,8 +290,9 @@ public:
 		VehicleSetup setup;
 		setup.buildVehicle(world, *m_vehicle );
 
-		m_vehicle->m_steering			= new DifferentialSteeringSteering(m_vehicle->m_steering);
-		m_vehicle->m_transmission		= new DifferentialSteeringTransmission(m_vehicle->m_transmission, (hkpVehicleDriverInputAnalogStatus*)m_vehicle->m_deviceStatus);
+		m_vehicle->m_steering			= new TestAngleSteering(m_vehicle, m_vehicle->m_steering);
+		//m_vehicle->m_steering			= new DifferentialSteeringSteering(m_vehicle->m_steering);
+		//m_vehicle->m_transmission		= new DifferentialSteeringTransmission(m_vehicle->m_transmission, (hkpVehicleDriverInputAnalogStatus*)m_vehicle->m_deviceStatus);
 
 		///[integrationWithSDK]
 		/// Actions are the interface between user controllable behavior of the physical simulation and the Havok core. 

@@ -244,4 +244,12 @@ inline float GetPointSideOfLine(const Vector2D &linePos, const Vector2D& lineDir
 }
 
 
+inline float SignedAngle(const Vector2D & v1, const Vector2D & v2)
+{
+	float perpDot = v1.x * v2.y - v1.y * v2.x;
+	return (float) atan2f(perpDot, Dot(v1, v2));
+}
+
+
+
 #endif
