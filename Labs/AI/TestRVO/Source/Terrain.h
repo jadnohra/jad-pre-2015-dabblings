@@ -651,8 +651,11 @@ class TerrainAgent
 {
 public:
 
+	TerrainAgent() : mpTerrain(NULL) {}
+
 	virtual Circle GetTerrainShape() = 0;
 	virtual const Path* GetPath(int& currToIndex, bool& hasTempAvoidPt, Vector2D& currTempAvoidancePt) { return NULL; }
+	Terrain* mpTerrain;
 };
 
 
@@ -850,6 +853,7 @@ public:
 		int agentIndex = (int) mAgentInfos.size();
 		mAgentInfos.push_back(AgentInfo());
 		mAgentInfos.back().agent = pAgent;
+		pAgent->mpTerrain = this;
 		return agentIndex;
 	}
 

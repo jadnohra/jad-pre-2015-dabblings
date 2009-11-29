@@ -152,11 +152,12 @@ int World::MainLoopRun(int version)
 	while (is_running)
 	{
 		unsigned int startFrame;
+		bool did_draw = false;
 
 		if (renderTimer.Update(startFrame))
 		{
 			//printf("%f\n", renderTimer.GetTime());
-
+			did_draw = true;
 			Color clear_color = mApp->GetBackgroundColor(*this);
 			Color terrain_el_color = mApp->GetTerrainElementColor(*this);
 			Color active_terrain_el_color = mApp->GetFocusedTerrainElementColor(*this);
@@ -181,7 +182,6 @@ int World::MainLoopRun(int version)
 			Draw(renderTimer.GetTime() - updateTimer.GetFrameTime(), worldController.mpFocusAgent);
 			worldController.Draw();
 			mApp->Draw(*this);
-			
 		}
 
 
@@ -195,8 +195,8 @@ int World::MainLoopRun(int version)
 			{
 				float t = updateTimer.GetFrameSyncedTime(frame);
 
-				mAvoidanceManager->Update(t, dt);
 				Update(t, dt);
+				mAvoidanceManager->Update(t, dt);
 				mTerrain->Update(t, dt);
 				if (!mApp->Update(*this, t, dt))
 				{
@@ -208,9 +208,11 @@ int World::MainLoopRun(int version)
 
 		worldController.Update();
 
-		mRenderer.EndRender();
-
-		SDL_GL_SwapBuffers();
+		if (did_draw)
+		{
+			mRenderer.EndRender();
+			SDL_GL_SwapBuffers();
+		}
 
 		SDL_Delay(2);
 

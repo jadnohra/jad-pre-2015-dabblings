@@ -6,7 +6,51 @@
 #include "World.h"
 #include "Terrain.h"
 
-class Agent : public TerrainAgent
+class IAgent
+{
+public:
+
+	virtual ~IAgent() {}
+
+	virtual Circle GetTerrainShape() 
+	{
+		return Circle(GetPos(), GetRadius());
+	}
+
+	virtual const Path* GetPath(int& currToIndex, bool& hasTempAvoidPt, Vector2D& currTempAvoidancePt) 
+	{ 
+		return NULL;
+	}
+
+	virtual void Agitate()			 { }
+	virtual const Vector2D& GetPos() { return Vector2D::kZero; }
+	virtual const Vector2D& GetVel() { return Vector2D::kZero;; }
+	virtual float GetRadius() { return 0.0f; }
+	virtual void NotifyControlledByAvoidance() { }
+
+	virtual void SetPos(const Vector2D& position) { }
+	virtual void SetVel(const Vector2D& velocity) { }
+
+	virtual void SetGoal(const Vector2D& pos, float speed) {  }
+	
+	virtual void SetPath(const Path& path, float speed) { }
+
+	virtual void AddAvoidanceSolutionToPath(const Vector2D& point, const Vector2D* pVel, bool replacePathPoint)
+	{
+	}
+
+	virtual void Update(float time, float dt) 
+	{
+	}
+
+
+	virtual void Draw(float time, Agent* pFocusAgent) 
+	{
+	}
+
+};
+
+class Agent : public IAgent, public TerrainAgent
 {
 public:
 
@@ -25,6 +69,7 @@ public:
 	float mPathSpeed;
 	bool mHasPathTempAvoidancePos;
 	Vector2D mPathTempAvoidancePos;
+	Vector2D mPathTempAvoidanceOrigPos;
 
 	float mUpdateTime;
 	Vector2D mPrevUpdatePos;
@@ -119,8 +164,13 @@ public:
 			}
 			else
 			{
+				if (!mHasPathTempAvoidancePos)
+					mPathTempAvoidanceOrigPos = mHasGoal ? mGoalPos : point;
+				//else keep the orig pos
+
 				mHasPathTempAvoidancePos = true;
 				mPathTempAvoidancePos = point;
+				
 				SetGoal(mPathTempAvoidancePos, mPathSpeed);
 			}
 		}
@@ -160,7 +210,8 @@ public:
 						if (!mHasPathTempAvoidancePos)
 							++mIndexInPath;
 
-						SetGoal(mPath.GetPoint(mIndexInPath), mPathSpeed);
+						SetGoalToVisiblePathPoint(mIndexInPath);
+						//SetGoal(mPath.GetPoint(mIndexInPath), mPathSpeed);
 					}
 					else
 					{
@@ -173,7 +224,35 @@ public:
 			}
 		}
 	}
-	
+
+	void SetGoalToVisiblePathPoint(int& index)
+	{
+		if (index+1 < mPath.Length())
+		{
+
+			Terrain::NavigableNodes nodes;
+			nodes.push_back(Terrain::NavigableNode(mPath.GetNode(index).wptIndex));
+			Terrain::LinkAddress linkAdress;
+			mpTerrain->FindLinkAddress(mPath.GetNode(index).wptIndex, mPath.GetNode(index+1).wptIndex, linkAdress);
+			nodes.push_back(Terrain::NavigableNode(linkAdress));
+			nodes.push_back(Terrain::NavigableNode(mPath.GetNode(index+1).wptIndex));
+
+
+			Vector2D intersectionPoint;
+			int intersectionNode;
+
+			if (mpTerrain->IntersectRayWithNavigableNodes(GetPos(), GetVel().Normalized(), GetRadius(),
+													   nodes, intersectionPoint, intersectionNode))
+			{
+				if (intersectionNode > 0)
+				{
+					index = index+1;
+				}
+			}
+		}
+
+		SetGoal(mPath.GetPoint(index), mPathSpeed);
+	}
 
 	virtual void Update(float time, float dt) 
 	{
@@ -220,11 +299,15 @@ public:
 
 				if (dist <= 0.2f)
 				{
-					SetVel(Vector2D::kZero);
 					mHasGoal = false;
 
 					if (mHasPath)
 						UpdatePath(time);
+					else
+					{
+						SetVel(Vector2D::kZero);
+						
+					}
 				}
 				else
 				{

@@ -185,6 +185,14 @@
 			>
 		</File>
 		<File
+			RelativePath="..\..\Source\Agent2.cpp"
+			>
+		</File>
+		<File
+			RelativePath="..\..\Source\Agent2.h"
+			>
+		</File>
+		<File
 			RelativePath="..\..\Source\App.h"
 			>
 		</File>

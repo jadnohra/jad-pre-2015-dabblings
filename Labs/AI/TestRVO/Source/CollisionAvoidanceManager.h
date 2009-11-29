@@ -626,7 +626,7 @@ public:
 			{
 				const AgentAvoidanceOption& solution = group.avoidanceSolutions[j];
 
-				m_AgentInfos[solution.agentIndex].pAgent->AddAvoidanceSolutionToPath(solution.point, solution.hasVel ? & solution.vel : NULL, solution.replacePointInPath);
+				m_AgentInfos[group.agents[solution.agentIndex]].pAgent->AddAvoidanceSolutionToPath(solution.point, solution.hasVel ? & solution.vel : NULL, solution.replacePointInPath);
 			}
 		}
 	}
@@ -639,11 +639,11 @@ public:
 			AgentInfo& agent = m_AgentInfos[group.agents[i]];
 			
 			int collider;
-			Vector2D collisionPoint;
+			Vector2D collisionPos;
 			
-			if (FindEarliestCollider(agent, group, lookAheadTime, collider, collisionPoint))
+			if (FindEarliestCollider(agent, group, lookAheadTime, collider, collisionPos))
 			{
-				ResolveCollision(agent, m_AgentInfos[group.agents[collider]], collisionPoint, group, lookAheadTime);
+				ResolveCollision(agent, m_AgentInfos[group.agents[collider]], collisionPos, group, lookAheadTime);
 			}
 		}
 	}
@@ -818,63 +818,76 @@ public:
 
 		virtual float ScoreOption(const AvoidanceOption& option)
 		{
-			Vector2D option_agent_vel = ((option.point - agent.pAgent->GetPos()).Normalized() * agent.pAgent->GetVel().Length());
-			Vector2D collider_vel = collider.hasModifiedVel ? collider.modifiedVel : collider.pAgent->GetVel();
+			float all_agents_score = 0.0f;
 
-			float collision_score = 0.0f;
-			float safety_score = 0.0f;
-			float comfort_zone_score = 0.0f;
-			
-			for (size_t i = 0; i < group.agents.size(); ++i)
-			{
-				AgentInfo& collider = manager.m_AgentInfos[group.agents[i]];
+			for (int i = 0; i < group.agents.size(); ++i)
+			{	
+				if (manager.m_AgentInfos[group.agents[i]].pAgent != agent.pAgent)
+				{
+					AgentInfo& collider = manager.m_AgentInfos[group.agents[i]];
 
-				if (&collider != &agent)
-				{	
-					if (collider_vel != Vector2D::kZero)
+					Vector2D option_agent_vel = ((option.point - agent.pAgent->GetPos()).Normalized() * agent.pAgent->GetVel().Length());
+					Vector2D collider_vel = collider.hasModifiedVel ? collider.modifiedVel : collider.pAgent->GetVel();
+
+					float collision_score = 0.0f;
+					float safety_score = 0.0f;
+					float comfort_zone_score = 0.0f;
+					
+					for (size_t i = 0; i < group.agents.size(); ++i)
 					{
-						// we could use the unnormalized + response curve
-						safety_score += 5.0f * (1.0f - Dot((option.point - collider.pAgent->GetPos()).Normalized(), collider_vel.Normalized()));
-					}
-					else
-					{
-						// use orientation
-					}
+						AgentInfo& collider = manager.m_AgentInfos[group.agents[i]];
 
-					{
-						Vector2D collider_pos_at_coll_time = collider.pAgent->GetPos() + collider_vel * lookAheadTime; // use collision time instead
-						comfort_zone_score += 5.0f * (Distance(collider_pos_at_coll_time, collisionPoint) - (collider.pAgent->GetRadius() + agent.pAgent->GetRadius()));
-					}
+						if (&collider != &agent)
+						{	
+							if (collider_vel != Vector2D::kZero)
+							{
+								// we could use the unnormalized + response curve
+								safety_score += 5.0f * (1.0f - Dot((option.point - collider.pAgent->GetPos()).Normalized(), collider_vel.Normalized()));
+							}
+							else
+							{
+								// use orientation
+							}
 
-					{
-						float timeUntilCollision;
+							{
+								Vector2D collider_pos_at_coll_time = collider.pAgent->GetPos() + collider_vel * lookAheadTime; // use collision time instead
+								comfort_zone_score += 5.0f * (Distance(collider_pos_at_coll_time, collisionPoint) - (collider.pAgent->GetRadius() + agent.pAgent->GetRadius()));
+							}
 
-						if (manager.GetCollisionTime(agent, option_agent_vel, 
-													collider, collider_vel, timeUntilCollision))
-						{
-							float penalty = 10.0f * (1.0f / timeUntilCollision);
-							if (penalty > 100.0f)
-								penalty = 100.0f;
+							{
+								float timeUntilCollision;
 
-							collision_score -= penalty;
+								if (manager.GetCollisionTime(agent, option_agent_vel, 
+															collider, collider_vel, timeUntilCollision))
+								{
+									float penalty = 10.0f * (1.0f / timeUntilCollision);
+									if (penalty > 100.0f)
+										penalty = 100.0f;
+
+									collision_score -= penalty;
+								}
+							}
 						}
 					}
+
+					// we could use the unnormalized + response curve
+					float deviation_score = 0.0f;
+					{
+						deviation_score = -5.0f * Distance(option.point, collisionPoint);
+					}
+					
+					
+					all_agents_score += (collision_score + safety_score + deviation_score + comfort_zone_score);
 				}
 			}
 
-			// we could use the unnormalized + response curve
-			float deviation_score = 0.0f;
-			{
-				deviation_score = -5.0f * Distance(option.point, collisionPoint);
-			}
-			
-			
-			return collision_score + safety_score + deviation_score + comfort_zone_score;
+			return all_agents_score;
 		}
 	};
 
-	bool ResolveCollision(AgentInfo& agent, AgentInfo& collider, const Vector2D& collisionPoint, AvoidanceGroup& group, float lookAheadTime)
+	bool ResolveCollision(AgentInfo& agent, AgentInfo& collider, const Vector2D& collisionPos, AvoidanceGroup& group, float lookAheadTime)
 	{
+		Vector2D collisionPoint = collisionPos + (agent.hasModifiedVel ? agent.modifiedVel : agent.pAgent->GetVel()).Normalized() * agent.pAgent->GetRadius();
 		CollisionResolveOptionGenerator generator(*this, agent, collider, collisionPoint, group, lookAheadTime);
 		CollisionResolveOptionScorer scorer(*this, agent, collider, collisionPoint, group, lookAheadTime);
 
@@ -899,7 +912,7 @@ public:
 
 			if (Distance(agent.pAgent->mPath.GetPoint(agent.pAgent->mIndexInPath), collisionPoint) <= test_dist)
 			{
-				option.replacePointInPath = true;
+				option.replacePointInPath = false;
 			}
 		}
 		
@@ -933,7 +946,7 @@ public:
 		return has_best_option;
 	}
 
-	bool FindEarliestCollider(AgentInfo& agent, AvoidanceGroup& group, float lookAheadTime, int& earliestCollider, Vector2D& collisionPoint)
+	bool FindEarliestCollider(AgentInfo& agent, AvoidanceGroup& group, float lookAheadTime, int& earliestCollider, Vector2D& collisionPos)
 	{
 		earliestCollider = -1;
 		float earliestCollisionTime;
@@ -957,7 +970,7 @@ public:
 					{
 						earliestCollider = (int) i;
 						earliestCollisionTime = timeUntilCollision;
-						collisionPoint = agent.pAgent->GetPos() + (agent_vel * timeUntilCollision);
+						collisionPos = agent.pAgent->GetPos() + (agent_vel * timeUntilCollision);
 					}
 				}
 			}
