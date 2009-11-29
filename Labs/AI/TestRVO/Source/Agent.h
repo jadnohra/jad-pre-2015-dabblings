@@ -229,14 +229,12 @@ public:
 	{
 		if (index+1 < mPath.Length())
 		{
-
 			Terrain::NavigableNodes nodes;
 			nodes.push_back(Terrain::NavigableNode(mPath.GetNode(index).wptIndex));
 			Terrain::LinkAddress linkAdress;
 			mpTerrain->FindLinkAddress(mPath.GetNode(index).wptIndex, mPath.GetNode(index+1).wptIndex, linkAdress);
 			nodes.push_back(Terrain::NavigableNode(linkAdress));
 			nodes.push_back(Terrain::NavigableNode(mPath.GetNode(index+1).wptIndex));
-
 
 			Vector2D intersectionPoint;
 			int intersectionNode;
