@@ -9,6 +9,26 @@
 #include "VehicleSetup.h"
 #include "SDL.h"
 
+#define HAVOC_2D_X 2
+#define HAVOC_2D_Y 0
+
+inline Vector2D to2D(const hkVector4& vect)
+{
+	return Vector2D(vect(HAVOC_2D_X), vect(HAVOC_2D_Y));
+}
+
+inline Vector2D to2DRight(const hkRotation& rot)
+{
+	return to2D(rot.getColumn(HAVOC_2D_X));
+}
+
+inline Vector2D to2DFwd(const hkRotation& rot)
+{
+	return to2D(rot.getColumn(HAVOC_2D_Y));
+}
+
+
+
 class TestVehicle
 {
 public:
@@ -100,10 +120,12 @@ public:
 	public:
 
 		hkpVehicleSteering* m_pOrig;
+		 
 
-		Steering(hkpVehicleSteering* pOrig)
+		Steering( hkpVehicleSteering * pOrig)
 		{
 			m_pOrig = pOrig;
+			
 		}
 
 		virtual void calcSteering (const hkReal deltaTime, const hkpVehicleInstance *vehicle, const hkpVehicleDriverInput::FilteredDriverInputOutput &filteredInfoOutput, SteeringAnglesOutput &steeringOutput)
@@ -122,14 +144,17 @@ public:
 	{
 	public:
 
-		hkpVehicleSteering* m_pOrig;
+		hkpVehicleDefaultSteering * m_pOrig;
 		hkpVehicleDefaultSuspension* m_pSusp;
 		hkVector4 mCenterPos;
 		float m_OnSpotAngle[16];
 
-		TestAngleSteering(hkpVehicleInstance* pVehicle, hkpVehicleSteering* pOrig)
+		TestAngleSteering(hkpVehicleInstance* pVehicle, hkpVehicleDefaultSteering* pOrig)
 		{
 			m_pOrig = pOrig;
+			m_pOrig->m_maxSteeringAngle = 2.0f * MATH_PIf;
+			m_pOrig->m_maxSpeedFullSteeringAngle = 2.0f * MATH_PIf;
+
 			m_pSusp = (hkpVehicleDefaultSuspension*) pVehicle->m_suspension;
 
 			Init();
@@ -137,32 +162,29 @@ public:
 
 		void Init()
 		{
-			hkVector4 center_pos;
-			center_pos.setZero4();
+			hkVector4 center_pos_3D;
+			center_pos_3D.setZero4();
 
 			float wheel_factor = 1.0f / ((float) m_pSusp->m_wheelParams.getSize());
 			for (int i = 0; i < m_pSusp->m_wheelParams.getSize(); ++i)
 			{
 				hkVector4 pos = m_pSusp->m_wheelParams[i].m_hardpointChassisSpace;
 				pos.mul4(wheel_factor);
-				center_pos.add4(pos);
+				center_pos_3D.add4(pos);
 			}
 
-			mCenterPos = center_pos;
-			Vector2D right(1.0f, 0.0f);
-
+			mCenterPos = center_pos_3D;
+			Vector2D center_pos = to2D(mCenterPos);
+			
 			for (int i = 0; i < m_pSusp->m_wheelParams.getSize(); ++i)
 			{
-				hkVector4 pos = m_pSusp->m_wheelParams[i].m_hardpointChassisSpace;
-				hkVector4 dir = pos;
-				dir.sub4(mCenterPos);
-
-				Vector2D normal2D(dir(0), dir(2));
-				normal2D.Normalize();
-
-				Vector2D dir2D = rotate90(normal2D);
+				Vector2D pos = to2D(m_pSusp->m_wheelParams[i].m_hardpointChassisSpace);
+				Vector2D normal = pos - center_pos;
+								
+				Vector2D dir = rotate90(normal);
+				Vector2D ref_dir(0.0f, 1.0f);
 				
-				m_OnSpotAngle[i] = SignedAngle(dir2D, right);
+				m_OnSpotAngle[i] = SignedAngle(dir, ref_dir);
 			}
 		}
 
@@ -170,10 +192,14 @@ public:
 		{
 			m_pOrig->calcSteering (deltaTime, vehicle, filteredInfoOutput, steeringOutput);
 
-			for (int i = 0; i < m_pSusp->m_wheelParams.getSize(); ++i)
-			{
-				steeringOutput.m_wheelsSteeringAngle[i] = m_OnSpotAngle[i];
-			}
+			//for (int i = 0; i < m_pSusp->m_wheelParams.getSize(); ++i)
+			//{
+			//	steeringOutput.m_wheelsSteeringAngle[i] = m_OnSpotAngle[i];
+			//}
+
+			//static int cnt = 0;
+			//steeringOutput.m_wheelsSteeringAngle[1] = (float) cnt / 50.0f;
+			//++cnt;
 
 			//if (steeringOutput.m_mainSteeringAngle != 0.0f)
 			//{
@@ -237,9 +263,9 @@ public:
 				 //transmissionOut.m_wheelsTransmittedTorque[2] = -transmissionOut.m_wheelsTransmittedTorque[2];
 				 //transmissionOut.m_wheelsTransmittedTorque[3] = -transmissionOut.m_wheelsTransmittedTorque[3];
 
-				 transmissionOut.m_wheelsTransmittedTorque[2] = transmissionOut.m_wheelsTransmittedTorque[0];
-				 transmissionOut.m_wheelsTransmittedTorque[1] = -transmissionOut.m_wheelsTransmittedTorque[0];
-				 transmissionOut.m_wheelsTransmittedTorque[3] = transmissionOut.m_wheelsTransmittedTorque[1];
+				 //transmissionOut.m_wheelsTransmittedTorque[2] = transmissionOut.m_wheelsTransmittedTorque[0];
+				 //transmissionOut.m_wheelsTransmittedTorque[1] = -transmissionOut.m_wheelsTransmittedTorque[0];
+				 //transmissionOut.m_wheelsTransmittedTorque[3] = transmissionOut.m_wheelsTransmittedTorque[1];
 			 }
 		}
 	};
@@ -290,7 +316,7 @@ public:
 		VehicleSetup setup;
 		setup.buildVehicle(world, *m_vehicle );
 
-		m_vehicle->m_steering			= new TestAngleSteering(m_vehicle, m_vehicle->m_steering);
+		//m_vehicle->m_steering			= new TestAngleSteering(m_vehicle, (hkpVehicleDefaultSteering*) m_vehicle->m_steering);
 		//m_vehicle->m_steering			= new DifferentialSteeringSteering(m_vehicle->m_steering);
 		//m_vehicle->m_transmission		= new DifferentialSteeringTransmission(m_vehicle->m_transmission, (hkpVehicleDriverInputAnalogStatus*)m_vehicle->m_deviceStatus);
 
@@ -314,10 +340,10 @@ public:
 		m_world->lock();
 
 		hkpVehicleDriverInputAnalogStatus*	deviceStatus = (hkpVehicleDriverInputAnalogStatus*)m_vehicle->m_deviceStatus;
-		deviceStatus->m_positionX = m_steer.x;
+		deviceStatus->m_positionX = -m_steer.x;
 		deviceStatus->m_positionY = -m_steer.y;
 
-		if (deviceStatus->m_positionX != 0.0f || deviceStatus->m_positionY != 0.0f)
+		//if (deviceStatus->m_positionX != 0.0f || deviceStatus->m_positionY != 0.0f)
 		{
 			m_vehicle->getChassis()->activate();
 		}
@@ -387,11 +413,6 @@ public:
 		m_world->unlock();
 	}
 
-	Vector2D to2D(const hkVector4& vect)
-	{
-		return Vector2D(vect(0), vect(2));
-	}
-
 	void Draw(Renderer& renderer, float t, float dt)
 	{
 		if (m_vehicle)
@@ -407,8 +428,8 @@ public:
 			Vector2D quad[4];
 			Vector2D center = to2D(transform.getTranslation());
 			hkRotation rot = transform.getRotation();
-			Vector2D right = to2D(rot.getColumn(0));
-			Vector2D fwd = to2D(rot.getColumn(2));
+			Vector2D right = to2DRight(rot);
+			Vector2D fwd = to2DFwd(rot);
 
 			Vector2D ext_min = to2D(aabb.m_min);
 			Vector2D ext_max = to2D(aabb.m_max);
@@ -422,6 +443,24 @@ public:
 							  renderer.WorldToScreen(quad[1]), 
 							  renderer.WorldToScreen(quad[2]), 
 							  renderer.WorldToScreen(quad[3]), Color::kWhite);
+
+			renderer.DrawQuad(renderer.WorldToScreen(quad[0]), 
+								renderer.WorldToScreen(quad[1]), 
+								renderer.WorldToScreen((quad[2]+quad[3]) * 0.5f), 
+								renderer.WorldToScreen((quad[2]+quad[3]) * 0.5f), Color::kWhite);
+
+			for (int i = 0; i < m_vehicle->m_wheelsInfo.getSize(); ++i)
+			{
+				const hkpVehicleInstance::WheelInfo& info = m_vehicle->m_wheelsInfo[i];
+				Vector2D pos = to2D(info.m_hardPointWs);
+				Vector2D dir = rotate90(to2D(info.m_spinAxisWs));
+				//Vector2D dir = to2D(info.m_spinAxisWs);
+				float radius = m_vehicle->m_data->m_wheelParams[i].m_radius;
+				
+				renderer.DrawLine(renderer.WorldToScreen(pos - (dir * radius)), 
+								  renderer.WorldToScreen(pos + (dir * radius)),
+								  Color::kWhite);
+			}
 		}
 	}
 };
