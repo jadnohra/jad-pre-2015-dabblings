@@ -112,6 +112,21 @@ struct Circle
 	}
 };
 
+struct Quad2D
+{
+	Vector2D points[4];
+
+	bool Contains(const Vector2D& pt)
+	{
+		return true;
+	}
+
+	int IntersectsLine(const Vector2D& pt, const Vector2D& dir, float& r, float& s)
+	{
+		return 0;
+	}
+};
+
 inline float Dot(const Vector2D& p1, const Vector2D& p2)
 {
 	return p1.x * p2.x + p1.y * p2.y;

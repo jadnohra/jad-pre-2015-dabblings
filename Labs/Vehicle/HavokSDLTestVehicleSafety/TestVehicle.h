@@ -745,9 +745,12 @@ public:
 
 	virtual void Draw(Renderer& renderer, float t) 
 	{
+		float alpha_inc = 0.25f * (1.0f / (float) mHistory.size());
+		float width_inc = 0.5f * (1.0f / (float) mHistory.size());
+		
 		for (int i=0; i+1<mHistory.size(); ++i)
 		{
-			renderer.DrawLine(renderer.WorldToScreen(mHistory[i]), renderer.WorldToScreen(mHistory[i+1]), Color::kWhite, 0.25f, 0.5f);
+			renderer.DrawLine(renderer.WorldToScreen(mHistory[i]), renderer.WorldToScreen(mHistory[i+1]), Color::kWhite, 0.05f + i*alpha_inc, 0.25f + i*width_inc);
 		}
 
 		if (mSampleCount >= 2)
@@ -871,9 +874,12 @@ public:
 
 	virtual void Draw(Renderer& renderer, float t) 
 	{
+		float alpha_inc = 0.25f * (1.0f / (float) mHistory.size());
+		float width_inc = 0.5f * (1.0f / (float) mHistory.size());
+		
 		for (int i=0; i+1<mHistory.size(); ++i)
 		{
-			renderer.DrawLine(renderer.WorldToScreen(mHistory[i]), renderer.WorldToScreen(mHistory[i+1]), Color::kWhite, 0.25f, 0.5f);
+			renderer.DrawLine(renderer.WorldToScreen(mHistory[i]), renderer.WorldToScreen(mHistory[i+1]), Color::kWhite, 0.05f + i*alpha_inc, 0.25f + i*width_inc);
 		}
 	}
 };
@@ -1168,6 +1174,57 @@ public:
 		else
 			mTester.Draw(renderer, t);
 	}
+};
+
+
+class VehicleController_BasicSafetyTest : public VehicleController
+{
+public:
+
+	Quad2D mSegments[2];
+
+
+	VehicleController_BasicSafetyTest()
+	{
+	}
+
+	void Init(float radius, float length1, float length2, float angle)
+	{
+		mSegments[0].points[0].x = -radius;
+		mSegments[0].points[1].x = -radius;
+		mSegments[0].points[2].x = radius;
+		mSegments[0].points[3].x = radius;
+
+		mSegments[0].points[0].y = -length1;
+		mSegments[0].points[1].y = 0.0f;
+		mSegments[0].points[2].y = 0.0f;
+		mSegments[0].points[3].y = -length1;
+
+		mSegments[1].points[0] = mSegments[0].points[1];
+		mSegments[1].points[3] = mSegments[0].points[2];
+
+		Vector2D offset(0.0f, length2);
+		offset = rotate(offset, angle);
+
+		mSegments[1].points[1] = mSegments[1].points[0] + offset;
+		mSegments[1].points[2] = mSegments[1].points[3] + offset;
+	}
+	
+	virtual void Update(float t, float dt) {}
+	
+	virtual void Draw(Renderer& renderer, float t) 
+	{
+	
+		for (int i = 0; i < 2; ++i)
+		{
+			renderer.DrawQuad(renderer.WorldToScreen(mSegments[i].points[0]), 
+						  renderer.WorldToScreen(mSegments[i].points[1]), 
+						  renderer.WorldToScreen(mSegments[i].points[2]), 
+						  renderer.WorldToScreen(mSegments[i].points[3]), Color::kGreen);
+		}
+	}
+	
+	virtual void HandleEvent(const SDL_Event& evt) {}
 };
 
 #endif

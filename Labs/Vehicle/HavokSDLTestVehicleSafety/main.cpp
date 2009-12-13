@@ -60,10 +60,17 @@ int main(int argc, char *argv[])
 	controller.Init(&vehicle, 15.0f, 25.0f, 5, 1.0f, 0.05f, 0.05f);
 	pController = &controller;
 	*/
-
+	
+	/*
 	VehicleController_HardBrakingDistanceLearn controller;
 	controller.SetVehicle(&vehicle);
 	controller.Init(&vehicle, 15.0f, 25.0f, 5);
+	pController = &controller;
+	*/
+
+	VehicleController_BasicSafetyTest controller;
+	controller.SetVehicle(&vehicle);
+	controller.Init(8.0f, 40.0f, 40.0f, 0.5f);
 	pController = &controller;
 
 	renderTimer.Start(globalTime, 60);
