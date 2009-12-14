@@ -3,6 +3,8 @@
 
 #include <math.h>
 #include <stdlib.h>
+#include <fstream>
+#include <vector>
 #include "Box2D.h"
 
 #define MATH_PIf 3.14159265f
@@ -266,5 +268,95 @@ inline float SignedAngle(const Vector2D & v1, const Vector2D & v2)
 }
 
 
+struct ResponseCurve
+{
+	typedef std::vector<Vector2D> Points;
+	Points mPoints;
+
+	void Clear()
+	{
+		mPoints.clear();
+	}
+
+	void Add(float x, float y)
+	{
+		mPoints.push_back(Vector2D(x, y));
+	}
+
+	float Get(float x, float defaultY)
+	{
+		Vector2D* pPrev=NULL;
+		Vector2D* pNext=NULL;
+
+		for (size_t i=0;i<mPoints.size();++i)
+		{
+			if (x == mPoints[i].x)
+			{
+				return mPoints[i].y;
+			}
+			else if (x > mPoints[i].x)
+			{
+				pPrev = &mPoints[i];
+			}
+			else
+			{
+				pNext = &mPoints[i];
+				break;
+			}
+		}
+
+		if (pPrev == NULL)
+			return defaultY;
+
+		if (pNext == NULL)
+			return pPrev->y;
+
+		float interp_factor = (x-pPrev->x) / (pNext->x-pPrev->x);
+
+		return pPrev->y + (pNext->y-pPrev->y) * interp_factor;
+	}
+
+	void Serialize(const char* path)
+	{
+		std::ofstream file;
+		file.open(path);
+
+		file << mPoints.size();
+
+		for (size_t i=0;i<mPoints.size();++i)
+		{
+			file << mPoints[i].x;
+			file << mPoints[i].y;
+		}
+	}
+
+	bool Deserialize(const char* path)
+	{
+		std::ifstream file;
+
+		file.open(path);
+
+		if (file.is_open())
+		{
+
+			size_t sz=0;
+			file >> sz;
+
+			for (size_t i=0;i<sz;++i)
+			{
+				float x,y;
+
+				file>>x;
+				file>>y;
+
+				Add(x, y);
+			}
+
+			return true;
+		}
+
+		return false;
+	}
+};
 
 #endif

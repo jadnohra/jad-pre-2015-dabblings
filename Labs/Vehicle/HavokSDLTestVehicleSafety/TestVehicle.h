@@ -57,6 +57,10 @@ public:
 
 	Vector2D m_steer;
 
+	ResponseCurve mSafeSteerForSpeedRP;
+	ResponseCurve mSafeSteerTurnRadiusForSpeedRP;
+
+
 	TestVehicle()
 	{
 		m_vehicle = NULL;	
@@ -440,6 +444,7 @@ public:
 
 	virtual void SetVehicle(TestVehicle* pVehicle) { mpVehicle = pVehicle; }
 	virtual void Update(float t, float dt) {}
+	virtual bool IsFinished() = 0;
 	virtual void Draw(Renderer& renderer, float t) {}
 	virtual void HandleEvent(const SDL_Event& evt) {}
 
@@ -451,6 +456,11 @@ class VehicleController_Keyb : public VehicleController
 public:
 
 	Vector2D m_steer;
+
+	virtual bool IsFinished() 
+	{
+		return false; 
+	}
 
 	virtual void HandleEvent(const SDL_Event& evt)
 	{
@@ -622,11 +632,16 @@ public:
 		mHistory.clear();
 	}
 
-	bool IsFinished(float t)
+	virtual bool IsFinished() 
 	{
 		Vector2D fwdDir(0.0f, 1.0f);
 
-		return (mState == TESTING) && (mSampleCount > 10) && (Dot(fwdDir, mLastDir) <= mTestEndDot);
+		return (mState == TESTING) && (mSampleCount > 5) && (Dot(fwdDir, mLastDir) <= mTestEndDot);
+	}
+
+	bool IsFinished(float t)
+	{
+		return IsFinished();
 	}
 
 	float GetCenterBoxError()
@@ -696,62 +711,65 @@ public:
 
 					if (mSampleCount > 0)
 					{
-						Vector2D radius_line_dir = rotate90(dir);
-						Vector2D prev_radius_line_dir = rotate90(mLastDir);
-
-						float r, s;
-
-						if (IntersectLines(pos, pos+radius_line_dir, mLastPos, mLastPos+prev_radius_line_dir, r, s))
+						if ((Dot(mLastDir, dir) < 0.95f) || (Distance(mLastPos, pos) > 1.0f))
 						{
-							Vector2D radius_center = pos + (radius_line_dir*r);
-							mLastRadiusCenter = radius_center;
+							Vector2D radius_line_dir = rotate90(dir);
+							Vector2D prev_radius_line_dir = rotate90(mLastDir);
 
-							float radius = Distance(pos, radius_center);
-							float prev_radius = Distance(mLastPos, radius_center);
-							float avg_radius = 0.5f*(radius + prev_radius);
-							float err = fabs(radius - prev_radius);
+							float r, s;
 
-							if (mSampleCount<=1)
+							if (IntersectLines(pos, pos+radius_line_dir, mLastPos, mLastPos+prev_radius_line_dir, r, s))
 							{
-								mRadius = avg_radius;
-								mError = err;
+								Vector2D radius_center = pos + (radius_line_dir*r);
+								mLastRadiusCenter = radius_center;
 
-								mCenterBoxMin = radius_center;
-								mCenterBoxMax = radius_center;
+								float radius = Distance(pos, radius_center);
+								float prev_radius = Distance(mLastPos, radius_center);
+								float avg_radius = 0.5f*(radius + prev_radius);
+								float err = fabs(radius - prev_radius);
+
+								if (mSampleCount<=1)
+								{
+									mRadius = avg_radius;
+									mError = err;
+
+									mCenterBoxMin = radius_center;
+									mCenterBoxMax = radius_center;
+								}
+								else
+								{
+									mRadius = mRadius + ((avg_radius - mRadius) / (mSampleCount+1));
+									mError = mError + ((err - mError) / (mSampleCount+1));
+
+									if (radius_center.x < mCenterBoxMin.x)
+										mCenterBoxMin.x = radius_center.x;
+
+									if (radius_center.y < mCenterBoxMin.y)
+										mCenterBoxMin.y = radius_center.y;
+
+									if (radius_center.x > mCenterBoxMax.x)
+										mCenterBoxMax.x = radius_center.x;
+
+									if (radius_center.y < mCenterBoxMax.y)
+										mCenterBoxMax.y = radius_center.y;
+								}
+
+								++mSampleCount;
 							}
-							else
+
+							mPreLastPos = mLastPos;
+							mPreLastDir = mLastDir;
+
+							mLastPos = pos;
+							mLastDir = dir;
+
+							/*
+							if (mSampleCount % 60 == 0)
 							{
-								mRadius = mRadius + ((avg_radius - mRadius) / (mSampleCount+1));
-								mError = mError + ((err - mError) / (mSampleCount+1));
-
-								if (radius_center.x < mCenterBoxMin.x)
-									mCenterBoxMin.x = radius_center.x;
-
-								if (radius_center.y < mCenterBoxMin.y)
-									mCenterBoxMin.y = radius_center.y;
-
-								if (radius_center.x > mCenterBoxMax.x)
-									mCenterBoxMax.x = radius_center.x;
-
-								if (radius_center.y < mCenterBoxMax.y)
-									mCenterBoxMax.y = radius_center.y;
+								printf("%f,%f\n", mRadius, mError);
 							}
-
-							++mSampleCount;
+							*/
 						}
-
-						mPreLastPos = mLastPos;
-						mPreLastDir = mLastDir;
-
-						mLastPos = pos;
-						mLastDir = dir;
-
-						/*
-						if (mSampleCount % 60 == 0)
-						{
-							printf("%f,%f\n", mRadius, mError);
-						}
-						*/
 					}
 					else
 					{
@@ -838,9 +856,14 @@ public:
 		mHistory.clear();
 	}
 
-	bool IsFinished(float t)
+	virtual bool IsFinished() 
 	{
 		return (mState == STOPPED);
+	}
+
+	bool IsFinished(float t)
+	{
+		return IsFinished();
 	}
 
 	virtual void Update(float t, float dt)
@@ -938,6 +961,11 @@ public:
 		mSteer = steer;
 	}
 
+	virtual bool IsFinished() 
+	{
+		return (mCurrSpeed >= mSpeedCount);
+	}
+
 	virtual void Update(float t, float dt) 
 	{
 		if (mCurrSpeed < mSpeedCount)
@@ -987,6 +1015,11 @@ public:
 		mCurrSpeed = -1;
 	}
 
+	virtual bool IsFinished() 
+	{
+		return (mCurrSpeed >= mSpeedCount);
+	}
+
 	void Init(TestVehicle* pVehicle, float fromSpeed, float toSpeed, int speedCount)
 	{
 		mCurrSpeed = -1;
@@ -1034,7 +1067,6 @@ public:
 	float mMinSteer;
 	float mMaxSteer;
 	float mSteer;
-	float mMinStability;
 	float mGranularity;
 
 	bool mIsTesting;
@@ -1046,23 +1078,27 @@ public:
 		mIsTesting = false;
 	}
 
-	void Init(TestVehicle* pVehicle, float speed, float granularity, float minStability)
+	void Init(TestVehicle* pVehicle, float speed, float searchGranularity)
 	{
 		VehicleController::SetVehicle(pVehicle);
 		mSpeed = speed;
-		mGranularity = granularity;
-		mMinStability = minStability;
 		mMinSteer = 0.0f;
 		mMaxSteer = 1.0f;
 		mSteer = 0.5f * (mMinSteer+mMaxSteer);
 		mIsTesting = true;
 		mTester.Init(mpVehicle, mSpeed, mSteer);
+		mGranularity = searchGranularity;
 		printf("testing stable-steer speed: %f, steer: %f\n", mSpeed, mSteer);
+	}
+
+	virtual bool IsFinished() 
+	{
+		return (!mIsTesting && mMaxSteer-mMinSteer < mGranularity);
 	}
 
 	bool IsFinished(float t)
 	{
-		return (!mIsTesting && mMaxSteer-mMinSteer < mGranularity);
+		return IsFinished();
 	}
 
 	virtual void Update(float t, float dt) 
@@ -1081,8 +1117,8 @@ public:
 		{
 			if (mMaxSteer-mMinSteer > mGranularity)
 			{
-				printf("instability %f, allowed: %f\n", mTester.GetCenterBoxError(), 0.15f * mTester.mRadius);
-				bool was_good_test = mTester.GetCenterBoxError() < 0.15f * mTester.mRadius;
+				printf("instability %f, allowed: %f\n", mTester.GetCenterBoxError(), 0.1f * mTester.mRadius);
+				bool was_good_test = mTester.GetCenterBoxError() < 0.1f * mTester.mRadius;
 
 				if (was_good_test)
 				{
@@ -1123,8 +1159,9 @@ public:
 	int mCurrSpeed;
 	float mSteer;
 	float mStableSteer;
-	float mMinStability;
-	float mStabilityGranularity;
+	float mGranularity;
+
+	bool mLearnRP;
 
 	VehicleController_TurnRadiusTest mTester;
 	VehicleController_StableSteerLearn mStableTester;
@@ -1135,15 +1172,26 @@ public:
 		mCurrSpeed = -1;
 	}
 
-	void Init(TestVehicle* pVehicle, float fromSpeed, float toSpeed, int speedCount, float steer, float minStability, float stabilityGranularity)
+	void Init(TestVehicle* pVehicle, float fromSpeed, float toSpeed, int speedCount, float steer, float searchGranularity, bool learnRP)
 	{
 		mCurrSpeed = -1;
 		mFromSpeed = fromSpeed;
 		mToSpeed = toSpeed;
 		mSpeedCount = speedCount;
 		mSteer = steer;
-		mMinStability= minStability;
-		mStabilityGranularity = stabilityGranularity;
+		mLearnRP = learnRP;
+		mGranularity = searchGranularity;
+
+		if (mLearnRP)
+		{
+			mpVehicle->mSafeSteerForSpeedRP.Clear();
+			mpVehicle->mSafeSteerTurnRadiusForSpeedRP.Clear();
+		}
+	}
+
+	virtual bool IsFinished() 
+	{
+		return (mCurrSpeed>=mSpeedCount);
 	}
 
 	virtual void Update(float t, float dt) 
@@ -1154,6 +1202,12 @@ public:
 			{
 				if (mCurrSpeed >= 0)
 				{
+					if (mLearnRP)
+					{
+						mpVehicle->mSafeSteerForSpeedRP.Add(mTester.mThrottle.mSpeed, mStableSteer);
+						mpVehicle->mSafeSteerTurnRadiusForSpeedRP.Add(mTester.mThrottle.mSpeed, mTester.mRadius);
+					}
+					
 					printf("Turn Radius for speed: %f is %f, instability: %f\n", mTester.mThrottle.mSpeed, mTester.mRadius, mTester.GetCenterBoxError());
 				}
 
@@ -1161,7 +1215,7 @@ public:
 				if (mCurrSpeed < mSpeedCount)
 				{	
 					mTester.Init(mpVehicle, mFromSpeed + ((mToSpeed-mFromSpeed)*((float) mCurrSpeed / (float) mSpeedCount)), mSteer);
-					mStableTester.Init(mpVehicle, mTester.mThrottle.mSpeed, mStabilityGranularity, mMinStability);
+					mStableTester.Init(mpVehicle, mTester.mThrottle.mSpeed, mGranularity);
 					mStableSteer = -1.0f;
 				}
 			}
@@ -1216,9 +1270,19 @@ public:
 		mpRenderer = NULL;
 	}
 
+	virtual bool IsFinished() 
+	{
+		return false;
+	}
+
 	virtual void SetVehicle(TestVehicle* pVehicle) 
 	{ 
 		VehicleController::SetVehicle(pVehicle);
+	}
+
+	void SetFollowMouse(bool follow)
+	{
+		mFollowMouse = follow;
 	}
 
 	void SetTarget(const Vector2D& target)
@@ -1247,7 +1311,8 @@ public:
 			{
 				Vector2D worldPos = mpRenderer->ScreenToWorld(Vector2D((float) x, (float) y));
 
-				SetTarget(worldPos);
+				if (worldPos != mTarget)
+					SetTarget(worldPos);
 			}
 		}
 		
@@ -1263,6 +1328,9 @@ public:
 				steer = 1.0f;
 
 			mpVehicle->steer(steer, throttle, false);
+
+			if (Distance(mTarget, mpVehicle->GetPos()) < 0.5f)
+				UnsetTarget();
 		}
 		else
 		{
@@ -1319,6 +1387,11 @@ public:
 		mSegments[1].points[2] = mSegments[1].points[3] + offset;
 	}
 	
+	virtual bool IsFinished() 
+	{
+		return false;
+	}
+
 	virtual void Update(float t, float dt) {}
 	
 	virtual void Draw(Renderer& renderer, float t) 

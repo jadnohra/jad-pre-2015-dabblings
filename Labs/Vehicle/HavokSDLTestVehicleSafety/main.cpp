@@ -35,6 +35,8 @@ int main(int argc, char *argv[])
 	VehicleController* pController = NULL;
 	VehicleController* pSteerController = NULL;
 
+	bool learn_rp = false;
+
 	/*
 	VehicleController_Keyb controller;
 	controller.SetVehicle(&vehicle);
@@ -55,12 +57,11 @@ int main(int argc, char *argv[])
 	pController = &controller;
 	*/
 
-	/*
+	learn_rp = true;
 	VehicleController_StableTurnRadiusLearn controller;
 	controller.SetVehicle(&vehicle);
-	controller.Init(&vehicle, 2.0f, 25.0f, 15, 1.0f, 0.05f, 0.05f); // check the bug for min speed = 3
+	controller.Init(&vehicle, 4.0f, 30.0f, 15, 1.0f, 0.1f, learn_rp); 
 	pController = &controller;
-	*/
 	
 	/*
 	VehicleController_HardBrakingDistanceLearn controller;
@@ -69,10 +70,12 @@ int main(int argc, char *argv[])
 	pController = &controller;
 	*/
 
+	/*
 	VehicleController_NaiveSteer steer_controller;
 	steer_controller.SetVehicle(&vehicle);
-	steer_controller.SetMaxSpeed(50.0/3.6f);
+	steer_controller.SetMaxSpeed(50.0f/3.6f);
 	pSteerController = &steer_controller;
+	*/
 
 	/*
 	VehicleController_BasicSafetyTest controller;
@@ -122,7 +125,15 @@ int main(int argc, char *argv[])
 				float t = updateTimer.GetFrameSyncedTime(frame);
 
 				if (pController)
+				{
 					pController->Update(t, dt);
+
+					if (learn_rp && pController->IsFinished())
+					{
+						vehicle.mSafeSteerForSpeedRP.Serialize("SafeSteerForSpeedRP.bin");
+						vehicle.mSafeSteerTurnRadiusForSpeedRP.Serialize("SafeSteerTurnRadiusForSpeedRP.bin");
+					}
+				}
 
 				if (pSteerController)
 					pSteerController->Update(t, dt);
