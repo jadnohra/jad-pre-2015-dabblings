@@ -336,6 +336,28 @@ public:
 		}
 	}
 
+	/*
+	float AIBodyLandVehicle::GetCurrentPhysicsMaximumSteeringAngle() const
+	{
+		cFloat forward_speed = GetMatrix().Forward().Dot(GetMover()->GetVelocity());
+		pcPhysicsVehicleResource resource = rtti_cast<PhysicsVehicleResource>(GetLandVehicle()->GetLandVehicleResource()->GetModelResource()->GetPhysicsResource(0));
+
+		// These calculations are based on hkpVehicleDefaultSteering::calcMainSteeringAngle(), hkpVehicleDefaultSteering provides no means of asking for this 
+		// value given an input speed.
+		cFloat steering_angle = gDegreesToRadians(resource->GetMaxSteeringAngleDegrees());
+
+		// The havok implementation does allow full steering angle at negative speeds
+		cFloat factor = (forward_speed > 0.0f) ? gMin(1.0f, resource->GetMaxSpeedFullSteeringAngle() / forward_speed) : 1.0f;
+		return steering_angle * gSquared(factor);
+	}
+	*/
+
+	float GetCurrMaxSteeringAngle()
+	{
+		// ignoring GetCurrentPhysicsMaximumSteeringAngle for now
+		return ((hkpVehicleDefaultSteering*)(m_vehicle->m_steering))->m_maxSteeringAngle;
+	}
+
 	Vector2D GetPos()
 	{
 		hkpRigidBody* chassisRigidBody = m_vehicle->getChassis();
@@ -527,6 +549,10 @@ public:
 		if (curr_speed > mSpeed)
 		{
 			mThrottleProportional -= 0.05f;
+
+			if (mThrottleProportional < 0.0f)
+				mThrottleProportional = 0.0f;
+
 			mHasReachedSpeed = true;
 		}
 		if (curr_speed < mSpeed)
@@ -1128,7 +1154,7 @@ public:
 			{
 				if (mCurrSpeed >= 0)
 				{
-					printf("Turn Radius for speed: %f is %f, error: %f\n", mTester.mThrottle.mSpeed, mTester.mRadius, mTester.GetCenterBoxError());
+					printf("Turn Radius for speed: %f is %f, instability: %f\n", mTester.mThrottle.mSpeed, mTester.mRadius, mTester.GetCenterBoxError());
 				}
 
 				++mCurrSpeed;
@@ -1176,6 +1202,89 @@ public:
 	}
 };
 
+
+class VehicleController_NaiveSteer : public VehicleController
+{
+public:
+
+	VehicleController_NaiveSteer()
+	{
+		mHasTarget = false;
+		mMaxSpeed = 1.0f;
+		mThrottle.SetSpeed(mMaxSpeed);
+		mFollowMouse = true;
+		mpRenderer = NULL;
+	}
+
+	virtual void SetVehicle(TestVehicle* pVehicle) 
+	{ 
+		VehicleController::SetVehicle(pVehicle);
+	}
+
+	void SetTarget(const Vector2D& target)
+	{
+		mHasTarget = true;
+		mTarget = target;
+	}
+
+	void UnsetTarget()
+	{
+		mHasTarget = false;
+	}
+
+	void SetMaxSpeed(float speed)
+	{
+		mMaxSpeed = speed;
+		mThrottle.SetSpeed(mMaxSpeed);
+	}
+
+	virtual void Update(float t, float dt) 
+	{
+		if (mFollowMouse && mpRenderer)
+		{
+			int x; int y;
+			SDL_GetMouseState(&x, &y);
+			{
+				Vector2D worldPos = mpRenderer->ScreenToWorld(Vector2D((float) x, (float) y));
+
+				SetTarget(worldPos);
+			}
+		}
+		
+
+		if (mHasTarget)
+		{
+			float throttle = mThrottle.GetThrottle(*mpVehicle);
+			float steer = (-SignedAngle(mpVehicle->GetDir(), mTarget - mpVehicle->GetPos())) / mpVehicle->GetCurrMaxSteeringAngle();
+
+			if (steer < -1.0f)
+				steer = -1.0f;
+			else if (steer > 1.0f)
+				steer = 1.0f;
+
+			mpVehicle->steer(steer, throttle, false);
+		}
+		else
+		{
+			mpVehicle->steer(0.0f, 0.0f, true);
+		}
+	}
+
+	virtual void Draw(Renderer& renderer, float t) 
+	{
+		mpRenderer = &renderer;
+
+		if (mHasTarget)
+			renderer.DrawLine(renderer.WorldToScreen(mpVehicle->GetPos()), renderer.WorldToScreen(mTarget), Color::kBlue, 0.5f, 0.5f);
+	}
+
+	Renderer* mpRenderer;
+	bool mFollowMouse;
+	bool mHasTarget;
+	Vector2D mTarget;
+	float mMaxSpeed;
+	SimpleVehicleSpeedThrottleController mThrottle;
+};
 
 class VehicleController_BasicSafetyTest : public VehicleController
 {

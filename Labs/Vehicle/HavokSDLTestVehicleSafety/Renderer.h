@@ -303,7 +303,7 @@ public:
 
 	Vector2D ScreenToWorld(const Vector2D& v)
 	{
-		return ((v - mWorldTranslation) - Vector2D(0.5f * (float) mScreenWidth, 0.5f * (float) mScreenHeight)) * (1.0f / mWorldScale);
+		return (((v) - Vector2D(0.5f * (float) mScreenWidth, 0.5f * (float) mScreenHeight)) * (1.0f / mWorldScale))  - mWorldTranslation ;
 	}
 
 	Vector2D ScreenToWorldDir(const Vector2D& v)

@@ -33,6 +33,7 @@ int main(int argc, char *argv[])
 	vehicle.Create(physics.physicsWorld);
 
 	VehicleController* pController = NULL;
+	VehicleController* pSteerController = NULL;
 
 	/*
 	VehicleController_Keyb controller;
@@ -57,7 +58,7 @@ int main(int argc, char *argv[])
 	/*
 	VehicleController_StableTurnRadiusLearn controller;
 	controller.SetVehicle(&vehicle);
-	controller.Init(&vehicle, 15.0f, 25.0f, 5, 1.0f, 0.05f, 0.05f);
+	controller.Init(&vehicle, 2.0f, 25.0f, 15, 1.0f, 0.05f, 0.05f); // check the bug for min speed = 3
 	pController = &controller;
 	*/
 	
@@ -68,10 +69,17 @@ int main(int argc, char *argv[])
 	pController = &controller;
 	*/
 
+	VehicleController_NaiveSteer steer_controller;
+	steer_controller.SetVehicle(&vehicle);
+	steer_controller.SetMaxSpeed(50.0/3.6f);
+	pSteerController = &steer_controller;
+
+	/*
 	VehicleController_BasicSafetyTest controller;
 	controller.SetVehicle(&vehicle);
 	controller.Init(8.0f, 40.0f, 40.0f, 0.5f);
 	pController = &controller;
+	*/
 
 	renderTimer.Start(globalTime, 60);
 	updateTimer.Start(globalTime, 60);
@@ -96,6 +104,9 @@ int main(int argc, char *argv[])
 			if (pController)
 				pController->Draw(renderer, renderTimer.GetTime() - updateTimer.GetFrameTime());
 
+			if (pSteerController)
+				pSteerController->Draw(renderer, renderTimer.GetTime() - updateTimer.GetFrameTime());
+
 			did_draw = true;
 		}
 
@@ -112,6 +123,9 @@ int main(int argc, char *argv[])
 
 				if (pController)
 					pController->Update(t, dt);
+
+				if (pSteerController)
+					pSteerController->Update(t, dt);
 
 				//vehicle.steer(dt);
 				physics.Update(dt);
@@ -155,8 +169,6 @@ int main(int argc, char *argv[])
 			vehicle.Teleport(Vector2D(), &fwd);
 		}
 		*/
-
-		
 
 		{
 			SDL_Event input_event;
