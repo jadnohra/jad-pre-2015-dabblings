@@ -11,6 +11,31 @@ void Draw(float t)
 }
 
 
+void LoadOrLearnTurnRadii(Physics& physics, TestVehicle& vehicle, float dt)
+{
+	if (!vehicle.mSafeSteerForSpeedRP.Deserialize("SafeSteerForSpeedRP.bin")
+		|| !vehicle.mSafeSteerTurnRadiusForSpeedRP.Deserialize("SafeSteerTurnRadiusForSpeedRP.bin"))
+	{
+
+		VehicleController_StableTurnRadiusLearn controller;
+		controller.SetVehicle(&vehicle);
+		controller.Init(&vehicle, 4.0f, 30.0f, 20, 1.0f, 0.1f, true); 
+		
+		float t = 0.0f;
+		physics.Update(dt);
+		while (!controller.IsFinished())
+		{
+			controller.Update(t, dt);
+			physics.Update(dt);
+			t+=dt;
+		}
+
+		vehicle.mSafeSteerForSpeedRP.Serialize("SafeSteerForSpeedRP.bin");
+		vehicle.mSafeSteerTurnRadiusForSpeedRP.Serialize("SafeSteerTurnRadiusForSpeedRP.bin");
+	}
+}
+
+
 int main(int argc, char *argv[])
 {
 	bool is_running = true;
@@ -35,7 +60,10 @@ int main(int argc, char *argv[])
 	VehicleController* pController = NULL;
 	VehicleController* pSteerController = NULL;
 
-	bool learn_rp = false;
+	float render_fps = 60.0f;
+	float update_fps = 60.0f;
+
+	LoadOrLearnTurnRadii(physics, vehicle, 1.0f / update_fps);
 
 	/*
 	VehicleController_Keyb controller;
@@ -58,10 +86,9 @@ int main(int argc, char *argv[])
 	*/
 
 	/*
-	learn_rp = true;
 	VehicleController_StableTurnRadiusLearn controller;
 	controller.SetVehicle(&vehicle);
-	controller.Init(&vehicle, 4.0f, 30.0f, 15, 1.0f, 0.1f, learn_rp); 
+	controller.Init(&vehicle, 4.0f, 30.0f, 15, 1.0f, 0.1f, false); 
 	pController = &controller;
 	*/
 	
@@ -72,24 +99,26 @@ int main(int argc, char *argv[])
 	pController = &controller;
 	*/
 
+	/*
 	VehicleController_NaiveSteer steer_controller;
 	steer_controller.SetVehicle(&vehicle);
 	steer_controller.SetMaxSpeed(50.0f/3.6f);
+	steer_controller.SetFollowMouse(true);
 	pSteerController = &steer_controller;
+	*/
 	
-	vehicle.mSafeSteerForSpeedRP.Deserialize("SafeSteerForSpeedRP.bin");
-	vehicle.mSafeSteerTurnRadiusForSpeedRP.Deserialize("SafeSteerTurnRadiusForSpeedRP.bin");
-
-	/*
 	VehicleController_BasicSafetyTest controller;
 	controller.SetVehicle(&vehicle);
-	controller.Init(8.0f, 40.0f, 40.0f, 0.5f);
+	controller.Init(8.0f, 40.0f, 40.0f, 0.5f, 15.0f);
 	pController = &controller;
-	*/
+	
+	Vector2D fwd(0.0f, 1.0f);
+	vehicle.Teleport(Vector2D(), &fwd);
+	
 
-	renderTimer.Start(globalTime, 60);
-	updateTimer.Start(globalTime, 60);
-
+	renderTimer.Start(globalTime, (int) render_fps);
+	updateTimer.Start(globalTime, (int) update_fps);
+	
 
 	while (is_running)
 	{
@@ -130,13 +159,6 @@ int main(int argc, char *argv[])
 				if (pController)
 				{
 					pController->Update(t, dt);
-
-					if (learn_rp && pController->IsFinished())
-					{
-						vehicle.mSafeSteerForSpeedRP.Serialize("SafeSteerForSpeedRP.bin");
-						vehicle.mSafeSteerTurnRadiusForSpeedRP.Serialize("SafeSteerTurnRadiusForSpeedRP.bin");
-						learn_rp = false;
-					}
 				}
 
 				if (pSteerController)

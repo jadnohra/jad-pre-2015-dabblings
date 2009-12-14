@@ -222,6 +222,26 @@ inline float DistancePointLineSquared(const Vector2D& linePos, const Vector2D& l
 	return DistanceSquared(closestPt, point);
 }
 
+inline float DistancePointSeqSquared(const Vector2D& segPos1, const Vector2D& segPos2, 
+									const Vector2D& point, float* pU = NULL)
+{
+	Vector2D diff = point - segPos1;
+	Vector2D lineDir = segPos2-segPos1;
+	float u = Dot(diff, lineDir) / Dot(lineDir, lineDir);
+	
+	if (u < 0.0f)
+		u=0.0f;
+	if (u>1.0f)
+		u=1.0f;
+	
+	Vector2D closestPt = segPos1 + (lineDir * u);
+
+	if (pU)
+		*pU = u;
+
+	return DistanceSquared(closestPt, point);
+}
+
 inline Vector2D rotate(const Vector2D& v, float rads)
 {
 	return Vector2D(cosf(rads) * v.x - sinf(rads) * v.y, cosf(rads) * v.y + sinf(rads) * v.x);
@@ -321,12 +341,13 @@ struct ResponseCurve
 		std::ofstream file;
 		file.open(path);
 
-		file << mPoints.size();
+		size_t sz=mPoints.size();
+		file.write((const char*)&sz, sizeof(size_t));
 
 		for (size_t i=0;i<mPoints.size();++i)
 		{
-			file << mPoints[i].x;
-			file << mPoints[i].y;
+			file.write((const char*)&(mPoints[i].x), sizeof(float));
+			file.write((const char*)&(mPoints[i].y), sizeof(float));
 		}
 	}
 
@@ -340,14 +361,14 @@ struct ResponseCurve
 		{
 
 			size_t sz=0;
-			file >> sz;
+			file.read((char*)&sz, sizeof(size_t));
 
 			for (size_t i=0;i<sz;++i)
 			{
 				float x,y;
 
-				file>>x;
-				file>>y;
+				file.read((char*)&x, sizeof(float));
+				file.read((char*)&y, sizeof(float));
 
 				Add(x, y);
 			}

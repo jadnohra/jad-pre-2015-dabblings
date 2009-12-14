@@ -1266,7 +1266,7 @@ public:
 		mHasTarget = false;
 		mMaxSpeed = 1.0f;
 		mThrottle.SetSpeed(mMaxSpeed);
-		mFollowMouse = true;
+		mFollowMouse = false;
 		mpRenderer = NULL;
 	}
 
@@ -1354,28 +1354,48 @@ public:
 	SimpleVehicleSpeedThrottleController mThrottle;
 };
 
+
 class VehicleController_BasicSafetyTest : public VehicleController
 {
 public:
 
 	Quad2D mSegments[2];
+	Vector2D mPoints[3];
 
+	bool mIsSteering;
+	bool mHasCursorPt;
+	int mCursorSeg;
+	Vector2D mCursorPt;
+
+	bool mEnableSafety;
+
+	VehicleController_NaiveSteer mNaiveSteer;
 
 	VehicleController_BasicSafetyTest()
 	{
+		mHasCursorPt = false;
+		mEnableSafety = false;
+		mIsSteering = false;
 	}
 
-	void Init(float radius, float length1, float length2, float angle)
+	virtual void SetVehicle(TestVehicle* pVehicle) 
+	{ 
+		VehicleController::SetVehicle(pVehicle);
+		mNaiveSteer.SetVehicle(mpVehicle);
+		mIsSteering = true;
+	}
+
+	void Init(float radius, float length1, float length2, float angle, float maxSpeed)
 	{
 		mSegments[0].points[0].x = -radius;
 		mSegments[0].points[1].x = -radius;
 		mSegments[0].points[2].x = radius;
 		mSegments[0].points[3].x = radius;
 
-		mSegments[0].points[0].y = -length1;
-		mSegments[0].points[1].y = 0.0f;
-		mSegments[0].points[2].y = 0.0f;
-		mSegments[0].points[3].y = -length1;
+		mSegments[0].points[0].y = 0.0f;
+		mSegments[0].points[1].y = length1;
+		mSegments[0].points[2].y = length1;
+		mSegments[0].points[3].y = 0.0f;
 
 		mSegments[1].points[0] = mSegments[0].points[1];
 		mSegments[1].points[3] = mSegments[0].points[2];
@@ -1385,24 +1405,110 @@ public:
 
 		mSegments[1].points[1] = mSegments[1].points[0] + offset;
 		mSegments[1].points[2] = mSegments[1].points[3] + offset;
+
+		mPoints[0] = (mSegments[0].points[0] + mSegments[0].points[3]) * 0.5f;
+		mPoints[1] = (mSegments[0].points[1] + mSegments[0].points[2]) * 0.5f;
+		mPoints[2] = (mSegments[1].points[1] + mSegments[1].points[2]) * 0.5f;
+
+
+		mNaiveSteer.SetMaxSpeed(maxSpeed);
 	}
 	
+	void GetTarget(float dist, Vector2D& pt)
+	{
+		float dist_left = dist;
+		Vector2D lastPt = mCursorPt;
+
+		for (int i=mCursorSeg;i<2 && dist_left>=0.0f;++i)
+		{
+			float dist = Distance(mPoints[i+1], lastPt);
+
+			if (dist < dist_left)
+			{
+				dist_left -= dist;
+			}
+			else
+			{
+				pt = lastPt + ((mPoints[i+1]-lastPt) * (dist_left/dist));
+				dist_left = 0.0f;
+				break;
+			}
+
+			lastPt = mPoints[i+1];
+		}
+
+		if (dist_left>0.0f)
+			pt = lastPt;
+	}
+
 	virtual bool IsFinished() 
 	{
 		return false;
 	}
 
-	virtual void Update(float t, float dt) {}
+	virtual void Update(float t, float dt) 
+	{
+		if (mIsSteering)
+		{
+			Vector2D curr_pos = mpVehicle->GetPos();
+			
+			int closest_seg = -1;
+			int closest_seg_dist_sq = 0.0f;
+			Vector2D cursor_pt;
+
+			for (int i=0;i<2;++i)
+			{
+				float u;
+				float dist_to_line_sq = DistancePointSeqSquared(mPoints[i], mPoints[i+1], 
+																 curr_pos, &u);
+
+				if (closest_seg == -1 || dist_to_line_sq < closest_seg_dist_sq)
+				{
+					closest_seg=i;
+					closest_seg_dist_sq = dist_to_line_sq;
+					cursor_pt = mPoints[i] + ((mPoints[i+1]-mPoints[i]) * u);
+				}
+			}
+
+			mHasCursorPt = true;
+			mCursorPt = cursor_pt;
+			mCursorSeg = closest_seg;
+
+			Vector2D target;
+			GetTarget(10.0f, target);
+
+			mNaiveSteer.SetTarget(target);
+		}
+		
+		mNaiveSteer.Update(t, dt);
+
+		if (!mNaiveSteer.mHasTarget)
+		{
+			mIsSteering = false;
+		}
+	}
 	
 	virtual void Draw(Renderer& renderer, float t) 
 	{
-	
 		for (int i = 0; i < 2; ++i)
 		{
 			renderer.DrawQuad(renderer.WorldToScreen(mSegments[i].points[0]), 
 						  renderer.WorldToScreen(mSegments[i].points[1]), 
 						  renderer.WorldToScreen(mSegments[i].points[2]), 
 						  renderer.WorldToScreen(mSegments[i].points[3]), Color::kGreen);
+		}
+
+		/*
+		for (int i=0;i<2;++i)
+		{
+			renderer.DrawLine(renderer.WorldToScreen(mPoints[i]), renderer.WorldToScreen( mPoints[i+1]), Color::kWhite);
+		}
+		*/
+
+		if (mHasCursorPt)
+		{
+			renderer.DrawCircle(renderer.WorldToScreen(mCursorPt), renderer.WorldToScreen(0.3f), Color::kBlue);
+			mNaiveSteer.Draw(renderer, t);
 		}
 	}
 	
