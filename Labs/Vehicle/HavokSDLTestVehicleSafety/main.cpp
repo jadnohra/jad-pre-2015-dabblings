@@ -57,11 +57,13 @@ int main(int argc, char *argv[])
 	pController = &controller;
 	*/
 
+	/*
 	learn_rp = true;
 	VehicleController_StableTurnRadiusLearn controller;
 	controller.SetVehicle(&vehicle);
 	controller.Init(&vehicle, 4.0f, 30.0f, 15, 1.0f, 0.1f, learn_rp); 
 	pController = &controller;
+	*/
 	
 	/*
 	VehicleController_HardBrakingDistanceLearn controller;
@@ -70,12 +72,13 @@ int main(int argc, char *argv[])
 	pController = &controller;
 	*/
 
-	/*
 	VehicleController_NaiveSteer steer_controller;
 	steer_controller.SetVehicle(&vehicle);
 	steer_controller.SetMaxSpeed(50.0f/3.6f);
 	pSteerController = &steer_controller;
-	*/
+	
+	vehicle.mSafeSteerForSpeedRP.Deserialize("SafeSteerForSpeedRP.bin");
+	vehicle.mSafeSteerTurnRadiusForSpeedRP.Deserialize("SafeSteerTurnRadiusForSpeedRP.bin");
 
 	/*
 	VehicleController_BasicSafetyTest controller;
@@ -132,6 +135,7 @@ int main(int argc, char *argv[])
 					{
 						vehicle.mSafeSteerForSpeedRP.Serialize("SafeSteerForSpeedRP.bin");
 						vehicle.mSafeSteerTurnRadiusForSpeedRP.Serialize("SafeSteerTurnRadiusForSpeedRP.bin");
+						learn_rp = false;
 					}
 				}
 

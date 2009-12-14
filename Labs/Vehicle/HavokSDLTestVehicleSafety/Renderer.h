@@ -5,7 +5,7 @@
 #include <vector>
 #include "SDL.h"
 #include "SDL_opengl.h" 
-#include "Math.h"
+#include "MathInc.h"
 
 struct Color
 {
