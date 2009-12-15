@@ -195,6 +195,14 @@
 			>
 		</File>
 		<File
+			RelativePath=".\Planner.cpp"
+			>
+		</File>
+		<File
+			RelativePath=".\Planner.h"
+			>
+		</File>
+		<File
 			RelativePath=".\PlatformInit.cpp"
 			>
 		</File>
@@ -204,6 +212,10 @@
 		</File>
 		<File
 			RelativePath=".\Renderer.h"
+			>
+		</File>
+		<File
+			RelativePath=".\SuperHeader.h"
 			>
 		</File>
 		<File
