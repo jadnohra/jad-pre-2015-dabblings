@@ -60,9 +60,27 @@ public:
 	ResponseCurve mSafeSteerForSpeedRP;
 	ResponseCurve mSafeSteerTurnRadiusForSpeedRP;
 
+	std::vector<Vector2D> mHistory;
+	bool mHistoryEnabled;
+	size_t mHistorySampleCount;
+	int mHistoryLastSampleIndex;
+
+	void SetHistorySize(size_t size)
+	{
+		mHistory.resize(size);
+		mHistorySampleCount = 0;
+		mHistoryLastSampleIndex = -1;
+	}
+
+	void EnableHistory(bool enable)
+	{
+		mHistoryEnabled = enable;
+	}
 
 	TestVehicle()
 	{
+		SetHistorySize(300);
+		EnableHistory(false);
 		m_vehicle = NULL;	
 	}
 
@@ -431,6 +449,32 @@ public:
 				renderer.DrawLine(renderer.WorldToScreen(pos - (dir * radius)), 
 								  renderer.WorldToScreen(pos + (dir * radius)),
 								  Color::kWhite);
+			}
+
+			if (mHistoryEnabled)
+			{
+				size_t new_index = (mHistoryLastSampleIndex+1)%mHistory.size();
+				mHistory[new_index] = center;
+
+				mHistoryLastSampleIndex = new_index;
+				++mHistorySampleCount;
+
+				if (mHistorySampleCount > mHistory.size())
+					mHistorySampleCount = mHistory.size();
+
+				float alpha_inc = 0.25f * (1.0f / (float) mHistorySampleCount);
+				float width_inc = 0.5f * (1.0f / (float) mHistorySampleCount);
+
+				for (int i=mHistoryLastSampleIndex, j=0; j+1<mHistorySampleCount; ++j, --i)
+				{
+					if (i < 0)
+						i = mHistory.size()-1;
+					int next = i-1;
+					if (next < 0)
+						next = mHistory.size()-1;
+
+					renderer.DrawLine(renderer.WorldToScreen(mHistory[i]), renderer.WorldToScreen(mHistory[next]), Color::kWhite, 0.05f + (float)(mHistorySampleCount-j)*alpha_inc, 0.25f + (float)(mHistorySampleCount-j)*width_inc);
+				}
 			}
 		}
 	}
@@ -1344,6 +1388,123 @@ public:
 
 		if (mHasTarget)
 			renderer.DrawLine(renderer.WorldToScreen(mpVehicle->GetPos()), renderer.WorldToScreen(mTarget), Color::kBlue, 0.5f, 0.5f);
+	}
+
+	Renderer* mpRenderer;
+	bool mFollowMouse;
+	bool mHasTarget;
+	Vector2D mTarget;
+	float mMaxSpeed;
+	SimpleVehicleSpeedThrottleController mThrottle;
+};
+
+
+// We could also have a DetectedNoSlideSteer ... but we still need the radii for planning...
+class VehicleController_LearnedNoSlideSteer : public VehicleController
+{
+public:
+
+	VehicleController_LearnedNoSlideSteer()
+	{
+		mHasTarget = false;
+		mMaxSpeed = 1.0f;
+		mThrottle.SetSpeed(mMaxSpeed);
+		mFollowMouse = false;
+		mpRenderer = NULL;
+	}
+
+	virtual bool IsFinished() 
+	{
+		return false;
+	}
+
+	virtual void SetVehicle(TestVehicle* pVehicle) 
+	{ 
+		VehicleController::SetVehicle(pVehicle);
+	}
+
+	void SetFollowMouse(bool follow)
+	{
+		mFollowMouse = follow;
+	}
+
+	void SetTarget(const Vector2D& target)
+	{
+		mHasTarget = true;
+		mTarget = target;
+	}
+
+	void UnsetTarget()
+	{
+		mHasTarget = false;
+	}
+
+	void SetMaxSpeed(float speed)
+	{
+		mMaxSpeed = speed;
+		mThrottle.SetSpeed(mMaxSpeed);
+	}
+
+	virtual void Update(float t, float dt) 
+	{
+		if (mFollowMouse && mpRenderer)
+		{
+			int x; int y;
+			SDL_GetMouseState(&x, &y);
+			{
+				Vector2D worldPos = mpRenderer->ScreenToWorld(Vector2D((float) x, (float) y));
+
+				if (worldPos != mTarget)
+					SetTarget(worldPos);
+			}
+		}
+
+
+		if (mHasTarget)
+		{
+			float steer = (-SignedAngle(mpVehicle->GetDir(), mTarget - mpVehicle->GetPos())) / mpVehicle->GetCurrMaxSteeringAngle();
+			if (steer > 1.0f) steer = 1.0f;
+			if (steer < -1.0f) steer = -1.0f;
+
+			float max_speed = GetMaxSafeSpeedForSteer(steer);
+			
+			if (max_speed < mMaxSpeed)
+			{
+				printf("limiting speed to: %f, steer: %f \n", max_speed, steer);
+				mThrottle.SetSpeed(max_speed);
+			}
+			else
+				mThrottle.SetSpeed(mMaxSpeed);
+
+			float throttle = mThrottle.GetThrottle(*mpVehicle);
+			
+			if (steer < -1.0f)
+				steer = -1.0f;
+			else if (steer > 1.0f)
+				steer = 1.0f;
+
+			mpVehicle->steer(steer, throttle, false);
+
+			if (Distance(mTarget, mpVehicle->GetPos()) < 0.5f)
+				UnsetTarget();
+		}
+		else
+		{
+			mpVehicle->steer(0.0f, 0.0f, true);
+		}
+	}
+
+	virtual void Draw(Renderer& renderer, float t) 
+	{
+		mpRenderer = &renderer;
+
+		if (mHasTarget)
+			renderer.DrawLine(renderer.WorldToScreen(mpVehicle->GetPos()), renderer.WorldToScreen(mTarget), Color::kBlue, 0.5f, 0.5f);
+	}
+
+	float GetMaxSafeSpeedForSteer(float steer)
+	{
+		return mpVehicle->mSafeSteerForSpeedRP.GetMaxXForY(fabs(steer), 1.0f);
 	}
 
 	Renderer* mpRenderer;

@@ -72,6 +72,13 @@ int main(int argc, char *argv[])
 	*/
 	
 	/*
+	VehicleController_TurnRadiusTest controller;
+	controller.SetVehicle(&vehicle);
+	controller.Init(&vehicle, 15.0f, 1.0f);
+	pController = &controller;
+	*/
+
+	/*
 	VehicleController_TurnRadiusLearn controller;
 	controller.SetVehicle(&vehicle);
 	controller.Init(&vehicle, 5.0f, 15.0f, 5, 1.0f);
@@ -88,7 +95,7 @@ int main(int argc, char *argv[])
 	/*
 	VehicleController_StableTurnRadiusLearn controller;
 	controller.SetVehicle(&vehicle);
-	controller.Init(&vehicle, 4.0f, 30.0f, 15, 1.0f, 0.1f, false); 
+	controller.Init(&vehicle, 15.0f, 30.0f, 15, 1.0f, 0.1f, false); 
 	pController = &controller;
 	*/
 	
@@ -102,15 +109,25 @@ int main(int argc, char *argv[])
 	/*
 	VehicleController_NaiveSteer steer_controller;
 	steer_controller.SetVehicle(&vehicle);
-	steer_controller.SetMaxSpeed(50.0f/3.6f);
+	steer_controller.SetMaxSpeed(90.0f/3.6f);
 	steer_controller.SetFollowMouse(true);
 	pSteerController = &steer_controller;
+	vehicle.EnableHistory(true);
 	*/
+
+	VehicleController_LearnedNoSlideSteer steer_controller;
+	steer_controller.SetVehicle(&vehicle);
+	steer_controller.SetMaxSpeed(90.0f/3.6f);
+	steer_controller.SetFollowMouse(true);
+	pSteerController = &steer_controller;
+	vehicle.EnableHistory(true);
 	
+	/*
 	VehicleController_BasicSafetyTest controller;
 	controller.SetVehicle(&vehicle);
-	controller.Init(8.0f, 40.0f, 40.0f, 0.5f, 15.0f);
+	controller.Init(8.0f, 40.0f, 40.0f, 0.5f, 30.0f);
 	pController = &controller;
+	*/
 	
 	Vector2D fwd(0.0f, 1.0f);
 	vehicle.Teleport(Vector2D(), &fwd);
@@ -118,7 +135,18 @@ int main(int argc, char *argv[])
 
 	renderTimer.Start(globalTime, (int) render_fps);
 	updateTimer.Start(globalTime, (int) update_fps);
-	
+
+	/*
+	Poly2D test_poly;
+	test_poly.AddPoint(Vector2D(0.0f, 0.0f));
+	test_poly.AddPoint(Vector2D(0.0f, 4.0f));
+	test_poly.AddPoint(Vector2D(4.0f, 8.0f));
+	test_poly.AddPoint(Vector2D(8.0f, 2.0f));
+	test_poly.AddPoint(Vector2D(2.0f, -6.0f));
+	*/
+
+	PolyPath2D test_path;
+	test_path.AddStraight(Vector2D(0.0f, 0.0f), Vector2D(10.0f, 60.0f), Vector2D(14.0f, 2.0f), 4);
 
 	while (is_running)
 	{
@@ -132,6 +160,7 @@ int main(int argc, char *argv[])
 			glClearColor(0.0f, 0.0f, 0.0f, 1.0f);
 			glClear( GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 			renderer.BeginRender();
+			renderer.DrawPolyPath2DWorldToScreen(test_path, Color::kBlue);
 			
 			Draw(renderTimer.GetTime() - updateTimer.GetFrameTime());
 			vehicle.Draw(renderer, renderTimer.GetTime() - updateTimer.GetFrameTime(), renderTimer.GetFrameTime());
@@ -168,6 +197,15 @@ int main(int argc, char *argv[])
 				physics.Update(dt);
 				//Update(t, dt);
 			}
+
+
+			/*
+			{
+				int x; int y;
+				SDL_GetMouseState(&x, &y);
+				Vector2D worldPos = renderer.ScreenToWorld(Vector2D((float) x, (float) y));
+			}
+			*/
 
 			float scroll_pixels_per_sec = 300.0f;
 

@@ -273,6 +273,29 @@ public:
 		}
 	}
 
+	void DrawPoly2DWorldToScreen(const Poly2D& poly,
+								const Color& color, float alpha = -1.0f, float width = 1.0f)
+	{
+		if (poly.points.size() >= 2)
+		{
+			for (int i=0; i+1< poly.points.size(); ++i)		
+			{
+				DrawLine(WorldToScreen(poly.points[i]), WorldToScreen(poly.points[i+1]), color, alpha, width);
+			}
+
+			DrawLine(WorldToScreen(poly.points[poly.points.size()-1]),WorldToScreen(poly.points[0]), color, alpha, width);
+		}
+	}
+
+	void DrawPolyPath2DWorldToScreen(const PolyPath2D& polyPath2D,
+									 const Color& color, float alpha = -1.0f, float width = 1.0f)
+	{
+		for (int i=0; i<polyPath2D.polys.size(); ++i)
+		{
+			DrawPoly2DWorldToScreen(polyPath2D.polys[i], color, alpha, width);
+		}
+	}
+
 	void DrawArrow(const Vector2D& p1, const Vector2D& p2, const Color& color, float alpha = -1.0f)
 	{
 		DrawLine(p1, p2, color, alpha);

@@ -129,6 +129,122 @@ struct Quad2D
 	}
 };
 
+struct Poly2D
+{
+	typedef std::vector<Vector2D> Points;
+	Points points;
+
+	void AddPoint(const Vector2D& pt)
+	{
+		points.push_back(pt);
+	}
+
+	bool Contains(const Vector2D& pt)
+	{
+		int nvert = points.size();
+		int i, j, c = 0;
+		for (i = 0, j = nvert-1; i < nvert; j = i++) {
+			if ( ((points[i].y>pt.y) != (points[j].y>pt.y)) &&
+				(pt.x < (points[j].x-points[i].x) * (pt.y-points[i].y) / (points[j].y-points[i].y) + points[i].x) )
+				c = !c;
+		}
+		return c;
+	}
+
+	// http://www.ecse.rpi.edu/Homepages/wrf/Research/Short_Notes/pnpoly.html#Almost%20Convex%20Polygons
+	// works for general polys
+	/*
+	int pnpoly(int nvert, float *vertx, float *verty, float testx, float testy)
+	{
+		int i, j, c = 0;
+		for (i = 0, j = nvert-1; i < nvert; j = i++) {
+			if ( ((verty[i]>testy) != (verty[j]>testy)) &&
+				(testx < (vertx[j]-vertx[i]) * (testy-verty[i]) / (verty[j]-verty[i]) + vertx[i]) )
+				c = !c;
+		}
+		return c;
+	}
+	*/
+};
+
+
+class PolyPath2D
+{
+public:
+
+	typedef std::vector<Poly2D> Polys;
+	typedef std::vector<int> Indices;
+	Polys polys;
+	Indices portalVertexIndices;
+
+	Poly2D& AddPoly(int prevPortalIndex, int polyPortalIndex)
+	{
+		if (polys.size() > 0)
+		{
+			portalVertexIndices.push_back(prevPortalIndex);
+			portalVertexIndices.push_back(polyPortalIndex);
+		}
+
+		polys.push_back(Poly2D());
+
+		return polys.back();
+	}
+
+	void AddArc(int prevPortalIndex, const Vector2D& center, float width, float angle, int divCount)
+	{
+		if (polys.size() == 0)
+			return;
+
+		Vector2D startPt[2];
+		Vector2D startRadius[2];
+
+		startPt[0] = polys.back().points[prevPortalIndex];
+		startPt[1] = polys.back().points[(prevPortalIndex+1)%polys.back().points.size()];
+
+		startRadius[0] = startPt[0] - center;
+		startRadius[1] = startPt[1] - center;
+
+		int refPt = 0;
+
+		if (startRadius[1].LengthSquared() < startRadius[0].LengthSquared())
+			refPt = 1;
+		
+
+		
+	}
+
+	void AddStraight(const Vector2D& start, const Vector2D& length, const Vector2D& width, int divCount)
+	{
+		Vector2D unitLength = length * (1.0f / (float) divCount);
+		Vector2D center = start + (unitLength * 0.5f);
+
+		for (int i=0;i<divCount+1;++i)
+		{
+			polys.push_back(Poly2D());
+			BuildQuad(center, unitLength, width, polys.back());
+
+			if (i < divCount)
+			{
+				portalVertexIndices.push_back(1);
+				portalVertexIndices.push_back(3);
+			}
+			
+			center = center + (unitLength);
+		}
+	}
+
+protected:
+
+	void BuildQuad(const Vector2D& center, const Vector2D& length, const Vector2D& width, Poly2D& poly)
+	{
+		poly.points.clear();
+		poly.points.push_back(center - (width*0.5f) - (length*0.5f));
+		poly.points.push_back(center - (width*0.5f) + (length*0.5f));
+		poly.points.push_back(center + (width*0.5f) + (length*0.5f));
+		poly.points.push_back(center + (width*0.5f) - (length*0.5f));
+	}
+};
+
 inline float Dot(const Vector2D& p1, const Vector2D& p2)
 {
 	return p1.x * p2.x + p1.y * p2.y;
@@ -334,6 +450,73 @@ struct ResponseCurve
 		float interp_factor = (x-pPrev->x) / (pNext->x-pPrev->x);
 
 		return pPrev->y + (pNext->y-pPrev->y) * interp_factor;
+	}
+
+	float GetMaxXForY(float y, float defaultX)
+	{
+		if (mPoints.size() == 0)
+			return defaultX;
+
+		size_t i;
+		for (i=0;i<mPoints.size();++i)
+		{
+			if (mPoints[i].y > y)
+			{
+			}
+			else
+			{
+				break;
+			}
+		}
+
+		if (i >= mPoints.size())
+		{
+			return mPoints[mPoints.size()-1].x;
+		} 
+		else if (i > 0)
+		{
+			Vector2D* pPrev=&mPoints[i-1];
+			Vector2D* pNext=&mPoints[i];
+
+			float interp_factor = (y-pPrev->y) / (pNext->y-pPrev->y);
+
+			return pPrev->x + (pNext->x-pPrev->x) * interp_factor;
+		}
+
+		return mPoints.size() == 0 ? defaultX : mPoints[0].x;
+	}
+
+	float GetXForY(float y, float defaultX)
+	{
+		Vector2D* pPrev=NULL;
+		Vector2D* pNext=NULL;
+
+		for (size_t i=0;i<mPoints.size();++i)
+		{
+			if (y == mPoints[i].y)
+			{
+				return mPoints[i].x;
+			}
+			else if (y > mPoints[i].y)
+			{
+				pPrev = &mPoints[i];
+			}
+			else
+			{
+				pNext = &mPoints[i];
+				break;
+			}
+		}
+
+		if (pPrev == NULL)
+			return defaultX;
+
+		if (pNext == NULL)
+			return pPrev->x;
+
+		float interp_factor = (y-pPrev->y) / (pNext->y-pPrev->y);
+
+		return pPrev->x + (pNext->x-pPrev->x) * interp_factor;
 	}
 
 	void Serialize(const char* path)
