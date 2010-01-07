@@ -813,26 +813,40 @@ public:
 		size_t sz=polys.size();
 		file.write((const char*)&sz, sizeof(size_t));
 
+		printf("%d polys\n", sz);
+
+		sz=portals.size();
+		file.write((const char*)&sz, sizeof(size_t));
+
+		printf("%d portals\n", sz);
+
 		for (size_t i=0;i<polys.size();++i)
 		{
 			sz=polys[i].points.size();
 			file.write((const char*)&sz, sizeof(size_t));
 
+			printf("%d points\n", sz);
+
 			for (size_t j=0;j<polys[i].points.size();++j)
 			{
+				printf("%f, %f\n", polys[i].points[j].x, polys[i].points[j].y);
+
 				file.write((const char*)&(polys[i].points[j].x), sizeof(float));
 				file.write((const char*)&(polys[i].points[j].y), sizeof(float));
 			}
 		}
 
-		sz=portals.size();
-		file.write((const char*)&sz, sizeof(size_t));
+			
 
 		for (size_t i=0;i<portals.size();++i)
 		{
+			printf("%d, %d\n", portals[i].index[0], portals[i].index[1]);
+
 			file.write((const char*)&(portals[i].index[0]), sizeof(int));
 			file.write((const char*)&(portals[i].index[1]), sizeof(int));
 		}
+
+		file.close();
 	}
 
 	bool Deserialize(const char* path)
@@ -849,27 +863,36 @@ public:
 
 			size_t sz1=0;
 			file.read((char*)&sz1, sizeof(size_t));
+			size_t sz3=0;
+			file.read((char*)&sz3, sizeof(size_t));
+
+			printf("%d polys\n", sz1);
 
 			for (size_t i=0;i<sz1;++i)
 			{
 				size_t sz2=0;
 				file.read((char*)&sz2, sizeof(size_t));
 
+				printf("%d points\n", sz2);
+
 				polys.push_back(Poly2D());
 
-				for (size_t i=0;i<sz2;++i)
+				for (size_t j=0;j<sz2;++j)
 				{
 					float x,y;
 
 					file.read((char*)&x, sizeof(float));
 					file.read((char*)&y, sizeof(float));
 
+					printf("%f, %f\n", x, y);
+
 					polys.back().AddPoint(Vector2D(x, y));
 				}
 			}
 
-			size_t sz3;
-			file.read((char*)&sz3, sizeof(size_t));
+			
+
+			printf("%d portals\n", sz3);
 
 			for (size_t i=0;i<sz3;++i)
 			{
@@ -877,6 +900,8 @@ public:
 
 				file.read((char*)&x, sizeof(int));
 				file.read((char*)&y, sizeof(int));
+
+				printf("%d, %d\n", x, y);
 
 				portals.push_back(Portal());
 				portals.back().index[0] = x;
