@@ -145,9 +145,33 @@ int main(int argc, char *argv[])
 	test_poly.AddPoint(Vector2D(2.0f, -6.0f));
 	*/
 
+	bool do_manual_test_path = true;
+	bool do_load_test_path = true;
 	PolyPath2D test_path;
-	test_path.AddStraight(Vector2D(0.0f, 0.0f), Vector2D(10.0f, 60.0f), Vector2D(14.0f, 2.0f), 4);
+	
+	if (do_load_test_path)
+	{
+		test_path.Deserialize("path.bin");
+	}
 
+	PolyPath2D::ManualAddContext test_path_build_context;
+	if (test_path.polys.size() == 0)
+	{
+		test_path.StartBuild(&test_path_build_context);
+		if (do_manual_test_path == false)
+		{
+			test_path.AddStraight(Vector2D(0.0f, 0.0f), Vector2D(40.0f, 0.0f), Vector2D(0.0f, 14.0f), 3, true);
+			test_path.AddArc(1, Vector2D(60.0f, 30.0f), 12.0f, 3.14f, 8);
+			test_path.AddStraight(Vector2D(40.0f, 60.0f), Vector2D(-40.0f, 0.0f), Vector2D(0.0f, 14.0f), 3, true);
+			test_path.EndBuild();
+		}
+	}
+	else
+	{
+		do_manual_test_path = false;
+	}
+	
+	
 	while (is_running)
 	{
 		unsigned int startFrame;
@@ -262,6 +286,17 @@ int main(int argc, char *argv[])
 						}
 						break;
 
+					case SDLK_RETURN:
+						{
+							if (do_manual_test_path)
+							{
+								do_manual_test_path = false;
+								test_path.EndBuild();
+								test_path.Serialize("path.bin");
+							}
+						}
+						break;
+
 					case SDLK_PAGEUP:
 						{
 						}
@@ -299,6 +334,17 @@ int main(int argc, char *argv[])
 				else if (input_event.type == SDL_QUIT) 
 				{
 					is_running = false;
+				}
+				else if (input_event.type == SDL_MOUSEBUTTONDOWN)
+				{
+					if (do_manual_test_path)
+					{
+						int x; int y;
+						SDL_GetMouseState(&x, &y);
+						Vector2D worldPos = renderer.ScreenToWorld(Vector2D((float) x, (float) y));
+
+						test_path.AddManualBuild(test_path_build_context, worldPos);
+					}
 				}
 			}
 		}

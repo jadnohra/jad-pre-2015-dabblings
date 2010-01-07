@@ -5,6 +5,7 @@
 #include <stdlib.h>
 #include <fstream>
 #include <vector>
+#include <algorithm>
 #include "Box2D.h"
 
 #define MATH_PIf 3.14159265f
@@ -129,121 +130,8 @@ struct Quad2D
 	}
 };
 
-struct Poly2D
-{
-	typedef std::vector<Vector2D> Points;
-	Points points;
-
-	void AddPoint(const Vector2D& pt)
-	{
-		points.push_back(pt);
-	}
-
-	bool Contains(const Vector2D& pt)
-	{
-		int nvert = points.size();
-		int i, j, c = 0;
-		for (i = 0, j = nvert-1; i < nvert; j = i++) {
-			if ( ((points[i].y>pt.y) != (points[j].y>pt.y)) &&
-				(pt.x < (points[j].x-points[i].x) * (pt.y-points[i].y) / (points[j].y-points[i].y) + points[i].x) )
-				c = !c;
-		}
-		return c;
-	}
-
-	// http://www.ecse.rpi.edu/Homepages/wrf/Research/Short_Notes/pnpoly.html#Almost%20Convex%20Polygons
-	// works for general polys
-	/*
-	int pnpoly(int nvert, float *vertx, float *verty, float testx, float testy)
-	{
-		int i, j, c = 0;
-		for (i = 0, j = nvert-1; i < nvert; j = i++) {
-			if ( ((verty[i]>testy) != (verty[j]>testy)) &&
-				(testx < (vertx[j]-vertx[i]) * (testy-verty[i]) / (verty[j]-verty[i]) + vertx[i]) )
-				c = !c;
-		}
-		return c;
-	}
-	*/
-};
 
 
-class PolyPath2D
-{
-public:
-
-	typedef std::vector<Poly2D> Polys;
-	typedef std::vector<int> Indices;
-	Polys polys;
-	Indices portalVertexIndices;
-
-	Poly2D& AddPoly(int prevPortalIndex, int polyPortalIndex)
-	{
-		if (polys.size() > 0)
-		{
-			portalVertexIndices.push_back(prevPortalIndex);
-			portalVertexIndices.push_back(polyPortalIndex);
-		}
-
-		polys.push_back(Poly2D());
-
-		return polys.back();
-	}
-
-	void AddArc(int prevPortalIndex, const Vector2D& center, float width, float angle, int divCount)
-	{
-		if (polys.size() == 0)
-			return;
-
-		Vector2D startPt[2];
-		Vector2D startRadius[2];
-
-		startPt[0] = polys.back().points[prevPortalIndex];
-		startPt[1] = polys.back().points[(prevPortalIndex+1)%polys.back().points.size()];
-
-		startRadius[0] = startPt[0] - center;
-		startRadius[1] = startPt[1] - center;
-
-		int refPt = 0;
-
-		if (startRadius[1].LengthSquared() < startRadius[0].LengthSquared())
-			refPt = 1;
-		
-
-		
-	}
-
-	void AddStraight(const Vector2D& start, const Vector2D& length, const Vector2D& width, int divCount)
-	{
-		Vector2D unitLength = length * (1.0f / (float) divCount);
-		Vector2D center = start + (unitLength * 0.5f);
-
-		for (int i=0;i<divCount+1;++i)
-		{
-			polys.push_back(Poly2D());
-			BuildQuad(center, unitLength, width, polys.back());
-
-			if (i < divCount)
-			{
-				portalVertexIndices.push_back(1);
-				portalVertexIndices.push_back(3);
-			}
-			
-			center = center + (unitLength);
-		}
-	}
-
-protected:
-
-	void BuildQuad(const Vector2D& center, const Vector2D& length, const Vector2D& width, Poly2D& poly)
-	{
-		poly.points.clear();
-		poly.points.push_back(center - (width*0.5f) - (length*0.5f));
-		poly.points.push_back(center - (width*0.5f) + (length*0.5f));
-		poly.points.push_back(center + (width*0.5f) + (length*0.5f));
-		poly.points.push_back(center + (width*0.5f) - (length*0.5f));
-	}
-};
 
 inline float Dot(const Vector2D& p1, const Vector2D& p2)
 {
@@ -562,5 +450,445 @@ struct ResponseCurve
 		return false;
 	}
 };
+
+
+
+class Poly2D
+{
+public:
+
+	typedef std::vector<Vector2D> Points;
+	Points points;
+
+	void AddPoint(const Vector2D& pt)
+	{
+		points.push_back(pt);
+	}
+
+	void AddPointsConvex(const Vector2D& pt1, const Vector2D& pt2)
+	{
+		if (points.size() > 1)
+		{
+			const Vector2D& test_pt1 = points[points.size()-2];
+			const Vector2D& test_pt2 = points[points.size()-1];
+
+			float sign1 = SignedAngle(test_pt2-test_pt1, pt1-test_pt2);
+			float sign2 = SignedAngle(pt1-test_pt2, pt2 - pt1);
+
+			if ((sign1 >= 0.0f && sign2 >= 0.0f)
+				|| (sign1 < 0.0f && sign2 < 0.0f))
+			{
+				AddPoint(pt1);
+				AddPoint(pt2);
+			}
+			else
+			{
+				AddPoint(pt2);
+				AddPoint(pt1);
+			}
+		}
+		else
+		{
+			AddPoint(pt1);
+			AddPoint(pt2);
+		}
+	}
+
+	
+
+	bool Contains(const Vector2D& pt)
+	{
+		int nvert = points.size();
+		int i, j, c = 0;
+		for (i = 0, j = nvert-1; i < nvert; j = i++) {
+			if ( ((points[i].y>pt.y) != (points[j].y>pt.y)) &&
+				(pt.x < (points[j].x-points[i].x) * (pt.y-points[i].y) / (points[j].y-points[i].y) + points[i].x) )
+				c = !c;
+		}
+		return c;
+	}
+
+	// http://www.ecse.rpi.edu/Homepages/wrf/Research/Short_Notes/pnpoly.html#Almost%20Convex%20Polygons
+	// works for general polys
+	/*
+	int pnpoly(int nvert, float *vertx, float *verty, float testx, float testy)
+	{
+		int i, j, c = 0;
+		for (i = 0, j = nvert-1; i < nvert; j = i++) {
+			if ( ((verty[i]>testy) != (verty[j]>testy)) &&
+				(testx < (vertx[j]-vertx[i]) * (testy-verty[i]) / (verty[j]-verty[i]) + vertx[i]) )
+				c = !c;
+		}
+		return c;
+	}
+	*/
+};
+
+class PolyPath2D
+{
+public:
+
+	struct Portal
+	{
+		int index[2];
+	};
+
+	typedef std::vector<Poly2D> Polys;
+	typedef std::vector<Portal> Portals;
+	Polys polys;
+	Portals portals;
+
+	Poly2D& AddPoly()
+	{
+		polys.push_back(Poly2D());
+
+		return polys.back();
+	}
+
+	void AddArc(int prevPortalIndex, const Vector2D& center, float width, float angle, int divCount)
+	{
+		if (polys.size() == 0)
+			return;
+
+		Vector2D startPt[2];
+		Vector2D startRadius[2];
+
+		startPt[0] = polys.back().points[prevPortalIndex];
+		startPt[1] = polys.back().points[(prevPortalIndex+1)%polys.back().points.size()];
+
+		startRadius[0] = startPt[0] - center;
+		startRadius[1] = startPt[1] - center;
+
+		int minPt = 0;
+
+		if (startRadius[1].LengthSquared() < startRadius[0].LengthSquared())
+			minPt = 1;
+
+		int maxPt = (minPt+1)%2;
+
+		Vector2D min_radius = startRadius[minPt];
+		Vector2D max_radius = min_radius + (min_radius.Normalized() * width);
+
+		float div_angle_inc = angle / (float) divCount;
+
+		for (int i=0; i<divCount; ++i)
+		{
+			Vector2D div_min_radius = rotate(min_radius, (float)i * div_angle_inc);
+			Vector2D div_max_radius = rotate(max_radius, (float)i * div_angle_inc);
+			Vector2D next_div_min_radius = rotate(min_radius, (float)(i+1) * div_angle_inc);
+			Vector2D next_div_max_radius = rotate(max_radius, (float)(i+1) * div_angle_inc);
+
+			if (i == 0)
+			{
+				Poly2D& new_poly = AddPoly();
+				
+				new_poly.AddPoint(center+startRadius[maxPt]);
+				new_poly.AddPoint(center+next_div_max_radius);
+				new_poly.AddPoint(center+next_div_min_radius);
+				new_poly.AddPoint(center+startRadius[minPt]);
+			}
+			else
+			{
+				Poly2D& new_poly = AddPoly();
+				
+				new_poly.AddPoint(center+div_max_radius);
+				new_poly.AddPoint(center+next_div_max_radius);
+				new_poly.AddPoint(center+next_div_min_radius);
+				new_poly.AddPoint(center+div_min_radius);
+			}
+		}
+
+	}
+
+	void AddStraight(const Vector2D& start, const Vector2D& length, const Vector2D& width, int divCount, bool addConnection)
+	{
+		Vector2D unitLength = length * (1.0f / (float) divCount);
+		Vector2D center = start + (unitLength * 0.5f);
+
+		for (int i=0;i<divCount+1;++i)
+		{
+			Poly2D poly;
+			BuildQuad(center, unitLength, width, poly);
+
+			if (addConnection && i == 0 && polys.size()>0)
+			{
+				Poly2D conn;
+				BuildConnectionQuad(polys.back(), poly, conn);
+				polys.push_back(conn);
+			}
+			
+			polys.push_back(poly);
+
+			center = center + (unitLength);
+		}
+	}
+
+	struct ManualAddContext
+	{
+		Poly2D poly1;
+		Poly2D poly2;
+	};
+
+	void AddManualBuild(ManualAddContext& context, const Vector2D& pt)
+	{
+		if (polys.size() == 0)
+		{
+			if (context.poly1.points.size() < 2)
+			{
+				context.poly1.AddPoint(pt);
+				return;
+			}
+
+			if (context.poly1.points.size() == 2)
+			{
+				if (context.poly2.points.size() == 0)
+				{
+					context.poly2.AddPoint(pt);
+				}
+				else
+				{
+					polys.push_back(Poly2D());
+					polys.back().AddPointsConvex(context.poly1.points[0], context.poly1.points[1]);
+					polys.back().AddPointsConvex(context.poly2.points[0], pt);
+					context.poly1.points.clear();
+					context.poly2.points.clear();
+				}
+			}
+		}
+		else
+		{
+			if (context.poly1.points.size() < 2)
+			{
+				context.poly1.AddPoint(pt);
+			}
+
+			if (context.poly1.points.size() == 2)
+			{
+				const Poly2D& prev = polys.back();
+
+				Poly2D poly;
+				poly.AddPointsConvex(prev.points[prev.points.size()-2], prev.points[prev.points.size()-1]);
+				poly.AddPointsConvex(context.poly1.points[0], context.poly1.points[1]);
+				polys.push_back(poly);
+				context.poly1.points.clear();
+			}
+		}
+	}
+
+	void StartBuild(ManualAddContext* pContext=NULL)
+	{
+		polys.clear();
+		portals.clear();
+
+		if (pContext)
+		{
+			pContext->poly1.points.clear();
+			pContext->poly2.points.clear();
+		}
+	}
+
+	void EndBuild()
+	{
+		portals.clear();
+		portals.reserve(polys.size());
+
+		for (int i=0; i+1<polys.size(); ++i)
+		{
+			Poly2D& curr = polys[i];
+			Poly2D& next = polys[i+1];
+
+			portals.push_back(Portal());
+
+			GetBestPortal(curr, next, portals.back());
+		}
+	}
+
+	void BuildConnectionQuad(const Poly2D& curr, const Poly2D& next, Poly2D& conn)
+	{
+		Portal portal;
+
+		GetBestPortal(curr, next, portal);
+
+		conn.points.clear();
+		conn.points.push_back(curr.points[portal.index[0]]);
+		conn.points.push_back(curr.points[(portal.index[0]+1)%curr.points.size()]);
+
+		Vector2D pt1=next.points[portal.index[1]];
+		Vector2D pt2=next.points[(portal.index[1]+1)%next.points.size()];
+
+		conn.AddPointsConvex(pt1, pt2);
+	}
+
+	struct Info
+	{
+		int index_curr;
+		int index_next;
+		float dist_sq;
+
+		inline bool operator<(const Info& comp) const
+		{
+			return dist_sq < comp.dist_sq;
+		}
+	};
+
+	void GetBestPortal(const Poly2D& curr, const Poly2D& next, Portal& portal)
+	{
+		typedef std::vector<Info> Infos;
+		Infos infos;
+
+		infos.reserve(curr.points.size()*next.points.size());
+
+		for (int i=0; i<curr.points.size(); ++i)
+		{
+			for (int j=0; j<next.points.size(); ++j)
+			{
+				infos.push_back(Info());
+				infos.back().index_curr = i;
+				infos.back().index_next = j;
+				infos.back().dist_sq = DistanceSquared(curr.points[i], next.points[j]);
+			}
+		}
+
+		std::sort(infos.begin(), infos.end());
+
+		int curr_pt_index_1 = infos[0].index_curr;
+		int curr_pt_index_2 = -1;
+		int next_pt_index_1 = infos[0].index_next;
+		int next_pt_index_2 = -1;
+
+		for (int i=1;i<infos.size() && ((curr_pt_index_2 == -1)||next_pt_index_2 == -1); ++i)
+		{
+			if (curr_pt_index_2 == -1)
+			{
+				if (infos[i].index_curr == ((curr_pt_index_1+1)%curr.points.size())
+					|| infos[i].index_curr == ((curr_pt_index_1+curr.points.size()-1)%curr.points.size()))
+				{
+					curr_pt_index_2 = infos[i].index_curr;
+
+					if (curr_pt_index_2 == curr_pt_index_1)
+						curr_pt_index_2 = -1;
+				}
+			}
+
+			if (next_pt_index_2 == -1)
+			{
+				if (infos[i].index_next == ((next_pt_index_1+1)%next.points.size())
+					|| infos[i].index_next == ((next_pt_index_1+next.points.size()-1)%next.points.size()))
+				{
+					next_pt_index_2 = infos[i].index_next;
+
+					if (next_pt_index_2 == next_pt_index_1)
+						next_pt_index_2 = -1;
+				}
+			}
+		}
+
+		if (curr_pt_index_2 == -1 || curr_pt_index_1+1 == curr_pt_index_2)
+			portal.index[0] = curr_pt_index_1;
+		else
+			portal.index[0] = curr_pt_index_2;
+
+
+		if (next_pt_index_2 == -1 || next_pt_index_1+1 == next_pt_index_2)
+			portal.index[1] = next_pt_index_1;
+		else
+			portal.index[1] = next_pt_index_2;
+	}
+
+	void BuildQuad(const Vector2D& center, const Vector2D& length, const Vector2D& width, Poly2D& poly)
+	{
+		poly.points.clear();
+		poly.points.push_back(center - (width*0.5f) - (length*0.5f));
+		poly.points.push_back(center - (width*0.5f) + (length*0.5f));
+		poly.points.push_back(center + (width*0.5f) + (length*0.5f));
+		poly.points.push_back(center + (width*0.5f) - (length*0.5f));
+	}
+
+
+	void Serialize(const char* path)
+	{
+		std::ofstream file;
+		file.open(path);
+
+		size_t sz=polys.size();
+		file.write((const char*)&sz, sizeof(size_t));
+
+		for (size_t i=0;i<polys.size();++i)
+		{
+			sz=polys[i].points.size();
+			file.write((const char*)&sz, sizeof(size_t));
+
+			for (size_t j=0;j<polys[i].points.size();++j)
+			{
+				file.write((const char*)&(polys[i].points[j].x), sizeof(float));
+				file.write((const char*)&(polys[i].points[j].y), sizeof(float));
+			}
+		}
+
+		sz=portals.size();
+		file.write((const char*)&sz, sizeof(size_t));
+
+		for (size_t i=0;i<portals.size();++i)
+		{
+			file.write((const char*)&(portals[i].index[0]), sizeof(int));
+			file.write((const char*)&(portals[i].index[1]), sizeof(int));
+		}
+	}
+
+	bool Deserialize(const char* path)
+	{
+		std::ifstream file;
+
+		polys.clear();
+		portals.clear();
+
+		file.open(path);
+
+		if (file.is_open())
+		{
+
+			size_t sz1=0;
+			file.read((char*)&sz1, sizeof(size_t));
+
+			for (size_t i=0;i<sz1;++i)
+			{
+				size_t sz2=0;
+				file.read((char*)&sz2, sizeof(size_t));
+
+				polys.push_back(Poly2D());
+
+				for (size_t i=0;i<sz2;++i)
+				{
+					float x,y;
+
+					file.read((char*)&x, sizeof(float));
+					file.read((char*)&y, sizeof(float));
+
+					polys.back().AddPoint(Vector2D(x, y));
+				}
+			}
+
+			size_t sz3;
+			file.read((char*)&sz3, sizeof(size_t));
+
+			for (size_t i=0;i<sz3;++i)
+			{
+				int x,y;
+
+				file.read((char*)&x, sizeof(int));
+				file.read((char*)&y, sizeof(int));
+
+				portals.push_back(Portal());
+				portals.back().index[0] = x;
+				portals.back().index[1] = y;
+			}
+
+			return true;
+		}
+
+		return false;
+	}
+};
+
 
 #endif
