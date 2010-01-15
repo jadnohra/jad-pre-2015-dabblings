@@ -36,8 +36,34 @@ void LoadOrLearnTurnRadii(Physics& physics, TestVehicle& vehicle, float dt)
 }
 
 
+void LoadOrLearnSwitchSpeed(Physics& physics, TestVehicle& vehicle, float dt)
+{
+	if (!vehicle.mSwitchSpeedTimeCurvesRC.Deserialize("SwitchSpeedTimeCurvesRC.bin")
+		|| !vehicle.mSwitchSpeedDistCurvesRC.Deserialize("SwitchSpeedDistCurvesRC.bin"))
+	{
+
+		VehicleController_SwitchSpeedLearn controller;
+		controller.SetVehicle(&vehicle);
+		controller.Init(&vehicle, 4.0f, 30.0f, 20); 
+		
+		float t = 0.0f;
+		physics.Update(dt);
+		while (!controller.IsFinished())
+		{
+			controller.Update(t, dt);
+			physics.Update(dt);
+			t+=dt;
+		}
+
+		vehicle.mSwitchSpeedTimeCurvesRC.Serialize("SwitchSpeedTimeCurvesRC.bin");
+		vehicle.mSwitchSpeedDistCurvesRC.Serialize("SwitchSpeedDistCurvesRC.bin");
+	}
+}
+
+
 int main(int argc, char *argv[])
 {
+
 	bool is_running = true;
 	bool draw_terrain = true;
 
@@ -64,6 +90,7 @@ int main(int argc, char *argv[])
 	float update_fps = 60.0f;
 
 	LoadOrLearnTurnRadii(physics, vehicle, 1.0f / update_fps);
+	LoadOrLearnSwitchSpeed(physics, vehicle, 1.0f / update_fps);
 
 	/*
 	VehicleController_Keyb controller;

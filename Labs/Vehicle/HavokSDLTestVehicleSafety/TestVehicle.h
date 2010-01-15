@@ -60,6 +60,9 @@ public:
 	ResponseCurve mSafeSteerForSpeedRP;
 	ResponseCurve mSafeSteerTurnRadiusForSpeedRP;
 
+	ResponseCurves mSwitchSpeedTimeCurvesRC;
+	ResponseCurves mSwitchSpeedDistCurvesRC;
+
 	std::vector<Vector2D> mHistory;
 	bool mHistoryEnabled;
 	size_t mHistorySampleCount;
@@ -572,6 +575,7 @@ public:
 	float mLastSpeed;
 	float mThrottleProportional;
 	bool mHasReachedSpeed;
+	float mOrigSpeed;
 
 	SimpleVehicleSpeedThrottleController::SimpleVehicleSpeedThrottleController()
 	{
@@ -581,9 +585,10 @@ public:
 	}
 
 
-	void SetSpeed(float speed)
+	void SetSpeed(float speed, float origSpeed)
 	{
 		mSpeed = speed;
+		mOrigSpeed = origSpeed;
 		mLastSpeed = -1.0f;
 		mThrottleProportional = 1.0f;
 		mHasReachedSpeed = false;
@@ -607,11 +612,15 @@ public:
 			if (mThrottleProportional < 0.0f)
 				mThrottleProportional = 0.0f;
 
-			mHasReachedSpeed = true;
+			if (mOrigSpeed <= mSpeed)
+				mHasReachedSpeed = true;
 		}
 		if (curr_speed < mSpeed)
 		{
 			mThrottleProportional += 0.05f;
+
+			if (mOrigSpeed >= mSpeed)
+				mHasReachedSpeed = true;
 		}
 
 		mLastSpeed = curr_speed;
@@ -619,6 +628,103 @@ public:
 		return mThrottle;
 	}
 };
+
+
+class VehicleController_SwitchSpeedTest : public VehicleController
+{
+public:
+
+	enum State
+	{
+		INVALID, SETTING_SPEED, TESTING_DELAY, TESTING
+	};
+
+	State mState;
+	SimpleVehicleSpeedThrottleController mThrottle;
+	float mFromSpeed;
+	float mToSpeed;
+
+	float mLastSpeed;
+	Vector2D mStartPos;
+
+	float mReachSpeedTime;
+	float mReachSpeedDist;
+
+	VehicleController_SwitchSpeedTest() 
+	{
+		mState = INVALID;
+	}
+
+	void Init(TestVehicle* inVehicle, float inFromSpeed, float inToSpeed)
+	{
+		mFromSpeed = inFromSpeed;
+		mToSpeed = inToSpeed;
+
+		VehicleController::SetVehicle(inVehicle);
+		mState = INVALID;
+	}
+
+	virtual bool IsFinished() 
+	{
+		return (mState == TESTING) && (mThrottle.mHasReachedSpeed);
+	}
+
+	bool IsFinished(float t)
+	{
+		return IsFinished();
+	}
+
+	virtual void Update(float t, float dt)
+	{
+		mLastSpeed = mpVehicle->m_vehicle->calcKMPH() / 3.6f;
+		
+		switch (mState)
+		{
+		case INVALID:
+			{
+				mpVehicle->steer(0.0f, 0.0f, true);
+
+				// why oh why does the speed not get to exact zero.
+				if (mLastSpeed <= 0.01f)
+				{
+					Vector2D fwd(0.0f, 1.0f);
+					mpVehicle->Teleport(Vector2D(), &fwd);
+					mState = SETTING_SPEED;
+					mThrottle.SetSpeed(mFromSpeed, mLastSpeed);
+				}
+			}
+			break;
+
+		case SETTING_SPEED:
+			{
+				mpVehicle->steer(0.0f, mThrottle.GetThrottle(*mpVehicle), false);
+				
+				if (mThrottle.mHasReachedSpeed)
+				{
+					mState = TESTING;
+					mThrottle.SetSpeed(mToSpeed, mLastSpeed);
+					mReachSpeedTime = 0.0f;
+					mReachSpeedDist = 0.0f;
+					mStartPos = mpVehicle->GetPos();
+				}
+			}
+			break;
+
+		case TESTING:
+			{
+				mpVehicle->steer(0.0f, mThrottle.GetThrottle(*mpVehicle), false);
+				mReachSpeedTime+=dt;
+				mReachSpeedDist= Distance(mpVehicle->GetPos(), mStartPos);
+			}
+			break;
+		}
+	}
+
+	virtual void Draw(Renderer& renderer, float t) 
+	{
+	}
+};
+
 
 class VehicleController_TurnRadiusTest : public VehicleController
 {
@@ -666,11 +772,11 @@ public:
 
 	void Init(TestVehicle* pVehicle, float speed, float steer)
 	{
-		mThrottle.SetSpeed(speed);
+		mThrottle.SetSpeed(speed, pVehicle->m_vehicle->calcKMPH() / 3.6f);
 		mSteer = steer;
 
 		VehicleController::SetVehicle(pVehicle);
-		mThrottle.SetSpeed(mThrottle.mSpeed);
+		mThrottle.SetSpeed(mThrottle.mSpeed, pVehicle->m_vehicle->calcKMPH() / 3.6f);
 		
 		mState = INVALID;
 		mHistory.clear();
@@ -891,10 +997,10 @@ public:
 
 	void Init(TestVehicle* pVehicle, float speed)
 	{
-		mThrottle.SetSpeed(speed);
+		mThrottle.SetSpeed(speed, pVehicle->m_vehicle->calcKMPH() / 3.6f);
 		
 		VehicleController::SetVehicle(pVehicle);
-		mThrottle.SetSpeed(mThrottle.mSpeed);
+		mThrottle.SetSpeed(mThrottle.mSpeed, pVehicle->m_vehicle->calcKMPH() / 3.6f);
 		
 		mState = INVALID;
 		mHistory.clear();
@@ -1091,6 +1197,111 @@ public:
 			}
 			
 			if (mCurrSpeed >= 0 && mCurrSpeed<mSpeedCount)
+			{
+				mTester.Update(t, dt);
+			}
+		}
+	}
+
+	virtual void Draw(Renderer& renderer, float t) 
+	{
+		mTester.Draw(renderer, t);
+	}
+};
+
+
+class VehicleController_SwitchSpeedLearn : public VehicleController
+{
+public:
+
+	float mFromSpeed;
+	float mToSpeed;
+	int mSpeedCount;
+	int mCurrFromSpeed;
+	int mCurrToSpeed;
+	int mTestCount;
+	int mCurrTest;
+
+	VehicleController_SwitchSpeedTest mTester;
+	
+	VehicleController_SwitchSpeedLearn()
+	{
+		mSpeedCount = 0;
+		mCurrFromSpeed = -1;
+		mCurrToSpeed = -1;
+	}
+
+	virtual bool IsFinished() 
+	{
+		return (mCurrTest >= mTestCount);
+	}
+
+	void Init(TestVehicle* pVehicle, float fromSpeed, float toSpeed, int speedCount)
+	{
+		mCurrFromSpeed = -1;
+		mCurrToSpeed = -1;
+		mFromSpeed = fromSpeed;
+		mToSpeed = toSpeed;
+		mSpeedCount = speedCount;
+		mTestCount = mSpeedCount * mSpeedCount;
+		mCurrTest = 0;
+
+		pVehicle->mSwitchSpeedTimeCurvesRC.clear();
+		pVehicle->mSwitchSpeedTimeCurvesRC.resize(mSpeedCount);
+		pVehicle->mSwitchSpeedDistCurvesRC.clear();
+		pVehicle->mSwitchSpeedDistCurvesRC.resize(mSpeedCount);
+	}
+
+	virtual void Update(float t, float dt) 
+	{
+		if (mCurrFromSpeed < mSpeedCount)
+		{
+			if (mCurrFromSpeed == -1 || mTester.IsFinished(t))
+			{
+				float from_speed = mFromSpeed + ((mToSpeed-mFromSpeed)*((float) mCurrFromSpeed/(float) mSpeedCount));
+				float to_speed = mFromSpeed + ((mToSpeed-mFromSpeed)*((float) mCurrToSpeed/(float) mSpeedCount));
+
+				if (mCurrFromSpeed >= 0)
+				{
+					if (mCurrFromSpeed == mCurrToSpeed)
+					{
+						ResponseCurve& time_curve = mpVehicle->mSwitchSpeedTimeCurvesRC[mCurrFromSpeed];
+						time_curve.Add(to_speed, 0.0f);
+
+						ResponseCurve& dist_curve = mpVehicle->mSwitchSpeedDistCurvesRC[mCurrFromSpeed];
+						dist_curve.Add(to_speed, 0.0f);
+					}
+					else
+					{
+						ResponseCurve& time_curve = mpVehicle->mSwitchSpeedTimeCurvesRC[mCurrFromSpeed];
+						time_curve.Add(to_speed, mTester.mReachSpeedTime);
+
+						ResponseCurve& dist_curve = mpVehicle->mSwitchSpeedDistCurvesRC[mCurrFromSpeed];
+						dist_curve.Add(to_speed, mTester.mReachSpeedDist);
+
+						printf("speed switch %f->%f: %f sec. %f m.\n", from_speed, to_speed, mTester.mReachSpeedTime, mTester.mReachSpeedDist);
+					}
+				}
+
+				++mCurrToSpeed;
+
+				if (mCurrToSpeed >= mSpeedCount || mCurrFromSpeed == -1)
+				{
+					++ mCurrFromSpeed;
+					mCurrToSpeed = 0;
+				}
+
+				from_speed = mFromSpeed + ((mToSpeed-mFromSpeed)*((float) mCurrFromSpeed/(float) mSpeedCount));
+				to_speed = mFromSpeed + ((mToSpeed-mFromSpeed)*((float) mCurrToSpeed/(float) mSpeedCount));
+
+				if (mCurrFromSpeed < mSpeedCount)
+				{
+					++mCurrTest;
+					mTester.Init(mpVehicle, from_speed, to_speed);
+				}
+			}
+			
+			if (mCurrFromSpeed >= 0 && mCurrFromSpeed<mSpeedCount)
 			{
 				mTester.Update(t, dt);
 			}
@@ -1309,7 +1520,7 @@ public:
 	{
 		mHasTarget = false;
 		mMaxSpeed = 1.0f;
-		mThrottle.SetSpeed(mMaxSpeed);
+		mThrottle.SetSpeed(mMaxSpeed, 0.0f);
 		mFollowMouse = false;
 		mpRenderer = NULL;
 	}
@@ -1343,7 +1554,7 @@ public:
 	void SetMaxSpeed(float speed)
 	{
 		mMaxSpeed = speed;
-		mThrottle.SetSpeed(mMaxSpeed);
+		mThrottle.SetSpeed(mMaxSpeed, 0.0f);
 	}
 
 	virtual void Update(float t, float dt) 
@@ -1408,7 +1619,7 @@ public:
 	{
 		mHasTarget = false;
 		mMaxSpeed = 1.0f;
-		mThrottle.SetSpeed(mMaxSpeed);
+		mThrottle.SetSpeed(mMaxSpeed, 0.0f);
 		mFollowMouse = false;
 		mpRenderer = NULL;
 	}
@@ -1442,7 +1653,7 @@ public:
 	void SetMaxSpeed(float speed)
 	{
 		mMaxSpeed = speed;
-		mThrottle.SetSpeed(mMaxSpeed);
+		mThrottle.SetSpeed(mMaxSpeed, 0.0f);
 	}
 
 	virtual void Update(float t, float dt) 
@@ -1471,10 +1682,10 @@ public:
 			if (max_speed < mMaxSpeed)
 			{
 				printf("limiting speed to: %f, steer: %f \n", max_speed, steer);
-				mThrottle.SetSpeed(max_speed);
+				mThrottle.SetSpeed(max_speed, 0.0f);
 			}
 			else
-				mThrottle.SetSpeed(mMaxSpeed);
+				mThrottle.SetSpeed(mMaxSpeed, 0.0f);
 
 			float throttle = mThrottle.GetThrottle(*mpVehicle);
 			

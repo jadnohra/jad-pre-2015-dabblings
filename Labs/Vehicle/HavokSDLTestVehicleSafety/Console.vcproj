@@ -207,6 +207,10 @@
 			>
 		</File>
 		<File
+			RelativePath=".\RandomizedConvexFlowFieldPlanner.h"
+			>
+		</File>
+		<File
 			RelativePath=".\Renderer.cpp"
 			>
 		</File>

@@ -145,7 +145,7 @@ public:
 				worldInfo.m_broadPhaseBorderBehaviour = hkpWorldCinfo::BROADPHASE_BORDER_FIX_ENTITY; // just fix the entity if the object falls off too far 
 
 				// You must specify the size of the broad phase - objects should not be simulated outside this region
-				worldInfo.setBroadPhaseWorldSize(1000.0f);
+				worldInfo.setBroadPhaseWorldSize(2000.0f);
 				physicsWorld = new hkpWorld(worldInfo);
 			}
 
@@ -198,7 +198,7 @@ public:
 		// Create the floor as a fixed box
 		{
 			hkpRigidBodyCinfo boxInfo;
-			hkVector4 boxSize(200.0f, 0.5f , 200.0f);
+			hkVector4 boxSize(1000.0f, 0.5f , 1000.0f);
 			hkpBoxShape* boxShape = new hkpBoxShape(boxSize);
 			boxInfo.m_shape = boxShape;
 			boxInfo.m_motionType = hkpMotion::MOTION_FIXED;

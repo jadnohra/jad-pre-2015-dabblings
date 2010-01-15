@@ -412,13 +412,21 @@ struct ResponseCurve
 		std::ofstream file;
 		file.open(path);
 
-		size_t sz=mPoints.size();
-		file.write((const char*)&sz, sizeof(size_t));
+		Serialize(file);
+	}
+
+	void Serialize(std::ofstream& file)
+	{
+		int sz=mPoints.size();
+		//file.write((const char*)&sz, sizeof(size_t));
+		file << sz << std::endl;
 
 		for (size_t i=0;i<mPoints.size();++i)
 		{
-			file.write((const char*)&(mPoints[i].x), sizeof(float));
-			file.write((const char*)&(mPoints[i].y), sizeof(float));
+			//file.write((const char*)&(mPoints[i].x), sizeof(float));
+			//file.write((const char*)&(mPoints[i].y), sizeof(float));
+			file << mPoints[i].x << std::endl;
+			file << mPoints[i].y << std::endl;
 		}
 	}
 
@@ -428,18 +436,27 @@ struct ResponseCurve
 
 		file.open(path);
 
+		return Deserialize(file);
+	}
+
+
+	bool Deserialize(std::ifstream& file)
+	{
 		if (file.is_open())
 		{
-
-			size_t sz=0;
-			file.read((char*)&sz, sizeof(size_t));
+			int sz=0;
+			
+			//file.read((char*)&sz, sizeof(size_t));
+			file >> sz;
 
 			for (size_t i=0;i<sz;++i)
 			{
 				float x,y;
 
-				file.read((char*)&x, sizeof(float));
-				file.read((char*)&y, sizeof(float));
+				//file.read((char*)&x, sizeof(float));
+				//file.read((char*)&y, sizeof(float));
+				file >> x;
+				file >> y;
 
 				Add(x, y);
 			}
@@ -451,7 +468,53 @@ struct ResponseCurve
 	}
 };
 
+class ResponseCurves : public std::vector<ResponseCurve>
+{
+public:
 
+	void Serialize(const char* path)
+	{
+		std::ofstream file;
+		file.open(path);
+
+		int sz=this->size();
+		//file.write((const char*)&sz, sizeof(size_t));
+		file << sz << std::endl;
+
+		for (size_t i=0;i<size();++i)
+		{
+			at(i).Serialize(file);
+		}
+	}
+
+	bool Deserialize(const char* path)
+	{
+		std::ifstream file;
+
+		file.open(path);
+
+		if (file.is_open())
+		{
+			int sz=0;
+			//file.read((char*)&sz, sizeof(size_t));
+			file >> sz;
+
+			clear();
+			resize(sz);
+
+			for (size_t i=0;i<sz;++i)
+			{
+				if (!at(i).Deserialize(file))
+					return false;
+			}
+
+			return true;
+		}
+
+		return false;
+	}
+	
+};
 
 class Poly2D
 {
