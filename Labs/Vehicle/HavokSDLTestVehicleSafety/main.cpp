@@ -267,6 +267,7 @@ int main(int argc, char *argv[])
 			*/
 
 			float scroll_pixels_per_sec = 300.0f;
+			float zoom_per_sec = 2.0f;
 
 			Uint8* keyboardmap = SDL_GetKeyState(NULL);
 			if (keyboardmap[SDLK_w])
@@ -284,6 +285,19 @@ int main(int argc, char *argv[])
 			if (keyboardmap[SDLK_d])
 			{
 				renderer.mWorldTranslation.x += renderer.ScreenToWorld(scroll_pixels_per_sec * (float) frames * updateTimer.GetFrameTime());
+			}
+			if (keyboardmap[SDLK_KP_PLUS])
+			{
+				renderer.mWorldScale += zoom_per_sec *  (float) frames * updateTimer.GetFrameTime();
+			}
+			if (keyboardmap[SDLK_KP_MINUS])
+			{
+				float backup_scale = renderer.mWorldScale;
+				renderer.mWorldScale -= zoom_per_sec * (float) frames * updateTimer.GetFrameTime();
+
+				if (renderer.mWorldScale < 0.0f)
+					renderer.mWorldScale = backup_scale;
+
 			}
 		}
 
