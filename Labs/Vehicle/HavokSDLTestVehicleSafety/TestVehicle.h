@@ -57,8 +57,8 @@ public:
 
 	Vector2D m_steer;
 
-	ResponseCurve mSafeSteerForSpeedRP;
-	ResponseCurve mSafeSteerTurnRadiusForSpeedRP;
+	ResponseCurve mSafeSteerForSpeedRC;
+	ResponseCurve mSafeSteerTurnRadiusForSpeedRC;
 
 	ResponseCurves mSwitchSpeedTimeCurvesRC;
 	ResponseCurves mSwitchSpeedDistCurvesRC;
@@ -402,6 +402,15 @@ public:
 		hkRotation rot = transform.getRotation();
 
 		return to2DFwd(rot);
+	}
+
+
+	Vector2D GetVel()
+	{
+		hkpRigidBody* chassisRigidBody = m_vehicle->getChassis();
+		const hkTransform& transform = chassisRigidBody->getTransform();
+
+		return to2D(chassisRigidBody->getLinearVelocity());
 	}
 
 	void Draw(Renderer& renderer, float t, float dt)
@@ -1250,6 +1259,14 @@ public:
 		pVehicle->mSwitchSpeedTimeCurvesRC.resize(mSpeedCount);
 		pVehicle->mSwitchSpeedDistCurvesRC.clear();
 		pVehicle->mSwitchSpeedDistCurvesRC.resize(mSpeedCount);
+
+		for (int i=0; i<mSpeedCount; ++i)
+		{
+			float from_speed = mFromSpeed + ((mToSpeed-mFromSpeed)*((float) i/(float) mSpeedCount));
+
+			mpVehicle->mSwitchSpeedTimeCurvesRC[i].mBaseValue = from_speed;
+			mpVehicle->mSwitchSpeedDistCurvesRC[i].mBaseValue = from_speed;
+		}
 	}
 
 	virtual void Update(float t, float dt) 
@@ -1339,7 +1356,7 @@ public:
 		mSpeed = speed;
 		mMinSteer = 0.0f;
 		mMaxSteer = 1.0f;
-		mSteer = 0.5f * (mMinSteer+mMaxSteer);
+		mSteer = mMaxSteer;
 		mIsTesting = true;
 		mTester.Init(mpVehicle, mSpeed, mSteer);
 		mGranularity = searchGranularity;
@@ -1373,7 +1390,7 @@ public:
 			if (mMaxSteer-mMinSteer > mGranularity)
 			{
 				printf("instability %f, allowed: %f\n", mTester.GetCenterBoxError(), 0.1f * mTester.mRadius);
-				bool was_good_test = mTester.GetCenterBoxError() < 0.1f * mTester.mRadius;
+				bool was_good_test = mTester.GetCenterBoxError() < std::max(0.1f * mTester.mRadius, 0.2f);
 
 				if (was_good_test)
 				{
@@ -1416,7 +1433,7 @@ public:
 	float mStableSteer;
 	float mGranularity;
 
-	bool mLearnRP;
+	bool mLearnRC;
 
 	VehicleController_TurnRadiusTest mTester;
 	VehicleController_StableSteerLearn mStableTester;
@@ -1427,20 +1444,20 @@ public:
 		mCurrSpeed = -1;
 	}
 
-	void Init(TestVehicle* pVehicle, float fromSpeed, float toSpeed, int speedCount, float steer, float searchGranularity, bool learnRP)
+	void Init(TestVehicle* pVehicle, float fromSpeed, float toSpeed, int speedCount, float steer, float searchGranularity, bool learnRC)
 	{
 		mCurrSpeed = -1;
 		mFromSpeed = fromSpeed;
 		mToSpeed = toSpeed;
 		mSpeedCount = speedCount;
 		mSteer = steer;
-		mLearnRP = learnRP;
+		mLearnRC = learnRC;
 		mGranularity = searchGranularity;
 
-		if (mLearnRP)
+		if (mLearnRC)
 		{
-			mpVehicle->mSafeSteerForSpeedRP.Clear();
-			mpVehicle->mSafeSteerTurnRadiusForSpeedRP.Clear();
+			mpVehicle->mSafeSteerForSpeedRC.Clear();
+			mpVehicle->mSafeSteerTurnRadiusForSpeedRC.Clear();
 		}
 	}
 
@@ -1457,10 +1474,10 @@ public:
 			{
 				if (mCurrSpeed >= 0)
 				{
-					if (mLearnRP)
+					if (mLearnRC)
 					{
-						mpVehicle->mSafeSteerForSpeedRP.Add(mTester.mThrottle.mSpeed, mStableSteer);
-						mpVehicle->mSafeSteerTurnRadiusForSpeedRP.Add(mTester.mThrottle.mSpeed, mTester.mRadius);
+						mpVehicle->mSafeSteerForSpeedRC.Add(mTester.mThrottle.mSpeed, mStableSteer);
+						mpVehicle->mSafeSteerTurnRadiusForSpeedRC.Add(mTester.mThrottle.mSpeed, mTester.mRadius);
 					}
 					
 					printf("Turn Radius for speed: %f is %f, instability: %f\n", mTester.mThrottle.mSpeed, mTester.mRadius, mTester.GetCenterBoxError());
@@ -1715,7 +1732,7 @@ public:
 
 	float GetMaxSafeSpeedForSteer(float steer)
 	{
-		return mpVehicle->mSafeSteerForSpeedRP.GetMaxXForY(fabs(steer), 1.0f);
+		return mpVehicle->mSafeSteerForSpeedRC.GetMaxXForY(fabs(steer), 1.0f);
 	}
 
 	Renderer* mpRenderer;

@@ -2,6 +2,7 @@
 #include "Time.h"
 #include "Physics.h"
 #include "TestVehicle.h"
+#include "RandomizedFlowFieldPlanner.h"
 
 Renderer renderer;
 
@@ -13,13 +14,13 @@ void Draw(float t)
 
 void LoadOrLearnTurnRadii(Physics& physics, TestVehicle& vehicle, float dt)
 {
-	if (!vehicle.mSafeSteerForSpeedRP.Deserialize("SafeSteerForSpeedRP.bin")
-		|| !vehicle.mSafeSteerTurnRadiusForSpeedRP.Deserialize("SafeSteerTurnRadiusForSpeedRP.bin"))
+	if (!vehicle.mSafeSteerForSpeedRC.Deserialize("SafeSteerForSpeedRC.bin")
+		|| !vehicle.mSafeSteerTurnRadiusForSpeedRC.Deserialize("SafeSteerTurnRadiusForSpeedRC.bin"))
 	{
 
 		VehicleController_StableTurnRadiusLearn controller;
 		controller.SetVehicle(&vehicle);
-		controller.Init(&vehicle, 4.0f, 30.0f, 20, 1.0f, 0.1f, true); 
+		controller.Init(&vehicle, 1.0f, 30.0f, 30, 1.0f, 0.1f, true); 
 		
 		float t = 0.0f;
 		physics.Update(dt);
@@ -30,8 +31,8 @@ void LoadOrLearnTurnRadii(Physics& physics, TestVehicle& vehicle, float dt)
 			t+=dt;
 		}
 
-		vehicle.mSafeSteerForSpeedRP.Serialize("SafeSteerForSpeedRP.bin");
-		vehicle.mSafeSteerTurnRadiusForSpeedRP.Serialize("SafeSteerTurnRadiusForSpeedRP.bin");
+		vehicle.mSafeSteerForSpeedRC.Serialize("SafeSteerForSpeedRC.bin");
+		vehicle.mSafeSteerTurnRadiusForSpeedRC.Serialize("SafeSteerTurnRadiusForSpeedRC.bin");
 	}
 }
 
@@ -44,7 +45,7 @@ void LoadOrLearnSwitchSpeed(Physics& physics, TestVehicle& vehicle, float dt)
 
 		VehicleController_SwitchSpeedLearn controller;
 		controller.SetVehicle(&vehicle);
-		controller.Init(&vehicle, 4.0f, 30.0f, 20); 
+		controller.Init(&vehicle, 1.0f, 30.0f, 30); 
 		
 		float t = 0.0f;
 		physics.Update(dt);
@@ -115,10 +116,10 @@ int main(int argc, char *argv[])
 	/*
 	VehicleController_StableSteerLearn controller;
 	controller.SetVehicle(&vehicle);
-	controller.Init(&vehicle, 5.0f, 0.1f, 0.05f);
+	controller.Init(&vehicle, 1.0f, 0.1f);
 	pController = &controller;
 	*/
-
+	
 	/*
 	VehicleController_StableTurnRadiusLearn controller;
 	controller.SetVehicle(&vehicle);
@@ -142,12 +143,19 @@ int main(int argc, char *argv[])
 	vehicle.EnableHistory(true);
 	*/
 
+	/*
 	VehicleController_LearnedNoSlideSteer steer_controller;
 	steer_controller.SetVehicle(&vehicle);
 	steer_controller.SetMaxSpeed(90.0f/3.6f);
 	steer_controller.SetFollowMouse(true);
 	pSteerController = &steer_controller;
 	vehicle.EnableHistory(true);
+	*/
+	
+	RandomizedFlowFieldPlanner flow_controller;
+	flow_controller.SetVehicle(&vehicle);
+	vehicle.EnableHistory(true);
+	pController = &flow_controller;
 	
 	/*
 	VehicleController_BasicSafetyTest controller;

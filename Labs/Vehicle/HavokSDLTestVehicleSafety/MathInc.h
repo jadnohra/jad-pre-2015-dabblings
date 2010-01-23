@@ -468,7 +468,31 @@ struct ResponseCurve
 	}
 };
 
-class ResponseCurves : public std::vector<ResponseCurve>
+class BasedResponseCurve : public ResponseCurve
+{
+public:
+
+	float mBaseValue;
+
+	void Serialize(std::ofstream& file)
+	{
+		file << mBaseValue << std::endl;
+		ResponseCurve::Serialize(file);
+	}
+
+	bool Deserialize(std::ifstream& file)
+	{
+		if (file.is_open())
+		{
+			file >> mBaseValue;
+			return ResponseCurve::Deserialize(file);
+		}
+
+		return false;
+	}
+};
+
+class ResponseCurves : public std::vector<BasedResponseCurve>
 {
 public:
 
@@ -514,6 +538,70 @@ public:
 		return false;
 	}
 	
+	float Get(float base, float x, float defaultY)
+	{
+		BasedResponseCurve* pPrev=NULL;
+		BasedResponseCurve* pNext=NULL;
+
+		for (size_t i=0;i<size();++i)
+		{
+			if (base == at(i).mBaseValue)
+			{
+				return at(i).Get(x, defaultY);
+			}
+			else if (base > at(i).mBaseValue)
+			{
+				pPrev = &at(i);
+			}
+			else
+			{
+				pNext = &at(i);
+				break;
+			}
+		}
+
+		if (pPrev && pNext)
+		{
+			if (x >= base)
+			{
+				if (x <= pNext->mBaseValue)
+				{
+					float interp_factor = (base-pPrev->mBaseValue) / (pNext->mBaseValue-pPrev->mBaseValue);
+					return pPrev->Get(x, defaultY) + (pNext->Get(x, defaultY)-pPrev->Get(x, defaultY)) * interp_factor;
+				}
+				else
+				{
+					// consider next basevalue = x, next y=0
+					float interp_factor = (base-pPrev->mBaseValue) / (x-pPrev->mBaseValue);
+					return pPrev->Get(x, defaultY) + (0.0f-pPrev->Get(x, defaultY)) * interp_factor;
+				}
+			}
+			else
+			{
+				if (x >= pPrev->mBaseValue)
+				{
+					float interp_factor = (base-pPrev->mBaseValue) / (pNext->mBaseValue-pPrev->mBaseValue);
+					return pPrev->Get(x, defaultY) + (pNext->Get(x, defaultY)-pPrev->Get(x, defaultY)) * interp_factor;
+				}
+				else
+				{
+					// consider next prevbase = x, prev y=0
+					float interp_factor = (base-x) / (pNext->mBaseValue-x);
+					return 0.0f + (pNext->Get(x, defaultY)-0.0f) * interp_factor;
+				}
+			}
+		}
+		else
+		{
+			if (pPrev)
+				return pPrev->Get(x, defaultY);
+
+			if (pNext)
+				return pNext->Get(x, defaultY);
+		}
+
+		return defaultY;
+	}
 };
 
 class Poly2D
