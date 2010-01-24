@@ -218,13 +218,39 @@ public:
 
 		virtual bool Plan(RandomizedFlowFieldPlanner& inPlanner, const SearchState& inState, SearchState& outState)
 		{
+			Vector2D flow_dir = inPlanner.GetFlowDirection(inState.mModelState.mPos);
+			float is_in_flow_dir = Dot(inPlanner.GetModel().GetDir(inState.mModelState.mVel), flow_dir) >= 0.5f;
+			float min_allowed;
+			float max_allowed;
+
+			if (is_in_flow_dir)
+			{
+				max_allowed = inPlanner.GetModel().GetMaxSpeed();
+				min_allowed = std::min(max_allowed, inState.mModelState.mVel.Length());
+			}
+			else
+			{
+				min_allowed = inPlanner.GetModel().GetMinSpeed();
+				max_allowed = std::max(min_allowed, inState.mModelState.mVel.Length());
+			}
+
+			if (min_allowed >= max_allowed)
+			{
+				if (min_allowed <= inState.mModelState.mVel.Length())
+					return false;
+			}
+
 			outState.InitFromParent(inState);
 
 			float actual_speed = inState.mModelState.mVel.Length();
 			float target_speed = actual_speed;
 			
-			while(fabs(target_speed-actual_speed) < 3.0f)
-				target_speed = Randf(inPlanner.GetModel().GetMinSpeed(), inPlanner.GetModel().GetMaxSpeed() * 0.4f);
+			int count = 0;
+			while(fabs(target_speed-actual_speed) < 3.0f && count < 5)
+			{
+				target_speed = Randf(min_allowed, max_allowed);
+				++count;
+			}
 
 			float time = Randf(0.5f, 2.0f);
 
@@ -251,17 +277,15 @@ public:
 
 		virtual bool Plan(RandomizedFlowFieldPlanner& inPlanner, const SearchState& inState, SearchState& outState)
 		{
+			Vector2D flow_dir = inPlanner.GetFlowDirection(inState.mModelState.mPos);
+			float is_in_flow_dir = Dot(inPlanner.GetModel().GetDir(inState.mModelState.mVel), flow_dir) >= 0.5f;
+
 			outState.InitFromParent(inState);
 
-			float curr_speed = inState.mModelState.mVel.Length();
-			float target_speed = curr_speed;
-
-			while(fabs(target_speed-curr_speed) < 3.0f)
-				target_speed = Randf(inPlanner.GetModel().GetMinSpeed(), inPlanner.GetModel().GetMaxSpeed());
-
+		
 			float time;
 			float turn_dir = Randf(0.0f, 1.0f) > 0.5f ? 1.0f : -1.0f;
-			float angle = Randf(DegToRad(20.0f), DegToRad(180.0f));
+			float angle = Randf(is_in_flow_dir ? 0.0f : DegToRad(45.0f), is_in_flow_dir ? DegToRad(45.0f) : DegToRad(180.0f));
 
 			inPlanner.GetModel().ModelSafeSteerAngle(inState.mModelState.mPos, inState.mModelState.mVel, turn_dir, angle, time, outState.mModelState.mPos, outState.mModelState.mVel);
 			outState.mTime = inState.mTime + time;
@@ -276,7 +300,7 @@ public:
 
 	Vector2D GetFlowDirection(Vector2D inPos)
 	{
-		return Vector2D(0.5f, 0.5f);
+		return Vector2D(-0.5f, -0.5f);
 	}
 
 	int curr_free_state;
@@ -316,11 +340,14 @@ public:
 				{
 					if (mSearchSkills[j] != NULL)
 					{
-						if (mSearchSkills[j]->Plan(*this, search_state, mSearchStates[curr_free_state]))
-							++curr_free_state;
+						if (Randf(0.0f, (float) curr_free_state) >= curr_free_state/2)
+						{
+							if (mSearchSkills[j]->Plan(*this, search_state, mSearchStates[curr_free_state]))
+								++curr_free_state;
 
-						if (curr_free_state == mSearchStates.size())
-							return;
+							if (curr_free_state == mSearchStates.size())
+								return;
+						}
 					}
 				}
 			}
@@ -359,8 +386,8 @@ public:
 				printf("%d\n", i);
 
 
-			//if (pParentState)
-			//	renderer.DrawLine(renderer.WorldToScreen(state.mModelState.mPos), renderer.WorldToScreen(pParentState->mModelState.mPos), Color::kBlue, -1.0f, 0.5f);
+			if (pParentState)
+				renderer.DrawLine(renderer.WorldToScreen(state.mModelState.mPos), renderer.WorldToScreen(pParentState->mModelState.mPos), Color::kBlue, -1.0f, 0.5f);
 		}
 	}
 
