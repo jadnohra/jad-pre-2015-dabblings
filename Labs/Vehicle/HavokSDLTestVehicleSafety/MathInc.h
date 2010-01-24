@@ -131,6 +131,8 @@ struct Quad2D
 };
 
 
+inline float DegToRad(float deg) { return deg / 57.29578f; }
+inline float RadToDeg(float rad) { return rad * 57.29578f; }
 
 
 inline float Dot(const Vector2D& p1, const Vector2D& p2)

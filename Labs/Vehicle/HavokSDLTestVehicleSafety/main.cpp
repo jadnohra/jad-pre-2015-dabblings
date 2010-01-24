@@ -3,6 +3,7 @@
 #include "Physics.h"
 #include "TestVehicle.h"
 #include "RandomizedFlowFieldPlanner.h"
+#include "RandomizedFlowFieldPlanner2.h"
 
 Renderer renderer;
 
@@ -152,7 +153,15 @@ int main(int argc, char *argv[])
 	vehicle.EnableHistory(true);
 	*/
 	
-	RandomizedFlowFieldPlanner flow_controller;
+	/*
+	planner1::RandomizedFlowFieldPlanner flow_controller;
+	flow_controller.SetVehicle(&vehicle);
+	vehicle.EnableHistory(true);
+	pController = &flow_controller;
+	*/
+
+
+	planner2::RandomizedFlowFieldPlanner flow_controller;
 	flow_controller.SetVehicle(&vehicle);
 	vehicle.EnableHistory(true);
 	pController = &flow_controller;

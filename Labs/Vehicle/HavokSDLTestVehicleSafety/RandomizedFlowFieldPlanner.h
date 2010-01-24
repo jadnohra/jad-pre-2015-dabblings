@@ -5,6 +5,9 @@
 #include "Assert.h"
 #include "TestVehicle.h"
 
+namespace planner
+{
+
 class VehicleModel
 {
 public:
@@ -13,7 +16,8 @@ public:
 
 	float GetMinSpeed()
 	{
-		return -10.0f;
+		//return -10.0f;
+		return 3.0f; // for now cannot drive back, need to model right
 	}
 
 	float GetMaxSpeed()
@@ -47,7 +51,7 @@ public:
 
 		Vector2D new_normal = rotate(circle_normal*-1.0f, angle);
 		outPos = circle_center + new_normal*turn_radius;
-		outVel = rotate90(new_normal) * -steer_dir;
+		outVel = rotate90(new_normal) * steer_dir * inVel.Length();
 	}
 
 	Vector2D GetDir(const Vector2D& inVel)
@@ -97,6 +101,15 @@ public:
 		float mTurnRadius;
 		float mTurnDir;
 		int mTurnChangeCount;
+
+		ControllerState& CopyValues(const ControllerState& inRefState)
+		{
+			int index = mIndex;
+			std::memcpy(this, &inRefState, sizeof(ControllerState));
+			mIndex = index;
+
+			return *this;
+		}
 	};
 
 	struct SearchState
@@ -149,8 +162,10 @@ public:
 			outModelState.mVel = inModelState.mVel;
 			outModelState.mPos = inControllerState.mStartState.mPos + (inControllerState.mStartState.mVel * (inTime-inControllerState.mCurrentSkillStartTime));
 			outModelState.mParentState = inModelState.mIndex;
+			
+			outControllerState.CopyValues(inControllerState);
+			outControllerState.mParentState = inControllerState.mIndex;
 
-			outControllerState = inControllerState;
 			outClose = false;
 			return true;
 		}
@@ -158,12 +173,15 @@ public:
 		virtual bool NewState(RandomizedFlowFieldPlanner& inPlanner, float inTime, VehicleModel& inModel, const ModelState& inModelState, const ControllerState& inControllerState,
 								ModelState& outModelState, ControllerState& outControllerState)
 		{
-			outControllerState.mStartState = inModelState;
-			outControllerState.mCurrentSkill = this;
-			outControllerState.mCurrentSkillStartTime = inTime;
+			ControllerState temp_controller_state = inControllerState;
+			temp_controller_state.mIndex = inControllerState.mIndex;
 
+			temp_controller_state.mStartState = inModelState;
+			temp_controller_state.mCurrentSkill = this;
+			temp_controller_state.mCurrentSkillStartTime = inTime;
+			
 			bool close;
-			return Continue(inPlanner, inTime, inModel, inModelState, outControllerState, outModelState, outControllerState, close);
+			return Continue(inPlanner, inTime, inModel, inModelState, temp_controller_state, outModelState, outControllerState, close);
 		}
 
 		virtual bool Execute(RandomizedFlowFieldPlanner& inPlanner, float inTime, float inDt, TestVehicle& inVehicle)
@@ -203,7 +221,7 @@ public:
 		//http://www.visualexpert.com/Resources/reactiontime.html
 		virtual bool IsInterruptible(float inTime, VehicleModel& inModel, const ModelState& inModelState, const ControllerState& inControllerState)
 		{
-			return (inTime - inControllerState.mCurrentSkillStartTime) > 0.2f;
+			return (inTime - inControllerState.mCurrentSkillStartTime) > 3.0f;
 		}
 
 		virtual bool Continue(RandomizedFlowFieldPlanner& inPlanner, float inTime, VehicleModel& inModel, const ModelState& inModelState, const ControllerState& inControllerState,
@@ -234,7 +252,11 @@ public:
 			outModelState.mPos = inControllerState.mStartState.mPos + (dir * curr_dist);
 			outModelState.mParentState = inModelState.mIndex;
 
-			outControllerState = inControllerState;
+			outControllerState.CopyValues(inControllerState);
+			outControllerState.mParentState = inControllerState.mIndex;
+
+			gAssert(outControllerState.mParentState != outControllerState.mIndex);
+
 			outClose = time_left<=0.0f;
 			return true;
 		}
@@ -245,7 +267,6 @@ public:
 			if (inControllerState.mAccelChangeCount > 3)
 				return false;
 
-			outControllerState = inControllerState;
 			Vector2D flow_dir = inPlanner.GetFlowDirection(inModelState.mPos);
 			float is_in_flow_dir = Dot(inModel.GetDir(inModelState.mVel), flow_dir) >= 0.0f;
 			float min_allowed;
@@ -275,20 +296,22 @@ public:
 			if (min_allowed >= max_allowed)
 				return false;
 
-			++outControllerState.mAccelChangeCount;
-			outControllerState.mParentState = inControllerState.mIndex;
-			outControllerState.mLastAccelDir = min_allowed > inModelState.mVel.Length() ? 1.0f : -1.0f;
-			outControllerState.mStartState = inModelState;
+			ControllerState temp_controller_state = inControllerState;
 
-			if (outControllerState.mStartState.mVel == Vector2D::kZero)
-				outControllerState.mStartState.mVel = inModel.GetDir(outControllerState.mStartState.mVel);
+			++temp_controller_state.mAccelChangeCount;
+			temp_controller_state.mParentState = inControllerState.mIndex;
+			temp_controller_state.mLastAccelDir = min_allowed > inModelState.mVel.Length() ? 1.0f : -1.0f;
+			temp_controller_state.mStartState = inModelState;
 
-			outControllerState.mAccelTargetSpeed = Randf(min_allowed, max_allowed);
-			outControllerState.mCurrentSkill = this;
-			outControllerState.mCurrentSkillStartTime = inModelState.mTime;
+			if (temp_controller_state.mStartState.mVel == Vector2D::kZero)
+				temp_controller_state.mStartState.mVel = inModel.GetDir(outControllerState.mStartState.mVel);
+
+			temp_controller_state.mAccelTargetSpeed = Randf(min_allowed, max_allowed);
+			temp_controller_state.mCurrentSkill = this;
+			temp_controller_state.mCurrentSkillStartTime = inModelState.mTime;
 
 			bool close;
-			return Continue(inPlanner, inTime, inModel, inModelState, outControllerState, outModelState, outControllerState, close);
+			return Continue(inPlanner, inTime, inModel, inModelState, temp_controller_state, outModelState, outControllerState, close);
 		}
 	};
 
@@ -300,7 +323,7 @@ public:
 		//http://www.visualexpert.com/Resources/reactiontime.html
 		virtual bool IsInterruptible(float inTime, VehicleModel& inModel, const ModelState& inModelState, const ControllerState& inControllerState)
 		{
-			return (inTime - inControllerState.mCurrentSkillStartTime) > 0.2f;
+			return (inTime - inControllerState.mCurrentSkillStartTime) > 3.0f;
 		}
 
 		virtual bool Continue(RandomizedFlowFieldPlanner& inPlanner, float inTime, VehicleModel& inModel, const ModelState& inModelState, const ControllerState& inControllerState,
@@ -313,7 +336,8 @@ public:
 			inModel.ModelSafeSteer(inControllerState.mStartState.mPos, inControllerState.mStartState.mVel, inControllerState.mTurnDir, inTime - inControllerState.mCurrentSkillStartTime, outModelState.mPos, outModelState.mVel);
 
 			outModelState.mParentState = inModelState.mIndex;
-			outControllerState = inControllerState;
+			outControllerState.CopyValues(inControllerState);
+			outControllerState.mParentState = inControllerState.mIndex;
 			outClose = (turned_dot >= 0.0f && pos_dot < 0.0f);
 			return true;
 		}
@@ -327,18 +351,25 @@ public:
 			if (inModelState.mVel.Length() < inModel.GetMinLocomotionSpeed())
 				return false;
 
-			outControllerState = inControllerState;
 			Vector2D flow_dir = inPlanner.GetFlowDirection(inModelState.mPos);
 
-			++outControllerState.mTurnChangeCount;
-			outControllerState.mParentState = inControllerState.mIndex;
-			outControllerState.mStartState = inModelState;
-			outControllerState.mCurrentSkill = this;
-			outControllerState.mCurrentSkillStartTime = inModelState.mTime;
-			outControllerState.mTurnDir = Randf(0.0f, 1.0f) > 0.5f ? 1.0f : -1.0f;
+			ControllerState temp_controller_state = inControllerState;
+
+			if (outControllerState.mIndex == 47)
+			{
+				int x=0;
+				++x;
+			}
+
+			++temp_controller_state.mTurnChangeCount;
+			temp_controller_state.mParentState = inControllerState.mIndex;
+			temp_controller_state.mStartState = inModelState;
+			temp_controller_state.mCurrentSkill = this;
+			temp_controller_state.mCurrentSkillStartTime = inModelState.mTime;
+			temp_controller_state.mTurnDir = Randf(0.0f, 1.0f) > 0.5f ? 1.0f : -1.0f;
 
 			bool close;
-			return Continue(inPlanner, inTime, inModel, inModelState, outControllerState, outModelState, outControllerState, close);
+			return Continue(inPlanner, inTime, inModel, inModelState, temp_controller_state, outModelState, outControllerState, close);
 		}
 	};
 
@@ -356,34 +387,43 @@ public:
 	{
 	}
 
+	int curr_free_state;
+	float t;
+	float dt;
+
 	void TestSearch()
 	{
-		mSearchSkills[0] = &mAccelerateSkill;
-		mSearchSkills[1] = &mTurnSkill;
-		mSearchSkills[2] = NULL;
+		if (mSearchStates.empty())
+		{
+			mSearchSkills[0] = &mAccelerateSkill;
+			mSearchSkills[1] = &mTurnSkill;
+			mSearchSkills[2] = NULL;
 
-		mSearchStates.resize(100);
-		ModelState& model_state = mSearchStates.front().mModelState;
-		model_state.mPos = mVehicle->GetPos();
-		model_state.mVel = mVehicle->GetVel();
-		model_state.mIndex = 0;
-		model_state.mParentState = -1;
-		model_state.mTime = 0.0f;
+			mSearchStates.resize(1000);
+			ModelState& model_state = mSearchStates.front().mModelState;
+			model_state.mPos = mVehicle->GetPos();
+			model_state.mVel = mVehicle->GetVel();
+			model_state.mIndex = 0;
+			model_state.mParentState = -1;
+			model_state.mTime = 0.0f;
 
-		ControllerState& controller_state = mSearchStates.front().mControllerState;
-		controller_state.mAccelChangeCount = 0;
-		controller_state.mTurnChangeCount = 0;
-		controller_state.mCurrentSkill = NULL;
-		controller_state.mIndex = 0;
-		controller_state.mParentState = -1;
+			ControllerState& controller_state = mSearchStates.front().mControllerState;
+			controller_state.mAccelChangeCount = 0;
+			controller_state.mTurnChangeCount = 0;
+			controller_state.mCurrentSkill = NULL;
+			controller_state.mIndex = 0;
+			controller_state.mParentState = -1;
 
-		int curr_branch_state=0;
-		int curr_free_state=curr_branch_state+1;
-		int state_count=1;
+			for (int i=0; i<mSearchStates.size(); ++i)
+			{
+				mSearchStates[i].mModelState.mIndex = i;
+				mSearchStates[i].mControllerState.mIndex = i;
+			}
 
-		float dt = 0.2f;
-		float t = 0.0f;
-
+			curr_free_state=1;
+			dt = 0.2f;
+			t = 0.0f + dt;
+		}
 
 		while (curr_free_state < mSearchStates.size())
 		{
@@ -398,9 +438,7 @@ public:
 					if (curr_free_state >= mSearchStates.size())
 						break;
 
-					mSearchStates[curr_free_state].mModelState.mIndex = curr_free_state;
-					mSearchStates[curr_free_state].mControllerState.mIndex = curr_free_state;
-
+				
 					bool do_branch = false;
 
 					if (search_state.mControllerState.mCurrentSkill != NULL)
@@ -412,16 +450,32 @@ public:
 								mSearchStates[curr_free_state].mModelState, mSearchStates[curr_free_state].mControllerState, search_state.mIsClosed))
 							{
 								mSearchStates[curr_free_state].mModelState.mTime = t;
+								mSearchStates[curr_free_state].mIsClosed = false;
 
 								++curr_free_state;
 								if (curr_free_state >= mSearchStates.size())
 									break;
-
-								mSearchStates[curr_free_state].mModelState.mIndex = curr_free_state;
-								mSearchStates[curr_free_state].mControllerState.mIndex = curr_free_state;
-
-								do_branch = true;
 							}
+						}
+						else
+						{
+							if (search_state.mControllerState.mCurrentSkill->Continue(*this, t, mModel, 
+								search_state.mModelState, search_state.mControllerState, 
+								mSearchStates[curr_free_state].mModelState, mSearchStates[curr_free_state].mControllerState, search_state.mIsClosed))
+							{
+								mSearchStates[curr_free_state].mModelState.mTime = t;
+								mSearchStates[curr_free_state].mIsClosed = true;
+
+								++curr_free_state;
+								if (curr_free_state >= mSearchStates.size())
+									break;
+							}
+							else
+							{
+								search_state.mIsClosed = true;
+							}
+
+							do_branch = search_state.mIsClosed;
 						}
 					}
 					else
@@ -442,9 +496,6 @@ public:
 									++curr_free_state;
 									if (curr_free_state >= mSearchStates.size())
 										break;
-
-									mSearchStates[curr_free_state].mModelState.mIndex = curr_free_state;
-									mSearchStates[curr_free_state].mControllerState.mIndex = curr_free_state;
 								}
 							}
 						}
@@ -458,6 +509,8 @@ public:
 				}
 			}
 			t+=dt;
+
+			break;
 		}
 	}
 
@@ -475,19 +528,37 @@ public:
 	
 	virtual void Draw(Renderer& renderer, float t) 
 	{
-		for (int i=0; i<mSearchStates.size(); ++i)
+		int x; int y;
+		SDL_GetMouseState(&x, &y);
+		Vector2D worldPos = renderer.ScreenToWorld(Vector2D((float) x, (float) y));
+
+		for (int i=0; i<curr_free_state; ++i)
 		{
 			SearchState& state = mSearchStates[i];
 			SearchState* pParentState = mSearchStates[i].mModelState.mParentState >= 0 ? &mSearchStates[mSearchStates[i].mModelState.mParentState] : NULL;
 
 			renderer.DrawCircle(renderer.WorldToScreen(state.mModelState.mPos), renderer.WorldToScreen(0.2f), Color::kGreen, -1.0f, true);
+			renderer.DrawArrow(renderer.WorldToScreen(state.mModelState.mPos), renderer.WorldToScreen(state.mModelState.mPos+(state.mModelState.mVel*0.2f)), Color::kGreen, 0.5f);
+
+			if (Distance(worldPos, state.mModelState.mPos) <= 0.2f)
+				printf("%d\n", i);
+
 
 			if (pParentState)
 				renderer.DrawLine(renderer.WorldToScreen(state.mModelState.mPos), renderer.WorldToScreen(pParentState->mModelState.mPos), Color::kBlue, -1.0f, 0.5f);
 		}
 	}
 
-	virtual void HandleEvent(const SDL_Event& evt) {}
+	virtual void HandleEvent(const SDL_Event& evt) 
+	{
+		if (evt.type == SDL_KEYDOWN)
+		{
+			if (evt.key.keysym.sym == SDLK_SPACE)
+			{
+				TestSearch();
+			}
+		}
+	}
 
 	TestVehicle* mVehicle;
 	VehicleModel mModel;
@@ -497,5 +568,7 @@ public:
 	Skill* mSearchSkills[3];
 	SearchStates mSearchStates;
 };
+
+}
 
 #endif

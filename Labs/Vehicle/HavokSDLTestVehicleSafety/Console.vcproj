@@ -220,6 +220,10 @@
 			>
 		</File>
 		<File
+			RelativePath=".\RandomizedFlowFieldPlanner2.h"
+			>
+		</File>
+		<File
 			RelativePath=".\Renderer.cpp"
 			>
 		</File>
