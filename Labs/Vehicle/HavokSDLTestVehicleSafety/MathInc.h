@@ -967,13 +967,13 @@ public:
 		//file.write((const char*)&sz, sizeof(size_t));
 		file << sz << std::endl;
 
-		printf("%d polys\n", sz);
+		//printf("%d polys\n", sz);
 
 		sz=portals.size();
 		//file.write((const char*)&sz, sizeof(size_t));
 		file << sz << std::endl;
 
-		printf("%d portals\n", sz);
+		//printf("%d portals\n", sz);
 
 		for (size_t i=0;i<polys.size();++i)
 		{
@@ -981,7 +981,7 @@ public:
 			//file.write((const char*)&sz, sizeof(size_t));
 			file << sz << std::endl;
 
-			printf("%d points\n", sz);
+			//printf("%d points\n", sz);
 
 			for (size_t j=0;j<polys[i].points.size();++j)
 			{
@@ -998,7 +998,7 @@ public:
 
 		for (size_t i=0;i<portals.size();++i)
 		{
-			printf("%d, %d\n", portals[i].index[0], portals[i].index[1]);
+			//printf("%d, %d\n", portals[i].index[0], portals[i].index[1]);
 
 			//file.write((const char*)&(portals[i].index[0]), sizeof(int));
 			file << portals[i].index[0] << std::endl;
@@ -1029,7 +1029,7 @@ public:
 			file >> sz3;
 
 
-			printf("%d polys\n", sz1);
+			//printf("%d polys\n", sz1);
 
 			for (size_t i=0;i<sz1;++i)
 			{
@@ -1037,7 +1037,7 @@ public:
 				//file.read((char*)&sz2, sizeof(size_t));
 				file >> sz2;
 
-				printf("%d points\n", sz2);
+				//printf("%d points\n", sz2);
 
 				polys.push_back(Poly2D());
 
@@ -1058,7 +1058,7 @@ public:
 
 			
 
-			printf("%d portals\n", sz3);
+			//printf("%d portals\n", sz3);
 
 			for (size_t i=0;i<sz3;++i)
 			{
@@ -1069,7 +1069,7 @@ public:
 				//file.read((char*)&y, sizeof(int));
 				file >> y;
 
-				printf("%d, %d\n", x, y);
+				//printf("%d, %d\n", x, y);
 
 				portals.push_back(Portal());
 				portals.back().index[0] = x;
@@ -1091,6 +1091,15 @@ public:
 	{
 		Vector2D mPos;
 		int mPathPoly;
+
+		float mCurveRadius;
+		Vector2D mCurveCenter;
+
+		PathPolyPoint()
+		:	mPathPoly(-1)
+		,	mCurveRadius(0.0f)
+		{
+		}
 	};
 
 	typedef std::vector<PathPolyPoint> PathPolyPoints;
@@ -1112,7 +1121,44 @@ public:
 			mPoints[i].mPos = (pt1 + pt2) * 0.5f;
 			mPoints[i].mPathPoly = i;
 		}
+
+		for (int i=1; i+1<mPoints.size(); ++i)
+		{
+			mPoints[i].mCurveRadius = 6.0f;
+			Fit(i, mPoints[i].mCurveRadius, mPoints[i].mCurveCenter);
+		}
 	}
+
+	bool Fit(int index, float radius, Vector2D& curve_center)
+	{
+		if (index <= 0)
+			return false;
+
+		if (index+1 >= mPoints.size())
+			return false;
+
+		const PathPolyPoint& prev = mPoints[index-1];
+		const PathPolyPoint& curr = mPoints[index];
+		const PathPolyPoint& next = mPoints[index+1];
+
+		float prev_curr_dist = Distance(prev.mPos, curr.mPos);
+		float curr_next_dist = Distance(next.mPos, curr.mPos);
+
+
+		float angle = SignedAngle(prev.mPos-curr.mPos, next.mPos - curr.mPos);
+		float dist_along_line_from_curr = radius / tanf(fabs(angle*0.5f));
+		float dist_along_perp_from_curr = radius / sinf(fabs(angle*0.5f));
+		
+		Vector2D dir = (next.mPos - curr.mPos).Normalized();
+		Vector2D perp_dir = rotate(dir, -(angle*0.5f));
+
+		curve_center = curr.mPos + (perp_dir * dist_along_perp_from_curr);
+
+		return true;
+	}
+
+
+	
 };
 
 #endif

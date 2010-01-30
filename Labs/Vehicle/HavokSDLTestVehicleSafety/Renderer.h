@@ -211,6 +211,11 @@ public:
 
 	void DrawCircle(const Vector2D& v, float radius, const Color& color, float alpha = -1.0f, bool thin = false)
 	{
+		DrawArc(v, radius, 0.0f, 2.0f * MATH_PIf, color, alpha, thin);
+	}
+
+	void DrawArc(const Vector2D& v, float radius, float from, float to, const Color& color, float alpha = -1.0f, bool thin = false)
+	{
 		if (!mIsRendering)
 		{
 			mRenderCircles.push_back(RenderCircle(v, radius, color, alpha, thin));
@@ -227,7 +232,7 @@ public:
 		//glBegin(GL_TRIANGLE_FAN);
 		//glVertex2f(v.x, v.y);
 
-		for (float angle = 0.0f; angle <= 2.0f * MATH_PIf; angle += (2.0f * MATH_PIf) / 32.0f)
+		for (float angle = from; angle <= to; angle += (2.0f * MATH_PIf) / 32.0f)
 		{
 			glVertex2f(v.x + sinf(angle) * radius, v.y + cosf(angle) * radius);
 		}
@@ -302,6 +307,12 @@ public:
 		for (int i=0; i+1< polyPointPath2D.mPoints.size(); ++i)		
 		{
 			DrawLine(WorldToScreen(polyPointPath2D.mPoints[i].mPos), WorldToScreen(polyPointPath2D.mPoints[i+1].mPos), color, alpha, width);
+
+			if (polyPointPath2D.mPoints[i].mCurveRadius > 0.0f)
+			{
+				DrawCircle(WorldToScreen(polyPointPath2D.mPoints[i].mCurveCenter), 
+					WorldToScreen(polyPointPath2D.mPoints[i].mCurveRadius), color, alpha, true);
+			}
 		}
 	}
 
