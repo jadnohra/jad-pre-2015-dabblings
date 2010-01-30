@@ -161,17 +161,17 @@ int main(int argc, char *argv[])
 	*/
 
 
+	/*
 	planner2::RandomizedFlowFieldPlanner flow_controller;
 	flow_controller.SetVehicle(&vehicle);
 	vehicle.EnableHistory(true);
 	pController = &flow_controller;
+	*/
 	
-	/*
 	VehicleController_BasicSafetyTest controller;
 	controller.SetVehicle(&vehicle);
 	controller.Init(8.0f, 40.0f, 40.0f, 0.5f, 30.0f);
 	pController = &controller;
-	*/
 	
 	Vector2D fwd(0.0f, 1.0f);
 	vehicle.Teleport(Vector2D(), &fwd);
@@ -192,10 +192,12 @@ int main(int argc, char *argv[])
 	bool do_manual_test_path = true;
 	bool do_load_test_path = true;
 	PolyPath2D test_path;
+	PolyPointPath2D test_point_path;
 	
 	if (do_load_test_path)
 	{
-		test_path.Deserialize("path.bin");
+		if (test_path.Deserialize("path.bin"))
+			test_point_path.BuildCentered(test_path);
 	}
 
 	PolyPath2D::ManualAddContext test_path_build_context;
@@ -208,6 +210,7 @@ int main(int argc, char *argv[])
 			test_path.AddArc(1, Vector2D(60.0f, 30.0f), 12.0f, 3.14f, 8);
 			test_path.AddStraight(Vector2D(40.0f, 60.0f), Vector2D(-40.0f, 0.0f), Vector2D(0.0f, 14.0f), 3, true);
 			test_path.EndBuild();
+			test_point_path.BuildCentered(test_path);
 		}
 	}
 	else
@@ -229,6 +232,7 @@ int main(int argc, char *argv[])
 			glClear( GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 			renderer.BeginRender();
 			renderer.DrawPolyPath2DWorldToScreen(test_path, Color::kBlue);
+			renderer.DrawPolyPointPath2DWorldToScreen(test_point_path, Color::kWhite);
 			
 			Draw(renderTimer.GetTime() - updateTimer.GetFrameTime());
 			vehicle.Draw(renderer, renderTimer.GetTime() - updateTimer.GetFrameTime(), renderTimer.GetFrameTime());
@@ -350,6 +354,7 @@ int main(int argc, char *argv[])
 							{
 								do_manual_test_path = false;
 								test_path.EndBuild();
+								test_point_path.BuildCentered(test_path);
 								test_path.Serialize("path.bin");
 							}
 						}

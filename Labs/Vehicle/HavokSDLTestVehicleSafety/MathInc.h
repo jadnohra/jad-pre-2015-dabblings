@@ -963,20 +963,23 @@ public:
 		std::ofstream file;
 		file.open(path);
 
-		size_t sz=polys.size();
-		file.write((const char*)&sz, sizeof(size_t));
+		int sz=polys.size();
+		//file.write((const char*)&sz, sizeof(size_t));
+		file << sz << std::endl;
 
 		printf("%d polys\n", sz);
 
 		sz=portals.size();
-		file.write((const char*)&sz, sizeof(size_t));
+		//file.write((const char*)&sz, sizeof(size_t));
+		file << sz << std::endl;
 
 		printf("%d portals\n", sz);
 
 		for (size_t i=0;i<polys.size();++i)
 		{
 			sz=polys[i].points.size();
-			file.write((const char*)&sz, sizeof(size_t));
+			//file.write((const char*)&sz, sizeof(size_t));
+			file << sz << std::endl;
 
 			printf("%d points\n", sz);
 
@@ -984,8 +987,10 @@ public:
 			{
 				printf("%f, %f\n", polys[i].points[j].x, polys[i].points[j].y);
 
-				file.write((const char*)&(polys[i].points[j].x), sizeof(float));
-				file.write((const char*)&(polys[i].points[j].y), sizeof(float));
+				//file.write((const char*)&(polys[i].points[j].x), sizeof(float));
+				file << polys[i].points[j].x << std::endl;
+				//file.write((const char*)&(polys[i].points[j].y), sizeof(float));
+				file << polys[i].points[j].y << std::endl;
 			}
 		}
 
@@ -995,8 +1000,10 @@ public:
 		{
 			printf("%d, %d\n", portals[i].index[0], portals[i].index[1]);
 
-			file.write((const char*)&(portals[i].index[0]), sizeof(int));
-			file.write((const char*)&(portals[i].index[1]), sizeof(int));
+			//file.write((const char*)&(portals[i].index[0]), sizeof(int));
+			file << portals[i].index[0] << std::endl;
+			//file.write((const char*)&(portals[i].index[1]), sizeof(int));
+			file << portals[i].index[1] << std::endl;
 		}
 
 		file.close();
@@ -1014,17 +1021,21 @@ public:
 		if (file.is_open())
 		{
 
-			size_t sz1=0;
-			file.read((char*)&sz1, sizeof(size_t));
-			size_t sz3=0;
-			file.read((char*)&sz3, sizeof(size_t));
+			int sz1=0;
+			//file.read((char*)&sz1, sizeof(size_t));
+			file >> sz1;
+			int sz3=0;
+			//file.read((char*)&sz3, sizeof(size_t));
+			file >> sz3;
+
 
 			printf("%d polys\n", sz1);
 
 			for (size_t i=0;i<sz1;++i)
 			{
-				size_t sz2=0;
-				file.read((char*)&sz2, sizeof(size_t));
+				int sz2=0;
+				//file.read((char*)&sz2, sizeof(size_t));
+				file >> sz2;
 
 				printf("%d points\n", sz2);
 
@@ -1034,8 +1045,10 @@ public:
 				{
 					float x,y;
 
-					file.read((char*)&x, sizeof(float));
-					file.read((char*)&y, sizeof(float));
+					//file.read((char*)&x, sizeof(float));
+					file >> x;
+					//file.read((char*)&y, sizeof(float));
+					file >> y;
 
 					printf("%f, %f\n", x, y);
 
@@ -1051,8 +1064,10 @@ public:
 			{
 				int x,y;
 
-				file.read((char*)&x, sizeof(int));
-				file.read((char*)&y, sizeof(int));
+				//file.read((char*)&x, sizeof(int));
+				file >> x;
+				//file.read((char*)&y, sizeof(int));
+				file >> y;
 
 				printf("%d, %d\n", x, y);
 
@@ -1068,5 +1083,36 @@ public:
 	}
 };
 
+class PolyPointPath2D
+{
+public:
+
+	struct PathPolyPoint
+	{
+		Vector2D mPos;
+		int mPathPoly;
+	};
+
+	typedef std::vector<PathPolyPoint> PathPolyPoints;
+	PathPolyPoints mPoints;
+
+	void BuildCentered(const PolyPath2D& path)
+	{
+		mPoints.resize(path.portals.size());
+
+		for (int i=0; i<path.portals.size(); ++i)
+		{
+			const PolyPath2D::Portal& portal = path.portals[i];
+			const Poly2D& prev_poly = path.polys[i];
+			//const Poly2D& next_poly = path.polys[i+1];
+
+			Vector2D pt1 = prev_poly.points[portal.index[0]];
+			Vector2D pt2 = prev_poly.points[(portal.index[0]+1) % prev_poly.points.size()];
+
+			mPoints[i].mPos = (pt1 + pt2) * 0.5f;
+			mPoints[i].mPathPoly = i;
+		}
+	}
+};
 
 #endif

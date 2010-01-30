@@ -1,11 +1,12 @@
 <?xml version="1.0" encoding="Windows-1252"?>
 <VisualStudioProject
 	ProjectType="Visual C++"
-	Version="8.00"
+	Version="9.00"
 	Name="Console"
 	ProjectGUID="{6861339A-D599-4698-A101-F51CD8EBF1DC}"
 	RootNamespace="Console"
 	Keyword="Win32Proj"
+	TargetFrameworkVersion="131072"
 	>
 	<Platforms>
 		<Platform
@@ -40,7 +41,7 @@
 			<Tool
 				Name="VCCLCompilerTool"
 				Optimization="0"
-				AdditionalIncludeDirectories="D:\dev\KZ3\Code\ThirdParty\Havok6\Source;..\3rdParty\SDL-1.2.13\include;..\3rdParty\Box2D_v2.0.1\Include"
+				AdditionalIncludeDirectories="D:\dev\KZ3\Code\ThirdParty\Havok6\Source;..\3rdParty\SDL-1.2.13\include;..\3rdParty\Box2D_v2.0.1\Include;D:\hk650r1\Source"
 				PreprocessorDefinitions="WIN32;_DEBUG;_CONSOLE"
 				MinimalRebuild="true"
 				BasicRuntimeChecks="3"
@@ -63,9 +64,11 @@
 				Name="VCLinkerTool"
 				AdditionalDependencies="opengl32.lib glu32.lib SDL.lib SDLmain.lib box2d_d.lib hkaAnimation.lib hkaInternal.lib hkaRagdoll.lib hkBase.lib hkCompat.lib hkgBridge.lib hkgCommon.lib hkgDx9.lib hkgDx9s.lib hkgDx10.lib hkGeometryUtilities.lib hkgOgl.lib hkgOgls.lib hkInternal.lib hkpCollide.lib hkpConstraintSolver.lib hkpDynamics.lib hkpInternal.lib hkpUtilities.lib hkpVehicle.lib hkSceneData.lib hksCommon.lib hkSerialize.lib hksXAudio2.lib hkVisualize.lib VdbClient.lib"
 				LinkIncremental="2"
-				AdditionalLibraryDirectories="D:\dev\KZ3\Code\ThirdParty\Havok6\Lib\win32_net_8-0_simd\fulldebug_multithreaded;..\3rdParty\SDL-1.2.13\lib;..\3rdParty\Box2D_v2.0.1\library;"
+				AdditionalLibraryDirectories="D:\dev\KZ3\Code\ThirdParty\Havok6\Lib\win32_net_8-0_simd\fulldebug_multithreaded;..\3rdParty\SDL-1.2.13\lib;..\3rdParty\Box2D_v2.0.1\library;D:\hk650r1\Lib\win32_net_9-0\debug_multithreaded"
 				GenerateDebugInformation="true"
 				SubSystem="1"
+				RandomizedBaseAddress="1"
+				DataExecutionPrevention="0"
 				TargetMachine="1"
 			/>
 			<Tool
@@ -85,9 +88,6 @@
 			/>
 			<Tool
 				Name="VCAppVerifierTool"
-			/>
-			<Tool
-				Name="VCWebDeploymentTool"
 			/>
 			<Tool
 				Name="VCPostBuildEventTool"
@@ -144,6 +144,8 @@
 				SubSystem="1"
 				OptimizeReferences="2"
 				EnableCOMDATFolding="2"
+				RandomizedBaseAddress="1"
+				DataExecutionPrevention="0"
 				TargetMachine="1"
 			/>
 			<Tool
@@ -163,9 +165,6 @@
 			/>
 			<Tool
 				Name="VCAppVerifierTool"
-			/>
-			<Tool
-				Name="VCWebDeploymentTool"
 			/>
 			<Tool
 				Name="VCPostBuildEventTool"
@@ -221,6 +220,10 @@
 		</File>
 		<File
 			RelativePath=".\RandomizedFlowFieldPlanner2.h"
+			>
+		</File>
+		<File
+			RelativePath=".\RandomizedFlowFieldPlanner3.h"
 			>
 		</File>
 		<File

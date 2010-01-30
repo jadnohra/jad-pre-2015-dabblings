@@ -296,6 +296,15 @@ public:
 		}
 	}
 
+	void DrawPolyPointPath2DWorldToScreen(const PolyPointPath2D& polyPointPath2D,
+									 const Color& color, float alpha = -1.0f, float width = 1.0f)
+	{
+		for (int i=0; i+1< polyPointPath2D.mPoints.size(); ++i)		
+		{
+			DrawLine(WorldToScreen(polyPointPath2D.mPoints[i].mPos), WorldToScreen(polyPointPath2D.mPoints[i+1].mPos), color, alpha, width);
+		}
+	}
+
 	void DrawArrow(const Vector2D& p1, const Vector2D& p2, const Color& color, float alpha = -1.0f)
 	{
 		DrawLine(p1, p2, color, alpha);
