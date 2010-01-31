@@ -286,6 +286,11 @@ inline float GetPointSideOfLine(const Vector2D &linePos, const Vector2D& lineDir
 	return Dot(normal, point - linePos);
 }
 
+inline float Cross(const Vector2D & v1, const Vector2D & v2) 
+{
+    return (v1.x*v2.y) - (v1.y*v2.x);
+}
+
 
 inline float SignedAngle(const Vector2D & v1, const Vector2D & v2)
 {
@@ -659,6 +664,29 @@ public:
 				c = !c;
 		}
 		return c;
+	}
+
+	bool Intserect(const Circle& circle)
+	{
+		for (int i =0; i<points.size(); ++i)
+		{
+			const Vector2D& pos = points[i];
+			const Vector2D& next_pos = points[(i+1)%points.size()];
+
+			float t,u;
+
+			int count = IntersectLineCircle(pos, (next_pos-pos).Normalized(), 
+											circle.pos, circle.radius,
+											t, u);
+
+			if (count > 0 && 
+				((t >= 0.0f && t <=1.0f) || (u >= 0.0f && u <=1.0f)))
+			{
+				return true;
+			}
+		}
+
+		return false;
 	}
 
 	// http://www.ecse.rpi.edu/Homepages/wrf/Research/Short_Notes/pnpoly.html#Almost%20Convex%20Polygons
@@ -1090,13 +1118,19 @@ public:
 	struct PathPolyPoint
 	{
 		Vector2D mPos;
-		int mPathPoly;
+		int mPathPortal;
+		int mPrevPoly;
 
 		float mCurveRadius;
 		Vector2D mCurveCenter;
+		Vector2D mCurveStartPoint;
+		Vector2D mCurveEndPoint;
+
+		Vector2D mDebugPt1;
+		Vector2D mDebugPt2;
 
 		PathPolyPoint()
-		:	mPathPoly(-1)
+		:	mPathPortal(-1)
 		,	mCurveRadius(0.0f)
 		{
 		}
@@ -1104,9 +1138,11 @@ public:
 
 	typedef std::vector<PathPolyPoint> PathPolyPoints;
 	PathPolyPoints mPoints;
+	const PolyPath2D* mPath;
 
 	void BuildCentered(const PolyPath2D& path)
 	{
+		mPath = &path;
 		mPoints.resize(path.portals.size());
 
 		for (int i=0; i<path.portals.size(); ++i)
@@ -1119,17 +1155,157 @@ public:
 			Vector2D pt2 = prev_poly.points[(portal.index[0]+1) % prev_poly.points.size()];
 
 			mPoints[i].mPos = (pt1 + pt2) * 0.5f;
-			mPoints[i].mPathPoly = i;
+			mPoints[i].mPathPortal = i;
+			mPoints[i].mPrevPoly = i;
 		}
 
 		for (int i=1; i+1<mPoints.size(); ++i)
 		{
-			mPoints[i].mCurveRadius = 6.0f;
-			Fit(i, mPoints[i].mCurveRadius, mPoints[i].mCurveCenter);
+			if (!Fit(i, 3.0f, 6.0f, mPoints[i].mCurveRadius, mPoints[i].mCurveCenter, mPoints[i].mCurveStartPoint, mPoints[i].mCurveEndPoint, 
+				mPoints[i].mDebugPt1, mPoints[i].mDebugPt2))
+				mPoints[i].mCurveRadius = 0.0f;
 		}
 	}
 
-	bool Fit(int index, float radius, Vector2D& curve_center)
+	bool Fit(int index, float min_radius, float max_radius, float& radius, Vector2D& curve_center, Vector2D& curve_start, Vector2D& curve_end, Vector2D& dbg_1, Vector2D& dbg_2)
+	{
+		bool is_good_radius = false;
+		radius = max_radius;
+		const float granularity = 0.5f;
+
+		Vector2D _dbg_1;
+		Vector2D _dbg_2;
+
+		while (fabs(max_radius - min_radius) > granularity)
+		{
+			Fit(index, radius, curve_center, curve_start, curve_end);
+
+			if (IsInsidePath(index, radius, curve_center, curve_start, curve_end, _dbg_1, _dbg_2))
+			{
+				dbg_1 = _dbg_1;
+				dbg_2 = _dbg_2;
+				is_good_radius = true;
+				min_radius = radius;
+				radius = (radius + max_radius) * 0.5f;
+			}
+			else
+			{
+				max_radius = radius;
+				radius = (radius + min_radius) * 0.5f;
+			}
+		}
+
+		return is_good_radius;
+	}
+
+	bool IntserectPolyIgnorePortal(const Poly2D& poly, const Circle& circle, int portal, Vector2D& inters_point, bool& fully_intersects_portal)
+	{
+		int i,ct;
+		for (i=(portal+1)%poly.points.size(), ct=0; ct+1<poly.points.size(); ++ct, i=(i+1)%poly.points.size())
+		{
+			const Vector2D& pos = poly.points[i];
+			const Vector2D& next_pos = poly.points[(i+1)%poly.points.size()];
+			Vector2D dir = (next_pos-pos);
+
+			float t,u;
+
+			int count = IntersectLineCircle(pos, dir, 
+											circle.pos, circle.radius,
+											t, u);
+
+			if (count > 0)
+			{
+				if (t >= 0.0f && t <=1.0f)
+				{
+					inters_point = pos + dir*t;
+					return true;
+				}
+
+				if (u >= 0.0f && u <=1.0f)
+				{
+					inters_point = pos + dir*u;
+					return true;
+				}
+			}
+		}
+
+		// test the portal we might be fully intersecting it ...
+		{
+			const Vector2D& pos = poly.points[i];
+			const Vector2D& next_pos = poly.points[(i+1)%poly.points.size()];
+			Vector2D dir = (next_pos-pos);
+
+			float t,u;
+
+			int count = IntersectLineCircle(pos, dir, 
+											circle.pos, circle.radius,
+											t, u);
+
+			if (count > 0)
+			{
+				if ((t >= 0.0f && t <=1.0f)
+					&& (u >= 0.0f && u <=1.0f))
+				{
+					fully_intersects_portal = true;
+					return true;
+				}
+			}
+		}
+
+		return false;
+	}
+
+	bool IsInsidePath(int index, float radius, Vector2D& curve_center, Vector2D& curve_start, Vector2D& curve_end, Vector2D& dbg_1, Vector2D& dbg_2)
+	{
+		const PathPolyPoint& curr = mPoints[index];
+		
+		const Poly2D& from_poly = mPath->polys[mPoints[index].mPrevPoly];
+		const Poly2D& to_poly = mPath->polys[mPoints[index].mPrevPoly+1];
+
+		Circle circle(curve_center, radius);
+		Vector2D inters_point[2];
+		int inters_count = 0;
+
+		bool fully_intersects_portal = false;
+
+		if (IntserectPolyIgnorePortal(from_poly, circle, mPath->portals[curr.mPathPortal].index[0], inters_point[inters_count], fully_intersects_portal))
+			++inters_count;
+
+		if (fully_intersects_portal)
+			return true;
+
+		if (inters_count == 0)
+			return false;
+
+		if (IntserectPolyIgnorePortal(to_poly, circle, mPath->portals[curr.mPathPortal].index[1], inters_point[inters_count], fully_intersects_portal))
+			++inters_count;
+
+		if (fully_intersects_portal)
+			return true;
+
+		if (inters_count == 0)
+			return false;
+
+		dbg_1 = inters_point[0];
+		dbg_2 = inters_point[1];
+
+		float angle_ref = SignedAngle(inters_point[0]-curve_center, inters_point[1]-curve_center);
+		if (angle_ref < 0.0f)
+			angle_ref += MATH_PIf;
+
+		float angle_1 = SignedAngle(inters_point[0]-curve_center, curve_start-curve_center);
+		if (angle_1 < 0.0f)
+			angle_1 += MATH_PIf;
+
+		float angle_2 = SignedAngle(inters_point[0]-curve_center, curve_end-curve_center);
+		if (angle_2 < 0.0f)
+			angle_2 += MATH_PIf;
+
+		return angle_ref > angle_2 && angle_2 > angle_1;
+	}
+
+
+	bool Fit(int index, float radius, Vector2D& curve_center, Vector2D& curve_start, Vector2D& curve_end)
 	{
 		if (index <= 0)
 			return false;
@@ -1153,6 +1329,9 @@ public:
 		Vector2D perp_dir = rotate(dir, -(angle*0.5f));
 
 		curve_center = curr.mPos + (perp_dir * dist_along_perp_from_curr);
+
+		curve_start = curr.mPos + (prev.mPos-curr.mPos).Normalized() * dist_along_line_from_curr;
+		curve_end = curr.mPos + (next.mPos-curr.mPos).Normalized() * dist_along_line_from_curr;
 
 		return true;
 	}

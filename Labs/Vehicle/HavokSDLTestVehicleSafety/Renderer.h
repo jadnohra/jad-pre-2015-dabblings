@@ -232,7 +232,7 @@ public:
 		//glBegin(GL_TRIANGLE_FAN);
 		//glVertex2f(v.x, v.y);
 
-		for (float angle = from; angle <= to; angle += (2.0f * MATH_PIf) / 32.0f)
+		for (float angle = from; angle <= to; angle += (to-from) / 32.0f)
 		{
 			glVertex2f(v.x + sinf(angle) * radius, v.y + cosf(angle) * radius);
 		}
@@ -310,8 +310,22 @@ public:
 
 			if (polyPointPath2D.mPoints[i].mCurveRadius > 0.0f)
 			{
-				DrawCircle(WorldToScreen(polyPointPath2D.mPoints[i].mCurveCenter), 
-					WorldToScreen(polyPointPath2D.mPoints[i].mCurveRadius), color, alpha, true);
+				const PolyPointPath2D::PathPolyPoint& pt = polyPointPath2D.mPoints[i];
+
+				//float start_angle = SignedAngle((pt.mCurveStartPoint - pt.mCurveCenter).Normalized(), Vector2D(0.0f, -1.0f));
+				//float end_angle = SignedAngle((pt.mCurveEndPoint - pt.mCurveCenter).Normalized(), Vector2D(0.0f, -1.0f));
+
+				//start_angle = 0.0f;
+				//end_angle = MATH_PIf*0.2f;
+				
+				DrawCircle(WorldToScreen(pt.mCurveCenter), 
+					WorldToScreen(pt.mCurveRadius), color, alpha, true);
+
+				DrawLine(WorldToScreen(pt.mCurveCenter), WorldToScreen(pt.mCurveStartPoint), color, alpha, width);
+				DrawLine(WorldToScreen(pt.mCurveCenter), WorldToScreen(pt.mCurveEndPoint), color, alpha, width);
+
+				DrawLine(WorldToScreen(pt.mCurveCenter), WorldToScreen(pt.mDebugPt1), color, alpha, width);
+				DrawLine(WorldToScreen(pt.mCurveCenter), WorldToScreen(pt.mDebugPt2), color, alpha, width);
 			}
 		}
 	}
