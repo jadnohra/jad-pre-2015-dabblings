@@ -1161,9 +1161,9 @@ public:
 
 		for (int i=1; i+1<mPoints.size(); ++i)
 		{
-			if (!Fit(i, 3.0f, 6.0f, mPoints[i].mCurveRadius, mPoints[i].mCurveCenter, mPoints[i].mCurveStartPoint, mPoints[i].mCurveEndPoint, 
+			if (!Fit(i, 4.0f, 30.0f, mPoints[i].mCurveRadius, mPoints[i].mCurveCenter, mPoints[i].mCurveStartPoint, mPoints[i].mCurveEndPoint, 
 				mPoints[i].mDebugPt1, mPoints[i].mDebugPt2))
-				mPoints[i].mCurveRadius = 0.0f;
+				mPoints[i].mCurveRadius = -1.0f;
 		}
 	}
 
@@ -1290,18 +1290,28 @@ public:
 		dbg_2 = inters_point[1];
 
 		float angle_ref = SignedAngle(inters_point[0]-curve_center, inters_point[1]-curve_center);
-		if (angle_ref < 0.0f)
-			angle_ref += MATH_PIf;
+		Vector2D ref_dir;
+		if (angle_ref >= 0.0f)
+		{
+			ref_dir = inters_point[0]-curve_center;
+		}
+		else
+		{
+			ref_dir = inters_point[1]-curve_center;
+			angle_ref = -angle_ref;
+		}
 
-		float angle_1 = SignedAngle(inters_point[0]-curve_center, curve_start-curve_center);
+		float angle_ref2 = SignedAngle(inters_point[1]-curve_center, inters_point[0]-curve_center);
+
+		float angle_1 = SignedAngle(ref_dir, curve_start-curve_center);
 		if (angle_1 < 0.0f)
 			angle_1 += MATH_PIf;
 
-		float angle_2 = SignedAngle(inters_point[0]-curve_center, curve_end-curve_center);
+		float angle_2 = SignedAngle(ref_dir, curve_end-curve_center);
 		if (angle_2 < 0.0f)
 			angle_2 += MATH_PIf;
 
-		return angle_ref > angle_2 && angle_2 > angle_1;
+		return angle_ref > angle_2 && angle_ref > angle_1;
 	}
 
 

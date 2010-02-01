@@ -232,7 +232,7 @@ int main(int argc, char *argv[])
 			glClear( GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 			renderer.BeginRender();
 			renderer.DrawPolyPath2DWorldToScreen(test_path, Color::kBlue);
-			renderer.DrawPolyPointPath2DWorldToScreen(test_point_path, Color::kWhite);
+			renderer.DrawPolyPointPath2DWorldToScreen(test_point_path, Color::kWhite, Color::kRed);
 			
 			Draw(renderTimer.GetTime() - updateTimer.GetFrameTime());
 			vehicle.Draw(renderer, renderTimer.GetTime() - updateTimer.GetFrameTime(), renderTimer.GetFrameTime());

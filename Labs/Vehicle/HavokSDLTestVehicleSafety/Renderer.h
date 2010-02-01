@@ -240,6 +240,34 @@ public:
 		glEnd();
 	}
 
+	void DrawArc(const Vector2D& v, const Vector2D& from, float arc_angle, const Color& color, float alpha = -1.0f, bool thin = false)
+	{
+		if (!mIsRendering)
+		{
+			//mRenderCircles.push_back(RenderCircle(v, radius, color, alpha, thin));
+			return;
+		}
+
+		if (alpha < 0.0f)
+			alpha = color.a;
+
+		glColor4f(color.r, color.g, color.b, mGlobalAlphaMul * alpha);
+		glLineWidth(thin ? 0.7f : std::min(3.0f, std::max(1.25f, mWorldScale / 6)));
+		glBegin(GL_LINE_STRIP);
+
+		//glBegin(GL_TRIANGLE_FAN);
+		//glVertex2f(v.x, v.y);
+
+		int i=0;
+		for (float angle = 0.0f; i<=32; ++i, angle += (arc_angle) / 32.0f)
+		{
+			Vector2D offset = rotate(from, angle);
+			glVertex2f(v.x + offset.x, v.y + offset.y );
+		}
+
+		glEnd();
+	}
+
 
 	void DrawLine(const Vector2D& p1, const Vector2D& p2, const Color& color, float alpha = -1.0f, float width = 1.0f)
 	{
@@ -302,11 +330,37 @@ public:
 	}
 
 	void DrawPolyPointPath2DWorldToScreen(const PolyPointPath2D& polyPointPath2D,
-									 const Color& color, float alpha = -1.0f, float width = 1.0f)
+									 const Color& normal_color, const Color& error_color, float alpha = -1.0f, float width = 1.0f)
 	{
 		for (int i=0; i+1< polyPointPath2D.mPoints.size(); ++i)		
 		{
-			DrawLine(WorldToScreen(polyPointPath2D.mPoints[i].mPos), WorldToScreen(polyPointPath2D.mPoints[i+1].mPos), color, alpha, width);
+			Vector2D from;
+			Vector2D to;
+
+			Color color = normal_color;
+
+			if (i == 0 || polyPointPath2D.mPoints[i].mCurveRadius <= 0.0f)
+			{
+				from = WorldToScreen(polyPointPath2D.mPoints[i].mPos);
+			}
+			else
+			{
+				from = WorldToScreen(polyPointPath2D.mPoints[i].mCurveEndPoint);
+			}
+
+			if (polyPointPath2D.mPoints[i+1].mCurveRadius <= 0.0f)
+			{
+				if (polyPointPath2D.mPoints[i+1].mCurveRadius < 0.0f)
+					color = error_color;
+
+				to = WorldToScreen(polyPointPath2D.mPoints[i+1].mPos);
+			}
+			else
+			{				
+				to = WorldToScreen(polyPointPath2D.mPoints[i+1].mCurveStartPoint);
+			}
+
+			DrawLine(from, to, color, alpha, width);
 
 			if (polyPointPath2D.mPoints[i].mCurveRadius > 0.0f)
 			{
@@ -318,14 +372,18 @@ public:
 				//start_angle = 0.0f;
 				//end_angle = MATH_PIf*0.2f;
 				
-				DrawCircle(WorldToScreen(pt.mCurveCenter), 
-					WorldToScreen(pt.mCurveRadius), color, alpha, true);
+				//DrawCircle(WorldToScreen(pt.mCurveCenter), 
+				//	WorldToScreen(pt.mCurveRadius), color, alpha, true);
 
-				DrawLine(WorldToScreen(pt.mCurveCenter), WorldToScreen(pt.mCurveStartPoint), color, alpha, width);
-				DrawLine(WorldToScreen(pt.mCurveCenter), WorldToScreen(pt.mCurveEndPoint), color, alpha, width);
+				float arc_angle = SignedAngle(pt.mCurveStartPoint-pt.mCurveCenter, pt.mCurveEndPoint-pt.mCurveCenter);
 
-				DrawLine(WorldToScreen(pt.mCurveCenter), WorldToScreen(pt.mDebugPt1), color, alpha, width);
-				DrawLine(WorldToScreen(pt.mCurveCenter), WorldToScreen(pt.mDebugPt2), color, alpha, width);
+				DrawArc(WorldToScreen(pt.mCurveCenter), WorldToScreenDir(pt.mCurveStartPoint-pt.mCurveCenter), arc_angle, color, alpha, true);
+
+				//DrawLine(WorldToScreen(pt.mCurveCenter), WorldToScreen(pt.mCurveStartPoint), color, alpha, width);
+				//DrawLine(WorldToScreen(pt.mCurveCenter), WorldToScreen(pt.mCurveEndPoint), color, alpha, width);
+
+				//DrawLine(WorldToScreen(pt.mCurveCenter), WorldToScreen(pt.mDebugPt1), color, alpha, width);
+				//DrawLine(WorldToScreen(pt.mCurveCenter), WorldToScreen(pt.mDebugPt2), color, alpha, width);
 			}
 		}
 	}
@@ -351,6 +409,11 @@ public:
 	Vector2D WorldToScreen(const Vector2D& v)
 	{
 		return ((v + mWorldTranslation) * mWorldScale) + Vector2D(0.5f * (float) mScreenWidth, 0.5f * (float) mScreenHeight);
+	}
+
+	Vector2D WorldToScreenDir(const Vector2D& v)
+	{
+		return (v*mWorldScale);
 	}
 
 	float WorldToScreen(float v)
