@@ -1140,7 +1140,7 @@ public:
 	PathPolyPoints mPoints;
 	const PolyPath2D* mPath;
 
-	void BuildCentered(const PolyPath2D& path)
+	void BuildCentered(const PolyPath2D& path, bool fixOverlaps)
 	{
 		mPath = &path;
 		mPoints.resize(path.portals.size());
@@ -1164,6 +1164,108 @@ public:
 			if (!Fit(i, 4.0f, 30.0f, mPoints[i].mCurveRadius, mPoints[i].mCurveCenter, mPoints[i].mCurveStartPoint, mPoints[i].mCurveEndPoint, 
 				mPoints[i].mDebugPt1, mPoints[i].mDebugPt2))
 				mPoints[i].mCurveRadius = -1.0f;
+		}
+
+		if (fixOverlaps)
+		{
+
+			for (int i=mPoints.size()-2; i>=2; --i)
+			{
+				int j = i-1;
+
+				if (mPoints[i].mCurveRadius >= 0.0f
+					&& mPoints[j].mCurveRadius >= 0.0f)
+				{
+
+					Vector2D line_start = mPoints[j].mPos;
+					Vector2D line_end = mPoints[i].mPos;
+					float line_length = (line_end - line_start).Length();
+
+					Vector2D in_curve_end_point = mPoints[j].mCurveEndPoint;
+					Vector2D out_curve_start_point = mPoints[i].mCurveStartPoint;
+
+					float in_curve_end_point_u = (in_curve_end_point - line_start).Length() / line_length;
+					float out_curve_start_point_u = (out_curve_start_point - line_start).Length() / line_length;
+
+					if (in_curve_end_point_u > out_curve_start_point_u)
+					{
+						float in_curve_end_point_min_u;
+						Vector2D in_curve_end_point_min_u_center;
+						float out_curve_start_point_min_u;
+						Vector2D out_curve_start_point_min_u_center;
+
+						//for now ignore speed!!
+						{
+							Vector2D curve_start; Vector2D curve_end;
+							Fit(j, 4.0f, in_curve_end_point_min_u_center, curve_start, curve_end);
+							in_curve_end_point_min_u = (curve_end - line_start).Length() / line_length;
+						}
+
+						{
+							Vector2D curve_start; Vector2D curve_end;
+							Fit(i, 4.0f, out_curve_start_point_min_u_center, curve_start, curve_end);
+							out_curve_start_point_min_u = (curve_start - line_start).Length() / line_length;
+						}
+
+
+						float search_min_in_curve_end_point_u = in_curve_end_point_min_u;
+						float search_min_out_curve_start_point_u = out_curve_start_point_min_u;
+						float search_max_in_curve_end_point_u = in_curve_end_point_u;
+						float search_max_out_curve_start_point_u = out_curve_start_point_u;
+
+						while (search_max_in_curve_end_point_u > search_max_out_curve_start_point_u)
+						{
+							search_max_in_curve_end_point_u = (search_max_in_curve_end_point_u+search_min_in_curve_end_point_u) * 0.5f;
+							search_max_out_curve_start_point_u = (search_max_out_curve_start_point_u+search_min_out_curve_start_point_u) * 0.5f;
+
+							// since we dont worry about speed thats all we need to do here for now
+						}
+
+
+						{
+							Vector2D j_point_curve_center_line_dir = mPoints[j].mCurveCenter - in_curve_end_point_min_u_center;
+							Vector2D j_point_line_inters_point = line_start + (line_end - line_start) * search_max_in_curve_end_point_u;
+							Vector2D j_point_line_inters_tangent = rotate90(line_end - line_start);
+
+							float r,s;
+							IntersectLines(j_point_line_inters_point, j_point_line_inters_point+j_point_line_inters_tangent, 
+											mPoints[j].mCurveCenter, mPoints[j].mCurveCenter+j_point_curve_center_line_dir, r, s);
+							
+							Vector2D j_new_center = mPoints[j].mCurveCenter + (j_point_curve_center_line_dir)*s;
+							float j_new_radius = Distance(j_new_center, j_point_line_inters_point);
+
+							if (j_new_radius > mPoints[j].mCurveRadius)
+							{
+								int x =0;
+								++x;
+							}
+
+							Fit(j, j_new_radius, mPoints[j].mCurveCenter, mPoints[j].mCurveStartPoint, mPoints[j].mCurveEndPoint);
+						}
+
+						{
+							Vector2D i_point_curve_center_line_dir = mPoints[i].mCurveCenter - out_curve_start_point_min_u_center;
+							Vector2D i_point_line_inters_point = line_start + (line_end - line_start) * search_max_out_curve_start_point_u;
+							Vector2D i_point_line_inters_tangent = rotate90(line_end - line_start);
+
+							float r,s;
+							IntersectLines(i_point_line_inters_point, i_point_line_inters_point+i_point_line_inters_tangent, 
+											mPoints[i].mCurveCenter, mPoints[i].mCurveCenter+i_point_curve_center_line_dir, r, s);
+							
+							Vector2D i_new_center = mPoints[i].mCurveCenter + (i_point_curve_center_line_dir)*s;
+							float i_new_radius = Distance(i_new_center, i_point_line_inters_point);
+
+							if (i_new_radius > mPoints[i].mCurveRadius)
+							{
+								int x =0;
+								++x;
+							}
+
+							Fit(i, i_new_radius, mPoints[i].mCurveCenter, mPoints[i].mCurveStartPoint, mPoints[i].mCurveEndPoint);
+						}
+					}
+				}
+			}
 		}
 	}
 

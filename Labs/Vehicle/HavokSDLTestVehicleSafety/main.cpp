@@ -197,7 +197,7 @@ int main(int argc, char *argv[])
 	if (do_load_test_path)
 	{
 		if (test_path.Deserialize("path.bin"))
-			test_point_path.BuildCentered(test_path);
+			test_point_path.BuildCentered(test_path, true);
 	}
 
 	PolyPath2D::ManualAddContext test_path_build_context;
@@ -210,7 +210,7 @@ int main(int argc, char *argv[])
 			test_path.AddArc(1, Vector2D(60.0f, 30.0f), 12.0f, 3.14f, 8);
 			test_path.AddStraight(Vector2D(40.0f, 60.0f), Vector2D(-40.0f, 0.0f), Vector2D(0.0f, 14.0f), 3, true);
 			test_path.EndBuild();
-			test_point_path.BuildCentered(test_path);
+			test_point_path.BuildCentered(test_path, true);
 		}
 	}
 	else
@@ -354,7 +354,7 @@ int main(int argc, char *argv[])
 							{
 								do_manual_test_path = false;
 								test_path.EndBuild();
-								test_point_path.BuildCentered(test_path);
+								test_point_path.BuildCentered(test_path, true);
 								test_path.Serialize("path.bin");
 							}
 						}

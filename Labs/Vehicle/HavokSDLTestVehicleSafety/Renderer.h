@@ -380,7 +380,7 @@ public:
 				DrawArc(WorldToScreen(pt.mCurveCenter), WorldToScreenDir(pt.mCurveStartPoint-pt.mCurveCenter), arc_angle, color, alpha, true);
 
 				//DrawLine(WorldToScreen(pt.mCurveCenter), WorldToScreen(pt.mCurveStartPoint), color, alpha, width);
-				//DrawLine(WorldToScreen(pt.mCurveCenter), WorldToScreen(pt.mCurveEndPoint), color, alpha, width);
+				//DrawLine(h u WorldToScreen(pt.mCurveCenter), WorldToScreen(pt.mCurveEndPoint), color, alpha, width);
 
 				//DrawLine(WorldToScreen(pt.mCurveCenter), WorldToScreen(pt.mDebugPt1), color, alpha, width);
 				//DrawLine(WorldToScreen(pt.mCurveCenter), WorldToScreen(pt.mDebugPt2), color, alpha, width);
