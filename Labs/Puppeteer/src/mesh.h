@@ -1,6 +1,9 @@
 #ifndef _MESH_H
 #define _MESH_H
 
+#include "NeHeGL.h"
+#include <gl/gl.h>												
+#include <gl/glu.h>	
 #include "glm/glm.hpp"
 #include <vector>
 

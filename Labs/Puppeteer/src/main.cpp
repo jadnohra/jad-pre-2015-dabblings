@@ -1,7 +1,10 @@
-#include "render.h"
+#include "NeheGL.h"
 #include "app.h"
 
-bool	keys[256];			// Array Used For The Keyboard Routine
+#define WM_TOGGLEFULLSCREEN (WM_USER+1)									// Application Define Message For Toggling
+
+static BOOL g_isProgramLooping;											// Window Creation Loop, For FullScreen/Windowed Toggle																		// Between Fullscreen / Windowed Mode
+static BOOL g_createFullScreen;											// If TRUE, Then Create Fullscreen
 
 
 LRESULT CALLBACK WndProc(	HWND	hWnd,			// Handle For This Window
@@ -9,129 +12,141 @@ LRESULT CALLBACK WndProc(	HWND	hWnd,			// Handle For This Window
 							WPARAM	wParam,			// Additional Message Information
 							LPARAM	lParam)			// Additional Message Information
 {
-	
-
-	switch (uMsg)									// Check For Windows Messages
-	{
-		case WM_ACTIVATE:							// Watch For Window Activate Message
-		{
-			// LoWord Can Be WA_INACTIVE, WA_ACTIVE, WA_CLICKACTIVE,
-			// The High-Order Word Specifies The Minimized State Of The Window Being Activated Or Deactivated.
-			// A NonZero Value Indicates The Window Is Minimized.
-			if ((LOWORD(wParam) != WA_INACTIVE) && !((BOOL)HIWORD(wParam)))
-				active=TRUE;						// Program Is Active
-			else
-				active=FALSE;						// Program Is No Longer Active
-
-			return 0;								// Return To The Message Loop
-		}
-
-		case WM_SYSCOMMAND:							// Intercept System Commands
-		{
-			switch (wParam)							// Check System Calls
-			{
-				case SC_SCREENSAVE:					// Screensaver Trying To Start?
-				case SC_MONITORPOWER:				// Monitor Trying To Enter Powersave?
-				return 0;							// Prevent From Happening
-			}
-			break;									// Exit
-		}
-
-		case WM_CLOSE:								// Did We Receive A Close Message?
-		{
-			PostQuitMessage(0);						// Send A Quit Message
-			return 0;								// Jump Back
-		}
-
-		case WM_KEYDOWN:							// Is A Key Being Held Down?
-		{
-			keys[wParam] = TRUE;					// If So, Mark It As TRUE
-			return 0;								// Jump Back
-		}
-
-		case WM_KEYUP:								// Has A Key Been Released?
-		{
-			keys[wParam] = FALSE;					// If So, Mark It As FALSE
-			return 0;								// Jump Back
-		}
-
-		case WM_SIZE:								// Resize The OpenGL Window
-		{
-			ReSizeGLScene(LOWORD(lParam),HIWORD(lParam));  // LoWord=Width, HiWord=Height
-			return 0;								// Jump Back
-		}
-	}
-
-	// Pass All Unhandled Messages To DefWindowProc
-	return DefWindowProc(hWnd,uMsg,wParam,lParam);
+	return NeheGLWindowProc(hWnd,uMsg,wParam,lParam);
 }
 
+
+BOOL RegisterWindowClass (Application* application)						// Register A Window Class For This Application.
+{																		// TRUE If Successful
+	// Register A Window Class
+	WNDCLASSEXA windowClass;												// Window Class
+	ZeroMemory (&windowClass, sizeof (WNDCLASSEXA));						// Make Sure Memory Is Cleared
+	windowClass.cbSize			= sizeof (WNDCLASSEXA);					// Size Of The windowClass Structure
+	windowClass.style			= CS_HREDRAW | CS_VREDRAW | CS_OWNDC;	// Redraws The Window For Any Movement / Resizing
+	windowClass.lpfnWndProc		= (WNDPROC)(WndProc);				// WindowProc Handles Messages
+	windowClass.hInstance		= application->hInstance;				// Set The Instance
+	windowClass.hbrBackground	= (HBRUSH)(COLOR_APPWORKSPACE);			// Class Background Brush Color
+	windowClass.hCursor			= LoadCursor(NULL, IDC_ARROW);			// Load The Arrow Pointer
+	windowClass.lpszClassName	= application->className;				// Sets The Applications Classname
+	if (RegisterClassExA (&windowClass) == 0)							// Did Registering The Class Fail?
+	{
+		// NOTE: Failure, Should Never Happen
+		MessageBoxA (HWND_DESKTOP, "RegisterClassEx Failed!", "Error", MB_OK | MB_ICONEXCLAMATION);
+		return FALSE;													// Return False (Failure)
+	}
+	return TRUE;														// Return True (Success)
+}
 
 
 int main()
 {
-	MSG		msg;									// Windows Message Structure
-	BOOL	done=FALSE;								// Bool Variable To Exit Loop
+	Application			application;									// Application Structure
+	GL_Window			window;											// Window Structure
+	Keys				keys;											// Key Structure
+	BOOL				isMessagePumpActive;							// Message Pump Active?
+	MSG					msg;											// Window Message Structure
+	DWORD				tickCount;										// Used For The Tick Counter
 
-	// Ask The User Which Screen Mode They Prefer
-	//if (MessageBoxA(NULL,"Would You Like To Run In Fullscreen Mode?", "Start FullScreen?",MB_YESNO|MB_ICONQUESTION)==IDNO)
+	// Fill Out Application Data
+	application.className = "OpenGL";									// Application Class Name
+	application.hInstance = GetModuleHandle(NULL);									// Application Instance
+
+	// Fill Out Window
+	ZeroMemory (&window, sizeof (GL_Window));							// Make Sure Memory Is Zeroed
+	window.keys					= &keys;								// Window Key Structure
+	window.init.application		= &application;							// Window Application
+	window.init.title			= "";							// Window Title
+	window.init.width			= 640;									// Window Width
+	window.init.height			= 480;									// Window Height
+	window.init.bitsPerPixel	= 32;									// Bits Per Pixel
+	window.init.isFullScreen	= TRUE;									// Fullscreen? (Set To TRUE)
+
+	ZeroMemory (&keys, sizeof (Keys));									// Zero keys Structure
+
+
+	// Ask The User If They Want To Start In FullScreen Mode?
+	//if (MessageBoxA (HWND_DESKTOP, "Would You Like To Run In Fullscreen Mode?", "Start FullScreen?", MB_YESNO | MB_ICONQUESTION) == IDNO)
 	{
-		fullscreen=FALSE;							// Windowed Mode
+		window.init.isFullScreen = FALSE;								// If Not, Run In Windowed Mode
 	}
 
-	// Create Our OpenGL Window
-	if (!CreateGLWindow("NeHe's Solid Object Tutorial",640,480,16,fullscreen))
+	// Register A Class For Our Window To Use
+	if (RegisterWindowClass (&application) == FALSE)					// Did Registering A Class Fail?
 	{
-		return 0;									// Quit If Window Was Not Created
+		// Failure
+		MessageBoxA (HWND_DESKTOP, "Error Registering Window Class!", "Error", MB_OK | MB_ICONEXCLAMATION);
+		return -1;														// Terminate Application
 	}
 
-	App app;
-	if (!app.Load())
-		return 0;
-
-	while(!done)									// Loop That Runs While done=FALSE
+	g_isProgramLooping = TRUE;											// Program Looping Is Set To TRUE
+	g_createFullScreen = window.init.isFullScreen;						// g_createFullScreen Is Set To User Default
+	
+	App					app;
+	
+	while (g_isProgramLooping)											// Loop Until WM_QUIT Is Received
 	{
-		if (PeekMessage(&msg,NULL,0,0,PM_REMOVE))	// Is There A Message Waiting?
+		// Create A Window
+		window.init.isFullScreen = g_createFullScreen;					// Set Init Param Of Window Creation To Fullscreen?
+		if (CreateWindowGL (&window) == TRUE)							// Was Window Creation Successful?
 		{
-			if (msg.message==WM_QUIT)				// Have We Received A Quit Message?
+			// At This Point We Should Have A Window That Is Setup To Render OpenGL
+			if (!app.Load(&window))										// Call User Intialization
 			{
-				done=TRUE;							// If So done=TRUE
+				// Failure
+				TerminateApplication (&window);							// Close Window, This Will Handle The Shutdown
 			}
-			else									// If Not, Deal With Window Messages
-			{
-				TranslateMessage(&msg);				// Translate The Message
-				DispatchMessage(&msg);				// Dispatch The Message
-			}
-		}
-		else										// If There Are No Messages
-		{
-			// Draw The Scene.  Watch For ESC Key And Quit Messages From DrawGLScene()
-			if ((/*active &&*/ !app.DrawScene()) || keys[VK_ESCAPE])	// Active?  Was There A Quit Received?
-			{
-				done=TRUE;							// ESC or DrawGLScene Signalled A Quit
-			}
-			else									// Not Time To Quit, Update Screen
-			{
-				SwapBuffers(hDC);					// Swap Buffers (Double Buffering)
-			}
-
-			/*
-			if (keys[VK_F1])						// Is F1 Being Pressed?
-			{
-				keys[VK_F1]=FALSE;					// If So Make Key FALSE
-				KillGLWindow();						// Kill Our Current Window
-				fullscreen=!fullscreen;				// Toggle Fullscreen / Windowed Mode
-				// Recreate Our OpenGL Window
-				if (!CreateGLWindow("NeHe's Solid Object Tutorial",640,480,16,fullscreen))
+			else														// Otherwise (Start The Message Pump)
+			{	// Initialize was a success
+				isMessagePumpActive = TRUE;								// Set isMessagePumpActive To TRUE
+				while (isMessagePumpActive == TRUE)						// While The Message Pump Is Active
 				{
-					return 0;						// Quit If Window Was Not Created
-				}
-			}
-			*/
-		}
-	}
+					// Success Creating Window.  Check For Window Messages
+					if (PeekMessage (&msg, window.hWnd, 0, 0, PM_REMOVE) != 0)
+					{
+						// Check For WM_QUIT Message
+						if (msg.message != WM_QUIT)						// Is The Message A WM_QUIT Message?
+						{
+							DispatchMessage (&msg);						// If Not, Dispatch The Message
+						}
+						else											// Otherwise (If Message Is WM_QUIT)
+						{
+							isMessagePumpActive = FALSE;				// Terminate The Message Pump
+						}
+					}
+					else												// If There Are No Messages
+					{
+						//if (window.isVisible == FALSE)					// If Window Is Not Visible
+						//{
+						//	WaitMessage ();								// Application Is Minimized Wait For A Message
+						//}
+						//else											// If Window Is Visible
+						{
+							// Process Application Loop
+							tickCount = GetTickCount ();				// Get The Tick Count
+							app.Update (tickCount - window.lastTickCount);	// Update The Counter
+							window.lastTickCount = tickCount;			// Set Last Count To Current Count
+							app.Draw();									// Draw Our Scene
 
-	// Shutdown
-	KillGLWindow();									// Kill The Window
-	//return (msg.wParam);							// Exit The Program
+							SwapBuffers (window.hDC);					// Swap Buffers (Double Buffering)
+						}
+					}
+				}														// Loop While isMessagePumpActive == TRUE
+			}															// If (Initialize (...
+
+			// Application Is Finished
+			app.End();
+			//Deinitialize ();											// User Defined DeInitialization
+
+			DestroyWindowGL (&window);									// Destroy The Active Window
+		}
+		else															// If Window Creation Failed
+		{
+			// Error Creating Window
+			MessageBoxA (HWND_DESKTOP, "Error Creating OpenGL Window", "Error", MB_OK | MB_ICONEXCLAMATION);
+			g_isProgramLooping = FALSE;									// Terminate The Loop
+		}
+	}																	// While (isProgramLooping)
+
+	UnregisterClassA (application.className, application.hInstance);		// UnRegister Window Class
+	return 0;
 }
