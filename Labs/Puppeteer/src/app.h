@@ -10,6 +10,8 @@
 #include <vector>
 #include <algorithm>
 #include <limits>
+#include "Skeleton.h"
+#include "LoaderBVH.h"
 
 class App
 {
@@ -188,6 +190,9 @@ public:
 
 	bool Load(GL_Window* pWindow)
 	{
+		BF::Skeleton skeleton;
+		BF::LoaderBVH::Load("media/test.bvh", skeleton);
+
 		mFocusClip = -1;
 		mWindow = pWindow;
 		int argp = 0;
@@ -386,7 +391,7 @@ public:
 		int window_height=rect.bottom-rect.top;		
 
 		float viewport_width=(float) window_width;
-		float viewport_height=(float) ((window_height*3)/4);
+		float viewport_height=(float) window_height-(float) ((window_height*1)/4);
 		glViewport(0,(window_height*1)/4,viewport_width, viewport_height);
 		glScissor(0,(window_height*1)/4,viewport_width, viewport_height);
 

@@ -252,6 +252,14 @@
 				>
 			</File>
 		</Filter>
+		<Filter
+			Name="strtk"
+			>
+			<File
+				RelativePath="..\src\strtk\strtk.hpp"
+				>
+			</File>
+		</Filter>
 		<File
 			RelativePath="..\src\App.h"
 			>
@@ -262,6 +270,14 @@
 		</File>
 		<File
 			RelativePath="..\src\ARB_Multisample.h"
+			>
+		</File>
+		<File
+			RelativePath="..\src\LoaderBVH.cpp"
+			>
+		</File>
+		<File
+			RelativePath="..\src\LoaderBVH.h"
 			>
 		</File>
 		<File
@@ -290,6 +306,14 @@
 		</File>
 		<File
 			RelativePath="..\src\Random.inl"
+			>
+		</File>
+		<File
+			RelativePath="..\src\Skeleton.cpp"
+			>
+		</File>
+		<File
+			RelativePath="..\src\Skeleton.h"
 			>
 		</File>
 	</Files>
