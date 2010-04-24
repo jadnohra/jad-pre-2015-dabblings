@@ -8,6 +8,8 @@
 #include <gl\freeglut.h>			// Header File For The GLu32 Library
 #include "Random.h"
 #include <vector>
+#include <algorithm>
+#include <limits>
 
 class App
 {
@@ -15,16 +17,20 @@ public:
 
 	struct MotionClip
 	{
+		// z is height in local space
+
 		glm::mat4 mWorldMatrix;
 		float mLength;
+		float mRadius;
 		glm::vec4 mColor;
 
 		MotionClip()
 		{
+			mRadius = 0.25f;
 			mLength = 1.0f;
 		}
 
-		void Draw(const glm::mat4& inViewMatrix)
+		void Draw(const glm::mat4& inViewMatrix, bool inFocus, float inFocusCylinderLength)
 		{
 			glMatrixMode(GL_MODELVIEW);
 			glLoadMatrixf(glm::value_ptr(inViewMatrix * mWorldMatrix));
@@ -41,19 +47,139 @@ public:
 
 			glColor4f(mColor.x, mColor.y, mColor.z, mColor.w);
 			//glColor4f(1.0f, 0.0f, 0.0f, 1.0f);
-			glutSolidCylinder(0.25f, mLength, 20, 1);
+			glutSolidCylinder(inFocus ? 1.3f * mRadius : mRadius, mLength, 20, 1);
 			//glutWireCylinder(0.5f, 2.0f, 20, 1);
 			//glutSolidCube(2.0f);
+
+			if (inFocus)
+			{
+				float marker_length = 0.2f;
+				glm::mat4 marker_matrix = glm::translate(mWorldMatrix, glm::vec3(0.0f, 0.0f, inFocusCylinderLength - (marker_length * 0.5f)));
+
+				glMatrixMode(GL_MODELVIEW);
+				glLoadMatrixf(glm::value_ptr(inViewMatrix * marker_matrix));
+
+				glDisable (GL_LIGHTING);
+				glColor4f(0.0f, 0.0f, 0.0f, 1.0f);
+
+				glutSolidCylinder(1.5f * mRadius, marker_length, 20, 1);
+
+				glEnable (GL_LIGHTING);
+			}
+		}
+
+		bool IntersectRay(const glm::vec3& pos, const glm::vec3& dir, float& line_t, float& cylinder_length)
+		{
+			//http://mrl.nyu.edu/~dzorin/intro-graphics/lectures/lecture11/sld002.htm
+
+			glm::mat4 world_to_cylinder_transform =  glm::inverse(mWorldMatrix);;
+			glm::vec3 local_ray_pos = glm::vec3(world_to_cylinder_transform * glm::vec4(pos.x, pos.y, pos.z, 1.0f));
+			glm::vec3 local_ray_dir = glm::vec3(world_to_cylinder_transform * glm::vec4(dir.x, dir.y, dir.z, 0.0f));
+
+			float solution_t[4];
+			int solution_count = 0;
+
+			// side surface intersect
+			{
+				float A = local_ray_dir.x*local_ray_dir.x + local_ray_dir.y*local_ray_dir.y;
+				float B = 2.0f* (local_ray_pos.x*local_ray_dir.x + local_ray_pos.y*local_ray_dir.y);
+				float C = local_ray_pos.x*local_ray_pos.x + local_ray_pos.y*local_ray_pos.y - mRadius*mRadius;
+				
+				float disc = B*B - 4.0f*A*C;
+
+				if (disc <= 0.0f)
+					return false;
+
+				float disc_sqrt = sqrtf(disc);
+
+				float t1 = (-B - disc_sqrt) / (2.0f*A); 
+				float t2 = (-B + disc_sqrt) / (2.0f*A); 
+				
+				float t1_z = local_ray_pos.z + local_ray_dir.z * t1;
+				float t2_z = local_ray_pos.z + local_ray_dir.z * t2;
+
+				if (t1_z >= 0.0f && t1_z < mLength)
+					solution_t[solution_count++] = t1;
+
+				if (t2_z >= 0.0f && t2_z < mLength)
+					solution_t[solution_count++] = t2;
+			}
+
+			// caps
+			{
+				// http://local.wasp.uwa.edu.au/~pbourke/geometry/planeline/
+
+				glm::vec3 plane_normal(0.0f, 0.0f, 1.0f);
+				glm::vec3 plane_cap1_pos(0.0f, 0.0f, 0.0f);
+				glm::vec3 plane_cap2_pos(0.0f, 0.0f, mLength);
+
+				float denom = glm::dot(plane_normal, local_ray_dir);
+
+				if (denom != 0.0f)
+				{
+					float cap1_t = glm::dot(plane_normal, plane_cap1_pos-local_ray_pos) / denom;
+					float cap2_t = glm::dot(plane_normal, plane_cap2_pos-local_ray_pos) / denom;
+
+					glm::vec3 cap1_t_inter = local_ray_pos + local_ray_dir * cap1_t;
+					glm::vec3 cap2_t_inter = local_ray_pos + local_ray_dir * cap2_t;
+
+					if (cap1_t_inter.x*cap1_t_inter.x + cap1_t_inter.y*cap1_t_inter.y < mRadius*mRadius) 
+						solution_t[solution_count++] = cap1_t;
+
+					if (cap2_t_inter.x*cap2_t_inter.x + cap2_t_inter.y*cap2_t_inter.y < mRadius*mRadius) 
+						solution_t[solution_count++] = cap2_t;
+
+				}
+			}
+
+			line_t = solution_t[0];
+
+			for (int i=1; i<solution_count; ++i)
+			{
+				if (solution_t[i] < line_t)
+					line_t = solution_t[i];
+			}
+
+			cylinder_length = local_ray_pos.z + local_ray_dir.z * line_t;
+
+			return solution_count > 0;
 		}
 	};
 
 	typedef std::vector<MotionClip> MotionClips;
+	typedef std::vector<int> Integers;
+
+	struct MotionClipCameraSpaceSort
+	{
+		const glm::mat4& mViewMatrix;
+		const MotionClips& mMotionClips;
+
+		MotionClipCameraSpaceSort(const glm::mat4& inViewMatrix, const MotionClips& inMotionClips)
+			:	mViewMatrix(inViewMatrix)
+			,	mMotionClips(inMotionClips)
+		{
+		}
+
+		bool operator()(int inComp, int inRef) const
+		{
+			glm::vec3 comp_pos((mViewMatrix * mMotionClips[inComp].mWorldMatrix)[3]);
+			glm::vec3 ref_pos((mViewMatrix * mMotionClips[inRef].mWorldMatrix)[3]);
+
+			return comp_pos.z < ref_pos.z;
+		}
+	};
+
+	
 
 	Mesh mMesh;
 	GL_Window*	mWindow;
 	
 	glm::mat4 mCameraWorldMatrix;
+	glm::mat4 mCameraViewMatrix;
 	MotionClips mMotionClips;
+	Integers mCameraSortedMotionClips;
+	int mFocusClip;
+	float mFocusClipCylinderLength;
 
 
 	void End()
@@ -62,6 +188,7 @@ public:
 
 	bool Load(GL_Window* pWindow)
 	{
+		mFocusClip = -1;
 		mWindow = pWindow;
 		int argp = 0;
 		glutInit(&argp, NULL);
@@ -101,7 +228,7 @@ public:
 
 		Random random;
 
-		mMotionClips.resize(120);
+		mMotionClips.resize(100);
 
 		glm::mat4 mat_identity;
 		float range_max = (float) mMotionClips.size() * 0.1f;
@@ -224,11 +351,49 @@ public:
 		mCameraWorldMatrix = glm::rotate(mCameraWorldMatrix, cam_rotate_euler.y * dt, glm::vec3(0.0f, 1.0f, 0.0f));
 		mCameraWorldMatrix = glm::rotate(mCameraWorldMatrix, cam_rotate_euler.z * dt, glm::vec3(0.0f, 0.0f, 1.0f));
 
-		
+		mCameraViewMatrix = glm::inverse(mCameraWorldMatrix);
+
+		if (mCameraSortedMotionClips.size() != mMotionClips.size())
+		{
+			mCameraSortedMotionClips.resize(mMotionClips.size());
+
+			for (int i=0; i<mCameraSortedMotionClips.size(); ++i)
+				mCameraSortedMotionClips[i] = i;
+		}
+
+		std::sort(mCameraSortedMotionClips.begin(), mCameraSortedMotionClips.end(), MotionClipCameraSpaceSort(mCameraViewMatrix, mMotionClips));
+
 	}
 
 	bool Draw()
 	{
+		POINT mouse;						// Stores The X And Y Coords For The Current Mouse Position
+		GetCursorPos(&mouse);					// Gets The Current Cursor Coordinates (Mouse Coordinates)
+		ScreenToClient(mWindow->hWnd, &mouse);
+
+		if (IsKeyDown(VK_PAUSE))
+		{
+			mWindow->keys->keyDown[VK_PAUSE] = false;
+			DebugBreak();
+		}
+
+		glEnable(GL_SCISSOR_TEST);
+
+		RECT	rect;										// Holds Coordinates Of A Rectangle
+
+		GetClientRect(mWindow->hWnd, &rect);							// Get Window Dimensions
+		int window_width=rect.right-rect.left;							// Calculate The Width (Right Side-Left Side)
+		int window_height=rect.bottom-rect.top;		
+
+		float viewport_width=(float) window_width;
+		float viewport_height=(float) ((window_height*3)/4);
+		glViewport(0,(window_height*1)/4,viewport_width, viewport_height);
+		glScissor(0,(window_height*1)/4,viewport_width, viewport_height);
+
+		glMatrixMode (GL_PROJECTION);										// Select The Projection Matrix
+		glLoadIdentity ();													// Reset The Projection Matrix
+		gluPerspective(50, (float)viewport_width/(float)viewport_height, 0.1,  2000);
+
 		glClearColor(49.0f/255.0f, 140.0f/255.0f, 231.0f / 255.0f, 1.0f);
 		//glClearColor(100.0f/255.0f, 149.0f/255.0f, 237.0f / 255.0f, 1.0f);
 		//glClearColor(75.0f/255.0f, 146.0f/255.0f, 219.0f / 255.0f, 1.0f);
@@ -238,7 +403,7 @@ public:
 		//glLoadIdentity();									// Reset The Current Modelview Matrix
 		glLoadMatrixf(glm::value_ptr(glm::inverse(mCameraWorldMatrix)));
 
-		glm::mat4 view_matrix = glm::inverse(mCameraWorldMatrix);
+		glm::mat4 view_matrix = mCameraViewMatrix;
 		
 		GLfloat light_ambient[]= { 0.1f, 0.1f, 0.1f, 0.1f };
 		GLfloat light_diffuse[]= { 1.0f, 1.0f, 1.0f, 0.0f };
@@ -255,8 +420,8 @@ public:
 		glEnable (GL_LIGHT1);
 		
 
-		for (int i=0; i<mMotionClips.size(); ++i)
-			mMotionClips[i].Draw(view_matrix);
+		for (int i=0; i<mCameraSortedMotionClips.size(); ++i)
+			mMotionClips[mCameraSortedMotionClips[i]].Draw(view_matrix, mFocusClip == mCameraSortedMotionClips[i], mFocusClipCylinderLength);
 
 
 		{
@@ -271,35 +436,48 @@ public:
 			glGetDoublev( GL_MODELVIEW_MATRIX, modelview );
 			glGetDoublev( GL_PROJECTION_MATRIX, projection );
 			glGetIntegerv( GL_VIEWPORT, viewport );
-
 			
-			POINT mouse;						// Stores The X And Y Coords For The Current Mouse Position
-			GetCursorPos(&mouse);					// Gets The Current Cursor Coordinates (Mouse Coordinates)
-			ScreenToClient(mWindow->hWnd, &mouse);
 
 			GLfloat winX, winY, winZ;				// Holds Our X, Y and Z Coordinates
 
 			winX = (float)mouse.x;					// Holds The Mouse X Coordinate
-			winY = (float)mouse.y;		
-			winY = (float)viewport[3] - (float)winY;
-
+			winY = (float)window_height -(float) mouse.y;		
+			
 			gluUnProject( winX, winY, 0.0f/*mCameraWorldMatrix[3].z*/, modelview, projection, viewport, &posX, &posY, &posZ);
 
 			glm::vec3 unproj = glm::vec3(posX, posY, posZ);
 			glm::vec3 dir = unproj - glm::vec3(mCameraWorldMatrix[3]);
 			dir = glm::normalize(dir);
 
+			/*
 			glEnable(GL_COLOR_MATERIAL);
-
 			glMatrixMode(GL_MODELVIEW);
 			glLoadMatrixf(glm::value_ptr(view_matrix * glm::translate(glm::mat4(), glm::vec3(mCameraWorldMatrix[3]) + (dir * 1.0f))));
-
-			
-
 			glColor4f(0.0f, 0.0f, 0.0f, 0.5f);
 			glutSolidSphere(0.02f, 10.0f, 10.0f);
-
 			glDisable(GL_COLOR_MATERIAL);
+			*/
+		
+			{
+				float min_t = std::numeric_limits<float>::max();
+				mFocusClip = -1;
+
+				
+
+				for (int i=0; i<mMotionClips.size(); ++i)
+				{
+					float t;
+					float cylinder_length;
+
+					if (mMotionClips[i].IntersectRay(glm::vec3(mCameraWorldMatrix[3]), dir, t, cylinder_length)
+						&& t < min_t)
+					{
+						min_t = t;
+						mFocusClip = i;
+						mFocusClipCylinderLength = cylinder_length;
+					}
+				}
+			}
 
 			//glMatrixMode(GL_MODELVIEW);
 			//glLoadMatrixf(glm::value_ptr(view_matrix * glm::translate(glm::mat4(), glm::vec3(mCameraWorldMatrix[3]))));
@@ -312,6 +490,22 @@ public:
 		//glutWireCylinder(0.5f, 2.0f, 20, 1);
 
 		//DefaultDrawGLScene();
+
+		{
+			float viewport_width=(float) window_width;
+			float viewport_height=(float) ((window_height*1)/4);
+			glViewport(0,0,viewport_width, viewport_height);
+			glScissor(0,0,viewport_width, viewport_height);
+ 			
+			glMatrixMode (GL_PROJECTION);										// Select The Projection Matrix
+			glLoadIdentity ();													// Reset The Projection Matrix
+			gluPerspective(50, (float)viewport_width/(float)viewport_height, 0.1,  2000);
+
+			//glClearColor(49.0f/255.0f, 140.0f/255.0f, 231.0f / 255.0f, 1.0f);
+			//glClearColor(100.0f/255.0f, 149.0f/255.0f, 237.0f / 255.0f, 1.0f);
+			glClearColor(75.0f/255.0f, 146.0f/255.0f, 219.0f / 255.0f, 1.0f);
+			glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);	// Clear Screen And Depth Buffer
+		}
 
 		return true;
 	}

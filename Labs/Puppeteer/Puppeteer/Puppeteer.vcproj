@@ -42,10 +42,11 @@
 				Name="VCCLCompilerTool"
 				Optimization="0"
 				AdditionalIncludeDirectories="../src/freeglut"
-				PreprocessorDefinitions="WIN32;_DEBUG;_CONSOLE"
+				PreprocessorDefinitions="WIN32;_DEBUG;_CONSOLE;_WIN32"
 				MinimalRebuild="true"
 				BasicRuntimeChecks="3"
 				RuntimeLibrary="3"
+				TreatWChar_tAsBuiltInType="true"
 				UsePrecompiledHeader="0"
 				WarningLevel="3"
 				DebugInformationFormat="4"
@@ -65,6 +66,8 @@
 				OutputFile="$(OutDir)\$(ProjectName)_d.exe"
 				LinkIncremental="2"
 				AdditionalLibraryDirectories="../src/freeglut"
+				IgnoreAllDefaultLibraries="false"
+				IgnoreDefaultLibraryNames="libcmt"
 				GenerateDebugInformation="true"
 				SubSystem="1"
 				TargetMachine="1"
@@ -140,6 +143,7 @@
 				AdditionalDependencies="opengl32.lib "
 				LinkIncremental="1"
 				AdditionalLibraryDirectories="../src/freeglut"
+				IgnoreDefaultLibraryNames="libcmt"
 				GenerateDebugInformation="true"
 				SubSystem="1"
 				OptimizeReferences="2"
@@ -216,8 +220,48 @@
 				>
 			</File>
 		</Filter>
+		<Filter
+			Name="freeglut"
+			>
+			<Filter
+				Name="include"
+				>
+				<File
+					RelativePath="..\src\freeglut\GL\freeglut_ext.h"
+					>
+				</File>
+				<File
+					RelativePath="..\src\freeglut\GL\freeglut_std.h"
+					>
+				</File>
+			</Filter>
+		</Filter>
+		<Filter
+			Name="dSFMT"
+			>
+			<File
+				RelativePath="..\src\dSFMT\dSFMT-params.h"
+				>
+			</File>
+			<File
+				RelativePath="..\src\dSFMT\dSFMT.c"
+				>
+			</File>
+			<File
+				RelativePath="..\src\dSFMT\dSFMT.h"
+				>
+			</File>
+		</Filter>
 		<File
-			RelativePath="..\src\app.h"
+			RelativePath="..\src\App.h"
+			>
+		</File>
+		<File
+			RelativePath="..\src\ARB_Multisample.cpp"
+			>
+		</File>
+		<File
+			RelativePath="..\src\ARB_Multisample.h"
 			>
 		</File>
 		<File
@@ -229,7 +273,23 @@
 			>
 		</File>
 		<File
-			RelativePath="..\src\render.h"
+			RelativePath="..\src\NeHeGL.cpp"
+			>
+		</File>
+		<File
+			RelativePath="..\src\NeHeGL.h"
+			>
+		</File>
+		<File
+			RelativePath="..\src\Random.cpp"
+			>
+		</File>
+		<File
+			RelativePath="..\src\Random.h"
+			>
+		</File>
+		<File
+			RelativePath="..\src\Random.inl"
 			>
 		</File>
 	</Files>

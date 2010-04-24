@@ -48,27 +48,27 @@ int main()
 	DWORD				tickCount;										// Used For The Tick Counter
 
 	// Fill Out Application Data
-	application.className = "OpenGL";									// Application Class Name
-	application.hInstance = GetModuleHandle(NULL);									// Application Instance
+	application.className = "Puppeteer";									// Application Class Name
+	application.hInstance = GetModuleHandle(NULL);						// Application Instance
 
 	// Fill Out Window
 	ZeroMemory (&window, sizeof (GL_Window));							// Make Sure Memory Is Zeroed
 	window.keys					= &keys;								// Window Key Structure
 	window.init.application		= &application;							// Window Application
-	window.init.title			= "";							// Window Title
-	window.init.width			= 640;									// Window Width
-	window.init.height			= 480;									// Window Height
+	window.init.title			= "Puppeteer";							// Window Title
+	window.init.width			= 800;									// Window Width
+	window.init.height			= 600;									// Window Height
 	window.init.bitsPerPixel	= 32;									// Bits Per Pixel
-	window.init.isFullScreen	= TRUE;									// Fullscreen? (Set To TRUE)
+	window.init.isFullScreen	= FALSE;									// Fullscreen? (Set To TRUE)
 
 	ZeroMemory (&keys, sizeof (Keys));									// Zero keys Structure
 
 
 	// Ask The User If They Want To Start In FullScreen Mode?
 	//if (MessageBoxA (HWND_DESKTOP, "Would You Like To Run In Fullscreen Mode?", "Start FullScreen?", MB_YESNO | MB_ICONQUESTION) == IDNO)
-	{
-		window.init.isFullScreen = FALSE;								// If Not, Run In Windowed Mode
-	}
+	//{
+	//	window.init.isFullScreen = FALSE;								// If Not, Run In Windowed Mode
+	//}
 
 	// Register A Class For Our Window To Use
 	if (RegisterWindowClass (&application) == FALSE)					// Did Registering A Class Fail?
