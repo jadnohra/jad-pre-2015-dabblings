@@ -524,12 +524,23 @@ namespace BF
 												// concatenate the matrices from left to right Y, X and Z.
 												// An alternative method is to compute the rotation matrix directly. A method for doing this is described in Graphics Gems II, p 322.
 
+												// ref
 												glm::vec3 pitch_yaw_roll(glm::radians(euler_angles_deg.y), glm::radians(euler_angles_deg.z), glm::radians(euler_angles_deg.x));
-												//glm::vec3 pitch_yaw_roll(euler_angles_deg.x, euler_angles_deg.y, euler_angles_deg.z);
-												//glm::vec3 pitch_yaw_roll(euler_angles_deg.x, euler_angles_deg.z, euler_angles_deg.y);
-												//glm::vec3 pitch_yaw_roll(euler_angles_deg.y, euler_angles_deg.x, euler_angles_deg.z);
-												//glm::vec3 pitch_yaw_roll(euler_angles_deg.z, euler_angles_deg.x, euler_angles_deg.y);
-												//glm::vec3 pitch_yaw_roll(euler_angles_deg.z, euler_angles_deg.y, euler_angles_deg.x);
+												//glm::vec3 pitch_yaw_roll(-glm::radians(euler_angles_deg.y), -glm::radians(euler_angles_deg.z), -glm::radians(euler_angles_deg.x));
+												
+												// not bad
+												//glm::vec3 pitch_yaw_roll(glm::radians(euler_angles_deg.x), glm::radians(euler_angles_deg.y), glm::radians(euler_angles_deg.z));
+
+												//glm::vec3 pitch_yaw_roll(-glm::radians(euler_angles_deg.x), -glm::radians(euler_angles_deg.y), -glm::radians(euler_angles_deg.z));
+
+												// not bad
+												//glm::vec3 pitch_yaw_roll(glm::radians(euler_angles_deg.x), glm::radians(euler_angles_deg.z), glm::radians(euler_angles_deg.y));
+
+												//glm::vec3 pitch_yaw_roll(-glm::radians(euler_angles_deg.x), -glm::radians(euler_angles_deg.z), -glm::radians(euler_angles_deg.y));
+
+												//glm::vec3 pitch_yaw_roll(glm::radians(euler_angles_deg.y), glm::radians(euler_angles_deg.x), glm::radians(euler_angles_deg.z));
+												//glm::vec3 pitch_yaw_roll(glm::radians(euler_angles_deg.z), glm::radians(euler_angles_deg.x), glm::radians(euler_angles_deg.y));
+												//glm::vec3 pitch_yaw_roll(glm::radians(euler_angles_deg.z), glm::radians(euler_angles_deg.y), glm::radians(euler_angles_deg.x));
 
 												mSkeleton.mJoints[node.mJointIndex].mLocalTransform.mOrientation = glm::quat(pitch_yaw_roll);
 											}

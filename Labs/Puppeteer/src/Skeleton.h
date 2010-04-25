@@ -166,12 +166,12 @@ namespace BF
 
 			if (inJointIndex != 0 || inIncludeRootTranslation)
 			{
-				outModelSpace[inJointIndex].mPosition = local_transform.mPosition + (local_transform.mOrientation * inParentModelTransform.mPosition);
+				outModelSpace[inJointIndex].mPosition = inParentModelTransform.mPosition + (inParentModelTransform.mOrientation * local_transform.mPosition);
 			}
 			else
 				outModelSpace[inJointIndex].mPosition = glm::vec3();
 
-			outModelSpace[inJointIndex].mOrientation = glm::cross(local_transform.mOrientation, inParentModelTransform.mOrientation);
+			outModelSpace[inJointIndex].mOrientation = glm::cross(inParentModelTransform.mOrientation, local_transform.mOrientation);
 			
 			int child_count = mJointHierarchy.mJointChildrenInfos[inJointIndex].mChildCount;
 
