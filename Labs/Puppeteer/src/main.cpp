@@ -83,7 +83,7 @@ int main()
 	
 	App					app;
 	
-	while (g_isProgramLooping)											// Loop Until WM_QUIT Is Received
+	//while (g_isProgramLooping)											// Loop Until WM_QUIT Is Received
 	{
 		// Create A Window
 		window.init.isFullScreen = g_createFullScreen;					// Set Init Param Of Window Creation To Fullscreen?

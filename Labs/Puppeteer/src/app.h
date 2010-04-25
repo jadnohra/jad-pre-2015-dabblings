@@ -183,6 +183,8 @@ public:
 	int mFocusClip;
 	float mFocusClipCylinderLength;
 
+	BF::Skeleton mTestSkeleton;
+	BF::JointTransforms mTestSkeletonJoints;
 
 	void End()
 	{
@@ -190,8 +192,8 @@ public:
 
 	bool Load(GL_Window* pWindow)
 	{
-		BF::Skeleton skeleton;
-		BF::LoaderBVH::Load("media/test.bvh", skeleton);
+		BF::LoaderBVH::Load("media/test.bvh", mTestSkeleton);
+		mTestSkeleton.ToModelSpace(mTestSkeletonJoints, true);
 
 		mFocusClip = -1;
 		mWindow = pWindow;
@@ -370,6 +372,52 @@ public:
 
 	}
 
+	void DrawTestSkeleton(int inJointIndex)
+	{
+		glLoadMatrixf(glm::value_ptr(mCameraViewMatrix * glm::translate(glm::mat4(), mTestSkeletonJoints[inJointIndex].mPosition)));
+		glutSolidSphere(1.0f, 10.0f, 10.0f);
+		
+		int child_count = mTestSkeleton.mJointHierarchy.mJointChildrenInfos[inJointIndex].mChildCount;
+
+		if (child_count > 0)
+		{
+			int child_index = mTestSkeleton.mJointHierarchy.mJointChildrenInfos[inJointIndex].mFirstChildIndex;
+
+			for (int i=0; i<child_count; ++i)
+			{
+				int child_joint_index = mTestSkeleton.mJointHierarchy.mJointChildren[child_index++];
+
+				glLoadMatrixf(glm::value_ptr(mCameraViewMatrix));
+				glBegin(GL_LINES);
+				glVertex3f(mTestSkeletonJoints[inJointIndex].mPosition.x, mTestSkeletonJoints[inJointIndex].mPosition.y, mTestSkeletonJoints[inJointIndex].mPosition.z); 
+				glVertex3f(mTestSkeletonJoints[child_joint_index].mPosition.x, mTestSkeletonJoints[child_joint_index].mPosition.y, mTestSkeletonJoints[child_joint_index].mPosition.z); 
+				glEnd( );
+
+				DrawTestSkeleton(child_joint_index);
+			}
+		}
+	}
+
+	void DrawTestSkeleton()
+	{
+		glEnable(GL_COLOR_MATERIAL);
+		glMatrixMode(GL_MODELVIEW);
+		glColor4f(0.0f, 0.0f, 0.0f, 0.5f);
+
+		DrawTestSkeleton(0);
+		
+		/*
+		for (int i=0; i<mTestSkeletonJoints.size(); ++i)
+		{
+			glLoadMatrixf(glm::value_ptr(mCameraViewMatrix * glm::translate(glm::mat4(), mTestSkeletonJoints[i].mPosition)));
+
+			glutSolidSphere(1.0f, 10.0f, 10.0f);
+		}
+		*/
+
+		glDisable(GL_COLOR_MATERIAL);
+	}
+
 	bool Draw()
 	{
 		POINT mouse;						// Stores The X And Y Coords For The Current Mouse Position
@@ -428,6 +476,7 @@ public:
 		for (int i=0; i<mCameraSortedMotionClips.size(); ++i)
 			mMotionClips[mCameraSortedMotionClips[i]].Draw(view_matrix, mFocusClip == mCameraSortedMotionClips[i], mFocusClipCylinderLength);
 
+		DrawTestSkeleton();
 
 		{
 		
