@@ -215,7 +215,7 @@ namespace BF
 									else
 									{
 										mSkeleton.mJoints.resize(mSkeleton.mJoints.size()+1);
-										mSkeleton.mJoints.back().mLocalTransform.mPosition = offset;
+										mSkeleton.mJoints.back().mLocalTransform.mPosition =  LoaderBVH::ToOpenGLTranslation(offset);
 										mParseState = Parse_CHANNELS;
 									}
 								}
@@ -516,7 +516,7 @@ namespace BF
 										if (mErrorLine < 0)
 										{
 											if (translation_was_set)
-												mSkeleton.mJoints[node.mJointIndex].mLocalTransform.mPosition += translation;
+												mSkeleton.mJoints[node.mJointIndex].mLocalTransform.mPosition += LoaderBVH::ToOpenGLTranslation(translation);
 											
 											if (rotation_was_set)
 											{
@@ -524,8 +524,10 @@ namespace BF
 												// concatenate the matrices from left to right Y, X and Z.
 												// An alternative method is to compute the rotation matrix directly. A method for doing this is described in Graphics Gems II, p 322.
 
+												//glm::vec3 pitch_yaw_roll(glm::radians(euler_angles_deg.z), glm::radians(euler_angles_deg.y), glm::radians(euler_angles_deg.x));
+
 												// ref
-												glm::vec3 pitch_yaw_roll(glm::radians(euler_angles_deg.y), glm::radians(euler_angles_deg.z), glm::radians(euler_angles_deg.x));
+												//glm::vec3 pitch_yaw_roll(glm::radians(euler_angles_deg.y), glm::radians(euler_angles_deg.z), glm::radians(euler_angles_deg.x));
 												//glm::vec3 pitch_yaw_roll(-glm::radians(euler_angles_deg.y), -glm::radians(euler_angles_deg.z), -glm::radians(euler_angles_deg.x));
 												
 												// not bad
@@ -542,7 +544,7 @@ namespace BF
 												//glm::vec3 pitch_yaw_roll(glm::radians(euler_angles_deg.z), glm::radians(euler_angles_deg.x), glm::radians(euler_angles_deg.y));
 												//glm::vec3 pitch_yaw_roll(glm::radians(euler_angles_deg.z), glm::radians(euler_angles_deg.y), glm::radians(euler_angles_deg.x));
 
-												mSkeleton.mJoints[node.mJointIndex].mLocalTransform.mOrientation = glm::quat(pitch_yaw_roll);
+												mSkeleton.mJoints[node.mJointIndex].mLocalTransform.mOrientation = LoaderBVH::ToOpenGLOrientation(euler_angles_deg);
 											}
 										}
 									}

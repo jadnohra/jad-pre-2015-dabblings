@@ -192,6 +192,7 @@ public:
 
 	bool Load(GL_Window* pWindow)
 	{
+		//BF::LoaderBVH::Load("media/test_xyz_rot.bvh", mTestSkeleton);
 		BF::LoaderBVH::Load("media/test.bvh", mTestSkeleton);
 		mTestSkeleton.ToModelSpace(mTestSkeletonJoints, true);
 
@@ -375,7 +376,7 @@ public:
 	void DrawTestSkeleton(int inJointIndex)
 	{
 		glLoadMatrixf(glm::value_ptr(mCameraViewMatrix * glm::translate(glm::mat4(), mTestSkeletonJoints[inJointIndex].mPosition)));
-		glutSolidSphere(1.0f, 10.0f, 10.0f);
+		glutSolidSphere(0.25f, 10.0f, 10.0f);
 		
 		int child_count = mTestSkeleton.mJointHierarchy.mJointChildrenInfos[inJointIndex].mChildCount;
 
@@ -400,6 +401,9 @@ public:
 
 	void DrawTestSkeleton()
 	{
+		if (mTestSkeletonJoints.empty())
+			return;
+
 		glEnable(GL_COLOR_MATERIAL);
 		glMatrixMode(GL_MODELVIEW);
 		glColor4f(0.0f, 0.0f, 0.0f, 0.5f);

@@ -130,19 +130,23 @@ namespace BF
 			for (size_t i=0; i<mChannelInfos.size(); ++i)
 			{
 				const ChannelInfo& channel_info = mChannelInfos[i];
-				bool is_different = false;
-
-				for (int j=0; j<valid_channel_count; ++j)
+				
+				if (valid_channel_count == channel_info.mChannelTypes.size())
 				{
-					if (inChannelType[j] != channel_info.mChannelTypes[j])
-					{
-						is_different = true;
-						break;
-					}
-				}
+					bool is_different = false;
 
-				if (!is_different)
-					return i;
+					for (int j=0; j<valid_channel_count; ++j)
+					{
+						if (inChannelType[j] != channel_info.mChannelTypes[j])
+						{
+							is_different = true;
+							break;
+						}
+					}
+
+					if (!is_different)
+						return i;
+				}
 			}
 
 			return -1;
