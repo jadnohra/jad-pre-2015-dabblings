@@ -149,15 +149,19 @@ namespace transform2
         Result[0][1] = u.x;
         Result[1][1] = u.y;
         Result[2][1] = u.z;
-        Result[0][2] =-f.x;
-        Result[1][2] =-f.y;
-        Result[2][2] =-f.z;
+        Result[0][2] =f.x;
+        Result[1][2] =f.y;
+        Result[2][2] =f.z;
+		Result[0][3] =eye.x;
+        Result[1][3] =eye.y;
+        Result[2][3] =eye.z;
     /*  Test this instead of translate3D
         Result[3][0] =-dot(s, eye);
         Result[3][1] =-dot(y, eye);
         Result[3][2] = dot(f, eye);
     */  
-		return gtc::matrix_transform::translate(Result, -eye);
+		//return gtc::matrix_transform::translate(Result, -eye);
+		return Result;
     }
 
 	template <typename T> 

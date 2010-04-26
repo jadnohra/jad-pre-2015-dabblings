@@ -1,16 +1,13 @@
-#include "NeHeGL.h"
-#include "mesh.h"
-#include "glm/glm.hpp"
-#include "glm/gtc/matrix_transform.hpp"
-#include "glm/gtx/type_ptr.hpp"
-#include "glm/gtx/transform2.hpp"
-#include "arb_multisample.h"
-#define FREEGLUT_STATIC
-#include <gl\freeglut.h>			// Header File For The GLu32 Library
-#include "Random.h"
+#ifndef _APP_H
+#define _APP_H
+
 #include <vector>
 #include <algorithm>
 #include <limits>
+
+#include "Rendering.h"
+#include "Mesh.h"
+#include "Random.h"
 #include "Skeleton.h"
 #include "LoaderBVH.h"
 
@@ -27,10 +24,31 @@ public:
 		float mRadius;
 		glm::vec4 mColor;
 
+		BF::Skeleton mSkeleton;
+
 		MotionClip()
 		{
 			mRadius = 0.25f;
 			mLength = 1.0f;
+		}
+
+		bool Load(const char* inFilePath)
+		{
+			return BF::LoaderBVH::Load(inFilePath, mSkeleton, NULL);
+		}
+
+		void Update(float dt)
+		{
+			/*
+			mTestAnimFrameTime += dt;
+			if (mTestAnimFrameTime >= mTestSkeletonAnimFrames.mFrameTime)
+			{
+				while (mTestAnimFrameTime >= mTestSkeletonAnimFrames.mFrameTime)
+					mTestAnimFrameTime -= mTestSkeletonAnimFrames.mFrameTime;
+
+				mTestAnimFrame = ((mTestAnimFrame + 1) % mTestSkeletonAnimFrames.mSkeletonAnimationFrames.size());
+			}
+			*/
 		}
 
 		void Draw(const glm::mat4& inViewMatrix, bool inFocus, float inFocusCylinderLength)
@@ -177,18 +195,15 @@ public:
 	Mesh mMesh;
 	GL_Window*	mWindow;
 	
+	Random mRandom;
+
 	glm::mat4 mCameraWorldMatrix;
 	glm::mat4 mCameraViewMatrix;
 	MotionClips mMotionClips;
 	Integers mCameraSortedMotionClips;
+	
 	int mFocusClip;
 	float mFocusClipCylinderLength;
-
-	BF::Skeleton mTestSkeleton;
-	BF::JointTransforms mTestSkeletonJoints;
-	BF::SkeletonAnimationFrames mTestSkeletonAnimFrames;
-	int mTestAnimFrame;
-	float mTestAnimFrameTime;
 
 	void End()
 	{
@@ -196,13 +211,6 @@ public:
 
 	bool Load(GL_Window* pWindow)
 	{
-		//BF::LoaderBVH::Load("media/test_xyz_rot.bvh", mTestSkeleton);
-		//BF::LoaderBVH::Load("media/test.bvh", mTestSkeleton);
-		BF::LoaderBVH::Load("media/Male1_C03_Run.bvh", mTestSkeleton, &mTestSkeletonAnimFrames);
-		mTestSkeleton.ToModelSpace(mTestSkeleton.mDefaultPose, true, mTestSkeletonJoints);
-		mTestAnimFrame = -1;
-		mTestAnimFrameTime = 0.0f;
-
 		mFocusClip = -1;
 		mWindow = pWindow;
 		int argp = 0;
@@ -239,28 +247,35 @@ public:
 
 		glEnable(GL_CULL_FACE);
 
-		mCameraWorldMatrix = glm::translate(mCameraWorldMatrix, glm::vec3(0.0f, 0.0f, 5.0f));
+		mCameraWorldMatrix = glm::translate(glm::mat4(), glm::vec3(0.0f, 0.0f, 5.0f));
+		mCameraWorldMatrix = glm::lookAt2(glm::vec3(0.0f, 0.0f, 5.0f), glm::vec3(), glm::vec3(0.0f, 1.0f, 0.0f));
 
-		//if (!mTestSkeletonJoints.empty())
-		//{
-		//	mCameraWorldMatrix = glm::lookAt(glm::vec3(mCameraWorldMatrix[3]), mTestSkeletonJoints[2].mPosition, glm::vec3(0.0f, 1.0f, 0.0f));
-		//}
-
-		Random random;
-		mMotionClips.resize(100);
-
-		glm::mat4 mat_identity;
-		float range_max = (float) mMotionClips.size() * 0.1f;
-		float range_min = -range_max;
-		
-		for (int i=0; i<mMotionClips.size(); ++i)
-		{
-			mMotionClips[i].mLength = random.randr(1.0f, 8.0f);
-			mMotionClips[i].mColor = glm::vec4(random.randr(1.0f), random.randr(1.0f), random.randr(1.0f), random.randr(0.3f, 0.7f));
-			mMotionClips[i].mWorldMatrix = glm::translate(mat_identity, glm::vec3(random.randr(range_min, range_max), random.randr(range_min, range_max), random.randr(range_min, range_max)));
-		}
+		AddMotionClip(NULL);
+		AddMotionClip(NULL);
 
 		return true;
+	}
+
+	void OnFilesDropped(int count)
+	{
+		mMotionClips.reserve(mMotionClips.size()+count);
+	}
+
+	void OnFileDropped(const char* inFilePath)
+	{
+		AddMotionClip(inFilePath);
+	}
+
+	void AddMotionClip(const char* inFilePath)
+	{
+		mMotionClips.resize(mMotionClips.size()+1);
+		float range_max = 0.1f * std::max((float) mMotionClips.size(), 50.0f);
+		float range_min = -range_max;
+
+		mMotionClips.back().mLength = mRandom.randr(1.0f, 8.0f);
+		mMotionClips.back().mColor = glm::vec4(mRandom.randr(1.0f), mRandom.randr(1.0f), mRandom.randr(1.0f), mRandom.randr(0.3f, 0.7f));
+		mMotionClips.back().mWorldMatrix = glm::translate(glm::mat4(), glm::vec3(mRandom.randr(range_min, range_max), mRandom.randr(range_min, range_max), mRandom.randr(range_min, range_max)));
+		mMotionClips.back().Load(inFilePath);
 	}
 
 	bool IsKeyDown(int key)
@@ -381,70 +396,6 @@ public:
 		}
 
 		std::sort(mCameraSortedMotionClips.begin(), mCameraSortedMotionClips.end(), MotionClipCameraSpaceSort(mCameraViewMatrix, mMotionClips));
-
-		mTestAnimFrameTime += dt;
-		if (mTestAnimFrameTime >= mTestSkeletonAnimFrames.mFrameTime)
-		{
-			while (mTestAnimFrameTime >= mTestSkeletonAnimFrames.mFrameTime)
-				mTestAnimFrameTime -= mTestSkeletonAnimFrames.mFrameTime;
-
-			mTestAnimFrame = ((mTestAnimFrame + 1) % mTestSkeletonAnimFrames.mSkeletonAnimationFrames.size());
-		}
-	}
-
-	void DrawTestSkeleton(int inJointIndex)
-	{
-		glLoadMatrixf(glm::value_ptr(mCameraViewMatrix * glm::translate(glm::mat4(), mTestSkeletonJoints[inJointIndex].mPosition)));
-		glutSolidSphere(0.25f, 10.0f, 10.0f);
-		
-		int child_count = mTestSkeleton.mJointHierarchy.mJointChildrenInfos[inJointIndex].mChildCount;
-
-		if (child_count > 0)
-		{
-			int child_index = mTestSkeleton.mJointHierarchy.mJointChildrenInfos[inJointIndex].mFirstChildIndex;
-
-			for (int i=0; i<child_count; ++i)
-			{
-				int child_joint_index = mTestSkeleton.mJointHierarchy.mJointChildren[child_index++];
-
-				glLoadMatrixf(glm::value_ptr(mCameraViewMatrix));
-				glBegin(GL_LINES);
-				glVertex3f(mTestSkeletonJoints[inJointIndex].mPosition.x, mTestSkeletonJoints[inJointIndex].mPosition.y, mTestSkeletonJoints[inJointIndex].mPosition.z); 
-				glVertex3f(mTestSkeletonJoints[child_joint_index].mPosition.x, mTestSkeletonJoints[child_joint_index].mPosition.y, mTestSkeletonJoints[child_joint_index].mPosition.z); 
-				glEnd( );
-
-				DrawTestSkeleton(child_joint_index);
-			}
-		}
-	}
-
-	void DrawTestSkeleton()
-	{
-		if (mTestSkeletonJoints.empty())
-			return;
-
-		if (!mTestSkeletonAnimFrames.mSkeletonAnimationFrames.empty()
-			&& mTestAnimFrame >= 0)
-		{
-			mTestSkeleton.ToModelSpace(mTestSkeletonAnimFrames.mSkeletonAnimationFrames[mTestAnimFrame], true, mTestSkeletonJoints);
-		}
-
-		glEnable(GL_COLOR_MATERIAL);
-		glMatrixMode(GL_MODELVIEW);
-		glColor4f(0.0f, 0.0f, 0.0f, 0.5f);
-
-		DrawTestSkeleton(0);
-		
-		/*
-		for (int i=0; i<mTestSkeletonJoints.size(); ++i)
-		{
-			glLoadMatrixf(glm::value_ptr(mCameraViewMatrix * glm::translate(glm::mat4(), mTestSkeletonJoints[i].mPosition)));
-
-			glutSolidSphere(1.0f, 10.0f, 10.0f);
-		}
-		*/
-
-		glDisable(GL_COLOR_MATERIAL);
 	}
 
 	bool Draw()
@@ -505,7 +456,14 @@ public:
 		for (int i=0; i<mCameraSortedMotionClips.size(); ++i)
 			mMotionClips[mCameraSortedMotionClips[i]].Draw(view_matrix, mFocusClip == mCameraSortedMotionClips[i], mFocusClipCylinderLength);
 
-		DrawTestSkeleton();
+		{
+			glEnable(GL_COLOR_MATERIAL);
+			glMatrixMode(GL_MODELVIEW);
+			glLoadMatrixf(glm::value_ptr(view_matrix));
+			glColor4f(0.0f, 0.0f, 0.0f, 0.5f);
+			glutSolidSphere(0.02f, 10.0f, 10.0f);
+			glDisable(GL_COLOR_MATERIAL);
+		}
 
 		{
 		
@@ -595,3 +553,4 @@ public:
 
 };
 
+#endif

@@ -5,13 +5,52 @@
 
 static BOOL g_isProgramLooping;											// Window Creation Loop, For FullScreen/Windowed Toggle																		// Between Fullscreen / Windowed Mode
 static BOOL g_createFullScreen;											// If TRUE, Then Create Fullscreen
-
+App* g_App = NULL;
 
 LRESULT CALLBACK WndProc(	HWND	hWnd,			// Handle For This Window
 							UINT	uMsg,			// Message For This Window
 							WPARAM	wParam,			// Additional Message Information
 							LPARAM	lParam)			// Additional Message Information
 {
+
+	switch (uMsg)
+	{
+		case WM_DROPFILES:
+		{
+			if (g_App)
+			{
+				HDROP fDrop = (HDROP) wParam;
+
+				int dropped_file_count = DragQueryFileA(fDrop, 0xFFFFFFFF, NULL, 0);
+				char* fName = NULL;
+				int buffer_size = 0;
+
+				g_App->OnFilesDropped(dropped_file_count);
+				
+				for (int i=0; i<dropped_file_count; ++i)
+				{
+					UINT nBufSize = 1 + DragQueryFileA(fDrop, i, NULL, 0);
+
+					if (nBufSize > buffer_size)
+					{
+						buffer_size = nBufSize;
+						delete fName;
+						fName = new char[buffer_size];
+					}
+
+					DragQueryFileA(fDrop, i, fName, buffer_size);
+					g_App->OnFileDropped(fName);
+				}
+
+				delete fName;
+				DragFinish(fDrop);
+			}
+
+			return 0;
+		}
+		break;
+	}
+
 	return NeheGLWindowProc(hWnd,uMsg,wParam,lParam);
 }
 
@@ -96,7 +135,11 @@ int main()
 				TerminateApplication (&window);							// Close Window, This Will Handle The Shutdown
 			}
 			else														// Otherwise (Start The Message Pump)
-			{	// Initialize was a success
+			{	
+				g_App = &app;
+				DragAcceptFiles(window.hWnd, TRUE);
+
+				// Initialize was a success
 				isMessagePumpActive = TRUE;								// Set isMessagePumpActive To TRUE
 				while (isMessagePumpActive == TRUE)						// While The Message Pump Is Active
 				{
@@ -136,6 +179,7 @@ int main()
 			// Application Is Finished
 			app.End();
 			//Deinitialize ();											// User Defined DeInitialization
+			g_App = NULL;
 
 			DestroyWindowGL (&window);									// Destroy The Active Window
 		}

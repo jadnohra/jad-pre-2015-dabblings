@@ -624,6 +624,9 @@ namespace BF
 
 	bool LoaderBVH::Load(const char* inFilePath, Skeleton& outSkeleton, SkeletonAnimationFrames* outAnimFrames)
 	{
+		if (inFilePath == NULL)
+			return false;
+
 		LoaderBVHLineParser line_parser(outSkeleton, outAnimFrames);
 
 		printf(inFilePath);

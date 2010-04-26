@@ -309,11 +309,23 @@
 			>
 		</File>
 		<File
+			RelativePath="..\src\Rendering.h"
+			>
+		</File>
+		<File
 			RelativePath="..\src\Skeleton.cpp"
 			>
 		</File>
 		<File
 			RelativePath="..\src\Skeleton.h"
+			>
+		</File>
+		<File
+			RelativePath="..\src\SkeletonRenderer.cpp"
+			>
+		</File>
+		<File
+			RelativePath="..\src\SkeletonRenderer.h"
 			>
 		</File>
 	</Files>

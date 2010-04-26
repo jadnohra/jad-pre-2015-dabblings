@@ -181,7 +181,7 @@ namespace BF
 			return -1;
 		}
 
-		void ToModelSpace(const SkeletonAnimationFrame& inSkelAnimFrame, bool inIncludeRootTranslation, JointTransforms& outModelSpace)
+		void ToModelSpace(const SkeletonAnimationFrame& inSkelAnimFrame, bool inIncludeRootTranslation, bool inIncludeRootAnimTranslation, JointTransforms& outModelSpace) const
 		{
 			outModelSpace.resize(mJoints.size());
 			
@@ -189,21 +189,26 @@ namespace BF
 			{
 				JointTransform identity;
 
-				ToModelSpace(identity, 0, inSkelAnimFrame, inIncludeRootTranslation, outModelSpace);
+				ToModelSpace(identity, 0, inSkelAnimFrame, inIncludeRootTranslation, inIncludeRootAnimTranslation, outModelSpace);
 			}
 		}
 
-		void ToModelSpace(const JointTransform& inParentModelTransform, int inJointIndex, const SkeletonAnimationFrame& inSkelAnimFrame, bool inIncludeRootTranslation, JointTransforms& outModelSpace)
+		void ToModelSpace(const JointTransform& inParentModelTransform, int inJointIndex, const SkeletonAnimationFrame& inSkelAnimFrame, bool inIncludeRootTranslation, bool inIncludeRootAnimTranslation, JointTransforms& outModelSpace) const
 		{
 			const JointTransform& local_transform = mJoints[inJointIndex].mLocalTransform;
 			const glm::quat& pose_orientation = inSkelAnimFrame.mJointOrientations[inJointIndex];
 
 			if (inJointIndex == 0)
 			{
+				glm::vec3 root_translation;
+
 				if (inIncludeRootTranslation)
-					outModelSpace[inJointIndex].mPosition = inParentModelTransform.mPosition + (inParentModelTransform.mOrientation * (local_transform.mPosition + inSkelAnimFrame.mRootTranslation));
-				else
-					outModelSpace[inJointIndex].mPosition = glm::vec3();
+					root_translation += local_transform.mPosition;
+
+				if (inIncludeRootAnimTranslation)
+					root_translation += inSkelAnimFrame.mRootTranslation;
+
+				outModelSpace[inJointIndex].mPosition = inParentModelTransform.mPosition + (inParentModelTransform.mOrientation * (root_translation));
 			}
 			else
 				outModelSpace[inJointIndex].mPosition = inParentModelTransform.mPosition + (inParentModelTransform.mOrientation * (local_transform.mPosition));
@@ -218,7 +223,7 @@ namespace BF
 
 				for (int i=0; i<child_count; ++i)
 				{
-					ToModelSpace(outModelSpace[inJointIndex], mJointHierarchy.mJointChildren[child_index++], inSkelAnimFrame, false, outModelSpace);
+					ToModelSpace(outModelSpace[inJointIndex], mJointHierarchy.mJointChildren[child_index++], inSkelAnimFrame, false, false, outModelSpace);
 				}
 			}
 		}
