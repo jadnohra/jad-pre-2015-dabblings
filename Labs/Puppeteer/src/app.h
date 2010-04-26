@@ -3,6 +3,7 @@
 #include "glm/glm.hpp"
 #include "glm/gtc/matrix_transform.hpp"
 #include "glm/gtx/type_ptr.hpp"
+#include "glm/gtx/transform2.hpp"
 #include "arb_multisample.h"
 #define FREEGLUT_STATIC
 #include <gl\freeglut.h>			// Header File For The GLu32 Library
@@ -185,6 +186,9 @@ public:
 
 	BF::Skeleton mTestSkeleton;
 	BF::JointTransforms mTestSkeletonJoints;
+	BF::SkeletonAnimationFrames mTestSkeletonAnimFrames;
+	int mTestAnimFrame;
+	float mTestAnimFrameTime;
 
 	void End()
 	{
@@ -193,8 +197,11 @@ public:
 	bool Load(GL_Window* pWindow)
 	{
 		//BF::LoaderBVH::Load("media/test_xyz_rot.bvh", mTestSkeleton);
-		BF::LoaderBVH::Load("media/test.bvh", mTestSkeleton);
-		mTestSkeleton.ToModelSpace(mTestSkeletonJoints, true);
+		//BF::LoaderBVH::Load("media/test.bvh", mTestSkeleton);
+		BF::LoaderBVH::Load("media/Male1_C03_Run.bvh", mTestSkeleton, &mTestSkeletonAnimFrames);
+		mTestSkeleton.ToModelSpace(mTestSkeleton.mDefaultPose, true, mTestSkeletonJoints);
+		mTestAnimFrame = -1;
+		mTestAnimFrameTime = 0.0f;
 
 		mFocusClip = -1;
 		mWindow = pWindow;
@@ -234,8 +241,12 @@ public:
 
 		mCameraWorldMatrix = glm::translate(mCameraWorldMatrix, glm::vec3(0.0f, 0.0f, 5.0f));
 
-		Random random;
+		//if (!mTestSkeletonJoints.empty())
+		//{
+		//	mCameraWorldMatrix = glm::lookAt(glm::vec3(mCameraWorldMatrix[3]), mTestSkeletonJoints[2].mPosition, glm::vec3(0.0f, 1.0f, 0.0f));
+		//}
 
+		Random random;
 		mMotionClips.resize(100);
 
 		glm::mat4 mat_identity;
@@ -371,6 +382,14 @@ public:
 
 		std::sort(mCameraSortedMotionClips.begin(), mCameraSortedMotionClips.end(), MotionClipCameraSpaceSort(mCameraViewMatrix, mMotionClips));
 
+		mTestAnimFrameTime += dt;
+		if (mTestAnimFrameTime >= mTestSkeletonAnimFrames.mFrameTime)
+		{
+			while (mTestAnimFrameTime >= mTestSkeletonAnimFrames.mFrameTime)
+				mTestAnimFrameTime -= mTestSkeletonAnimFrames.mFrameTime;
+
+			mTestAnimFrame = ((mTestAnimFrame + 1) % mTestSkeletonAnimFrames.mSkeletonAnimationFrames.size());
+		}
 	}
 
 	void DrawTestSkeleton(int inJointIndex)
@@ -403,6 +422,12 @@ public:
 	{
 		if (mTestSkeletonJoints.empty())
 			return;
+
+		if (!mTestSkeletonAnimFrames.mSkeletonAnimationFrames.empty()
+			&& mTestAnimFrame >= 0)
+		{
+			mTestSkeleton.ToModelSpace(mTestSkeletonAnimFrames.mSkeletonAnimationFrames[mTestAnimFrame], true, mTestSkeletonJoints);
+		}
 
 		glEnable(GL_COLOR_MATERIAL);
 		glMatrixMode(GL_MODELVIEW);

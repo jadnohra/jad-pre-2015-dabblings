@@ -16,6 +16,7 @@ namespace BF
 		glm::quat mOrientation;
 	};
 	typedef std::vector<JointTransform> JointTransforms;
+	typedef std::vector<glm::quat> JointOrientations;
 
 
 	struct Joint
@@ -78,6 +79,33 @@ namespace BF
 	typedef std::vector<ChannelInfo> ChannelInfos;
 
 
+	class SkeletonAnimationFrame
+	{
+	public:
+
+		void Destroy()
+		{
+			mJointOrientations.clear();
+		}
+
+		JointOrientations mJointOrientations;
+		glm::vec3 mRootTranslation;
+	};
+	typedef std::vector<SkeletonAnimationFrame> aSkeletonAnimationFrame;
+
+	class SkeletonAnimationFrames
+	{
+	public:
+
+		void Destroy()
+		{
+			mSkeletonAnimationFrames.clear();
+		}
+		
+		float mFrameTime;
+		aSkeletonAnimationFrame mSkeletonAnimationFrames;
+	};
+
 	class Skeleton
 	{
 	public:
@@ -88,6 +116,7 @@ namespace BF
 			mJointHierarchy.mJointChildren.clear();
 			mJointHierarchy.mJointChildrenInfos.clear();
 			mJointInfos.clear();
+			mDefaultPose.Destroy();
 		}
 
 		int CreateChannelInfo(EChannelType inChannelType[6])
@@ -152,7 +181,7 @@ namespace BF
 			return -1;
 		}
 
-		void ToModelSpace(JointTransforms& outModelSpace, bool inIncludeRootTranslation)
+		void ToModelSpace(const SkeletonAnimationFrame& inSkelAnimFrame, bool inIncludeRootTranslation, JointTransforms& outModelSpace)
 		{
 			outModelSpace.resize(mJoints.size());
 			
@@ -160,22 +189,26 @@ namespace BF
 			{
 				JointTransform identity;
 
-				ToModelSpace(identity, 0, outModelSpace, inIncludeRootTranslation);
+				ToModelSpace(identity, 0, inSkelAnimFrame, inIncludeRootTranslation, outModelSpace);
 			}
 		}
 
-		void ToModelSpace(const JointTransform& inParentModelTransform, int inJointIndex, JointTransforms& outModelSpace, bool inIncludeRootTranslation)
+		void ToModelSpace(const JointTransform& inParentModelTransform, int inJointIndex, const SkeletonAnimationFrame& inSkelAnimFrame, bool inIncludeRootTranslation, JointTransforms& outModelSpace)
 		{
 			const JointTransform& local_transform = mJoints[inJointIndex].mLocalTransform;
+			const glm::quat& pose_orientation = inSkelAnimFrame.mJointOrientations[inJointIndex];
 
-			if (inJointIndex != 0 || inIncludeRootTranslation)
+			if (inJointIndex == 0)
 			{
-				outModelSpace[inJointIndex].mPosition = inParentModelTransform.mPosition + (inParentModelTransform.mOrientation * local_transform.mPosition);
+				if (inIncludeRootTranslation)
+					outModelSpace[inJointIndex].mPosition = inParentModelTransform.mPosition + (inParentModelTransform.mOrientation * (local_transform.mPosition + inSkelAnimFrame.mRootTranslation));
+				else
+					outModelSpace[inJointIndex].mPosition = glm::vec3();
 			}
 			else
-				outModelSpace[inJointIndex].mPosition = glm::vec3();
+				outModelSpace[inJointIndex].mPosition = inParentModelTransform.mPosition + (inParentModelTransform.mOrientation * (local_transform.mPosition));
 
-			outModelSpace[inJointIndex].mOrientation = glm::cross(inParentModelTransform.mOrientation, local_transform.mOrientation);
+			outModelSpace[inJointIndex].mOrientation = glm::cross(inParentModelTransform.mOrientation, pose_orientation);
 			
 			int child_count = mJointHierarchy.mJointChildrenInfos[inJointIndex].mChildCount;
 
@@ -185,7 +218,7 @@ namespace BF
 
 				for (int i=0; i<child_count; ++i)
 				{
-					ToModelSpace(outModelSpace[inJointIndex], mJointHierarchy.mJointChildren[child_index++], outModelSpace, false);
+					ToModelSpace(outModelSpace[inJointIndex], mJointHierarchy.mJointChildren[child_index++], inSkelAnimFrame, false, outModelSpace);
 				}
 			}
 		}
@@ -196,7 +229,10 @@ namespace BF
 		JointHierarchy mJointHierarchy;
 		JointInfos mJointInfos;
 		ChannelInfos mChannelInfos;
+		SkeletonAnimationFrame mDefaultPose;
 	};
+
+	
 }
 
 #endif

@@ -16,8 +16,9 @@ namespace BF
 
 	public:
 
-		LoaderBVHLineParser(Skeleton& outSkeleton)
+		LoaderBVHLineParser(Skeleton& outSkeleton, SkeletonAnimationFrames* outAnimFrames)
 			:	mSkeleton(outSkeleton)
+			,	mAnimFrames(outAnimFrames)
 			,	mPredicate(" \t\r")
 			,	mParseState(Parse_START)
 			,	mErrorLine(-1)
@@ -27,6 +28,9 @@ namespace BF
 			,	mFrameIndex(0)
 		{
 			mSkeleton.Destroy();
+
+			if (mAnimFrames)
+				mAnimFrames->Destroy();
 		}
 
 		void buildJointHierarchy(const JointTreeNode& node, int& ioChildIndex)
@@ -435,8 +439,21 @@ namespace BF
 					{
 						if (mStringList.size() == mFrameChannelCount)
 						{
-							if (mFrameIndex == 0)
+							if ((mFrameIndex == 0) || (mAnimFrames != NULL))
 							{
+								if (mAnimFrames)
+								{
+									mAnimFrames->mSkeletonAnimationFrames.resize(mAnimFrames->mSkeletonAnimationFrames.size()+1);
+									mAnimFrames->mSkeletonAnimationFrames.back().mJointOrientations.resize(mJointTree.size());
+								}
+
+								if (mFrameIndex == 0)
+								{
+									if (mAnimFrames)
+										mAnimFrames->mFrameTime = mFrameTime;
+									mSkeleton.mDefaultPose.mJointOrientations.resize(mJointTree.size());
+								}
+
 								int data_index = 0;
 
 								for (size_t joint_index=0; joint_index<mJointTree.size(); ++joint_index)
@@ -516,35 +533,28 @@ namespace BF
 										if (mErrorLine < 0)
 										{
 											if (translation_was_set)
-												mSkeleton.mJoints[node.mJointIndex].mLocalTransform.mPosition += LoaderBVH::ToOpenGLTranslation(translation);
+											{
+												if (node.mJointIndex == 0 && mAnimFrames)
+													mAnimFrames->mSkeletonAnimationFrames.back().mRootTranslation = LoaderBVH::ToOpenGLTranslation(translation);
+
+												if (mFrameIndex == 0)
+												{
+													//mSkeleton.mJoints[node.mJointIndex].mLocalTransform.mPosition += LoaderBVH::ToOpenGLTranslation(translation);
+												}
+											}
 											
 											if (rotation_was_set)
 											{
-												// BVH order: RPY
-												// concatenate the matrices from left to right Y, X and Z.
-												// An alternative method is to compute the rotation matrix directly. A method for doing this is described in Graphics Gems II, p 322.
+												glm::quat orientation = LoaderBVH::ToOpenGLOrientation(euler_angles_deg);
 
-												//glm::vec3 pitch_yaw_roll(glm::radians(euler_angles_deg.z), glm::radians(euler_angles_deg.y), glm::radians(euler_angles_deg.x));
+												if (mFrameIndex == 0)
+												{
+													mSkeleton.mJoints[node.mJointIndex].mLocalTransform.mOrientation = orientation;
+													mSkeleton.mDefaultPose.mJointOrientations[node.mJointIndex] = orientation;
+												}
 
-												// ref
-												//glm::vec3 pitch_yaw_roll(glm::radians(euler_angles_deg.y), glm::radians(euler_angles_deg.z), glm::radians(euler_angles_deg.x));
-												//glm::vec3 pitch_yaw_roll(-glm::radians(euler_angles_deg.y), -glm::radians(euler_angles_deg.z), -glm::radians(euler_angles_deg.x));
-												
-												// not bad
-												//glm::vec3 pitch_yaw_roll(glm::radians(euler_angles_deg.x), glm::radians(euler_angles_deg.y), glm::radians(euler_angles_deg.z));
-
-												//glm::vec3 pitch_yaw_roll(-glm::radians(euler_angles_deg.x), -glm::radians(euler_angles_deg.y), -glm::radians(euler_angles_deg.z));
-
-												// not bad
-												//glm::vec3 pitch_yaw_roll(glm::radians(euler_angles_deg.x), glm::radians(euler_angles_deg.z), glm::radians(euler_angles_deg.y));
-
-												//glm::vec3 pitch_yaw_roll(-glm::radians(euler_angles_deg.x), -glm::radians(euler_angles_deg.z), -glm::radians(euler_angles_deg.y));
-
-												//glm::vec3 pitch_yaw_roll(glm::radians(euler_angles_deg.y), glm::radians(euler_angles_deg.x), glm::radians(euler_angles_deg.z));
-												//glm::vec3 pitch_yaw_roll(glm::radians(euler_angles_deg.z), glm::radians(euler_angles_deg.x), glm::radians(euler_angles_deg.y));
-												//glm::vec3 pitch_yaw_roll(glm::radians(euler_angles_deg.z), glm::radians(euler_angles_deg.y), glm::radians(euler_angles_deg.x));
-
-												mSkeleton.mJoints[node.mJointIndex].mLocalTransform.mOrientation = LoaderBVH::ToOpenGLOrientation(euler_angles_deg);
+												if (mAnimFrames)
+													mAnimFrames->mSkeletonAnimationFrames.back().mJointOrientations[node.mJointIndex] = orientation;
 											}
 										}
 									}
@@ -571,6 +581,7 @@ namespace BF
 	private:
 
 		Skeleton& mSkeleton;
+		SkeletonAnimationFrames* mAnimFrames;
 
 		std::string mDelimiters;
 		strtk::multiple_char_delimiter_predicate mPredicate;
@@ -611,9 +622,9 @@ namespace BF
 		std::vector<int> mJointToTreeIndex;
 	};
 
-	bool LoaderBVH::Load(const char* inFilePath, Skeleton& outSkeleton)
+	bool LoaderBVH::Load(const char* inFilePath, Skeleton& outSkeleton, SkeletonAnimationFrames* outAnimFrames)
 	{
-		LoaderBVHLineParser line_parser(outSkeleton);
+		LoaderBVHLineParser line_parser(outSkeleton, outAnimFrames);
 
 		printf(inFilePath);
 		printf("\n");
