@@ -273,6 +273,14 @@
 			>
 		</File>
 		<File
+			RelativePath="..\src\Camera.cpp"
+			>
+		</File>
+		<File
+			RelativePath="..\src\Camera.h"
+			>
+		</File>
+		<File
 			RelativePath="..\src\LoaderBVH.cpp"
 			>
 		</File>

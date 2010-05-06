@@ -56,6 +56,12 @@ typedef struct {									// Contains Information Vital To A Window
 	GL_WindowInit		init;						// Window Init
 	BOOL				isVisible;					// Window Visible?
 	DWORD				lastTickCount;				// Tick Counter
+
+	bool IsKeyDown(int key) const
+	{
+		return (bool) (keys->keyDown[key]);
+	}
+
 } GL_Window;										// GL_Window
 
 void TerminateApplication (GL_Window* window);		// Terminate The Application
