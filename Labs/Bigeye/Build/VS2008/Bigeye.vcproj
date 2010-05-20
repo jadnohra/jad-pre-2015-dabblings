@@ -170,6 +170,14 @@
 	</References>
 	<Files>
 		<File
+			RelativePath="..\..\src\ARB_Multisample.cpp"
+			>
+		</File>
+		<File
+			RelativePath="..\..\src\ARB_Multisample.h"
+			>
+		</File>
+		<File
 			RelativePath="..\..\src\Bigeye.cpp"
 			>
 		</File>
@@ -186,7 +194,27 @@
 			>
 		</File>
 		<File
+			RelativePath="..\..\src\glext.h"
+			>
+		</File>
+		<File
 			RelativePath="..\..\src\main_test.cpp"
+			>
+		</File>
+		<File
+			RelativePath="..\..\src\OGL.h"
+			>
+		</File>
+		<File
+			RelativePath="..\..\src\OGLState.cpp"
+			>
+		</File>
+		<File
+			RelativePath="..\..\src\OGLState.h"
+			>
+		</File>
+		<File
+			RelativePath="..\..\src\wglext.h"
 			>
 		</File>
 	</Files>
