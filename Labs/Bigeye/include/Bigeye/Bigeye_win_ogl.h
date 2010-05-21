@@ -35,6 +35,7 @@ namespace BE
 		EOGLState_Reset,
 		EOGLState_NativeWindowWidget,
 		EOGLState_NormalWidget,
+		EOGLState_WidgetShadow,
 		EOGLState_FontRender,
 		EOGLState_Count,
 	};
@@ -56,6 +57,14 @@ namespace BE
 
 
 	class OGLState_NormalWidget : public OGLState
+	{
+	public:
+
+		virtual void	Set();
+	};
+
+
+	class OGLState_WidgetShadow : public OGLState
 	{
 	public:
 

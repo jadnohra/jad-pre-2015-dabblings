@@ -87,13 +87,49 @@ void SimpleRectangleWidget::Render(const App& inApp, float inTimeSecs, const Sce
 	glm::vec3 world_pos = inParentTransform * mPos;
 
 	{
-		inApp.GetOGLStateManager().Enable(EOGLState_NormalWidget);
+		glm::vec3 shadow_pos = world_pos;
+		shadow_pos.x += -3.0f;
+		shadow_pos.y += 4.0f;
 
-		glColor4f(1.0f, 1.0f, 1.0f, 0.0f);
-		//glLineWidth(1.0f);
+		glm::vec2 shadow_size = mSize;
+		//shadow_size.x += 4.0f;
+		
+		inApp.GetOGLStateManager().Enable(EOGLState_WidgetShadow);
+
+		glColor4f(0.7f, 0.7f, 0.7f, 1.0f);
 
 		glBegin(GL_QUADS);
 		
+		glVertex2f(shadow_pos.x, shadow_pos.y);
+		glVertex2f(shadow_pos.x+shadow_size.x, shadow_pos.y);
+		glVertex2f(shadow_pos.x+shadow_size.x, shadow_pos.y+shadow_size.y);
+		glVertex2f(shadow_pos.x, shadow_pos.y+shadow_size.y);
+
+		glEnd();
+	}
+
+	{
+		inApp.GetOGLStateManager().Enable(EOGLState_NormalWidget);
+
+		glColor4f(1.0f, 1.0f, 0.0f, 1.0f);
+
+		glBegin(GL_QUADS);
+		
+		glColor4f(84.0f/255.0f, 84.0f/255.0f, 84.0f/255.0f, 1.0f);
+		glVertex2f(world_pos.x, world_pos.y);
+		glColor4f(82.0f/255.0f, 82.0f/255.0f, 82.0f/255.0f, 1.0f);
+		glVertex2f(world_pos.x+mSize.x, world_pos.y);
+		glColor4f(37.0f/255.0f, 37.0f/255.0f, 37.0f/255.0f, 1.0f);
+		glVertex2f(world_pos.x+mSize.x, world_pos.y+mSize.y);
+		glColor4f(44.0f/255.0f, 44.0f/255.0f, 44.0f/255.0f, 1.0f);
+		glVertex2f(world_pos.x, world_pos.y+mSize.y);
+
+		glEnd();
+
+		glBegin(GL_LINE_LOOP);
+		
+		glColor4f(0.0f, 0.0f, 0.0f, 1.0f);
+
 		glVertex2f(world_pos.x, world_pos.y);
 		glVertex2f(world_pos.x+mSize.x, world_pos.y);
 		glVertex2f(world_pos.x+mSize.x, world_pos.y+mSize.y);
@@ -112,6 +148,14 @@ void SimpleRectangleWidget::Render(const App& inApp, float inTimeSecs, const Sce
 void OGLState_NormalWidget::Set()
 {
 	glDisable(GL_BLEND);
+	glDisable(GL_TEXTURE_2D);
+}
+
+
+void OGLState_WidgetShadow::Set()
+{
+	glEnable(GL_BLEND);
+	glBlendFunc(GL_DST_COLOR,GL_ZERO);
 	glDisable(GL_TEXTURE_2D);
 }
 
@@ -340,6 +384,7 @@ bool NativeWindowWidget::Create(App& inApp, const WideString& inWindowName, int 
 		inApp.GetOGLStateManager().BuildSetState(new OGLState(), EOGLState_Reset);
 		inApp.GetOGLStateManager().BuildSetState(new OGLState_NativeWindowWidget(*this), EOGLState_NativeWindowWidget);
 		inApp.GetOGLStateManager().BuildSetState(new OGLState_NormalWidget(), EOGLState_NormalWidget, EOGLState_NativeWindowWidget);
+		inApp.GetOGLStateManager().BuildSetState(new OGLState_WidgetShadow(), EOGLState_WidgetShadow, EOGLState_NativeWindowWidget);
 		inApp.GetOGLStateManager().BuildSetState(new OGLState_FontRender(mDefaultFont), EOGLState_FontRender, EOGLState_NativeWindowWidget);
 		inApp.GetOGLStateManager().EndBuild();
 	}
@@ -360,7 +405,7 @@ void NativeWindowWidget::Test(App& inApp)
 
 	{
 		SimpleRectangleWidget* widget = new SimpleRectangleWidget();
-		widget->Create(glm::vec2(30.0f, 40.0f), glm::vec2(200.0f, 200.0f));
+		widget->Create(glm::vec2(130.0f, 240.0f), glm::vec2(200.0f, 200.0f));
 		mChildren.mChildWidgets.push_back(widget);
 	}
 }
@@ -407,6 +452,7 @@ void NativeWindowWidget::Render(const App& inApp, float inTimeSecs, const SceneT
 	inApp.GetOGLStateManager().Enable(EOGLState_NativeWindowWidget);
 
 	glClearColor(0.0f, 0.0f, 0.0f, 1.0f);
+	glClearColor(39.0f/255.0f, 39.0f/255.0f, 39.0f/255.0f, 1.0f);
 	//glClearColor(49.0f/255.0f, 140.0f/255.0f, 231.0f / 255.0f, 1.0f);
 	
 	//glClearColor(100.0f/255.0f, 149.0f/255.0f, 237.0f / 255.0f, 1.0f);
