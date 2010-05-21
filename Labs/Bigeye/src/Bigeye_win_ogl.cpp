@@ -84,18 +84,35 @@ bool SimpleRectangleWidget::Create(const glm::vec2& inPos, const glm::vec2& inSi
 
 void SimpleRectangleWidget::Render(const App& inApp, float inTimeSecs, const SceneTransform& inParentTransform)
 {
-	glColor4f(1.0f, 1.0f, 1.0f, 1.0f);
-	glLineWidth(1.0f);
-	glBegin(GL_LINE_LOOP);
-
 	glm::vec3 world_pos = inParentTransform * mPos;
 
-	glVertex2f(world_pos.x, world_pos.y);
-	glVertex2f(world_pos.x+mSize.x, world_pos.y);
-	glVertex2f(world_pos.x+mSize.x, world_pos.y+mSize.y);
-	glVertex2f(world_pos.x, world_pos.y+mSize.y);
+	{
+		inApp.GetOGLStateManager().Enable(EOGLState_NormalWidget);
 
-	glEnd();
+		glColor4f(1.0f, 1.0f, 1.0f, 0.0f);
+		//glLineWidth(1.0f);
+
+		glBegin(GL_QUADS);
+		
+		glVertex2f(world_pos.x, world_pos.y);
+		glVertex2f(world_pos.x+mSize.x, world_pos.y);
+		glVertex2f(world_pos.x+mSize.x, world_pos.y+mSize.y);
+		glVertex2f(world_pos.x, world_pos.y+mSize.y);
+
+		glEnd();
+	}
+
+	{
+		const OGLState_FontRender* font_render = (const OGLState_FontRender*) inApp.GetOGLStateManager().Enable(EOGLState_FontRender);
+		font_render->Render("Hey", world_pos.x, world_pos.y);
+	}
+}
+
+
+void OGLState_NormalWidget::Set()
+{
+	glDisable(GL_BLEND);
+	glDisable(GL_TEXTURE_2D);
 }
 
 
@@ -300,6 +317,7 @@ bool NativeWindowWidget::Create(App& inApp, const WideString& inWindowName, int 
 		return false;	
 	}
 
+	/*
 	if(!arbMultisampleSupported && CHECK_FOR_MULTISAMPLE)
 	{
 		if(InitMultisample(inApp.GetHINSTANCE(), mHWND, pfd))
@@ -309,23 +327,30 @@ bool NativeWindowWidget::Create(App& inApp, const WideString& inWindowName, int 
 			return Create(inApp, inWindowName, inWidth, inHeight);
 		}
 	}
+	*/
 
 	ShowWindow (mHWND, SW_NORMAL);	
 
 	//ReshapeGL (window->init.width, window->init.height);				// Reshape Our GL Window
 
-	inApp.GetOGLStateManager().Reserve(EOGLState_Count);
-	if (inApp.GetOGLStateManager().InsertState(new OGLState_NativeWindowWidget(*this), EOGLState_NativeWindowWidget))
 	{
-		Test();
-		return true;
+		mDefaultFont.Create("DroidSans.ttf", 16.0f);
+
+		inApp.GetOGLStateManager().StartBuild(EOGLState_Count);
+		inApp.GetOGLStateManager().BuildSetState(new OGLState(), EOGLState_Reset);
+		inApp.GetOGLStateManager().BuildSetState(new OGLState_NativeWindowWidget(*this), EOGLState_NativeWindowWidget);
+		inApp.GetOGLStateManager().BuildSetState(new OGLState_NormalWidget(), EOGLState_NormalWidget, EOGLState_NativeWindowWidget);
+		inApp.GetOGLStateManager().BuildSetState(new OGLState_FontRender(mDefaultFont), EOGLState_FontRender, EOGLState_NativeWindowWidget);
+		inApp.GetOGLStateManager().EndBuild();
 	}
 
-	return false;
+	Test(inApp);
+	
+	return true;
 }
 
 
-void NativeWindowWidget::Test()
+void NativeWindowWidget::Test(App& inApp)
 {
 	{
 		SimpleRectangleWidget* widget = new SimpleRectangleWidget();
@@ -379,17 +404,24 @@ void NativeWindowWidget::Update(const App& inApp, float inTimeSecs, const SceneT
 
 void NativeWindowWidget::Render(const App& inApp, float inTimeSecs, const SceneTransform& inParentTransform) 
 {
-	inApp.GetOGLStateManager().SetState(EOGLState_NativeWindowWidget);
+	inApp.GetOGLStateManager().Enable(EOGLState_NativeWindowWidget);
 
-	glClearColor(49.0f/255.0f, 140.0f/255.0f, 231.0f / 255.0f, 1.0f);
+	glClearColor(0.0f, 0.0f, 0.0f, 1.0f);
+	//glClearColor(49.0f/255.0f, 140.0f/255.0f, 231.0f / 255.0f, 1.0f);
+	
 	//glClearColor(100.0f/255.0f, 149.0f/255.0f, 237.0f / 255.0f, 1.0f);
 	//glClearColor(75.0f/255.0f, 146.0f/255.0f, 219.0f / 255.0f, 1.0f);
 	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);	// Clear Screen And Depth Buffer
 
 	mChildren.Render(inApp, inTimeSecs, inParentTransform, kIdentitySceneTransform);
 
+	{
+		const OGLState_FontRender* font_render = (const OGLState_FontRender*) inApp.GetOGLStateManager().Enable(EOGLState_FontRender);
+		font_render->Render("AbcdefGhIJK", 300.0f, 100.0f);
+	}
+
 	SwapBuffers(mHDC);
-	inApp.GetOGLStateManager().SetState(EOGLState_Reset);
+	inApp.GetOGLStateManager().Enable(EOGLState_Reset);
 }
 
 

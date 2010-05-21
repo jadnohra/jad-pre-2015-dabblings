@@ -3,9 +3,11 @@
 #define _INCLUDED_BIGEYE_BIGEYE_WIN_OGL_H
 
 #include <windows.h>
+#include "glm/glm.hpp"
 #include "OGL.h"
 #include "OGLState.h"
-#include "glm/glm.hpp"
+#include "OGLFontRender.h"
+
 
 namespace BE
 {
@@ -30,8 +32,10 @@ namespace BE
 
 	enum EOGLWidgetState
 	{
-		EOGLState_NativeWindowWidget,
 		EOGLState_Reset,
+		EOGLState_NativeWindowWidget,
+		EOGLState_NormalWidget,
+		EOGLState_FontRender,
 		EOGLState_Count,
 	};
 
@@ -51,6 +55,14 @@ namespace BE
 	};
 
 
+	class OGLState_NormalWidget : public OGLState
+	{
+	public:
+
+		virtual void	Set();
+	};
+
+	
 	class ChildWidgetContainer
 	{
 	public:
@@ -99,13 +111,14 @@ namespace BE
 	protected:
 
 		void			Destroy();
-		void			Test();
+		void			Test(App& inApp);
 
 		bool	mIsWNDCLASSRegistered;
 		HWND	mHWND;
 		HDC		mHDC;
 		HGLRC	mHRC;
 		ChildWidgetContainer mChildren;
+		OGLFontInstance		 mDefaultFont;	
 	};
 
 	struct InputEventInfo

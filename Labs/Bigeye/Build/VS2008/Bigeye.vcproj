@@ -18,7 +18,7 @@
 	<Configurations>
 		<Configuration
 			Name="Debug|Win32"
-			OutputDirectory="$(SolutionDir)\..\lib\$(ConfigurationName)"
+			OutputDirectory="$(SolutionDir)\..\..\lib\"
 			IntermediateDirectory="$(SolutionDir)\BuildWorkFiles\$(ConfigurationName)"
 			ConfigurationType="1"
 			CharacterSet="1"
@@ -61,6 +61,7 @@
 			/>
 			<Tool
 				Name="VCLinkerTool"
+				OutputFile="$(OutDir)\$(ProjectName)_d.exe"
 				LinkIncremental="2"
 				AdditionalLibraryDirectories="../../../Dependencies/freeglut"
 				GenerateDebugInformation="true"
@@ -178,6 +179,10 @@
 			>
 		</File>
 		<File
+			RelativePath="..\..\src\Assert.h"
+			>
+		</File>
+		<File
 			RelativePath="..\..\src\Bigeye.cpp"
 			>
 		</File>
@@ -206,11 +211,27 @@
 			>
 		</File>
 		<File
+			RelativePath="..\..\src\OGLFontRender.cpp"
+			>
+		</File>
+		<File
+			RelativePath="..\..\src\OGLFontRender.h"
+			>
+		</File>
+		<File
 			RelativePath="..\..\src\OGLState.cpp"
 			>
 		</File>
 		<File
 			RelativePath="..\..\src\OGLState.h"
+			>
+		</File>
+		<File
+			RelativePath="..\..\src\Platform.h"
+			>
+		</File>
+		<File
+			RelativePath="..\..\src\stb_truetype.h"
 			>
 		</File>
 		<File
