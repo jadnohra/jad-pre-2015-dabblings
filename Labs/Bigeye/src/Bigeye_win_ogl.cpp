@@ -1,11 +1,10 @@
 #ifdef WIN32
 #include "../include/Bigeye/Bigeye_win_ogl.h"
 #include "ARB_Multisample.h"
+#include "ShapeUtil.h"
 
 namespace BE
 {
-
-//SceneTransform kIdentitySceneTransform;
 
 
 WideString::WideString()
@@ -55,21 +54,21 @@ void ChildWidgetContainer::Delete()
 }
 
 
-void ChildWidgetContainer::Update(const App& inApp, float inTimeSecs, const SceneTransform& inParentTransform, const SceneTransform& inParentLocalTransform)
+void ChildWidgetContainer::Update(const App& inApp, float inTimeSecs, const SceneTransform& inParentTransform, const SceneTransform& inParentLocalTransform, bool inParentTransformDirty)
 {
 	SceneTransform parent_world_tfm = inParentTransform * inParentLocalTransform;
 
 	for (size_t i=0; i<mChildWidgets.size(); ++i)
-		mChildWidgets[i]->Update(inApp, inTimeSecs, parent_world_tfm);
+		mChildWidgets[i]->Update(inApp, inTimeSecs, parent_world_tfm, inParentTransformDirty);
 }
 
 
-void ChildWidgetContainer::Render(const App& inApp, float inTimeSecs, const SceneTransform& inParentTransform, const SceneTransform& inParentLocalTransform)
+void ChildWidgetContainer::Render(const App& inApp, float inTimeSecs, const SceneTransform& inParentTransform, const SceneTransform& inParentLocalTransform, bool inParentTransformDirty)
 {
 	SceneTransform parent_world_tfm = inParentTransform * inParentLocalTransform;
 
 	for (size_t i=0; i<mChildWidgets.size(); ++i)
-		mChildWidgets[i]->Render(inApp, inTimeSecs, parent_world_tfm);
+		mChildWidgets[i]->Render(inApp, inTimeSecs, parent_world_tfm, inParentTransformDirty);
 }
 
 
@@ -82,60 +81,72 @@ bool SimpleRectangleWidget::Create(const glm::vec2& inPos, const glm::vec2& inSi
 }
 
 
-void SimpleRectangleWidget::Render(const App& inApp, float inTimeSecs, const SceneTransform& inParentTransform)
+void SimpleRectangleWidget::UpdateGeometry(const glm::vec2& inWorldPos)
+{
+	{
+		static float shades[4] = {84.0f/255.0f, 82.0f/255.0f, 37.0f/255.0f, 34.0f/255.0f};
+		mRectangle.SetPosSize(inWorldPos, mSize, 10.0f, 5, shades);
+	}
+
+	{
+		glm::vec2 shadow_pos = inWorldPos;
+		shadow_pos.x += -4.0f;
+		shadow_pos.y += 5.0f;
+
+		glm::vec2 shadow_size = mSize;
+		shadow_size.x += 2.0f;
+
+		static float shades[4] = {0.85f, 1.0f, 0.85f, 0.8f};
+		mShadowRectangle.SetPosSize(shadow_pos, shadow_size, 10.0f, 5, shades);
+	}
+}
+
+
+void SimpleRectangleWidget::Update(const App& inApp, float inTimeSecs, const SceneTransform& inParentTransform, bool inParentTransformDirty)
+{
+	if (inParentTransformDirty || !mRectangle.IsSet())
+	{
+		glm::vec3 world_pos = inParentTransform * mPos;
+		UpdateGeometry(to2d_point(world_pos));
+	}
+}
+
+
+void SimpleRectangleWidget::Render(const App& inApp, float inTimeSecs, const SceneTransform& inParentTransform, bool inParentTransformDirty)
 {
 	glm::vec3 world_pos = inParentTransform * mPos;
 
 	{
-		glm::vec3 shadow_pos = world_pos;
-		shadow_pos.x += -3.0f;
-		shadow_pos.y += 4.0f;
+		glm::vec2 shadow_pos = todim<glm::vec3, glm::vec2>::point(world_pos);
+		shadow_pos.x += -4.0f;
+		shadow_pos.y += 5.0f;
 
 		glm::vec2 shadow_size = mSize;
-		//shadow_size.x += 4.0f;
+		shadow_size.x += 2.0f;
 		
 		inApp.GetOGLStateManager().Enable(EOGLState_WidgetShadow);
+		mShadowRectangle.RenderGL();
 
-		glColor4f(0.7f, 0.7f, 0.7f, 1.0f);
-
+		/*
 		glBegin(GL_QUADS);
 		
+		glColor4f(0.85f, 0.85f, 0.85f, 1.0f);
 		glVertex2f(shadow_pos.x, shadow_pos.y);
+		glColor4f(1.0f, 1.0f, 1.0f, 1.0f);
 		glVertex2f(shadow_pos.x+shadow_size.x, shadow_pos.y);
+		glColor4f(0.85f, 0.85f, 0.85f, 1.0f);
 		glVertex2f(shadow_pos.x+shadow_size.x, shadow_pos.y+shadow_size.y);
+		glColor4f(0.7f, 0.7f, 0.7f, 1.0f);
 		glVertex2f(shadow_pos.x, shadow_pos.y+shadow_size.y);
 
 		glEnd();
+		*/
 	}
 
 	{
 		inApp.GetOGLStateManager().Enable(EOGLState_NormalWidget);
-
-		glColor4f(1.0f, 1.0f, 0.0f, 1.0f);
-
-		glBegin(GL_QUADS);
-		
-		glColor4f(84.0f/255.0f, 84.0f/255.0f, 84.0f/255.0f, 1.0f);
-		glVertex2f(world_pos.x, world_pos.y);
-		glColor4f(82.0f/255.0f, 82.0f/255.0f, 82.0f/255.0f, 1.0f);
-		glVertex2f(world_pos.x+mSize.x, world_pos.y);
-		glColor4f(37.0f/255.0f, 37.0f/255.0f, 37.0f/255.0f, 1.0f);
-		glVertex2f(world_pos.x+mSize.x, world_pos.y+mSize.y);
-		glColor4f(44.0f/255.0f, 44.0f/255.0f, 44.0f/255.0f, 1.0f);
-		glVertex2f(world_pos.x, world_pos.y+mSize.y);
-
-		glEnd();
-
-		glBegin(GL_LINE_LOOP);
-		
-		glColor4f(0.0f, 0.0f, 0.0f, 1.0f);
-
-		glVertex2f(world_pos.x, world_pos.y);
-		glVertex2f(world_pos.x+mSize.x, world_pos.y);
-		glVertex2f(world_pos.x+mSize.x, world_pos.y+mSize.y);
-		glVertex2f(world_pos.x, world_pos.y+mSize.y);
-
-		glEnd();
+		const float outline_color[4] = { 0.0f, 0.0f, 0.0f, 1.0f };
+		mRectangle.RenderGL(outline_color);
 	}
 
 	{
@@ -361,7 +372,6 @@ bool NativeWindowWidget::Create(App& inApp, const WideString& inWindowName, int 
 		return false;	
 	}
 
-	/*
 	if(!arbMultisampleSupported && CHECK_FOR_MULTISAMPLE)
 	{
 		if(InitMultisample(inApp.GetHINSTANCE(), mHWND, pfd))
@@ -371,7 +381,6 @@ bool NativeWindowWidget::Create(App& inApp, const WideString& inWindowName, int 
 			return Create(inApp, inWindowName, inWidth, inHeight);
 		}
 	}
-	*/
 
 	ShowWindow (mHWND, SW_NORMAL);	
 
@@ -397,6 +406,7 @@ bool NativeWindowWidget::Create(App& inApp, const WideString& inWindowName, int 
 
 void NativeWindowWidget::Test(App& inApp)
 {
+	
 	{
 		SimpleRectangleWidget* widget = new SimpleRectangleWidget();
 		widget->Create(glm::vec2(10.0f, 100.0f), glm::vec2(50.0f, 200.0f));
@@ -408,6 +418,14 @@ void NativeWindowWidget::Test(App& inApp)
 		widget->Create(glm::vec2(130.0f, 240.0f), glm::vec2(200.0f, 200.0f));
 		mChildren.mChildWidgets.push_back(widget);
 	}
+	
+	/*
+	{
+		SimpleRectangleWidget* widget = new SimpleRectangleWidget();
+		widget->Create(glm::vec2(10.0f, 100.0f), glm::vec2(500.0f, 600.0f));
+		mChildren.mChildWidgets.push_back(widget);
+	}
+	*/
 }
 
 
@@ -438,16 +456,19 @@ void OGLState_NativeWindowWidget::Set()
 
 	// For 2D pixel precise mode
 	glTranslatef (0.375f, 0.375f, 0.0f);
+
+	//glPolygonMode( GL_FRONT_AND_BACK, GL_LINE );
+	//glPolygonMode( GL_FRONT_AND_BACK, GL_FILL );
 }
 
 
-void NativeWindowWidget::Update(const App& inApp, float inTimeSecs, const SceneTransform& inParentTransform) 
+void NativeWindowWidget::Update(const App& inApp, float inTimeSecs, const SceneTransform& inParentTransform, bool inParentTransformDirty) 
 {
-	mChildren.Update(inApp, inTimeSecs, inParentTransform, kIdentitySceneTransform);
+	mChildren.Update(inApp, inTimeSecs, inParentTransform, kIdentitySceneTransform, inParentTransformDirty || false);
 }
 
 
-void NativeWindowWidget::Render(const App& inApp, float inTimeSecs, const SceneTransform& inParentTransform) 
+void NativeWindowWidget::Render(const App& inApp, float inTimeSecs, const SceneTransform& inParentTransform, bool inParentTransformDirty) 
 {
 	inApp.GetOGLStateManager().Enable(EOGLState_NativeWindowWidget);
 
@@ -459,7 +480,7 @@ void NativeWindowWidget::Render(const App& inApp, float inTimeSecs, const SceneT
 	//glClearColor(75.0f/255.0f, 146.0f/255.0f, 219.0f / 255.0f, 1.0f);
 	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);	// Clear Screen And Depth Buffer
 
-	mChildren.Render(inApp, inTimeSecs, inParentTransform, kIdentitySceneTransform);
+	mChildren.Render(inApp, inTimeSecs, inParentTransform, kIdentitySceneTransform, inParentTransformDirty || false);
 
 	{
 		const OGLState_FontRender* font_render = (const OGLState_FontRender*) inApp.GetOGLStateManager().Enable(EOGLState_FontRender);
@@ -548,8 +569,8 @@ bool App::Update(float inTimeSecs)
 
 		SceneTransform identity;
 
-		mWindow->Update(*this, inTimeSecs, identity);
-		mWindow->Render(*this, inTimeSecs, identity);
+		mWindow->Update(*this, inTimeSecs, identity, false);
+		mWindow->Render(*this, inTimeSecs, identity, false);
 
 		//else												
 		{

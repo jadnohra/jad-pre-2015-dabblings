@@ -3,11 +3,11 @@
 #define _INCLUDED_BIGEYE_BIGEYE_WIN_OGL_H
 
 #include <windows.h>
-#include "glm/glm.hpp"
+#include "BEMath.h"
 #include "OGL.h"
 #include "OGLState.h"
 #include "OGLFontRender.h"
-
+#include "RoundedRectangle.h"
 
 namespace BE
 {
@@ -18,15 +18,13 @@ namespace BE
 	{
 	};
 
-	typedef glm::mat3 SceneTransform;
-	static const SceneTransform kIdentitySceneTransform;
 
 	class Widget
 	{
 	public:
 
-		virtual void Update(const App& inApp, float inTimeSecs, const SceneTransform& inParentTransform) {}
-		virtual void Render(const App& inApp, float inTimeSecs, const SceneTransform& inParentTransform) {}
+		virtual void Update(const App& inApp, float inTimeSecs, const SceneTransform& inParentTransform, bool inParentTransformDirty) {}
+		virtual void Render(const App& inApp, float inTimeSecs, const SceneTransform& inParentTransform, bool inParentTransformDirty) {}
 	};
 
 
@@ -77,8 +75,8 @@ namespace BE
 	public:
 
 		void	Delete();
-		void	Update(const App& inApp, float inTimeSecs, const SceneTransform& inParentTransform, const SceneTransform& inParentLocalTransform);
-		void	Render(const App& inApp, float inTimeSecs, const SceneTransform& inParentTransform, const SceneTransform& inParentLocalTransform);
+		void	Update(const App& inApp, float inTimeSecs, const SceneTransform& inParentTransform, const SceneTransform& inParentLocalTransform, bool inParentTransformDirty);
+		void	Render(const App& inApp, float inTimeSecs, const SceneTransform& inParentTransform, const SceneTransform& inParentLocalTransform, bool inParentTransformDirty);
 
 	public:
 
@@ -92,13 +90,20 @@ namespace BE
 
 		bool		Create(const glm::vec2& inPos, const glm::vec2& inSize);
 
-		virtual void Render(const App& inApp, float inTimeSecs, const SceneTransform& inParentTransform);
+		virtual void Update(const App& inApp, float inTimeSecs, const SceneTransform& inParentTransform, bool inParentTransformDirty);
+		virtual void Render(const App& inApp, float inTimeSecs, const SceneTransform& inParentTransform, bool inParentTransformDirty);
 
 	protected:
 
+		void UpdateGeometry(const glm::vec2& inWorldPos);
+
 		glm::vec3 mPos;
 		glm::vec2 mSize;
+
+		RoundedRectangle mRectangle;
+		RoundedRectangle mShadowRectangle;
 	};
+
 
 	class NativeWindowWidget : public Widget
 	{
@@ -109,8 +114,8 @@ namespace BE
 
 		bool			Create(App& inApp, const WideString& inWindowName, int inWidth, int inHeight);
 
-		virtual void	Update(const App& inApp, float inTimeSecs, const SceneTransform& inParentTransform);
-		virtual void	Render(const App& inApp, float inTimeSecs, const SceneTransform& inParentTransform);
+		virtual void	Update(const App& inApp, float inTimeSecs, const SceneTransform& inParentTransform, bool inParentTransformDirty);
+		virtual void	Render(const App& inApp, float inTimeSecs, const SceneTransform& inParentTransform, bool inParentTransformDirty);
 
 		LRESULT CALLBACK WindowProc (HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam);
 		static LRESULT CALLBACK WindowProcProxy(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam);

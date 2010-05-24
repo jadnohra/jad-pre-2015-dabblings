@@ -183,6 +183,10 @@
 			>
 		</File>
 		<File
+			RelativePath="..\..\src\BEMath.h"
+			>
+		</File>
+		<File
 			RelativePath="..\..\src\Bigeye.cpp"
 			>
 		</File>
@@ -228,6 +232,22 @@
 		</File>
 		<File
 			RelativePath="..\..\src\Platform.h"
+			>
+		</File>
+		<File
+			RelativePath="..\..\src\RoundedRectangle.cpp"
+			>
+		</File>
+		<File
+			RelativePath="..\..\src\RoundedRectangle.h"
+			>
+		</File>
+		<File
+			RelativePath="..\..\src\ShapeUtil.cpp"
+			>
+		</File>
+		<File
+			RelativePath="..\..\src\ShapeUtil.h"
 			>
 		</File>
 		<File
