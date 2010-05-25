@@ -97,9 +97,13 @@ OGLState_FontRender::OGLState_FontRender(OGLFontInstance& inFont)
 
 void OGLState_FontRender::Set()
 {
+	//http://www.opengl-doc.com/Sams-OpenGL.SuperBible.Third/0672326019/ch06lev1sec1.html
+
 	//glHint(GL_PERSPECTIVE_CORRECTION_HINT, GL_NICEST);
 	glEnable(GL_BLEND);
-	glBlendFunc(GL_SRC_ALPHA,GL_ONE);	
+	//glBlendFunc(GL_SRC_ALPHA,GL_ONE);	
+	//glBlendFunc(GL_DST_COLOR,GL_ZERO);
+	glBlendFunc(GL_SRC_ALPHA,GL_ONE_MINUS_SRC_ALPHA);
 	glEnable(GL_TEXTURE_2D);
 	glBindTexture(GL_TEXTURE_2D, mFont.mTexture);
 	glTexParameteri(GL_TEXTURE_2D,GL_TEXTURE_MIN_FILTER,GL_LINEAR);	// Linear Filtering

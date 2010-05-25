@@ -83,22 +83,30 @@ bool SimpleRectangleWidget::Create(const glm::vec2& inPos, const glm::vec2& inSi
 
 void SimpleRectangleWidget::UpdateGeometry(const glm::vec2& inWorldPos)
 {
+	// TODO try colors like in : http://www.gameanim.com/2009/08/27/street-fighter-iv-facial-controls/
+	// also see the rounded rects when using right panel + shadow placement.
 	{
-		static float shades[4] = {84.0f/255.0f, 82.0f/255.0f, 37.0f/255.0f, 34.0f/255.0f};
-		mRectangle.SetPosSize(inWorldPos, mSize, 10.0f, 5, shades);
+		//static float shades[4] = {84.0f/255.0f, 82.0f/255.0f, 37.0f/255.0f, 34.0f/255.0f};
+		static const glm::vec4 color(0.0f, 200.0f/255.0f, 240.0f/255.0f, 1.0f);
+		static const glm::vec4 colors[4] = { color, color, color, color};
+		mRectangle.SetPosSize(inWorldPos, mSize, 10.0f, 5, colors, 0.3f, true);
 	}
 
+	/*
 	{
 		glm::vec2 shadow_pos = inWorldPos;
-		shadow_pos.x += -4.0f;
-		shadow_pos.y += 5.0f;
+		shadow_pos.x += -3.0f;
+		shadow_pos.y += 3.0f;
 
 		glm::vec2 shadow_size = mSize;
 		shadow_size.x += 2.0f;
 
-		static float shades[4] = {0.85f, 1.0f, 0.85f, 0.8f};
+		//static glm::vec4 shades[4] = { glm::vec4(0.85f), glm::vec4(1.0f), glm::vec4(0.85f), glm::vec4(0.8f)};
+		//shadow_size.x += 3.0f;
+		static glm::vec4 shades[4] = { glm::vec4(0.9f), glm::vec4(1.0f), glm::vec4(0.8f), glm::vec4(0.85f)};
 		mShadowRectangle.SetPosSize(shadow_pos, shadow_size, 10.0f, 5, shades);
 	}
+	*/
 }
 
 
@@ -116,6 +124,7 @@ void SimpleRectangleWidget::Render(const App& inApp, float inTimeSecs, const Sce
 {
 	glm::vec3 world_pos = inParentTransform * mPos;
 
+	/*
 	{
 		glm::vec2 shadow_pos = todim<glm::vec3, glm::vec2>::point(world_pos);
 		shadow_pos.x += -4.0f;
@@ -127,31 +136,31 @@ void SimpleRectangleWidget::Render(const App& inApp, float inTimeSecs, const Sce
 		inApp.GetOGLStateManager().Enable(EOGLState_WidgetShadow);
 		mShadowRectangle.RenderGL();
 
-		/*
-		glBegin(GL_QUADS);
-		
-		glColor4f(0.85f, 0.85f, 0.85f, 1.0f);
-		glVertex2f(shadow_pos.x, shadow_pos.y);
-		glColor4f(1.0f, 1.0f, 1.0f, 1.0f);
-		glVertex2f(shadow_pos.x+shadow_size.x, shadow_pos.y);
-		glColor4f(0.85f, 0.85f, 0.85f, 1.0f);
-		glVertex2f(shadow_pos.x+shadow_size.x, shadow_pos.y+shadow_size.y);
-		glColor4f(0.7f, 0.7f, 0.7f, 1.0f);
-		glVertex2f(shadow_pos.x, shadow_pos.y+shadow_size.y);
+		//glBegin(GL_QUADS);
+		//
+		//glColor4f(0.85f, 0.85f, 0.85f, 1.0f);
+		//glVertex2f(shadow_pos.x, shadow_pos.y);
+		//glColor4f(1.0f, 1.0f, 1.0f, 1.0f);
+		//glVertex2f(shadow_pos.x+shadow_size.x, shadow_pos.y);
+		//glColor4f(0.85f, 0.85f, 0.85f, 1.0f);
+		//glVertex2f(shadow_pos.x+shadow_size.x, shadow_pos.y+shadow_size.y);
+		//glColor4f(0.7f, 0.7f, 0.7f, 1.0f);
+		//glVertex2f(shadow_pos.x, shadow_pos.y+shadow_size.y);
 
-		glEnd();
-		*/
+		//glEnd();
 	}
+	*/
 
 	{
-		inApp.GetOGLStateManager().Enable(EOGLState_NormalWidget);
-		const float outline_color[4] = { 0.0f, 0.0f, 0.0f, 1.0f };
-		mRectangle.RenderGL(outline_color);
+		//inApp.GetOGLStateManager().Enable(EOGLState_NormalWidget);
+		const glm::vec4 outline_color(0.0f, 0.0f, 0.0f, 1.0f );
+		mRectangle.RenderGL(inApp.GetOGLStateManager(), EOGLState_WidgetShadow, EOGLState_NormalWidget);
 	}
 
 	{
 		const OGLState_FontRender* font_render = (const OGLState_FontRender*) inApp.GetOGLStateManager().Enable(EOGLState_FontRender);
-		font_render->Render("Hey", world_pos.x, world_pos.y);
+		glColor4f(0.0f,0.0f,0.0f,1.0f);
+		font_render->Render("Hey", world_pos.x, world_pos.y + 16.0f);
 	}
 }
 
@@ -478,6 +487,7 @@ void NativeWindowWidget::Render(const App& inApp, float inTimeSecs, const SceneT
 	
 	//glClearColor(100.0f/255.0f, 149.0f/255.0f, 237.0f / 255.0f, 1.0f);
 	//glClearColor(75.0f/255.0f, 146.0f/255.0f, 219.0f / 255.0f, 1.0f);
+	glClearColor(1.0f, 1.0f, 1.0f, 1.0f);
 	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);	// Clear Screen And Depth Buffer
 
 	mChildren.Render(inApp, inTimeSecs, inParentTransform, kIdentitySceneTransform, inParentTransformDirty || false);

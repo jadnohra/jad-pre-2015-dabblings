@@ -167,14 +167,14 @@ namespace BE { namespace detail
 namespace BE
 {
 
-void RoundedRectangle::SetPosSize(const glm::vec2& inPos, const glm::vec2& inSize, float inRadius, int inNumPoint, const float inColors[4])
+void RoundedRectangle::SetPosSize(const glm::vec2& inPos, const glm::vec2& inSize, float inRadius, int inNumPoints, const glm::vec4 inColors[4])
 {
 	using namespace BE::detail;
 
 	glm::vec2 rect_positions[4];
 
 	RectTopLeftAndSizeToPoints(inPos, inSize, rect_positions);
-	ToRoundedRectangle(rect_positions, inRadius, inNumPoint, mPositions);
+	ToRoundedRectangle(rect_positions, inRadius, inNumPoints, mPositions);
 
 	{
 		{
@@ -186,7 +186,7 @@ void RoundedRectangle::SetPosSize(const glm::vec2& inPos, const glm::vec2& inSiz
 			}
 			mCenter = mCenter / ((float) mPositions.size());
 
-			mCenterColor = 0.0f;
+			mCenterColor = glm::vec4();
 			for (int i=0; i<4; ++i)
 			{
 				mCenterColor += inColors[i];
@@ -208,8 +208,8 @@ void RoundedRectangle::SetPosSize(const glm::vec2& inPos, const glm::vec2& inSiz
 				const glm::vec2& from_point = rect_positions[(ref_index) % 4];
 				const glm::vec2& tp_point = rect_positions[(ref_index+1) % 4];
 
-				float from_color = inColors[(ref_index) % 4];
-				float to_color = inColors[(ref_index+1) % 4];
+				glm::vec4 from_color = inColors[(ref_index) % 4];
+				glm::vec4 to_color = inColors[(ref_index+1) % 4];
 
 				glm::vec2 from_dir = glm::normalize(from_point-mCenter);
 				float factor_from = glm::dot(from_dir, glm::normalize(mPositions[point_index]-mCenter));
@@ -313,37 +313,128 @@ void RoundedRectangle::SetPosSize(const glm::vec2& inPos, const glm::vec2& inSiz
 }
 
 
-void RoundedRectangle::RenderGL(const float* inOutlineColors)
+void RoundedRectangle::RenderGL()
 {
 	glBegin(GL_TRIANGLE_FAN);
 
-	glColor4f(mCenterColor, mCenterColor, mCenterColor, 1.0f);
+	glColor4f(mCenterColor.r, mCenterColor.g, mCenterColor.b, mCenterColor.a);
 	glVertex2f(horiz2d(mCenter), vert2d(mCenter));
 	
 	for (int i=0; i<mPositions.size(); ++i)
 	{
-		glColor4f(mColors[i], mColors[i], mColors[i], 1.0f);
+		glColor4f(mColors[i].r, mColors[i].g, mColors[i].b, mColors[i].a);
 		glVertex2f(horiz2d(mPositions[i]), vert2d(mPositions[i]));
 	}
 
-	glColor4f(mColors[0], mColors[0], mColors[0], 1.0f);
+	glColor4f(mColors[0].r, mColors[0].g, mColors[0].b, mColors[0].a);
 	glVertex2f(horiz2d(mPositions[0]), vert2d(mPositions[0]));
 
 	glEnd();
+}
 
-	if (inOutlineColors != NULL)
+
+void RoundedRectangle::RenderOutlineGL(const glm::vec4& inOutlineColor)
+{
+	glColor4f(inOutlineColor.r, inOutlineColor.g, inOutlineColor.b, inOutlineColor.a);
+
+	glLineWidth(1.0f);
+	glBegin(GL_LINE_LOOP);
+	for (int i=0; i<mPositions.size(); ++i)
 	{
-		glColor4f(inOutlineColors[0], inOutlineColors[1], inOutlineColors[2], 1.0f);
-
-		//glLineWidth(1.5f); // or check z order!
-		glLineWidth(1.0f);
-		glBegin(GL_LINE_LOOP);
-		for (int i=0; i<mPositions.size(); ++i)
-		{
-			glVertex2f(horiz2d(mPositions[i]), vert2d(mPositions[i]));
-		}
-		glEnd();
+		glVertex2f(horiz2d(mPositions[i]), vert2d(mPositions[i]));
 	}
+	glEnd();
+}
+
+
+void RoundedRectangleWithShadow::SetPosSize(const glm::vec2& inPos, const glm::vec2& inSize, float inRadius, int inNumPoints,
+											const glm::vec4 inColors[4], float inShadowIntensity, bool inDoubleSideShadow)
+{
+	mMainRect.SetPosSize(inPos, inSize, inRadius, inNumPoints, inColors);
+
+	glm::vec4 shadow_colors[4];
+	glm::vec3 shadow_color(1.0f, 1.0f, 1.0f);
+
+	{
+		glm::vec2 shadow_pos = inPos; 
+		glm::vec2 shadow_size = inSize;
+		horiz2d(shadow_pos) += left2d(0.0f);
+		vert2d(shadow_pos) += down2d(1.0f);
+		
+		if (inDoubleSideShadow)
+			horiz2d(shadow_size) += right2d(0.0f);
+
+		float shadow_color_factor = (1.0f - inShadowIntensity);
+
+		for (int i=0; i<4; ++i)
+			shadow_colors[i] = glm::vec4(shadow_color.r * shadow_color_factor, shadow_color.g * shadow_color_factor, shadow_color.b * shadow_color_factor, 1.0f);
+
+		mShadowRect[0].SetPosSize(shadow_pos, shadow_size, inRadius, inNumPoints, shadow_colors);
+	}
+
+	{
+		glm::vec2 shadow_pos = inPos; 
+		glm::vec2 shadow_size = inSize;
+		horiz2d(shadow_pos) += left2d(1.0f);
+		vert2d(shadow_pos) += down2d(2.0f);
+
+		if (inDoubleSideShadow)
+			horiz2d(shadow_size) += right2d(0.0f);
+
+		float shadow_color_factor = (1.0f - (inShadowIntensity*0.9f));
+
+		for (int i=0; i<4; ++i)
+			shadow_colors[i] = glm::vec4(shadow_color.r * shadow_color_factor, shadow_color.g * shadow_color_factor, shadow_color.b * shadow_color_factor, 1.0f);
+
+		mShadowRect[1].SetPosSize(shadow_pos, shadow_size, inRadius, inNumPoints, shadow_colors);
+	}
+
+	{
+		glm::vec2 shadow_pos = inPos; 
+		glm::vec2 shadow_size = inSize;
+		horiz2d(shadow_pos) += left2d(2.0f);
+		vert2d(shadow_pos) += down2d(3.0f);
+
+		if (inDoubleSideShadow)
+			horiz2d(shadow_size) += right2d(3.0f);
+
+		float shadow_color_factor = (1.0f - (inShadowIntensity*0.8f));
+
+		for (int i=0; i<4; ++i)
+			shadow_colors[i] = glm::vec4(shadow_color.r * shadow_color_factor, shadow_color.g * shadow_color_factor, shadow_color.b * shadow_color_factor, 1.0f);
+
+		mShadowRect[2].SetPosSize(shadow_pos, shadow_size, inRadius, inNumPoints, shadow_colors);
+	}
+
+	{
+		glm::vec2 shadow_pos = inPos; 
+		glm::vec2 shadow_size = inSize;
+		horiz2d(shadow_pos) += left2d(3.0f);
+		vert2d(shadow_pos) += down2d(4.0f);
+
+		if (inDoubleSideShadow)
+			horiz2d(shadow_size) += right2d(5.0f);
+
+		float shadow_color_factor = (1.0f - (inShadowIntensity*0.7f));
+
+		for (int i=0; i<4; ++i)
+			shadow_colors[i] = glm::vec4(shadow_color.r * shadow_color_factor, shadow_color.g * shadow_color_factor, shadow_color.b * shadow_color_factor, 1.0f);
+
+		mShadowRect[3].SetPosSize(shadow_pos, shadow_size, inRadius, inNumPoints, shadow_colors);
+	}
+}
+
+
+void RoundedRectangleWithShadow::RenderGL(const OGLStateManager& inStateManager, int inShadowState, int inNormalState)
+{
+	inStateManager.Enable(inShadowState);
+
+	for (int i=0; i<4; ++i)
+		mShadowRect[i].RenderGL();
+
+	inStateManager.Enable(inNormalState);
+
+	mMainRect.RenderGL();
 }
 
 }

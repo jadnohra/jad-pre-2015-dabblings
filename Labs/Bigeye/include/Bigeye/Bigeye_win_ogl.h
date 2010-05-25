@@ -100,8 +100,7 @@ namespace BE
 		glm::vec3 mPos;
 		glm::vec2 mSize;
 
-		RoundedRectangle mRectangle;
-		RoundedRectangle mShadowRectangle;
+		RoundedRectangleWithShadow mRectangle;
 	};
 
 
