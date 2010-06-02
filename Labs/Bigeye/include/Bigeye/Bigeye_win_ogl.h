@@ -33,7 +33,8 @@ namespace BE
 		EOGLState_Reset,
 		EOGLState_NativeWindowWidget,
 		EOGLState_NormalWidget,
-		EOGLState_WidgetShadow,
+		EOGLState_ShadowWidget,
+		EOGLState_TextureWidget,
 		EOGLState_FontRender,
 		EOGLState_Count,
 	};
@@ -53,6 +54,13 @@ namespace BE
 		NativeWindowWidget& mParent;
 	};
 
+	class OGLState_TextureWidget : public OGLState
+	{
+	public:
+
+		virtual void	Set();
+	};
+
 
 	class OGLState_NormalWidget : public OGLState
 	{
@@ -62,7 +70,7 @@ namespace BE
 	};
 
 
-	class OGLState_WidgetShadow : public OGLState
+	class OGLState_ShadowWidget : public OGLState
 	{
 	public:
 
@@ -74,6 +82,11 @@ namespace BE
 	{
 	public:
 
+		ChildWidgetContainer(bool inDeleteWidgets);
+		~ChildWidgetContainer();
+
+		void SetDelectWidgets(bool inDeleteWidgets);
+
 		void	Delete();
 		void	Update(const App& inApp, float inTimeSecs, const SceneTransform& inParentTransform, const SceneTransform& inParentLocalTransform, bool inParentTransformDirty);
 		void	Render(const App& inApp, float inTimeSecs, const SceneTransform& inParentTransform, const SceneTransform& inParentLocalTransform, bool inParentTransformDirty);
@@ -81,10 +94,46 @@ namespace BE
 	public:
 
 		typedef std::vector<Widget*> aWidgetPtr;
+		
+		bool mDeleteWidgets;
 		aWidgetPtr mChildWidgets;
 	};
 
-	class SimpleRectangleWidget : public Widget
+	
+	class SimpleTextureWidget : public Widget
+	{
+	public:
+
+		SimpleTextureWidget();
+		virtual ~SimpleTextureWidget();
+
+		bool		Create(const glm::vec2& inPos, const char* inTexturePath);
+
+		virtual void Render(const App& inApp, float inTimeSecs, const SceneTransform& inParentTransform, bool inParentTransformDirty);
+
+	protected:
+
+		GLuint mTexture;
+		glm::vec3 mPos;
+		glm::vec2 mSize;
+	};
+
+	class SimpleTextWidget : public Widget
+	{
+	public:
+
+		bool		Create(const glm::vec2& inPos, const char* inText = "");
+
+		virtual void Render(const App& inApp, float inTimeSecs, const SceneTransform& inParentTransform, bool inParentTransformDirty);
+
+	protected:
+
+		glm::vec3 mPos;
+		std::string mText;
+	};
+
+
+	class SimpleSliderWidget : public Widget
 	{
 	public:
 
@@ -99,8 +148,35 @@ namespace BE
 
 		glm::vec3 mPos;
 		glm::vec2 mSize;
+		float mSliderPos;
+
+		ShapeOutline mRectangleOutline;
+		RoundedRectangle mRangeRect;
+		RoundedRectangle mSliderRect;
+	};
+
+	class SimplePanelWidget : public Widget
+	{
+	public:
+
+		SimplePanelWidget();
+
+		bool		Create(const glm::vec2& inPos, const glm::vec2& inSize);
+
+		ChildWidgetContainer& GetChildren() { return mChildren; } 
+
+		virtual void Update(const App& inApp, float inTimeSecs, const SceneTransform& inParentTransform, bool inParentTransformDirty);
+		virtual void Render(const App& inApp, float inTimeSecs, const SceneTransform& inParentTransform, bool inParentTransformDirty);
+
+	protected:
+
+		void UpdateGeometry(const glm::vec2& inWorldPos);
+
+		glm::vec3 mPos;
+		glm::vec2 mSize;
 
 		RoundedRectangleWithShadow mRectangle;
+		ChildWidgetContainer mChildren;
 	};
 
 

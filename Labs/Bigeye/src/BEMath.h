@@ -2,6 +2,7 @@
 #define _INCLUDED_BIGEYE_BEMATH_H
 
 #include "glm/glm.hpp"
+#include "glm/gtx/vector_query.hpp"
 
 namespace BE
 {

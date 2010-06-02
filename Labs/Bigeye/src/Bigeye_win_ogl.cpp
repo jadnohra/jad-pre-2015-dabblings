@@ -2,6 +2,7 @@
 #include "../include/Bigeye/Bigeye_win_ogl.h"
 #include "ARB_Multisample.h"
 #include "ShapeUtil.h"
+#include "MagickWand.h"
 
 namespace BE
 {
@@ -43,6 +44,24 @@ void WideString::Set(const char* inString)
 	}
 }
 
+ChildWidgetContainer::ChildWidgetContainer(bool inDeleteWidgets)
+:	mDeleteWidgets(inDeleteWidgets)
+{
+}
+
+
+ChildWidgetContainer::~ChildWidgetContainer()
+{
+	if (mDeleteWidgets)
+		Delete();
+}
+
+
+void ChildWidgetContainer::SetDelectWidgets(bool inDeleteWidgets)
+{
+	mDeleteWidgets = inDeleteWidgets;
+}
+
 
 void ChildWidgetContainer::Delete()
 {
@@ -72,24 +91,212 @@ void ChildWidgetContainer::Render(const App& inApp, float inTimeSecs, const Scen
 }
 
 
-bool SimpleRectangleWidget::Create(const glm::vec2& inPos, const glm::vec2& inSize)
+bool SimpleSliderWidget::Create(const glm::vec2& inPos, const glm::vec2& inSize)
 {
-	mPos = glm::vec3(inPos.x, inPos.y, 1.0f);
+	mPos = to3d_point(inPos);
+	mSize = inSize;
+
+	mSliderPos = 0.2f;
+
+	return true;
+}
+
+
+void SimpleSliderWidget::UpdateGeometry(const glm::vec2& inWorldPos)
+{
+	{
+		//static const glm::vec4 color(236.0f/255.0f, 115.0f/255.0f, 0.0f, 1.0f);
+		static const glm::vec4 color(1.0f, 1.0f, 1.0f, 1.0f);
+		static const glm::vec4 colors[4] = { color, color, color, color};
+		
+		float rect_height = 4.0f;
+		rect_height = 80.0f;
+		
+		glm::vec2 start_pos = inWorldPos;
+		vert2d(start_pos) += up2d(0.5f * rect_height);
+
+		mRangeRect.SetPosSize(start_pos, glm::vec2(mSize.x, rect_height), 20.0f, 5, colors);
+	}
+
+	{
+		//static const glm::vec4 color(236.0f/255.0f, 115.0f/255.0f, 0.0f, 1.0f);
+		static const glm::vec4 color(0.0f, 200.0f/255.0f, 240.0f/255.0f, 1.0f);
+		static const glm::vec4 colors[4] = { color, color, color, color};
+		
+		glm::vec2 start_pos = inWorldPos;
+		glm::vec2 end_pos = start_pos + mSize;
+		glm::vec2 slider_pos = start_pos * (1.0f-mSliderPos) + end_pos * mSliderPos;
+		
+		float slider_height = 8.0f;
+		
+		vert2d(slider_pos) += up2d(0.5f * slider_height);
+		
+		mSliderRect.SetPosSize(slider_pos, glm::vec2(20.0f, slider_height), 2.0f, 1, colors);
+	}
+
+	{
+		mRectangleOutline.SetToShape(mRangeRect.GetPositions(), 1.0f, 1.0f);
+	}
+}
+
+
+void SimpleSliderWidget::Update(const App& inApp, float inTimeSecs, const SceneTransform& inParentTransform, bool inParentTransformDirty)
+{
+	if (inParentTransformDirty || !mSliderRect.IsSet())
+	{
+		glm::vec3 world_pos = inParentTransform * mPos;
+		UpdateGeometry(to2d_point(world_pos));
+	}
+}
+
+
+void SimpleSliderWidget::Render(const App& inApp, float inTimeSecs, const SceneTransform& inParentTransform, bool inParentTransformDirty)
+{
+	glm::vec2 start_pos = to2d_point(inParentTransform * mPos);
+	glm::vec2 end_pos = start_pos + mSize;
+
+	int point_count = ((int) (glm::length(mSize) * 0.05f)) + 2;
+	float inc = 1.0f / (float) point_count;
+
+
+	inApp.GetOGLStateManager().Enable(EOGLState_NormalWidget);
+	{
+		//mRangeRect.RenderGL();
+
+		static const glm::vec4 outline_color(0.0f, 0.0f, 0.0f, 1.0f);
+		mRectangleOutline.RenderGL(outline_color);
+
+		/*
+
+		glColor4f(1.0f, 1.0f, 1.0f, 1.0f);
+		glLineWidth(1.0f);
+		
+		glBegin(GL_LINE_STRIP);
+
+		float factor = 0.0f;
+		for (int i=0; i<point_count; ++i)
+		{
+			glm::vec2 point = start_pos * (1.0f-factor) + end_pos * factor;
+			
+			glVertex2f(horiz2d(point), vert2d(point));
+
+			factor += inc;
+		}
+
+		glEnd();
+		*/
+	}
+
+	{
+		mSliderRect.RenderGL();
+
+		static const glm::vec4 outline_color(0.0f, 0.0f, 0.0f, 1.0f);
+		glLineWidth(1.5f);
+		mSliderRect.RenderOutlineGL(outline_color);
+	}
+}
+
+
+bool SimpleTextWidget::Create(const glm::vec2& inPos, const char* inText)
+{
+	mPos = to3d_point(inPos);
+	mText = inText;
+
+	return true;
+}
+
+
+void SimpleTextWidget::Render(const App& inApp, float inTimeSecs, const SceneTransform& inParentTransform, bool inParentTransformDirty)
+{
+	glm::vec3 world_pos = inParentTransform * mPos;
+
+	{
+		const OGLState_FontRender* font_render = (const OGLState_FontRender*) inApp.GetOGLStateManager().Enable(EOGLState_FontRender);
+		//glColor4f(1.0f, 1.0f, 1.0f,1.0f);
+		font_render->Render(mText.c_str(), world_pos.x, world_pos.y);
+	}
+}
+
+
+SimpleTextureWidget::SimpleTextureWidget()
+:	mTexture(-1)
+{
+}
+
+SimpleTextureWidget::~SimpleTextureWidget()
+{
+	//TODO free texture
+}
+
+bool SimpleTextureWidget::Create(const glm::vec2& inPos, const char* inTexturePath)
+{
+	mPos = to3d_point(inPos);
+	mTexture = 0;
+
+	GLsizei dims[2];
+
+	if (!MagicWand::ReadImageToGLTexture(inTexturePath, mTexture, dims[0], dims[1]))
+		return false;
+
+	mSize.x = (float) dims[0];
+	mSize.y = (float) dims[1];
+
+	//glGenTextures(1, &mTexture);
+	//glBindTexture(GL_TEXTURE_2D, mTexture);
+	//glTexImage2D(GL_TEXTURE_2D, 0, GL_ALPHA, 512,512, 0, GL_ALPHA, GL_UNSIGNED_BYTE, temp_bitmap);
+
+	return true;
+}
+
+
+void SimpleTextureWidget::Render(const App& inApp, float inTimeSecs, const SceneTransform& inParentTransform, bool inParentTransformDirty)
+{
+	glm::vec3 world_pos = inParentTransform * mPos;
+
+	inApp.GetOGLStateManager().Enable(EOGLState_TextureWidget);
+	{
+		glBindTexture(GL_TEXTURE_2D, mTexture);
+		glTexParameteri(GL_TEXTURE_2D,GL_TEXTURE_MIN_FILTER,GL_NEAREST);	// Linear Filtering
+		glTexParameteri(GL_TEXTURE_2D,GL_TEXTURE_MAG_FILTER,GL_NEAREST);	// Linear Filtering
+		
+		glTexEnvi(GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_REPLACE);
+		//glColor4f(1.0f,1.0f,1.0f,1.0f);			
+
+		glBegin(GL_QUADS);
+			 glTexCoord2f(0.0f,0.0f); glVertex2f(world_pos.x,world_pos.y);
+			 glTexCoord2f(1.0f,0.0f); glVertex2f(world_pos.x+mSize.x,world_pos.y);
+			 glTexCoord2f(1.0f,1.0f); glVertex2f(world_pos.x+mSize.x,world_pos.y+mSize.y);
+			 glTexCoord2f(0.0f,1.0f); glVertex2f(world_pos.x,world_pos.y+mSize.y);
+		glEnd();
+	}
+}
+
+
+SimplePanelWidget::SimplePanelWidget()
+:	mChildren(true)
+{
+}
+
+
+bool SimplePanelWidget::Create(const glm::vec2& inPos, const glm::vec2& inSize)
+{
+	mPos = to3d_point(inPos);
 	mSize = inSize;
 
 	return true;
 }
 
 
-void SimpleRectangleWidget::UpdateGeometry(const glm::vec2& inWorldPos)
+void SimplePanelWidget::UpdateGeometry(const glm::vec2& inWorldPos)
 {
 	// TODO try colors like in : http://www.gameanim.com/2009/08/27/street-fighter-iv-facial-controls/
 	// also see the rounded rects when using right panel + shadow placement.
 	{
 		//static float shades[4] = {84.0f/255.0f, 82.0f/255.0f, 37.0f/255.0f, 34.0f/255.0f};
-		static const glm::vec4 color(0.0f, 200.0f/255.0f, 240.0f/255.0f, 1.0f);
+		//static const glm::vec4 color(0.0f, 200.0f/255.0f, 240.0f/255.0f, 1.0f);
+		static const glm::vec4 color(1.0f, 1.0f, 1.0f, 1.0f);
 		static const glm::vec4 colors[4] = { color, color, color, color};
-		mRectangle.SetPosSize(inWorldPos, mSize, 10.0f, 5, colors, 0.3f, true);
+		mRectangle.SetPosSize(inWorldPos, mSize, 8.0f, 5, colors, 0.1f, true);
 	}
 
 	/*
@@ -110,17 +317,22 @@ void SimpleRectangleWidget::UpdateGeometry(const glm::vec2& inWorldPos)
 }
 
 
-void SimpleRectangleWidget::Update(const App& inApp, float inTimeSecs, const SceneTransform& inParentTransform, bool inParentTransformDirty)
+void SimplePanelWidget::Update(const App& inApp, float inTimeSecs, const SceneTransform& inParentTransform, bool inParentTransformDirty)
 {
 	if (inParentTransformDirty || !mRectangle.IsSet())
 	{
 		glm::vec3 world_pos = inParentTransform * mPos;
 		UpdateGeometry(to2d_point(world_pos));
 	}
+
+	SceneTransform local_transform;
+	local_transform[2] = mPos;
+
+	mChildren.Update(inApp, inTimeSecs, inParentTransform, local_transform, inParentTransformDirty || false);
 }
 
 
-void SimpleRectangleWidget::Render(const App& inApp, float inTimeSecs, const SceneTransform& inParentTransform, bool inParentTransformDirty)
+void SimplePanelWidget::Render(const App& inApp, float inTimeSecs, const SceneTransform& inParentTransform, bool inParentTransformDirty)
 {
 	glm::vec3 world_pos = inParentTransform * mPos;
 
@@ -133,7 +345,7 @@ void SimpleRectangleWidget::Render(const App& inApp, float inTimeSecs, const Sce
 		glm::vec2 shadow_size = mSize;
 		shadow_size.x += 2.0f;
 		
-		inApp.GetOGLStateManager().Enable(EOGLState_WidgetShadow);
+		inApp.GetOGLStateManager().Enable(EOGLState_ShadowWidget);
 		mShadowRectangle.RenderGL();
 
 		//glBegin(GL_QUADS);
@@ -154,13 +366,22 @@ void SimpleRectangleWidget::Render(const App& inApp, float inTimeSecs, const Sce
 	{
 		//inApp.GetOGLStateManager().Enable(EOGLState_NormalWidget);
 		const glm::vec4 outline_color(0.0f, 0.0f, 0.0f, 1.0f );
-		mRectangle.RenderGL(inApp.GetOGLStateManager(), EOGLState_WidgetShadow, EOGLState_NormalWidget);
+		mRectangle.RenderGL(inApp.GetOGLStateManager(), EOGLState_ShadowWidget, EOGLState_NormalWidget);
 	}
 
+	/*
 	{
 		const OGLState_FontRender* font_render = (const OGLState_FontRender*) inApp.GetOGLStateManager().Enable(EOGLState_FontRender);
 		glColor4f(0.0f,0.0f,0.0f,1.0f);
-		font_render->Render("Hey", world_pos.x, world_pos.y + 16.0f);
+		//glColor4f(1.0f,1.0f,1.0f,1.0f);
+		font_render->Render("ABCD", world_pos.x, world_pos.y);
+	}
+	*/
+
+	{
+		SceneTransform local_transform;
+		local_transform[2] = mPos;
+		mChildren.Render(inApp, inTimeSecs, inParentTransform, local_transform, inParentTransformDirty || false);
 	}
 }
 
@@ -172,11 +393,20 @@ void OGLState_NormalWidget::Set()
 }
 
 
-void OGLState_WidgetShadow::Set()
+void OGLState_ShadowWidget::Set()
 {
 	glEnable(GL_BLEND);
 	glBlendFunc(GL_DST_COLOR,GL_ZERO);
 	glDisable(GL_TEXTURE_2D);
+}
+
+
+void OGLState_TextureWidget::Set()
+{
+	//glDisable(GL_BLEND);
+	glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+	glEnable(GL_BLEND);
+	glEnable(GL_TEXTURE_2D);
 }
 
 
@@ -185,6 +415,7 @@ NativeWindowWidget::NativeWindowWidget()
 ,	mHDC(NULL)
 ,	mHRC(NULL)
 ,	mIsWNDCLASSRegistered(false)
+,	mChildren(true)
 {
 }
 
@@ -192,7 +423,6 @@ NativeWindowWidget::NativeWindowWidget()
 NativeWindowWidget::~NativeWindowWidget()
 {
 	Destroy();
-	mChildren.Delete();
 }
 
 
@@ -380,7 +610,7 @@ bool NativeWindowWidget::Create(App& inApp, const WideString& inWindowName, int 
 		Destroy();
 		return false;	
 	}
-
+	
 	if(!arbMultisampleSupported && CHECK_FOR_MULTISAMPLE)
 	{
 		if(InitMultisample(inApp.GetHINSTANCE(), mHWND, pfd))
@@ -390,20 +620,22 @@ bool NativeWindowWidget::Create(App& inApp, const WideString& inWindowName, int 
 			return Create(inApp, inWindowName, inWidth, inHeight);
 		}
 	}
+		
 
 	ShowWindow (mHWND, SW_NORMAL);	
 
 	//ReshapeGL (window->init.width, window->init.height);				// Reshape Our GL Window
 
 	{
-		mDefaultFont.Create("DroidSans.ttf", 16.0f);
+		mDefaultFont.Create("media/DroidSans.ttf", 16.0f);
 
 		inApp.GetOGLStateManager().StartBuild(EOGLState_Count);
 		inApp.GetOGLStateManager().BuildSetState(new OGLState(), EOGLState_Reset);
 		inApp.GetOGLStateManager().BuildSetState(new OGLState_NativeWindowWidget(*this), EOGLState_NativeWindowWidget);
 		inApp.GetOGLStateManager().BuildSetState(new OGLState_NormalWidget(), EOGLState_NormalWidget, EOGLState_NativeWindowWidget);
-		inApp.GetOGLStateManager().BuildSetState(new OGLState_WidgetShadow(), EOGLState_WidgetShadow, EOGLState_NativeWindowWidget);
+		inApp.GetOGLStateManager().BuildSetState(new OGLState_ShadowWidget(), EOGLState_ShadowWidget, EOGLState_NativeWindowWidget);
 		inApp.GetOGLStateManager().BuildSetState(new OGLState_FontRender(mDefaultFont), EOGLState_FontRender, EOGLState_NativeWindowWidget);
+		inApp.GetOGLStateManager().BuildSetState(new OGLState_TextureWidget(), EOGLState_TextureWidget, EOGLState_NativeWindowWidget);
 		inApp.GetOGLStateManager().EndBuild();
 	}
 
@@ -415,22 +647,63 @@ bool NativeWindowWidget::Create(App& inApp, const WideString& inWindowName, int 
 
 void NativeWindowWidget::Test(App& inApp)
 {
-	
 	{
-		SimpleRectangleWidget* widget = new SimpleRectangleWidget();
+		SimpleTextureWidget* widget = new SimpleTextureWidget();
+		//widget->Create(glm::vec2(200.0f, 100.0f), "media/tiny_test.bmp");
+		widget->Create(glm::vec2(200.0f, 100.0f), "media/imagick_button.png");
+		mChildren.mChildWidgets.push_back(widget);
+	}
+
+	{
+		SimplePanelWidget* widget = new SimplePanelWidget();
 		widget->Create(glm::vec2(10.0f, 100.0f), glm::vec2(50.0f, 200.0f));
 		mChildren.mChildWidgets.push_back(widget);
 	}
 
 	{
-		SimpleRectangleWidget* widget = new SimpleRectangleWidget();
+		SimplePanelWidget* widget = new SimplePanelWidget();
 		widget->Create(glm::vec2(130.0f, 240.0f), glm::vec2(200.0f, 200.0f));
 		mChildren.mChildWidgets.push_back(widget);
+
+		ChildWidgetContainer& children = widget->GetChildren();
+
+		float pos_vert = 2.0f;
+		pos_vert += mDefaultFont.GetPixelHeight();
+
+		/*
+		{
+			SimpleTextWidget* text_widget = new SimpleTextWidget();
+			text_widget->Create(glm::vec2(2.0f, pos_vert), "Hey you");
+			pos_vert += mDefaultFont.GetPixelHeight();
+
+			children.mChildWidgets.push_back(text_widget);
+		}
+
+		{
+			SimpleTextWidget* text_widget = new SimpleTextWidget();
+			text_widget->Create(glm::vec2(2.0f, pos_vert), "Hey you ...");
+			pos_vert += mDefaultFont.GetPixelHeight();
+
+			children.mChildWidgets.push_back(text_widget);
+		}
+		*/
+
+
+		{
+			SimpleSliderWidget* slider_widget = new SimpleSliderWidget();
+			slider_widget->Create(glm::vec2(2.0f, pos_vert), glm::vec2(150.0f, 0.0f));
+			pos_vert += mDefaultFont.GetPixelHeight();
+
+			children.mChildWidgets.push_back(slider_widget);
+		}
+
+
+		
 	}
 	
 	/*
 	{
-		SimpleRectangleWidget* widget = new SimpleRectangleWidget();
+		SimplePanelWidget* widget = new SimplePanelWidget();
 		widget->Create(glm::vec2(10.0f, 100.0f), glm::vec2(500.0f, 600.0f));
 		mChildren.mChildWidgets.push_back(widget);
 	}
@@ -464,7 +737,8 @@ void OGLState_NativeWindowWidget::Set()
 	glLoadIdentity();
 
 	// For 2D pixel precise mode
-	glTranslatef (0.375f, 0.375f, 0.0f);
+	//glTranslatef (0.375f, 0.375f, 0.0f);
+	//glTranslatef (0.5f, 0.5f, 0.0f);
 
 	//glPolygonMode( GL_FRONT_AND_BACK, GL_LINE );
 	//glPolygonMode( GL_FRONT_AND_BACK, GL_FILL );
@@ -483,18 +757,19 @@ void NativeWindowWidget::Render(const App& inApp, float inTimeSecs, const SceneT
 
 	glClearColor(0.0f, 0.0f, 0.0f, 1.0f);
 	glClearColor(39.0f/255.0f, 39.0f/255.0f, 39.0f/255.0f, 1.0f);
+	glClearColor(176.0f/255.0f, 176.0f/255.0f, 176.0f/255.0f, 1.0f);
 	//glClearColor(49.0f/255.0f, 140.0f/255.0f, 231.0f / 255.0f, 1.0f);
 	
 	//glClearColor(100.0f/255.0f, 149.0f/255.0f, 237.0f / 255.0f, 1.0f);
 	//glClearColor(75.0f/255.0f, 146.0f/255.0f, 219.0f / 255.0f, 1.0f);
-	glClearColor(1.0f, 1.0f, 1.0f, 1.0f);
+	//glClearColor(1.0f, 1.0f, 1.0f, 1.0f);
 	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);	// Clear Screen And Depth Buffer
 
 	mChildren.Render(inApp, inTimeSecs, inParentTransform, kIdentitySceneTransform, inParentTransformDirty || false);
 
 	{
-		const OGLState_FontRender* font_render = (const OGLState_FontRender*) inApp.GetOGLStateManager().Enable(EOGLState_FontRender);
-		font_render->Render("AbcdefGhIJK", 300.0f, 100.0f);
+		//const OGLState_FontRender* font_render = (const OGLState_FontRender*) inApp.GetOGLStateManager().Enable(EOGLState_FontRender);
+		//font_render->Render("AbcdefGhIJK", 300.0f, 100.0f);
 	}
 
 	SwapBuffers(mHDC);

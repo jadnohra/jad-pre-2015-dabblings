@@ -14,6 +14,7 @@ stbtt_bakedchar cdata[96]; // ASCII 32..126 is 95 glyphs
 bool OGLFontInstance::Create(const char* inFilePath, float inPixelHeight)
 {
 	FILE* file = NULL;
+	mPixelHeight = inPixelHeight;
 	
 	if (fopen_s(&file, inFilePath, "rb") == 0)
 	{
@@ -31,7 +32,7 @@ bool OGLFontInstance::Create(const char* inFilePath, float inPixelHeight)
 				stbtt_BakeFontBitmap(ttf_buffer,0, inPixelHeight, temp_bitmap,512,512, 32,96, cdata); // no guarantee this fits!
 				free(ttf_buffer);
 
-				glGenTextures(1, &mTexture);
+				glGenTextures(1, &mTexture); //TODO free texture
 				glBindTexture(GL_TEXTURE_2D, mTexture);
 				glTexImage2D(GL_TEXTURE_2D, 0, GL_ALPHA, 512,512, 0, GL_ALPHA, GL_UNSIGNED_BYTE, temp_bitmap);
 				// can free temp_bitmap at this point
@@ -70,8 +71,11 @@ void OGLFontInstance::Render(const char* inText, float inPosX, float inPosY) con
 	// assume orthographic projection with units = screen pixels, origin at top left
    //glBindTexture(GL_TEXTURE_2D, mTexture);
    //glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
-   glBegin(GL_QUADS);
-   while (*inText) {
+   
+	//inPosY += mPixelHeight;
+
+	glBegin(GL_QUADS);
+	while (*inText) {
       if (*inText >= 32 && *inText < 128) {
          stbtt_aligned_quad q;
          stbtt_GetBakedQuad(cdata, 512,512, *inText-32, &inPosX,&inPosY,&q,1);//1=opengl,0=old d3d
@@ -108,7 +112,7 @@ void OGLState_FontRender::Set()
 	glBindTexture(GL_TEXTURE_2D, mFont.mTexture);
 	glTexParameteri(GL_TEXTURE_2D,GL_TEXTURE_MIN_FILTER,GL_LINEAR);	// Linear Filtering
 	glTexParameteri(GL_TEXTURE_2D,GL_TEXTURE_MAG_FILTER,GL_LINEAR);	// Linear Filtering
-	glColor4f(1.0f,1.0f,1.0f,0.95f);			// Full Brightness, 50% Alpha ( NEW )
+	glColor4f(0.0f,0.0f,0.0f,1.0f);			// Full Brightness, 50% Alpha ( NEW )
 }
 
 

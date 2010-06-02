@@ -167,7 +167,8 @@ namespace BE { namespace detail
 namespace BE
 {
 
-void RoundedRectangle::SetPosSize(const glm::vec2& inPos, const glm::vec2& inSize, float inRadius, int inNumPoints, const glm::vec4 inColors[4])
+
+void RoundedRectangleSkeleton::SetPosSize(const glm::vec2& inPos, const glm::vec2& inSize, float inRadius, int inNumPoints)
 {
 	using namespace BE::detail;
 
@@ -177,15 +178,25 @@ void RoundedRectangle::SetPosSize(const glm::vec2& inPos, const glm::vec2& inSiz
 	ToRoundedRectangle(rect_positions, inRadius, inNumPoints, mPositions);
 
 	{
+		mCenter = glm::vec2();
+
+		for (size_t i=0; i<mPositions.size(); ++i)
 		{
-			mCenter = glm::vec2();
+			mCenter += mPositions[i];
+		}
+		mCenter = mCenter / ((float) mPositions.size());
+	}
+}
 
-			for (int i=0; i<mPositions.size(); ++i)
-			{
-				mCenter += mPositions[i];
-			}
-			mCenter = mCenter / ((float) mPositions.size());
 
+void RoundedRectangle::SetPosSize(const glm::vec2& inPos, const glm::vec2& inSize, float inRadius, int inNumPoints, const glm::vec4 inColors[4])
+{
+	using namespace BE::detail;
+
+	mSkeleton.SetPosSize(inPos, inSize, inRadius, inNumPoints);
+
+	{
+		{
 			mCenterColor = glm::vec4();
 			for (int i=0; i<4; ++i)
 			{
@@ -197,13 +208,18 @@ void RoundedRectangle::SetPosSize(const glm::vec2& inPos, const glm::vec2& inSiz
 
 		// FIX USING ANGLES!!!
 		{
-			mColors.resize(mPositions.size());
+			glm::vec2 rect_positions[4];
+			RectTopLeftAndSizeToPoints(inPos, inSize, rect_positions);
 
-			int point_count_per_side = mPositions.size() / 4;
+			mColors.resize(mSkeleton.GetPositions().size());
+
+			int point_count_per_side = mSkeleton.GetPositions().size() / 4;
 			int point_index = 0;
 			int ref_index = 0;
 
-			while (point_index < mPositions.size())
+			const int point_count = (int) mSkeleton.GetPositions().size();
+
+			while (point_index < point_count)
 			{
 				const glm::vec2& from_point = rect_positions[(ref_index) % 4];
 				const glm::vec2& tp_point = rect_positions[(ref_index+1) % 4];
@@ -211,15 +227,15 @@ void RoundedRectangle::SetPosSize(const glm::vec2& inPos, const glm::vec2& inSiz
 				glm::vec4 from_color = inColors[(ref_index) % 4];
 				glm::vec4 to_color = inColors[(ref_index+1) % 4];
 
-				glm::vec2 from_dir = glm::normalize(from_point-mCenter);
-				float factor_from = glm::dot(from_dir, glm::normalize(mPositions[point_index]-mCenter));
+				glm::vec2 from_dir = glm::normalize(from_point-mSkeleton.GetCenter());
+				float factor_from = glm::dot(from_dir, glm::normalize(mSkeleton.GetPositions()[point_index]-mSkeleton.GetCenter()));
 
 				while (factor_from >= 0.0f)
 				{
 					mColors[point_index++] = from_color * factor_from + to_color * (1.0f-factor_from);
 
-					if (point_index < mPositions.size())
-						factor_from = glm::dot(from_dir, glm::normalize(mPositions[point_index]-mCenter));
+					if (point_index < point_count)
+						factor_from = glm::dot(from_dir, glm::normalize(mSkeleton.GetPositions()[point_index]-mSkeleton.GetCenter()));
 					else
 						break;
 				}
@@ -318,16 +334,16 @@ void RoundedRectangle::RenderGL()
 	glBegin(GL_TRIANGLE_FAN);
 
 	glColor4f(mCenterColor.r, mCenterColor.g, mCenterColor.b, mCenterColor.a);
-	glVertex2f(horiz2d(mCenter), vert2d(mCenter));
+	glVertex2f(horiz2d(mSkeleton.GetCenter()), vert2d(mSkeleton.GetCenter()));
 	
-	for (int i=0; i<mPositions.size(); ++i)
+	for (size_t i=0; i<mSkeleton.GetPositions().size(); ++i)
 	{
 		glColor4f(mColors[i].r, mColors[i].g, mColors[i].b, mColors[i].a);
-		glVertex2f(horiz2d(mPositions[i]), vert2d(mPositions[i]));
+		glVertex2f(horiz2d(mSkeleton.GetPositions()[i]), vert2d(mSkeleton.GetPositions()[i]));
 	}
 
 	glColor4f(mColors[0].r, mColors[0].g, mColors[0].b, mColors[0].a);
-	glVertex2f(horiz2d(mPositions[0]), vert2d(mPositions[0]));
+	glVertex2f(horiz2d(mSkeleton.GetPositions()[0]), vert2d(mSkeleton.GetPositions()[0]));
 
 	glEnd();
 }
@@ -337,11 +353,10 @@ void RoundedRectangle::RenderOutlineGL(const glm::vec4& inOutlineColor)
 {
 	glColor4f(inOutlineColor.r, inOutlineColor.g, inOutlineColor.b, inOutlineColor.a);
 
-	glLineWidth(1.0f);
 	glBegin(GL_LINE_LOOP);
-	for (int i=0; i<mPositions.size(); ++i)
+	for (size_t i=0; i<mSkeleton.GetPositions().size(); ++i)
 	{
-		glVertex2f(horiz2d(mPositions[i]), vert2d(mPositions[i]));
+		glVertex2f(horiz2d(mSkeleton.GetPositions()[i]), vert2d(mSkeleton.GetPositions()[i]));
 	}
 	glEnd();
 }
@@ -435,6 +450,130 @@ void RoundedRectangleWithShadow::RenderGL(const OGLStateManager& inStateManager,
 	inStateManager.Enable(inNormalState);
 
 	mMainRect.RenderGL();
+}
+
+
+void ShapeOutline::SetToShape(const Positions& inPositions, float inRadius, float inLinearity)
+{
+	using namespace BE::detail;
+
+	if (inPositions.size() < 1)
+	{
+		mPoints.clear();
+		return;
+	}
+
+	mPoints.reserve(inPositions.size() * 3);
+	int set_index = 0;
+
+	Positions temp_positions;
+	
+
+	for (size_t p=((int)inPositions.size()-1),i=0, j=1; i<inPositions.size(); ++i)
+	{
+		const glm::vec2& from = inPositions[p];
+		const glm::vec2& at = inPositions[i];
+		const glm::vec2& to = inPositions[j];
+
+		//if (!glm::areSimilar(at, from, 0.0f/*, std::numeric_limits<float>::epsilon()*/)
+		//	&& !glm::areSimilar(at, to, 0.0f/*, std::numeric_limits<float>::epsilon()*/)
+		//	)
+		{
+			glm::vec2 from_dir = glm::normalize(at-from);
+			glm::vec2 from_normal(from_dir.y, -from_dir.x);
+
+			glm::vec2 to_dir = glm::normalize(to-at);
+			glm::vec2 to_normal(to_dir.y, -to_dir.x);
+			
+			glm::vec2 normal = 0.5f * (from_normal + to_normal);
+			
+			mPoints.push_back(Point(EInner, at));
+			
+			glm::vec2 tip_from = at + from_normal * inRadius;
+			glm::vec2 tip_to = at + to_normal * inRadius;
+			
+			float tip_dist = glm::length(tip_to - tip_from);
+			float needed_round_point_count = tip_dist / inLinearity;
+			
+			if (needed_round_point_count > 2.0f)
+			{
+				int point_count = (int) (needed_round_point_count + 0.5f);
+				temp_positions.resize(point_count);
+				ToRoundedRectangle_GenCircleArc(at, tip_from, tip_to, 
+												inRadius, point_count, 
+												temp_positions, 0);
+
+				mPoints.push_back(Point(EOuterRoundingStart, tip_from));
+				for (size_t i=0; i<temp_positions.size(); ++i)
+				{
+					mPoints.push_back(Point(EOuterRounding, temp_positions[i]));
+				}
+				mPoints.push_back(Point(EOuterRoundingEnd, tip_to));
+			}
+			else
+			{
+				glm::vec2 tip_avg = at + glm::normalize(0.5f * (from_normal + to_normal)) * inRadius;
+				mPoints.push_back(Point(EOuterNormal,tip_avg));
+			}
+
+			++set_index;
+		}
+
+		{
+			++j;
+			if (j == inPositions.size())
+				j = 0;
+		}
+
+		{
+			++p;
+			if (p == inPositions.size())
+				p = 0;
+		}
+	}
+}
+
+
+void ShapeOutline::RenderGL(const glm::vec4& inColor)
+{
+	if (mPoints.empty())
+		return;
+
+	glColor4f(inColor.r, inColor.g, inColor.b, inColor.a);
+
+	glBegin(GL_TRIANGLE_STRIP);
+
+	glm::vec2 rounding_center;
+
+	for (size_t i=0; i<mPoints.size(); ++i)
+	{
+		if (mPoints[i].type == EInner
+			|| mPoints[i].type == EOuterNormal)
+		{
+			glVertex2f(horiz2d(mPoints[i].pos), vert2d(mPoints[i].pos));
+		}
+		else if (mPoints[i].type == EOuterRoundingStart)
+		{
+			rounding_center = mPoints[i-1].pos;
+
+			glVertex2f(horiz2d(mPoints[i].pos), vert2d(mPoints[i].pos));
+			glVertex2f(horiz2d(rounding_center), vert2d(rounding_center));
+		}
+		else if (mPoints[i].type == EOuterRounding)
+		{
+			glVertex2f(horiz2d(mPoints[i].pos), vert2d(mPoints[i].pos));
+			glVertex2f(horiz2d(rounding_center), vert2d(rounding_center));
+		}
+		else if (mPoints[i].type == EOuterRoundingEnd)
+		{
+			glVertex2f(horiz2d(mPoints[i].pos), vert2d(mPoints[i].pos));
+		}
+	}
+
+	//glVertex2f(horiz2d(mPoints[0].pos), vert2d(mPoints[0].pos));
+	//glVertex2f(horiz2d(mPoints[0].pos), vert2d(mPoints[0].pos));
+
+	glEnd();
 }
 
 }

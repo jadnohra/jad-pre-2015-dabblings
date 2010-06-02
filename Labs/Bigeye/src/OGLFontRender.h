@@ -12,10 +12,13 @@ namespace BE
 		bool Create(const char* inFilePath, float inPixelHeight);
 		void Render(const char* inText, float inPosX, float inPosY) const;
 
+		float GetPixelHeight() const { return mPixelHeight; }
+
 	protected:
 
 		friend class OGLState_FontRender;
 		
+		float mPixelHeight;
 		GLuint mTexture;
 	};
 
@@ -28,6 +31,7 @@ namespace BE
 
 		virtual void	Set();
 
+		float GetPixelHeight() const { return mFont.GetPixelHeight(); }
 		void Render(const char* inText, float inPosX, float inPosY) const { mFont.Render(inText, inPosX, inPosY); }
 
 	protected:

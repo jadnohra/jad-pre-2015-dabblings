@@ -1,6 +1,5 @@
 #include "../include/Bigeye/Bigeye.h"
 
-
 int main()
 {
 	BE::App app;
