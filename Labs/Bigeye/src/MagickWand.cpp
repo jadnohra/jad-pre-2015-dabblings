@@ -1,4 +1,5 @@
 #include "MagickWand.h"
+#include "smart_ptr.h"
 #include <stdio.h>
 
 #ifdef _DEBUG
@@ -48,16 +49,85 @@
 namespace BE
 {
 
+//useful links:
+// http://members.shaw.ca/el.supremo/MagickWand/
+// http://valokuva.org/?paged=2
+
+
+template<>
+struct PtrDeletePolicy_delete<MagickWand> {
+
+    static inline MagickWand* getDefault() { return NULL; }
+    static inline void doDelete(MagickWand* ptr) { ClearMagickWand(ptr); }
+};
+
+
+template<>
+struct PtrDeletePolicy_delete<PixelWand> {
+
+    static inline PixelWand* getDefault() { return NULL; }
+    static inline void doDelete(PixelWand* ptr) { ClearPixelWand(ptr); }
+};
+
+template<>
+struct PtrDeletePolicy_delete<DrawingWand> {
+
+    static inline DrawingWand* getDefault() { return NULL; }
+    static inline void doDelete(DrawingWand* ptr) { ClearDrawingWand(ptr); }
+};
+
+template<>
+struct PtrDeletePolicy_delete<PixelIterator> {
+
+    static inline PixelIterator* getDefault() { return NULL; }
+    static inline void doDelete(PixelIterator* ptr) { ClearPixelIterator(ptr); }
+};
+
 class MagickWandContext
 {
 public:
 
-	MagickWandContext()
+	struct AutoGenesis
 	{
-		temp_pixels = NULL;
-		temp_total_component_count = 0;
+		AutoGenesis()
+		{
+			MagickWandGenesis();
+		}
+	};
 
-		MagickWandGenesis();
+	unsigned char* temp_pixels;
+	size_t temp_total_component_count;
+
+	AutoGenesis auto_genesis;
+
+	auto_scoped_ptr<PixelWand> white;
+	auto_scoped_ptr<PixelWand> red;
+	auto_scoped_ptr<PixelWand> blue;
+	auto_scoped_ptr<PixelWand> black;
+	auto_scoped_ptr<PixelWand> black_mask;
+	auto_scoped_ptr<PixelWand> blue1;
+	auto_scoped_ptr<PixelWand> transparent;
+
+	MagickWandContext()
+	:	temp_pixels(NULL)
+	,	temp_total_component_count(0)
+	,	auto_genesis()
+	,	white(NewPixelWand())
+	,	red(NewPixelWand())
+	,	blue(NewPixelWand())
+	,	black(NewPixelWand())
+	,	black_mask(NewPixelWand())
+	,	blue1(NewPixelWand())
+	,	transparent(NewPixelWand())
+	{
+		PixelSetColor(white, "white");
+		PixelSetColor(red, "red");
+		PixelSetColor(blue, "blue");
+		PixelSetColor(black, "black");
+		PixelSetColor(black_mask, "black");
+		PixelSetAlpha(black_mask, 0.0);
+		PixelSetColor(blue1, "#4096EE");
+		PixelSetColor(transparent, "transparent");
 	}
 
 	~MagickWandContext()
@@ -81,144 +151,385 @@ public:
 
 	unsigned char* GetTempPixels() { return temp_pixels; }
 
-	unsigned char* temp_pixels;
-	size_t temp_total_component_count;
+
+	bool ToGLTexture(DrawingWand* draw, GLuint inTexture, GLsizei inWidth, GLsizei inHeight)
+	{
+		auto_scoped_ptr<MagickWand> wand(NewMagickWand());
+		MagickNewImage(wand, inWidth, inHeight, transparent);
+		MagickDrawImage(wand, draw);
+
+		return ToGLTexture(wand, inTexture, inWidth, inHeight);
+	}
+
+
+	bool ToGLTexture(MagickWand* wand, GLuint inTexture, GLsizei& outWidth, GLsizei& outHeight)
+	{
+		if (wand)
+		{
+			outWidth = MagickGetImageWidth(wand);
+			outHeight = MagickGetImageHeight(wand);
+
+			if (MagickExportImagePixels(wand, 0, 0, outWidth, outHeight, "RGBA", CharPixel, GetTempPixels(outWidth*outHeight, 4)))
+			{
+				glBindTexture(GL_TEXTURE_2D, inTexture);
+				glPixelStorei(GL_UNPACK_ALIGNMENT, 1);
+				glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, outWidth, outHeight, 0, GL_RGBA, GL_UNSIGNED_BYTE, GetTempPixels());
+				return true;
+			}
+		}
+
+		return false;
+	}
+
+	// modifies source wand
+	void RoundWand(MagickWand* ioSourceWand, int inRounding)
+	{
+		auto_scoped_ptr<DrawingWand> round_drawing_wand(NewDrawingWand());
+		MagickWand* round_wand = NewMagickWand();
+		MagickNewImage(round_wand, MagickGetImageWidth(ioSourceWand), MagickGetImageHeight(ioSourceWand), transparent);
+		
+		DrawSetFillColor(round_drawing_wand, white);
+		DrawRoundRectangle(round_drawing_wand, inRounding/2, inRounding/2, MagickGetImageWidth(round_wand)-inRounding/2,MagickGetImageHeight(round_wand)-inRounding/2, inRounding, inRounding);
+
+		MagickDrawImage(round_wand, round_drawing_wand);
+		MagickCompositeImage(ioSourceWand, round_wand, CopyOpacityCompositeOp, 0, 0);
+	}
+
+	MagickWand* DrawToWand(DrawingWand* draw, GLsizei inWidth, GLsizei inHeight, PixelWand* inColor)
+	{
+		MagickWand* wand(NewMagickWand());
+		MagickNewImage(wand, inWidth, inHeight, inColor);
+		MagickDrawImage(wand, draw);
+
+		return wand;
+	}
+
+	// Returns result
+	MagickWand* ShadowDrawWand(DrawingWand* draw, GLsizei inWidth, GLsizei inHeight, int inOffsetX=1, int inOffsetY=1, float inOpacity=40.0f, float inSigma=1.0f)
+	{
+		auto_scoped_ptr<MagickWand> wand(DrawToWand(draw, inWidth, inHeight, transparent));
+		return ShadowWand(wand, inOffsetX, inOffsetY, inOpacity, inSigma);
+	}
+
+	// Returns result
+	MagickWand* ShadowWand(MagickWand* inSourceWand, int inOffsetX=1, int inOffsetY=1, float inOpacity=40.0f, float inSigma=1.0f)
+	{
+		MagickWand* shadow_wand(CloneMagickWand(inSourceWand));
+
+		//$shadow->setImageBackgroundColor( new ImagickPixel('black') );
+		MagickSetImageBackgroundColor(shadow_wand, black);
+
+		//$shadow->shadowImage( 40, 1, 1, 1 );
+		MagickShadowImage(shadow_wand, inOpacity, inSigma, 1, 1);
+
+		//$shadow->compositeImage( $im, Imagick::COMPOSITE_OVER, 0, 0 );
+		MagickCompositeImage(shadow_wand, inSourceWand, OverCompositeOp, inOffsetX, inOffsetY);
+
+		return shadow_wand;
+	}
+
+	MagickWand* GradientFillWand(size_t inWidth, size_t inHeight, glm::vec4 inColors[4])
+	{
+		MagickWand* wand = NewMagickWand();
+		MagickNewImage(wand, inWidth, inHeight, transparent);
+
+		GradientFillWand(wand, inColors);
+		return wand;
+	}
+
+	void GradientFillWand(MagickWand* ioSourceWand, glm::vec4 inColors[4])
+	{
+		auto_scoped_ptr<PixelIterator> iterator(NewPixelIterator(ioSourceWand));
+
+		size_t width = MagickGetImageWidth(ioSourceWand);
+		size_t height = MagickGetImageHeight(ioSourceWand);
+
+		char hex[128];
+		
+		size_t x,y;
+
+		float y_step = 1.0f / (float) height;
+		float x_step = 1.0f / (float) width;
+		float yf = 0.0f;
+		float xf = 0.0f;
+
+		glm::vec4 row_colors[2];
+
+		for(y=0;y<height;y++, yf+=y_step) {
+			// Get the next row of the image as an array of PixelWands
+			PixelWand** pixels=PixelGetNextIteratorRow(iterator,&x);
+			// Set the row of wands to a simple gray scale gradient
+			
+			row_colors[0] = inColors[3] * yf + inColors[0] * (1.0f-yf);
+			row_colors[1] = inColors[2] * yf + inColors[1] * (1.0f-yf);
+
+			xf = 0.0f;
+			for(x=0;x<width;x++, xf+=x_step) {
+
+				glm::vec4 color = row_colors[1]*xf + row_colors[0]* (1.0f-xf);
+				
+				sprintf(hex,"rgb(%d,%d,%d)", (int) (color.r * 255.0f),(int) (color.g * 255.0f),(int) (color.b * 255.0f));
+				PixelSetColor(pixels[x],hex);
+				PixelSetAlpha(pixels[x],color.a);
+			}
+			// Sync writes the pixels back to the m_wand
+			PixelSyncIterator(iterator);
+		}
+	}
+
 };
 
-static MagickWandContext sMagickWandContext;
+static MagickWandContext sContext;
 
-bool MagicWand::ReadImageToGLTexture(const char* inPath, GLuint& outTexture, GLsizei& outWidth, GLsizei& outHeight)
+bool MagicWand::MakeTestButtonTexture(GLuint inTexture, GLsizei& outWidth, GLsizei& outHeight)
 {
 	bool was_read = false;
 
-	MagickWand* wand = NewMagickWand();
+	auto_scoped_ptr<MagickWand> test_wand(NewMagickWand());
+	auto_scoped_ptr<PixelWand> white_wand(NewPixelWand());
+	auto_scoped_ptr<PixelWand> red_wand(NewPixelWand());
+	auto_scoped_ptr<PixelWand> blue_wand(NewPixelWand());
+	auto_scoped_ptr<PixelWand> black_wand(NewPixelWand());
+	auto_scoped_ptr<PixelWand> col1_wand(NewPixelWand());
+	auto_scoped_ptr<PixelWand> transparent_wand(NewPixelWand());
+	PixelSetColor(white_wand, "white");
+	PixelSetColor(red_wand, "red");
+	PixelSetColor(blue_wand, "blue");
+	PixelSetColor(black_wand, "black");
+	PixelSetColor(col1_wand, "#4096EE");
+	PixelSetColor(transparent_wand, "transparent");
+	auto_scoped_ptr<DrawingWand> drawing_wand(NewDrawingWand());
+	
+	//$im->newImage( 200, 200, "white", "png" );
+	MagickNewImage(test_wand, 200, 200, white_wand);
+
+	//$draw->setFillColor( "#4096EE" );
+	DrawSetFillColor(drawing_wand, col1_wand);
+
+	//??
+	//DrawSetStrokeColor(drawing_wand, blue_wand);
+	
+	//$draw->rectangle( 0, 0, 170, 40 );
+	DrawRectangle(drawing_wand, 0,0,170,40);
+
+	//$draw->setFillColor( "white" );
+	DrawSetFillColor(drawing_wand, white_wand);
+
+	//$draw->setFillAlpha( 0.5 );
+	DrawSetFillAlpha(drawing_wand, 0.5);
+
+	//$draw->setFont( "./Vera.ttf" );
+	DrawSetFont(drawing_wand, "media/DroidSans.ttf");
+
+	//$draw->setFillAlpha( 0.17 );
+	DrawSetFillAlpha(drawing_wand, 0.17);
+
+	//$draw->bezier( array(
+    //   array( "x" => 0 , "y" => 0 ),
+    //    array( "x" => 85, "y" => 24 ),
+    //    array( "x" => 170, "y" => 0 ),
+    //   ) );
+	PointInfo bezier_points[3];
+	bezier_points[0].x = 0; bezier_points[0].y = 0;
+	bezier_points[1].x = 85; bezier_points[1].y = 24;
+	bezier_points[2].x = 170; bezier_points[2].y = 0;
+	DrawBezier(drawing_wand, 3, bezier_points);
+
+	/* Render all pending operations on the image */
+	MagickDrawImage(test_wand, drawing_wand);
+
+	//$draw->setFillAlpha( 1 );
+	DrawSetFillAlpha(drawing_wand, 1.0);
+
+	//$draw->setFontSize( 25 );
+	DrawSetFontSize(drawing_wand, 25.0);
+
+	//$draw->setFillColor( "white" );
+	DrawSetFillColor(drawing_wand, white_wand);
+
+	//$im->annotateImage( $draw, 38, 28, 0, "Submit" );
+	MagickAnnotateImage(test_wand, drawing_wand, 32, 28, 0, "Bigeye ! ;)");
+
+	//$im->trimImage( 0 );
+	MagickTrimImage(test_wand, 0);
+
+	//$im->roundCorners( 4, 4 );
+	//
+		auto_scoped_ptr<DrawingWand> round_drawing_wand(NewDrawingWand());
+		MagickWand* round_wand = NewMagickWand();
+		MagickNewImage(round_wand, MagickGetImageWidth(test_wand),MagickGetImageHeight(test_wand), transparent_wand);
+		
+		DrawSetFillColor(round_drawing_wand, white_wand);
+		DrawRoundRectangle(round_drawing_wand, 2,2, MagickGetImageWidth(round_wand)-2,MagickGetImageHeight(round_wand)-2, 4, 4);
+
+		MagickDrawImage(round_wand, round_drawing_wand);
+		MagickCompositeImage(test_wand, round_wand, CopyOpacityCompositeOp, 0, 0);
+	//
+
+	//$shadow = $im->clone();
+	auto_scoped_ptr<MagickWand> shadow_wand(CloneMagickWand(test_wand));
+
+	//$shadow->setImageBackgroundColor( new ImagickPixel('black') );
+	MagickSetImageBackgroundColor(shadow_wand, black_wand);
+
+	//$shadow->shadowImage( 40, 1, 1, 1 );
+	MagickShadowImage(shadow_wand, 40, 1, 1, 1);
+
+	//$shadow->compositeImage( $im, Imagick::COMPOSITE_OVER, 0, 0 );
+	MagickCompositeImage(shadow_wand, test_wand, OverCompositeOp, 0, 0);
+
+	//MagickDrawImage(test_wand, drawing_wand);
+
+	MagickWand* copy_wand = shadow_wand;
+
+	outWidth = MagickGetImageWidth(copy_wand);
+	outHeight = MagickGetImageHeight(copy_wand);
+
+	if (MagickExportImagePixels(copy_wand, 0, 0, outWidth, outHeight, "RGBA", CharPixel, sContext.GetTempPixels(outWidth*outHeight, 4)))
+	{
+		glBindTexture(GL_TEXTURE_2D, inTexture);
+		glPixelStorei(GL_UNPACK_ALIGNMENT, 1);
+		glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, outWidth, outHeight, 0, GL_RGBA, GL_UNSIGNED_BYTE, sContext.GetTempPixels());
+		was_read = true;
+	}
+
+	return was_read;
+}
+
+
+bool MagicWand::MakeFrameTexture(GLuint inTexture, GLsizei& outWidth, GLsizei& outHeight)
+{
+	glm::vec4 colors[4] = { glm::vec4(82.0f/255.0f, 82.0f/255.0f, 82.0f/255.0f, 1.0f), 
+							glm::vec4(82.0f/255.0f, 82.0f/255.0f, 82.0f/255.0f, 1.0f), 
+							glm::vec4(37.0f/255.0f, 37.0f/255.0f, 37.0f/255.0f, 1.0f), 
+							glm::vec4(37.0f/255.0f, 37.0f/255.0f, 37.0f/255.0f, 1.0f) };
+
+	auto_scoped_ptr<MagickWand> gradient_wand(sContext.GradientFillWand(outWidth, outHeight, colors));
+	sContext.RoundWand(gradient_wand, 8);
+
+	int offset[2];
+	offset[0] = 4;
+	offset[1] = -4;
+
+	auto_scoped_ptr<MagickWand> shadowed_wand(sContext.ShadowWand(gradient_wand, offset[0], offset[1], 40.0f, 1.5f));
+
+	outWidth += offset[0];
+	outHeight += offset[1];
+
+	return sContext.ToGLTexture(shadowed_wand, inTexture, outWidth, outHeight);
+	
+	/*
+	auto_scoped_ptr<DrawingWand> draw(NewDrawingWand());
+	auto_scoped_ptr<PixelWand> color(NewPixelWand());
+	
+	PixelSetColor(color, "#00C8F0");
+
+	DrawSetFillColor(draw, color);
+	DrawSetStrokeColor(draw, color);
+	DrawRoundRectangle(draw, 0, 0 ,inWidth-1, inHeight-1, 8, 8);
+	
+	auto_scoped_ptr<MagickWand> shadowed_wand(sContext.ShadowWand(draw, inWidth, inHeight));
+
+	return sContext.ToGLTexture(shadowed_wand, inTexture, inWidth, inHeight);
+	*/
+}
+
+
+bool MagicWand::MakeSliderFrameTexture(GLuint inTexture, GLsizei inLength, GLsizei& outWidth, GLsizei& outHeight)
+{
+	glm::vec3 maincolor(1.0f, 1.0f, 1.0f);
+	//glm::vec3 maincolor(0.0f, 0.0f, 0.0f);
+
+	glm::vec4 colors[4] = { glm::vec4(maincolor.r, maincolor.g, maincolor.b, 0.0f), 
+							glm::vec4(maincolor.r, maincolor.g, maincolor.b, 1.0f), 
+							glm::vec4(maincolor.r, maincolor.g, maincolor.b, 1.0f), 
+							glm::vec4(maincolor.r, maincolor.g, maincolor.b, 0.0f) };
+
+	outWidth = inLength;
+	outHeight = 1;
+
+	auto_scoped_ptr<MagickWand> gradient_wand(sContext.GradientFillWand(outWidth, outHeight, colors));
+	//return sContext.ToGLTexture(gradient_wand, inTexture, outWidth, outHeight);
+
+	{
+		auto_scoped_ptr<DrawingWand> draw(NewDrawingWand());
+		
+		DrawSetFillColor(draw, sContext.white);
+		DrawSetStrokeColor(draw, sContext.white);
+		DrawSetStrokeWidth(draw, 0.0f);
+
+		PointInfo points[3];
+		points[0].x = 0.0f;
+		points[0].y = 0.5f;
+		points[1].x = inLength;
+		points[1].y = 0.0;
+		points[2].x = inLength;
+		points[2].y = 1.0f;
+
+		DrawPolygon(draw, 3, points);
+
+		auto_scoped_ptr<MagickWand> poly_wand(sContext.DrawToWand(draw, outWidth, outHeight, sContext.transparent));
+
+		MagickCompositeImage(gradient_wand, poly_wand, DstInCompositeOp, 0, 0);
+	}
+
+	return sContext.ToGLTexture(gradient_wand, inTexture, outWidth, outHeight);
+}
+
+bool MagicWand::MakeSliderMarkerTexture(GLuint inTexture, GLsizei& outWidth, GLsizei& outHeight)
+{
+	auto_scoped_ptr<DrawingWand> draw(NewDrawingWand());
+	auto_scoped_ptr<PixelWand> fill(NewPixelWand());
+	auto_scoped_ptr<PixelWand> stroke(NewPixelWand());
+	
+	//http://www.colorsontheweb.com/colorwizard.asp
+
+	PixelSetColor(stroke, "#000000");
+	PixelSetAlpha(stroke, 0.2f);
+	//PixelSetColor(fill, "#F47100");
+	//PixelSetColor(fill, "#F0A000");
+	//PixelSetColor(fill, "#0077F0");
+	//PixelSetColor(fill, "#F37103");
+	PixelSetColor(fill, "#F27100");
+	PixelSetAlpha(fill, 1.0f);
+
+	outWidth = 25;
+	outHeight = 12;
+
+	DrawSetStrokeWidth(draw, 1.5f);
+	DrawSetFillColor(draw, fill);
+	DrawSetStrokeColor(draw, stroke);
+	DrawRoundRectangle(draw, 2, 2 ,outWidth-2, outHeight-2, 3, 3);
+	
+	//auto_scoped_ptr<MagickWand> test_wand(sContext.DrawToWand(draw, outWidth, outHeight, sContext.red));
+	//MagickWriteImage(test_wand, "test.bmp");
+
+	//auto_scoped_ptr<MagickWand> shadowed_wand(sContext.ShadowWand(draw, outWidth, outHeight));
+	//return sContext.ToGLTexture(shadowed_wand, inTexture, outWidth, outHeight);
+
+	return sContext.ToGLTexture(draw, inTexture, outWidth, outHeight);
+
+	//auto_scoped_ptr<MagickWand> shadowed_wand(sContext.ShadowWand(draw, inWidth, inHeight));
+	//return sContext.ToGLTexture(shadowed_wand, inTexture, inWidth, inHeight);
+}
+
+bool MagicWand::ReadImageToGLTexture(const char* inPath, GLuint inTexture, GLsizei& outWidth, GLsizei& outHeight)
+{
+	bool was_read = false;
+
+	auto_scoped_ptr<MagickWand> wand(NewMagickWand());
 	{
 		if (MagickReadImage(wand, inPath))
 		{
-			MagickWand* test_wand = NewMagickWand();
-			PixelWand* white_wand = NewPixelWand();
-			PixelWand* red_wand = NewPixelWand();
-			PixelWand* blue_wand = NewPixelWand();
-			PixelWand* black_wand = NewPixelWand();
-			PixelWand* col1_wand = NewPixelWand();
-			PixelWand* transparent_wand = NewPixelWand();
-			PixelSetColor(white_wand, "white");
-			PixelSetColor(red_wand, "red");
-			PixelSetColor(blue_wand, "blue");
-			PixelSetColor(black_wand, "black");
-			PixelSetColor(col1_wand, "#4096EE");
-			PixelSetColor(transparent_wand, "transparent");
-			DrawingWand* drawing_wand = NewDrawingWand();
-			
-			//$im->newImage( 200, 200, "white", "png" );
-			MagickNewImage(test_wand, 200, 200, white_wand);
-
-			//$draw->setFillColor( "#4096EE" );
-			DrawSetFillColor(drawing_wand, col1_wand);
-
-			//??
-			//DrawSetStrokeColor(drawing_wand, blue_wand);
-			
-			//$draw->rectangle( 0, 0, 170, 40 );
-			DrawRectangle(drawing_wand, 0,0,170,40);
-
-			//$draw->setFillColor( "white" );
-			DrawSetFillColor(drawing_wand, white_wand);
-
-			//$draw->setFillAlpha( 0.5 );
-			DrawSetFillAlpha(drawing_wand, 0.5);
-
-			//$draw->setFont( "./Vera.ttf" );
-			DrawSetFont(drawing_wand, "media/DroidSans.ttf");
-
-			//$draw->setFillAlpha( 0.17 );
-			DrawSetFillAlpha(drawing_wand, 0.17);
-
-			//$draw->bezier( array(
-            //   array( "x" => 0 , "y" => 0 ),
-            //    array( "x" => 85, "y" => 24 ),
-            //    array( "x" => 170, "y" => 0 ),
-            //   ) );
-			PointInfo bezier_points[3];
-			bezier_points[0].x = 0; bezier_points[0].y = 0;
-			bezier_points[1].x = 85; bezier_points[1].y = 24;
-			bezier_points[2].x = 170; bezier_points[2].y = 0;
-			DrawBezier(drawing_wand, 3, bezier_points);
-
-			/* Render all pending operations on the image */
-			MagickDrawImage(test_wand, drawing_wand);
-
-			//$draw->setFillAlpha( 1 );
-			DrawSetFillAlpha(drawing_wand, 1.0);
-
-			//$draw->setFontSize( 25 );
-			DrawSetFontSize(drawing_wand, 25.0);
-
-			//$draw->setFillColor( "white" );
-			DrawSetFillColor(drawing_wand, white_wand);
-
-			//$im->annotateImage( $draw, 38, 28, 0, "Submit" );
-			MagickAnnotateImage(test_wand, drawing_wand, 32, 28, 0, "Bigeye ! ;)");
-
-			//$im->trimImage( 0 );
-			MagickTrimImage(test_wand, 0);
-
-			//$im->roundCorners( 4, 4 );
-			// MagickRoundCorners( ??
-			//
-				DrawingWand* round_drawing_wand = NewDrawingWand();
-				MagickWand* round_wand = NewMagickWand();
-				MagickNewImage(round_wand, MagickGetImageWidth(test_wand),MagickGetImageHeight(test_wand), transparent_wand);
-				
-				DrawSetFillColor(round_drawing_wand, white_wand);
-				DrawRoundRectangle(round_drawing_wand, 2,2, MagickGetImageWidth(round_wand)-2,MagickGetImageHeight(round_wand)-2, 4, 4);
-
-				MagickDrawImage(round_wand, round_drawing_wand);
-				MagickCompositeImage(test_wand, round_wand, CopyOpacityCompositeOp, 0, 0);
-			//
-
-			//$shadow = $im->clone();
-			MagickWand* shadow_wand = CloneMagickWand(test_wand);
-
-			//$shadow->setImageBackgroundColor( new ImagickPixel('black') );
-			MagickSetImageBackgroundColor(shadow_wand, black_wand);
-
-			//$shadow->shadowImage( 40, 1, 1, 1 );
-			MagickShadowImage(shadow_wand, 40, 1, 1, 1);
-
-			//$shadow->compositeImage( $im, Imagick::COMPOSITE_OVER, 0, 0 );
-			MagickCompositeImage(shadow_wand, test_wand, OverCompositeOp, 0, 0);
-
-			//MagickDrawImage(test_wand, drawing_wand);
-
-			MagickWand* copy_wand = shadow_wand;
-
-			outWidth = MagickGetImageWidth(copy_wand);
-			outHeight = MagickGetImageHeight(copy_wand);
-
-			if (MagickExportImagePixels(copy_wand, 0, 0, outWidth, outHeight, "RGBA", CharPixel, sMagickWandContext.GetTempPixels(outWidth*outHeight, 4)))
-			{
-				glGenTextures(1, &outTexture);
-				glBindTexture(GL_TEXTURE_2D, outTexture);
-				glPixelStorei(GL_UNPACK_ALIGNMENT, 1);
-				glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, outWidth, outHeight, 0, GL_RGBA, GL_UNSIGNED_BYTE, sMagickWandContext.GetTempPixels());
-				was_read = true;
-			}
-
-			ClearMagickWand(shadow_wand);
-			ClearMagickWand(test_wand);
-			ClearDrawingWand(drawing_wand);
-			ClearPixelWand(white_wand);
-			ClearPixelWand(red_wand);
-			ClearPixelWand(blue_wand);
-			ClearPixelWand(col1_wand);
-			ClearPixelWand(black_wand);
+			was_read = sContext.ToGLTexture(wand, inTexture, outWidth, outHeight);
 		}
 	}
-	ClearMagickWand(wand);
 	
 	return was_read;
 }
+
+
+
 
 
 }

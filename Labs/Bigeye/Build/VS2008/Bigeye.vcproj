@@ -219,6 +219,10 @@
 			>
 		</File>
 		<File
+			RelativePath="..\..\src\meta_util.h"
+			>
+		</File>
+		<File
 			RelativePath="..\..\src\OGL.h"
 			>
 		</File>
@@ -256,6 +260,10 @@
 		</File>
 		<File
 			RelativePath="..\..\src\ShapeUtil.h"
+			>
+		</File>
+		<File
+			RelativePath="..\..\src\smart_ptr.h"
 			>
 		</File>
 		<File

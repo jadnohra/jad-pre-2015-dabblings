@@ -99,7 +99,24 @@ namespace BE
 		aWidgetPtr mChildWidgets;
 	};
 
-	
+	class MagicWandTestTextureWidget : public Widget
+	{
+	public:
+
+		MagicWandTestTextureWidget();
+		virtual ~MagicWandTestTextureWidget();
+
+		bool		Create(const glm::vec2& inPos);
+
+		virtual void Render(const App& inApp, float inTimeSecs, const SceneTransform& inParentTransform, bool inParentTransformDirty);
+
+	protected:
+
+		OGLTexture mTexture;
+		glm::vec3 mPos;
+		glm::vec2 mSize;
+	};
+
 	class SimpleTextureWidget : public Widget
 	{
 	public:
@@ -150,9 +167,10 @@ namespace BE
 		glm::vec2 mSize;
 		float mSliderPos;
 
-		ShapeOutline mRectangleOutline;
-		RoundedRectangle mRangeRect;
-		RoundedRectangle mSliderRect;
+		OGLTexture mFrameTexture;
+		glm::vec2 mFrameTexSize;
+		OGLTexture mMarkerTexture;
+		glm::vec2 mMarkerTexSize;
 	};
 
 	class SimplePanelWidget : public Widget
@@ -175,7 +193,7 @@ namespace BE
 		glm::vec3 mPos;
 		glm::vec2 mSize;
 
-		RoundedRectangleWithShadow mRectangle;
+		OGLTexture mTexture;
 		ChildWidgetContainer mChildren;
 	};
 

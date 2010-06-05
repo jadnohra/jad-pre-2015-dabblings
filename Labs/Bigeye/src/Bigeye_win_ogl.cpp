@@ -105,44 +105,28 @@ bool SimpleSliderWidget::Create(const glm::vec2& inPos, const glm::vec2& inSize)
 void SimpleSliderWidget::UpdateGeometry(const glm::vec2& inWorldPos)
 {
 	{
-		//static const glm::vec4 color(236.0f/255.0f, 115.0f/255.0f, 0.0f, 1.0f);
-		static const glm::vec4 color(1.0f, 1.0f, 1.0f, 1.0f);
-		static const glm::vec4 colors[4] = { color, color, color, color};
-		
-		float rect_height = 4.0f;
-		rect_height = 80.0f;
-		
-		glm::vec2 start_pos = inWorldPos;
-		vert2d(start_pos) += up2d(0.5f * rect_height);
+		mFrameTexture.AutoCreate();
+		mMarkerTexture.AutoCreate();
 
-		mRangeRect.SetPosSize(start_pos, glm::vec2(mSize.x, rect_height), 20.0f, 5, colors);
-	}
+		GLsizei tex_dims[2];
 
-	{
-		//static const glm::vec4 color(236.0f/255.0f, 115.0f/255.0f, 0.0f, 1.0f);
-		static const glm::vec4 color(0.0f, 200.0f/255.0f, 240.0f/255.0f, 1.0f);
-		static const glm::vec4 colors[4] = { color, color, color, color};
-		
-		glm::vec2 start_pos = inWorldPos;
-		glm::vec2 end_pos = start_pos + mSize;
-		glm::vec2 slider_pos = start_pos * (1.0f-mSliderPos) + end_pos * mSliderPos;
-		
-		float slider_height = 8.0f;
-		
-		vert2d(slider_pos) += up2d(0.5f * slider_height);
-		
-		mSliderRect.SetPosSize(slider_pos, glm::vec2(20.0f, slider_height), 2.0f, 1, colors);
-	}
+		MagicWand::MakeSliderFrameTexture(mFrameTexture.mTexture, mSize.x, tex_dims[0], tex_dims[1]);
+		mFrameTexSize[0] = tex_dims[0];
+		mFrameTexSize[1] = tex_dims[1];
 
-	{
-		mRectangleOutline.SetToShape(mRangeRect.GetPositions(), 1.0f, 1.0f);
+		MagicWand::MakeSliderMarkerTexture(mMarkerTexture.mTexture, tex_dims[0], tex_dims[1]);
+		//tex_dims[0] = 40;
+		//tex_dims[1] = 20;
+		//MagicWand::MakeFrameTexture(mMarkerTexture.mTexture, tex_dims[0], tex_dims[1]);
+		mMarkerTexSize[0] = tex_dims[0];
+		mMarkerTexSize[1] = tex_dims[1];
 	}
 }
 
 
 void SimpleSliderWidget::Update(const App& inApp, float inTimeSecs, const SceneTransform& inParentTransform, bool inParentTransformDirty)
 {
-	if (inParentTransformDirty || !mSliderRect.IsSet())
+	if (inParentTransformDirty || !mMarkerTexture.IsCreated())
 	{
 		glm::vec3 world_pos = inParentTransform * mPos;
 		UpdateGeometry(to2d_point(world_pos));
@@ -152,47 +136,47 @@ void SimpleSliderWidget::Update(const App& inApp, float inTimeSecs, const SceneT
 
 void SimpleSliderWidget::Render(const App& inApp, float inTimeSecs, const SceneTransform& inParentTransform, bool inParentTransformDirty)
 {
-	glm::vec2 start_pos = to2d_point(inParentTransform * mPos);
-	glm::vec2 end_pos = start_pos + mSize;
+	glm::vec2 world_pos = to2d_point(inParentTransform * mPos);
 
-	int point_count = ((int) (glm::length(mSize) * 0.05f)) + 2;
-	float inc = 1.0f / (float) point_count;
+	glm::vec2 frame_world_pos = world_pos;
+	vert2d(frame_world_pos) -= 0.5f * vert2d(mFrameTexSize);
 
+	glm::vec2 marker_world_pos = world_pos;
+	vert2d(marker_world_pos) -= 0.5f * vert2d(mMarkerTexSize);
+	horiz2d(marker_world_pos) += 0.3f * horiz2d(mFrameTexSize);
 
-	inApp.GetOGLStateManager().Enable(EOGLState_NormalWidget);
+	inApp.GetOGLStateManager().Enable(EOGLState_TextureWidget);
 	{
-		//mRangeRect.RenderGL();
-
-		static const glm::vec4 outline_color(0.0f, 0.0f, 0.0f, 1.0f);
-		mRectangleOutline.RenderGL(outline_color);
-
-		/*
-
-		glColor4f(1.0f, 1.0f, 1.0f, 1.0f);
-		glLineWidth(1.0f);
+		glBindTexture(GL_TEXTURE_2D, mFrameTexture.mTexture);
+		glTexParameteri(GL_TEXTURE_2D,GL_TEXTURE_MIN_FILTER,GL_NEAREST);	// Linear Filtering
+		glTexParameteri(GL_TEXTURE_2D,GL_TEXTURE_MAG_FILTER,GL_NEAREST);	// Linear Filtering
 		
-		glBegin(GL_LINE_STRIP);
+		glTexEnvi(GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_REPLACE);
+		//glColor4f(1.0f,1.0f,1.0f,1.0f);			
 
-		float factor = 0.0f;
-		for (int i=0; i<point_count; ++i)
-		{
-			glm::vec2 point = start_pos * (1.0f-factor) + end_pos * factor;
-			
-			glVertex2f(horiz2d(point), vert2d(point));
-
-			factor += inc;
-		}
-
+		glBegin(GL_QUADS);
+			 glTexCoord2f(0.0f,0.0f); glVertex2f(frame_world_pos.x,frame_world_pos.y);
+			 glTexCoord2f(1.0f,0.0f); glVertex2f(frame_world_pos.x+mFrameTexSize.x,frame_world_pos.y);
+			 glTexCoord2f(1.0f,1.0f); glVertex2f(frame_world_pos.x+mFrameTexSize.x,frame_world_pos.y+mFrameTexSize.y);
+			 glTexCoord2f(0.0f,1.0f); glVertex2f(frame_world_pos.x,frame_world_pos.y+mFrameTexSize.y);
 		glEnd();
-		*/
 	}
 
 	{
-		mSliderRect.RenderGL();
-
-		static const glm::vec4 outline_color(0.0f, 0.0f, 0.0f, 1.0f);
-		glLineWidth(1.5f);
-		mSliderRect.RenderOutlineGL(outline_color);
+		glBindTexture(GL_TEXTURE_2D, mMarkerTexture.mTexture);
+		// I do not know why things break if I do not set these params again here!!! find out!
+		glTexParameteri(GL_TEXTURE_2D,GL_TEXTURE_MIN_FILTER,GL_NEAREST);	// Linear Filtering
+		glTexParameteri(GL_TEXTURE_2D,GL_TEXTURE_MAG_FILTER,GL_NEAREST);	// Linear Filtering
+		
+		glTexEnvi(GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_REPLACE);
+		//glColor4f(1.0f,1.0f,1.0f,1.0f);			
+	
+		glBegin(GL_QUADS);
+			 glTexCoord2f(0.0f,0.0f); glVertex2f(marker_world_pos.x,marker_world_pos.y);
+			 glTexCoord2f(1.0f,0.0f); glVertex2f(marker_world_pos.x+mMarkerTexSize.x,marker_world_pos.y);
+			 glTexCoord2f(1.0f,1.0f); glVertex2f(marker_world_pos.x+mMarkerTexSize.x,marker_world_pos.y+mMarkerTexSize.y);
+			 glTexCoord2f(0.0f,1.0f); glVertex2f(marker_world_pos.x,marker_world_pos.y+mMarkerTexSize.y);
+		glEnd();
 	}
 }
 
@@ -225,7 +209,8 @@ SimpleTextureWidget::SimpleTextureWidget()
 
 SimpleTextureWidget::~SimpleTextureWidget()
 {
-	//TODO free texture
+	if (mTexture >= 0)
+		glDeleteTextures(1, &mTexture);
 }
 
 bool SimpleTextureWidget::Create(const glm::vec2& inPos, const char* inTexturePath)
@@ -240,10 +225,6 @@ bool SimpleTextureWidget::Create(const glm::vec2& inPos, const char* inTexturePa
 
 	mSize.x = (float) dims[0];
 	mSize.y = (float) dims[1];
-
-	//glGenTextures(1, &mTexture);
-	//glBindTexture(GL_TEXTURE_2D, mTexture);
-	//glTexImage2D(GL_TEXTURE_2D, 0, GL_ALPHA, 512,512, 0, GL_ALPHA, GL_UNSIGNED_BYTE, temp_bitmap);
 
 	return true;
 }
@@ -272,6 +253,61 @@ void SimpleTextureWidget::Render(const App& inApp, float inTimeSecs, const Scene
 }
 
 
+MagicWandTestTextureWidget::MagicWandTestTextureWidget()
+{
+}
+
+
+MagicWandTestTextureWidget::~MagicWandTestTextureWidget()
+{
+}
+
+
+bool MagicWandTestTextureWidget::Create(const glm::vec2& inPos)
+{
+	mPos = to3d_point(inPos);
+
+	GLsizei dims[2];
+
+	mTexture.AutoCreate();
+
+	if (!MagicWand::MakeTestButtonTexture(mTexture.mTexture, dims[0], dims[1]))
+		return false;
+
+	//if (!MagicWand::MakeSliderFrameTexture(mTexture.mTexture, 100, dims[0], dims[1]))
+	//	return false;
+	
+
+	mSize.x = (float) dims[0];
+	mSize.y = (float) dims[1];
+
+	return true;
+}
+
+
+void MagicWandTestTextureWidget::Render(const App& inApp, float inTimeSecs, const SceneTransform& inParentTransform, bool inParentTransformDirty)
+{
+	glm::vec3 world_pos = inParentTransform * mPos;
+
+	inApp.GetOGLStateManager().Enable(EOGLState_TextureWidget);
+	{
+		glBindTexture(GL_TEXTURE_2D, mTexture.mTexture);
+		glTexParameteri(GL_TEXTURE_2D,GL_TEXTURE_MIN_FILTER,GL_NEAREST);	// Linear Filtering
+		glTexParameteri(GL_TEXTURE_2D,GL_TEXTURE_MAG_FILTER,GL_NEAREST);	// Linear Filtering
+		
+		glTexEnvi(GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_REPLACE);
+		//glColor4f(1.0f,1.0f,1.0f,1.0f);			
+
+		glBegin(GL_QUADS);
+			 glTexCoord2f(0.0f,0.0f); glVertex2f(world_pos.x,world_pos.y);
+			 glTexCoord2f(1.0f,0.0f); glVertex2f(world_pos.x+mSize.x,world_pos.y);
+			 glTexCoord2f(1.0f,1.0f); glVertex2f(world_pos.x+mSize.x,world_pos.y+mSize.y);
+			 glTexCoord2f(0.0f,1.0f); glVertex2f(world_pos.x,world_pos.y+mSize.y);
+		glEnd();
+	}
+}
+
+
 SimplePanelWidget::SimplePanelWidget()
 :	mChildren(true)
 {
@@ -282,6 +318,7 @@ bool SimplePanelWidget::Create(const glm::vec2& inPos, const glm::vec2& inSize)
 {
 	mPos = to3d_point(inPos);
 	mSize = inSize;
+	
 
 	return true;
 }
@@ -294,9 +331,16 @@ void SimplePanelWidget::UpdateGeometry(const glm::vec2& inWorldPos)
 	{
 		//static float shades[4] = {84.0f/255.0f, 82.0f/255.0f, 37.0f/255.0f, 34.0f/255.0f};
 		//static const glm::vec4 color(0.0f, 200.0f/255.0f, 240.0f/255.0f, 1.0f);
-		static const glm::vec4 color(1.0f, 1.0f, 1.0f, 1.0f);
-		static const glm::vec4 colors[4] = { color, color, color, color};
-		mRectangle.SetPosSize(inWorldPos, mSize, 8.0f, 5, colors, 0.1f, true);
+		//static const glm::vec4 color(1.0f, 1.0f, 1.0f, 1.0f);
+		//static const glm::vec4 colors[4] = { color, color, color, color};
+		//mRectangle.SetPosSize(inWorldPos, mSize, 8.0f, 5, colors, 0.1f, true);
+		mTexture.AutoCreate();
+		GLsizei dims[2];
+		dims[0] = mSize.x;
+		dims[1] = mSize.y;
+		MagicWand::MakeFrameTexture(mTexture.mTexture, dims[0], dims[1]);
+		mSize.x = dims[0];
+		mSize.y = dims[1];
 	}
 
 	/*
@@ -319,7 +363,7 @@ void SimplePanelWidget::UpdateGeometry(const glm::vec2& inWorldPos)
 
 void SimplePanelWidget::Update(const App& inApp, float inTimeSecs, const SceneTransform& inParentTransform, bool inParentTransformDirty)
 {
-	if (inParentTransformDirty || !mRectangle.IsSet())
+	if (inParentTransformDirty || !mTexture.IsCreated())
 	{
 		glm::vec3 world_pos = inParentTransform * mPos;
 		UpdateGeometry(to2d_point(world_pos));
@@ -336,47 +380,23 @@ void SimplePanelWidget::Render(const App& inApp, float inTimeSecs, const SceneTr
 {
 	glm::vec3 world_pos = inParentTransform * mPos;
 
-	/*
+	inApp.GetOGLStateManager().Enable(EOGLState_TextureWidget);
 	{
-		glm::vec2 shadow_pos = todim<glm::vec3, glm::vec2>::point(world_pos);
-		shadow_pos.x += -4.0f;
-		shadow_pos.y += 5.0f;
-
-		glm::vec2 shadow_size = mSize;
-		shadow_size.x += 2.0f;
+		glBindTexture(GL_TEXTURE_2D, mTexture.mTexture);
+		glTexParameteri(GL_TEXTURE_2D,GL_TEXTURE_MIN_FILTER,GL_NEAREST);	// Linear Filtering
+		glTexParameteri(GL_TEXTURE_2D,GL_TEXTURE_MAG_FILTER,GL_NEAREST);	// Linear Filtering
 		
-		inApp.GetOGLStateManager().Enable(EOGLState_ShadowWidget);
-		mShadowRectangle.RenderGL();
+		glTexEnvi(GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_REPLACE);
+		//glColor4f(1.0f,1.0f,1.0f,1.0f);			
 
-		//glBegin(GL_QUADS);
-		//
-		//glColor4f(0.85f, 0.85f, 0.85f, 1.0f);
-		//glVertex2f(shadow_pos.x, shadow_pos.y);
-		//glColor4f(1.0f, 1.0f, 1.0f, 1.0f);
-		//glVertex2f(shadow_pos.x+shadow_size.x, shadow_pos.y);
-		//glColor4f(0.85f, 0.85f, 0.85f, 1.0f);
-		//glVertex2f(shadow_pos.x+shadow_size.x, shadow_pos.y+shadow_size.y);
-		//glColor4f(0.7f, 0.7f, 0.7f, 1.0f);
-		//glVertex2f(shadow_pos.x, shadow_pos.y+shadow_size.y);
-
-		//glEnd();
-	}
-	*/
-
-	{
-		//inApp.GetOGLStateManager().Enable(EOGLState_NormalWidget);
-		const glm::vec4 outline_color(0.0f, 0.0f, 0.0f, 1.0f );
-		mRectangle.RenderGL(inApp.GetOGLStateManager(), EOGLState_ShadowWidget, EOGLState_NormalWidget);
+		glBegin(GL_QUADS);
+			 glTexCoord2f(0.0f,0.0f); glVertex2f(world_pos.x,world_pos.y);
+			 glTexCoord2f(1.0f,0.0f); glVertex2f(world_pos.x+mSize.x,world_pos.y);
+			 glTexCoord2f(1.0f,1.0f); glVertex2f(world_pos.x+mSize.x,world_pos.y+mSize.y);
+			 glTexCoord2f(0.0f,1.0f); glVertex2f(world_pos.x,world_pos.y+mSize.y);
+		glEnd();
 	}
 
-	/*
-	{
-		const OGLState_FontRender* font_render = (const OGLState_FontRender*) inApp.GetOGLStateManager().Enable(EOGLState_FontRender);
-		glColor4f(0.0f,0.0f,0.0f,1.0f);
-		//glColor4f(1.0f,1.0f,1.0f,1.0f);
-		font_render->Render("ABCD", world_pos.x, world_pos.y);
-	}
-	*/
 
 	{
 		SceneTransform local_transform;
@@ -647,6 +667,12 @@ bool NativeWindowWidget::Create(App& inApp, const WideString& inWindowName, int 
 
 void NativeWindowWidget::Test(App& inApp)
 {
+	{
+		MagicWandTestTextureWidget* widget = new MagicWandTestTextureWidget();
+		widget->Create(glm::vec2(400.0f, 400.0f));
+		mChildren.mChildWidgets.push_back(widget);
+	}
+
 	{
 		SimpleTextureWidget* widget = new SimpleTextureWidget();
 		//widget->Create(glm::vec2(200.0f, 100.0f), "media/tiny_test.bmp");
