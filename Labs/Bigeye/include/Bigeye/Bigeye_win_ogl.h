@@ -8,6 +8,7 @@
 #include "OGLState.h"
 #include "OGLFontRender.h"
 #include "RoundedRectangle.h"
+#include "MagickWand.h"
 
 namespace BE
 {
@@ -106,7 +107,7 @@ namespace BE
 		MagicWandTestTextureWidget();
 		virtual ~MagicWandTestTextureWidget();
 
-		bool		Create(const glm::vec2& inPos);
+		bool		Create(const App& inApp, const glm::vec2& inPos);
 
 		virtual void Render(const App& inApp, float inTimeSecs, const SceneTransform& inParentTransform, bool inParentTransformDirty);
 
@@ -124,7 +125,7 @@ namespace BE
 		SimpleTextureWidget();
 		virtual ~SimpleTextureWidget();
 
-		bool		Create(const glm::vec2& inPos, const char* inTexturePath);
+		bool		Create(const App& inApp, const glm::vec2& inPos, const char* inTexturePath);
 
 		virtual void Render(const App& inApp, float inTimeSecs, const SceneTransform& inParentTransform, bool inParentTransformDirty);
 
@@ -161,7 +162,7 @@ namespace BE
 
 	protected:
 
-		void UpdateGeometry(const glm::vec2& inWorldPos);
+		void UpdateGeometry(const App& inApp, const glm::vec2& inWorldPos);
 
 		glm::vec3 mPos;
 		glm::vec2 mSize;
@@ -188,7 +189,7 @@ namespace BE
 
 	protected:
 
-		void UpdateGeometry(const glm::vec2& inWorldPos);
+		void UpdateGeometry(const App& inApp, const glm::vec2& inWorldPos);
 
 		glm::vec3 mPos;
 		glm::vec2 mSize;
@@ -254,12 +255,14 @@ namespace BE
 		HINSTANCE				GetHINSTANCE() const			{ return mHINSTANCE; }
 		const OGLStateManager&	GetOGLStateManager() const		{ return mOGLStateManager; }
 		OGLStateManager&		GetOGLStateManager()			{ return mOGLStateManager; }
+		MagicWand&				GetWand() const					{ return mWand; }
 
 	protected:
 
 		HINSTANCE				mHINSTANCE;
 		NativeWindowWidget*		mWindow;
 		OGLStateManager			mOGLStateManager;
+		mutable MagicWand		mWand;
 	};
 
 	class WideString

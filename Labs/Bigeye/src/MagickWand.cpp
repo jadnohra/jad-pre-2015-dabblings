@@ -1,6 +1,6 @@
 #include "MagickWand.h"
-#include "smart_ptr.h"
 #include <stdio.h>
+#include <vector>
 
 #ifdef _DEBUG
 	#pragma comment (lib, "CORE_DB_bzlib_.lib")	
@@ -83,7 +83,7 @@ struct PtrDeletePolicy_delete<PixelIterator> {
     static inline void doDelete(PixelIterator* ptr) { ClearPixelIterator(ptr); }
 };
 
-class MagickWandContext
+class MagickWandImpl
 {
 public:
 
@@ -108,7 +108,10 @@ public:
 	auto_scoped_ptr<PixelWand> blue1;
 	auto_scoped_ptr<PixelWand> transparent;
 
-	MagickWandContext()
+	typedef std::vector<DrawingWand*> FontWands;
+	FontWands mFontWands;
+
+	MagickWandImpl()
 	:	temp_pixels(NULL)
 	,	temp_total_component_count(0)
 	,	auto_genesis()
@@ -130,8 +133,11 @@ public:
 		PixelSetColor(transparent, "transparent");
 	}
 
-	~MagickWandContext()
+	~MagickWandImpl()
 	{
+		for (size_t i=0; i<mFontWands.size(); ++i)
+			ClearDrawingWand(mFontWands[i]);
+
 		MagickWandTerminus();
 		free(temp_pixels);
 	}
@@ -182,17 +188,33 @@ public:
 	}
 
 	// modifies source wand
-	void RoundWand(MagickWand* ioSourceWand, int inRounding)
+	void RoundWand(MagickWand* ioSourceWand, int inRounding, bool inStroke)
 	{
 		auto_scoped_ptr<DrawingWand> round_drawing_wand(NewDrawingWand());
 		MagickWand* round_wand = NewMagickWand();
 		MagickNewImage(round_wand, MagickGetImageWidth(ioSourceWand), MagickGetImageHeight(ioSourceWand), transparent);
 		
 		DrawSetFillColor(round_drawing_wand, white);
+		if (inStroke)
+		{
+			DrawSetStrokeColor(round_drawing_wand, black);
+		}
 		DrawRoundRectangle(round_drawing_wand, inRounding/2, inRounding/2, MagickGetImageWidth(round_wand)-inRounding/2,MagickGetImageHeight(round_wand)-inRounding/2, inRounding, inRounding);
 
 		MagickDrawImage(round_wand, round_drawing_wand);
-		MagickCompositeImage(ioSourceWand, round_wand, CopyOpacityCompositeOp, 0, 0);
+		MagickCompositeImage(ioSourceWand, round_wand, DstInCompositeOp, 0, 0);
+
+		if (inStroke)
+		{
+			auto_scoped_ptr<MagickWand> stroke_round_wand(NewMagickWand());
+			MagickNewImage(stroke_round_wand, MagickGetImageWidth(ioSourceWand), MagickGetImageHeight(ioSourceWand), transparent);
+			DrawSetFillColor(round_drawing_wand, white);
+			DrawSetStrokeColor(round_drawing_wand, black);
+			MagickDrawImage(stroke_round_wand, round_drawing_wand);
+			MagickCompositeImage(stroke_round_wand, round_wand, DstInCompositeOp, 0, 0);
+
+			MagickCompositeImage(ioSourceWand, stroke_round_wand, MultiplyCompositeOp, 0, 0);
+		}
 	}
 
 	MagickWand* DrawToWand(DrawingWand* draw, GLsizei inWidth, GLsizei inHeight, PixelWand* inColor)
@@ -277,9 +299,17 @@ public:
 		}
 	}
 
+	MagicWand::FontID LoadFont(const char* inPath)
+	{
+		DrawingWand* new_font = NewDrawingWand();
+		DrawSetFont(new_font, "inPath");
+		mFontWands.push_back(new_font);
+
+		return ((int) mFontWands.size() - 1);
+	}
+
 };
 
-static MagickWandContext sContext;
 
 bool MagicWand::MakeTestButtonTexture(GLuint inTexture, GLsizei& outWidth, GLsizei& outHeight)
 {
@@ -385,11 +415,11 @@ bool MagicWand::MakeTestButtonTexture(GLuint inTexture, GLsizei& outWidth, GLsiz
 	outWidth = MagickGetImageWidth(copy_wand);
 	outHeight = MagickGetImageHeight(copy_wand);
 
-	if (MagickExportImagePixels(copy_wand, 0, 0, outWidth, outHeight, "RGBA", CharPixel, sContext.GetTempPixels(outWidth*outHeight, 4)))
+	if (MagickExportImagePixels(copy_wand, 0, 0, outWidth, outHeight, "RGBA", CharPixel, mImpl->GetTempPixels(outWidth*outHeight, 4)))
 	{
 		glBindTexture(GL_TEXTURE_2D, inTexture);
 		glPixelStorei(GL_UNPACK_ALIGNMENT, 1);
-		glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, outWidth, outHeight, 0, GL_RGBA, GL_UNSIGNED_BYTE, sContext.GetTempPixels());
+		glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, outWidth, outHeight, 0, GL_RGBA, GL_UNSIGNED_BYTE, mImpl->GetTempPixels());
 		was_read = true;
 	}
 
@@ -404,19 +434,19 @@ bool MagicWand::MakeFrameTexture(GLuint inTexture, GLsizei& outWidth, GLsizei& o
 							glm::vec4(37.0f/255.0f, 37.0f/255.0f, 37.0f/255.0f, 1.0f), 
 							glm::vec4(37.0f/255.0f, 37.0f/255.0f, 37.0f/255.0f, 1.0f) };
 
-	auto_scoped_ptr<MagickWand> gradient_wand(sContext.GradientFillWand(outWidth, outHeight, colors));
-	sContext.RoundWand(gradient_wand, 8);
+	auto_scoped_ptr<MagickWand> gradient_wand(mImpl->GradientFillWand(outWidth, outHeight, colors));
+	mImpl->RoundWand(gradient_wand, 8, false);
 
 	int offset[2];
 	offset[0] = 4;
 	offset[1] = -4;
 
-	auto_scoped_ptr<MagickWand> shadowed_wand(sContext.ShadowWand(gradient_wand, offset[0], offset[1], 40.0f, 1.5f));
+	auto_scoped_ptr<MagickWand> shadowed_wand(mImpl->ShadowWand(gradient_wand, offset[0], offset[1], 40.0f, 1.5f));
 
 	outWidth += offset[0];
 	outHeight += offset[1];
 
-	return sContext.ToGLTexture(shadowed_wand, inTexture, outWidth, outHeight);
+	return mImpl->ToGLTexture(shadowed_wand, inTexture, outWidth, outHeight);
 	
 	/*
 	auto_scoped_ptr<DrawingWand> draw(NewDrawingWand());
@@ -428,9 +458,9 @@ bool MagicWand::MakeFrameTexture(GLuint inTexture, GLsizei& outWidth, GLsizei& o
 	DrawSetStrokeColor(draw, color);
 	DrawRoundRectangle(draw, 0, 0 ,inWidth-1, inHeight-1, 8, 8);
 	
-	auto_scoped_ptr<MagickWand> shadowed_wand(sContext.ShadowWand(draw, inWidth, inHeight));
+	auto_scoped_ptr<MagickWand> shadowed_wand(mImpl->ShadowWand(draw, inWidth, inHeight));
 
-	return sContext.ToGLTexture(shadowed_wand, inTexture, inWidth, inHeight);
+	return mImpl->ToGLTexture(shadowed_wand, inTexture, inWidth, inHeight);
 	*/
 }
 
@@ -448,14 +478,14 @@ bool MagicWand::MakeSliderFrameTexture(GLuint inTexture, GLsizei inLength, GLsiz
 	outWidth = inLength;
 	outHeight = 1;
 
-	auto_scoped_ptr<MagickWand> gradient_wand(sContext.GradientFillWand(outWidth, outHeight, colors));
-	//return sContext.ToGLTexture(gradient_wand, inTexture, outWidth, outHeight);
+	auto_scoped_ptr<MagickWand> gradient_wand(mImpl->GradientFillWand(outWidth, outHeight, colors));
+	//return mImpl->ToGLTexture(gradient_wand, inTexture, outWidth, outHeight);
 
 	{
 		auto_scoped_ptr<DrawingWand> draw(NewDrawingWand());
 		
-		DrawSetFillColor(draw, sContext.white);
-		DrawSetStrokeColor(draw, sContext.white);
+		DrawSetFillColor(draw, mImpl->white);
+		DrawSetStrokeColor(draw, mImpl->white);
 		DrawSetStrokeWidth(draw, 0.0f);
 
 		PointInfo points[3];
@@ -468,12 +498,12 @@ bool MagicWand::MakeSliderFrameTexture(GLuint inTexture, GLsizei inLength, GLsiz
 
 		DrawPolygon(draw, 3, points);
 
-		auto_scoped_ptr<MagickWand> poly_wand(sContext.DrawToWand(draw, outWidth, outHeight, sContext.transparent));
+		auto_scoped_ptr<MagickWand> poly_wand(mImpl->DrawToWand(draw, outWidth, outHeight, mImpl->transparent));
 
 		MagickCompositeImage(gradient_wand, poly_wand, DstInCompositeOp, 0, 0);
 	}
 
-	return sContext.ToGLTexture(gradient_wand, inTexture, outWidth, outHeight);
+	return mImpl->ToGLTexture(gradient_wand, inTexture, outWidth, outHeight);
 }
 
 bool MagicWand::MakeSliderMarkerTexture(GLuint inTexture, GLsizei& outWidth, GLsizei& outHeight)
@@ -501,16 +531,16 @@ bool MagicWand::MakeSliderMarkerTexture(GLuint inTexture, GLsizei& outWidth, GLs
 	DrawSetStrokeColor(draw, stroke);
 	DrawRoundRectangle(draw, 2, 2 ,outWidth-2, outHeight-2, 3, 3);
 	
-	//auto_scoped_ptr<MagickWand> test_wand(sContext.DrawToWand(draw, outWidth, outHeight, sContext.red));
+	//auto_scoped_ptr<MagickWand> test_wand(mImpl->DrawToWand(draw, outWidth, outHeight, mImpl->red));
 	//MagickWriteImage(test_wand, "test.bmp");
 
-	//auto_scoped_ptr<MagickWand> shadowed_wand(sContext.ShadowWand(draw, outWidth, outHeight));
-	//return sContext.ToGLTexture(shadowed_wand, inTexture, outWidth, outHeight);
+	//auto_scoped_ptr<MagickWand> shadowed_wand(mImpl->ShadowWand(draw, outWidth, outHeight));
+	//return mImpl->ToGLTexture(shadowed_wand, inTexture, outWidth, outHeight);
 
-	return sContext.ToGLTexture(draw, inTexture, outWidth, outHeight);
+	return mImpl->ToGLTexture(draw, inTexture, outWidth, outHeight);
 
-	//auto_scoped_ptr<MagickWand> shadowed_wand(sContext.ShadowWand(draw, inWidth, inHeight));
-	//return sContext.ToGLTexture(shadowed_wand, inTexture, inWidth, inHeight);
+	//auto_scoped_ptr<MagickWand> shadowed_wand(mImpl->ShadowWand(draw, inWidth, inHeight));
+	//return mImpl->ToGLTexture(shadowed_wand, inTexture, inWidth, inHeight);
 }
 
 bool MagicWand::ReadImageToGLTexture(const char* inPath, GLuint inTexture, GLsizei& outWidth, GLsizei& outHeight)
@@ -521,7 +551,7 @@ bool MagicWand::ReadImageToGLTexture(const char* inPath, GLuint inTexture, GLsiz
 	{
 		if (MagickReadImage(wand, inPath))
 		{
-			was_read = sContext.ToGLTexture(wand, inTexture, outWidth, outHeight);
+			was_read = mImpl->ToGLTexture(wand, inTexture, outWidth, outHeight);
 		}
 	}
 	
@@ -529,7 +559,59 @@ bool MagicWand::ReadImageToGLTexture(const char* inPath, GLuint inTexture, GLsiz
 }
 
 
+MagicWand::FontID MagicWand::LoadFont(const char* inPath)
+{
+	return mImpl->LoadFont(inPath);
+}
 
 
+bool MagicWand::MakeButtonTexture(GLuint inTexture, const char* inText, FontID inFontID, float inPointSize, int inAdditionalHorizSpace, int inAdditionalVertSpace, GLsizei& outWidth, GLsizei& outHeight)
+{
+	glm::vec4 colors[4] = { glm::vec4(63.0f/255.0f, 63.0f/255.0f, 63/255.0f, 1.0f), 
+							glm::vec4(63.0f/255.0f, 63.0f/255.0f, 63/255.0f, 1.0f), 
+							glm::vec4(30.0f/255.0f, 30.0f/255.0f, 30/255.0f, 1.0f), 
+							glm::vec4(30.0f/255.0f, 30.0f/255.0f, 30/255.0f, 1.0f)  };
+
+	DrawingWand* font = mImpl->mFontWands[inFontID];
+	DrawSetFontSize(font, inPointSize);
+	
+	auto_scoped_ptr<MagickWand> empty_wand(NewMagickWand());
+	MagickReadImage(empty_wand,"xc:");
+	
+	double* font_metrics = MagickQueryFontMetrics(empty_wand, font, inText);
+	
+	float text_width = (float) font_metrics[4];
+	float text_height = (float) font_metrics[5];
+	
+	float radius = 4.0f;
+	float additional_size_base = (radius * (1.0f - (1.0f / sqrtf(2.0f)))) + 2.0f;
+	float additional_size[2];
+	additional_size[0] = 2.0f * additional_size_base + (float) inAdditionalHorizSpace;
+	additional_size[1] = 2.0f * additional_size_base + /*font_metrics[8]*/ + (float) inAdditionalVertSpace;
+
+	float rect_width = text_width+additional_size[0];
+	float rect_height = text_height+additional_size[1];
+
+	auto_scoped_ptr<MagickWand> gradient_wand(mImpl->GradientFillWand((size_t) (rect_width), (size_t) (rect_height), colors));
+	mImpl->RoundWand(gradient_wand, radius, true);
+
+	DrawSetFillAlpha(font, 1.0);
+	DrawSetFontSize(font, inPointSize);
+	DrawSetFillColor(font, mImpl->white);
+	MagickAnnotateImage(gradient_wand, font, 0.5f*(rect_width-text_width), (font_metrics[8]+ font_metrics[5]) + 0.5f*(rect_height-text_height), 0.0, inText);
+
+	return mImpl->ToGLTexture(gradient_wand, inTexture, outWidth, outHeight);
+}
+
+
+MagicWand::MagicWand()
+{
+	mImpl = new MagickWandImpl();
+}
+
+MagicWand::~MagicWand()
+{
+	delete mImpl;
+}
 
 }

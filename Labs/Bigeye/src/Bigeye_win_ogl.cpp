@@ -102,7 +102,7 @@ bool SimpleSliderWidget::Create(const glm::vec2& inPos, const glm::vec2& inSize)
 }
 
 
-void SimpleSliderWidget::UpdateGeometry(const glm::vec2& inWorldPos)
+void SimpleSliderWidget::UpdateGeometry(const App& inApp, const glm::vec2& inWorldPos)
 {
 	{
 		mFrameTexture.AutoCreate();
@@ -110,11 +110,11 @@ void SimpleSliderWidget::UpdateGeometry(const glm::vec2& inWorldPos)
 
 		GLsizei tex_dims[2];
 
-		MagicWand::MakeSliderFrameTexture(mFrameTexture.mTexture, mSize.x, tex_dims[0], tex_dims[1]);
+		inApp.GetWand().MakeSliderFrameTexture(mFrameTexture.mTexture, mSize.x, tex_dims[0], tex_dims[1]);
 		mFrameTexSize[0] = tex_dims[0];
 		mFrameTexSize[1] = tex_dims[1];
 
-		MagicWand::MakeSliderMarkerTexture(mMarkerTexture.mTexture, tex_dims[0], tex_dims[1]);
+		inApp.GetWand().MakeSliderMarkerTexture(mMarkerTexture.mTexture, tex_dims[0], tex_dims[1]);
 		//tex_dims[0] = 40;
 		//tex_dims[1] = 20;
 		//MagicWand::MakeFrameTexture(mMarkerTexture.mTexture, tex_dims[0], tex_dims[1]);
@@ -129,7 +129,7 @@ void SimpleSliderWidget::Update(const App& inApp, float inTimeSecs, const SceneT
 	if (inParentTransformDirty || !mMarkerTexture.IsCreated())
 	{
 		glm::vec3 world_pos = inParentTransform * mPos;
-		UpdateGeometry(to2d_point(world_pos));
+		UpdateGeometry(inApp, to2d_point(world_pos));
 	}
 }
 
@@ -213,14 +213,14 @@ SimpleTextureWidget::~SimpleTextureWidget()
 		glDeleteTextures(1, &mTexture);
 }
 
-bool SimpleTextureWidget::Create(const glm::vec2& inPos, const char* inTexturePath)
+bool SimpleTextureWidget::Create(const App& inApp, const glm::vec2& inPos, const char* inTexturePath)
 {
 	mPos = to3d_point(inPos);
 	mTexture = 0;
 
 	GLsizei dims[2];
 
-	if (!MagicWand::ReadImageToGLTexture(inTexturePath, mTexture, dims[0], dims[1]))
+	if (!inApp.GetWand().ReadImageToGLTexture(inTexturePath, mTexture, dims[0], dims[1]))
 		return false;
 
 	mSize.x = (float) dims[0];
@@ -263,7 +263,7 @@ MagicWandTestTextureWidget::~MagicWandTestTextureWidget()
 }
 
 
-bool MagicWandTestTextureWidget::Create(const glm::vec2& inPos)
+bool MagicWandTestTextureWidget::Create(const App& inApp, const glm::vec2& inPos)
 {
 	mPos = to3d_point(inPos);
 
@@ -271,12 +271,14 @@ bool MagicWandTestTextureWidget::Create(const glm::vec2& inPos)
 
 	mTexture.AutoCreate();
 
-	if (!MagicWand::MakeTestButtonTexture(mTexture.mTexture, dims[0], dims[1]))
-		return false;
+	//if (!MagicWand::MakeTestButtonTexture(mTexture.mTexture, dims[0], dims[1]))
+	//	return false;
 
 	//if (!MagicWand::MakeSliderFrameTexture(mTexture.mTexture, 100, dims[0], dims[1]))
 	//	return false;
 	
+	if (!inApp.GetWand().MakeButtonTexture(mTexture.mTexture, "BigEye ;)", 0, 12.0f, 10, 2, dims[0], dims[1]))
+		return false;
 
 	mSize.x = (float) dims[0];
 	mSize.y = (float) dims[1];
@@ -324,40 +326,18 @@ bool SimplePanelWidget::Create(const glm::vec2& inPos, const glm::vec2& inSize)
 }
 
 
-void SimplePanelWidget::UpdateGeometry(const glm::vec2& inWorldPos)
+void SimplePanelWidget::UpdateGeometry(const App& inApp, const glm::vec2& inWorldPos)
 {
 	// TODO try colors like in : http://www.gameanim.com/2009/08/27/street-fighter-iv-facial-controls/
-	// also see the rounded rects when using right panel + shadow placement.
 	{
-		//static float shades[4] = {84.0f/255.0f, 82.0f/255.0f, 37.0f/255.0f, 34.0f/255.0f};
-		//static const glm::vec4 color(0.0f, 200.0f/255.0f, 240.0f/255.0f, 1.0f);
-		//static const glm::vec4 color(1.0f, 1.0f, 1.0f, 1.0f);
-		//static const glm::vec4 colors[4] = { color, color, color, color};
-		//mRectangle.SetPosSize(inWorldPos, mSize, 8.0f, 5, colors, 0.1f, true);
 		mTexture.AutoCreate();
 		GLsizei dims[2];
 		dims[0] = mSize.x;
 		dims[1] = mSize.y;
-		MagicWand::MakeFrameTexture(mTexture.mTexture, dims[0], dims[1]);
+		inApp.GetWand().MakeFrameTexture(mTexture.mTexture, dims[0], dims[1]);
 		mSize.x = dims[0];
 		mSize.y = dims[1];
 	}
-
-	/*
-	{
-		glm::vec2 shadow_pos = inWorldPos;
-		shadow_pos.x += -3.0f;
-		shadow_pos.y += 3.0f;
-
-		glm::vec2 shadow_size = mSize;
-		shadow_size.x += 2.0f;
-
-		//static glm::vec4 shades[4] = { glm::vec4(0.85f), glm::vec4(1.0f), glm::vec4(0.85f), glm::vec4(0.8f)};
-		//shadow_size.x += 3.0f;
-		static glm::vec4 shades[4] = { glm::vec4(0.9f), glm::vec4(1.0f), glm::vec4(0.8f), glm::vec4(0.85f)};
-		mShadowRectangle.SetPosSize(shadow_pos, shadow_size, 10.0f, 5, shades);
-	}
-	*/
 }
 
 
@@ -366,7 +346,7 @@ void SimplePanelWidget::Update(const App& inApp, float inTimeSecs, const SceneTr
 	if (inParentTransformDirty || !mTexture.IsCreated())
 	{
 		glm::vec3 world_pos = inParentTransform * mPos;
-		UpdateGeometry(to2d_point(world_pos));
+		UpdateGeometry(inApp, to2d_point(world_pos));
 	}
 
 	SceneTransform local_transform;
@@ -648,6 +628,7 @@ bool NativeWindowWidget::Create(App& inApp, const WideString& inWindowName, int 
 
 	{
 		mDefaultFont.Create("media/DroidSans.ttf", 16.0f);
+		inApp.GetWand().LoadFont("media/DroidSans.ttf");
 
 		inApp.GetOGLStateManager().StartBuild(EOGLState_Count);
 		inApp.GetOGLStateManager().BuildSetState(new OGLState(), EOGLState_Reset);
@@ -669,14 +650,14 @@ void NativeWindowWidget::Test(App& inApp)
 {
 	{
 		MagicWandTestTextureWidget* widget = new MagicWandTestTextureWidget();
-		widget->Create(glm::vec2(400.0f, 400.0f));
+		widget->Create(inApp, glm::vec2(400.0f, 400.0f));
 		mChildren.mChildWidgets.push_back(widget);
 	}
 
 	{
 		SimpleTextureWidget* widget = new SimpleTextureWidget();
 		//widget->Create(glm::vec2(200.0f, 100.0f), "media/tiny_test.bmp");
-		widget->Create(glm::vec2(200.0f, 100.0f), "media/imagick_button.png");
+		widget->Create(inApp, glm::vec2(200.0f, 100.0f), "media/imagick_button.png");
 		mChildren.mChildWidgets.push_back(widget);
 	}
 
