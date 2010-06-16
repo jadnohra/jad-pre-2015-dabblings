@@ -262,6 +262,8 @@ public:
 	// modifies source wand
 	void RoundWand(MagickWand* ioSourceWand, int inRounding, bool inStroke)
 	{
+		//return;
+
 		auto_scoped_ptr<DrawingWand> round_drawing_wand(NewDrawingWand());
 		MagickWand* round_wand = NewMagickWand();
 		MagickNewImage(round_wand, MagickGetImageWidth(ioSourceWand), MagickGetImageHeight(ioSourceWand), transparent);
@@ -368,6 +370,18 @@ public:
 		glm::vec4 row_colors[2];
 
 		int stack_index = inVerticalCurves ? inVerticalCurves->StartMap() : 0;
+
+		for(y=0;y<startOfsetY;y++) {
+			// Get the next row of the image as an array of PixelWands
+			PixelWand** pixels=PixelGetNextIteratorRow(iterator,&x);
+
+			for(x=startOffsetX;x<width;x++, xf+=x_step) {
+
+				PixelSetColor(pixels[x],"black");
+				PixelSetAlpha(pixels[x],0.0f);
+			}
+			PixelSyncIterator(iterator);
+		}
 
 		for(y=startOfsetY;y<height;y++, yf+=y_step) {
 			// Get the next row of the image as an array of PixelWands
@@ -596,7 +610,7 @@ bool MagicWand::MakeSliderMarkerTexture(GLuint inTexture, GLsizei& outWidth, GLs
 	//http://www.colorsontheweb.com/colorwizard.asp
 
 	PixelSetColor(stroke, "#000000");
-	PixelSetAlpha(stroke, 0.2f);
+	PixelSetAlpha(stroke, 0.4f);
 	//PixelSetColor(fill, "#F47100");
 	//PixelSetColor(fill, "#F0A000");
 	//PixelSetColor(fill, "#0077F0");
@@ -668,12 +682,20 @@ bool MagicWand::MakeButtonTexture(GLuint inTexture, const char* inText, FontID i
 	float rect_width = text_width+additional_size[0];
 	float rect_height = text_height+additional_size[1];
 
-	glm::vec4 gradient_colors_stack[] = {	glm::vec4(255.0f/255.0f, 255.0f/255.0f, 255.0f/255.0f, 1.0f), 
-											glm::vec4(255.0f/255.0f, 255.0f/255.0f, 255.0f/255.0f, 1.0f), 
+	glm::vec4 gradient_colors_stack[] = {	glm::vec4(85.0f/255.0f, 85/255.0f, 85/255.0f, 1.0f), 
+											glm::vec4(85/255.0f, 85/255.0f, 85/255.0f, 1.0f),
+											glm::vec4(37.0f/255.0f, 37.0f/255.0f, 37/255.0f, 1.0f), 
+											glm::vec4(37.0f/255.0f, 37.0f/255.0f, 37/255.0f, 1.0f),
 											glm::vec4(30.0f/255.0f, 30.0f/255.0f, 30/255.0f, 1.0f), 
 											glm::vec4(30.0f/255.0f, 30.0f/255.0f, 30/255.0f, 1.0f)};
 
-	auto_scoped_ptr<MagickWand> gradient_wand(mImpl->GradientFillWand((size_t) (rect_width), (size_t) (rect_height), 0, 1, gradient_colors_stack));
+	MagickWandImpl::GradientCurves gradient_curves;
+	gradient_curves.mCurves.resize(2);
+	float specular_fraction = 8.0f * (1.0f / rect_height);
+	gradient_curves.mCurves[0] = MagickWandImpl::GradientCurve(0.0f, specular_fraction, 0.4f);
+	gradient_curves.mCurves[1] = MagickWandImpl::GradientCurve(specular_fraction, 1.0f, 1.0f);
+
+	auto_scoped_ptr<MagickWand> gradient_wand(mImpl->GradientFillWand((size_t) (rect_width), (size_t) (rect_height), 0, 1, gradient_colors_stack, &gradient_curves));
 	mImpl->RoundWand(gradient_wand, radius, true);
 
 	DrawSetFillAlpha(font, 1.0);

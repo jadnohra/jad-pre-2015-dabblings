@@ -332,8 +332,8 @@ bool MagicWandTestTextureWidget::Create(const App& inApp, const glm::vec2& inPos
 
 	mTexture.AutoCreate();
 
-	//if (!inApp.GetWand().MakeTestButtonTexture(mTexture.mTexture, dims[0], dims[1]))
-	//	return false;
+	if (!inApp.GetWand().MakeTestButtonTexture(mTexture.mTexture, dims[0], dims[1]))
+		return false;
 
 	//if (!MagicWand::MakeSliderFrameTexture(mTexture.mTexture, 100, dims[0], dims[1]))
 	//	return false;
@@ -341,8 +341,8 @@ bool MagicWandTestTextureWidget::Create(const App& inApp, const glm::vec2& inPos
 	//if (!inApp.GetWand().MakeButtonTexture(mTexture.mTexture, "BigEye ;)", 0, 12.0f, 10, 2, dims[0], dims[1]))
 	//	return false;
 
-	if (!inApp.GetWand().MakeTestTexture(mTexture.mTexture, 50, 180, dims[0], dims[1]))
-		return false;
+	//if (!inApp.GetWand().MakeTestTexture(mTexture.mTexture, 50, 180, dims[0], dims[1]))
+	//	return false;
 	
 
 	mSize.x = (float) dims[0];
