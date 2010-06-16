@@ -91,12 +91,13 @@ void ChildWidgetContainer::Render(const App& inApp, float inTimeSecs, const Scen
 }
 
 
-bool SimpleButtonWidget::Create(const glm::vec2& inPos, const char* inText, MagicWand::FontID inFontID, float inPointSize, int inAdditionalHorizSpace, int inAdditionalVertSpace)
+bool SimpleButtonWidget::Create(const glm::vec2& inPos, const char* inText, MagicWand::FontID inFontID, float inPointSize, bool inBold, int inAdditionalHorizSpace, int inAdditionalVertSpace)
 {
 	mPos = to3d_point(inPos);
 	mText = inText;
 	mFontID = inFontID;
 	mPointSize = inPointSize;
+	mBold = inBold;
 	mAdditionalHorizSpace = inAdditionalHorizSpace;
 	mAdditionalVertSpace = inAdditionalVertSpace;
 
@@ -112,7 +113,7 @@ void SimpleButtonWidget::UpdateGeometry(const App& inApp, const glm::vec2& inWor
 
 		GLsizei tex_dims[2];
 
-		inApp.GetWand().MakeButtonTexture(mButtonTexture.mTexture, mText.c_str(), mFontID, mPointSize, mAdditionalHorizSpace, mAdditionalVertSpace,  tex_dims[0], tex_dims[1]);
+		inApp.GetWand().MakeButtonTexture(mButtonTexture.mTexture, mText.c_str(), mFontID, mPointSize, mBold, mAdditionalHorizSpace, mAdditionalVertSpace,  tex_dims[0], tex_dims[1]);
 		mButtonTexSize[0] = tex_dims[0];
 		mButtonTexSize[1] = tex_dims[1];
 	}
@@ -332,14 +333,17 @@ bool MagicWandTestTextureWidget::Create(const App& inApp, const glm::vec2& inPos
 
 	mTexture.AutoCreate();
 
-	if (!inApp.GetWand().MakeTestButtonTexture(mTexture.mTexture, dims[0], dims[1]))
-		return false;
+	//if (!inApp.GetWand().MakeTestButtonTexture(mTexture.mTexture, dims[0], dims[1]))
+	//	return false;
 
 	//if (!MagicWand::MakeSliderFrameTexture(mTexture.mTexture, 100, dims[0], dims[1]))
 	//	return false;
 	
-	//if (!inApp.GetWand().MakeButtonTexture(mTexture.mTexture, "BigEye ;)", 0, 12.0f, 10, 2, dims[0], dims[1]))
+	//if (!inApp.GetWand().MakeButtonTexture(mTexture.mTexture, "BigEye ;)", 0, 12.0f, false, 10, 2, dims[0], dims[1]))
 	//	return false;
+
+	if (!inApp.GetWand().MakeTextTexture(mTexture.mTexture, "BigEye blends", 0, 12.0f, true, 10, 2, dims[0], dims[1]))
+		return false;
 
 	//if (!inApp.GetWand().MakeTestTexture(mTexture.mTexture, 50, 180, dims[0], dims[1]))
 	//	return false;
@@ -783,7 +787,16 @@ void NativeWindowWidget::Test(App& inApp)
 
 		{
 			SimpleButtonWidget* button_widget = new SimpleButtonWidget();
-			button_widget->Create(glm::vec2(8.0f, pos_vert), "Big eye ;)",  0, 12.0f, 10, 2);
+			button_widget->Create(glm::vec2(8.0f, pos_vert), "Big eye ;)",  0, 12.0f, false, 10, 2);
+			
+			pos_vert += 1.5f * mDefaultFont.GetPixelHeight();
+
+			children.mChildWidgets.push_back(button_widget);
+		}
+
+		{
+			SimpleButtonWidget* button_widget = new SimpleButtonWidget();
+			button_widget->Create(glm::vec2(8.0f, pos_vert), "Bold eye ;)",  0, 12.0f, true, 10, 2);
 			
 			pos_vert += 2.0f * mDefaultFont.GetPixelHeight();
 
@@ -793,7 +806,7 @@ void NativeWindowWidget::Test(App& inApp)
 
 		{
 			SimpleButtonWidget* button_widget = new SimpleButtonWidget();
-			button_widget->Create(glm::vec2(8.0f, pos_vert), "Biger eye!",  0, 16.0f, 10, 2);
+			button_widget->Create(glm::vec2(8.0f, pos_vert), "Biger eye!",  0, 16.0f, false, 10, 2);
 			
 			pos_vert += mDefaultFont.GetPixelHeight();
 

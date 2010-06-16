@@ -660,7 +660,7 @@ MagicWand::FontID MagicWand::LoadFont(const char* inPath)
 }
 
 
-bool MagicWand::MakeButtonTexture(GLuint inTexture, const char* inText, FontID inFontID, float inPointSize, int inAdditionalHorizSpace, int inAdditionalVertSpace, GLsizei& outWidth, GLsizei& outHeight)
+bool MagicWand::MakeButtonTexture(GLuint inTexture, const char* inText, FontID inFontID, float inPointSize, bool inBold, int inAdditionalHorizSpace, int inAdditionalVertSpace, GLsizei& outWidth, GLsizei& outHeight)
 {
 	DrawingWand* font = mImpl->mFontWands[inFontID];
 	DrawSetFontSize(font, inPointSize);
@@ -701,9 +701,45 @@ bool MagicWand::MakeButtonTexture(GLuint inTexture, const char* inText, FontID i
 	DrawSetFillAlpha(font, 1.0);
 	DrawSetFontSize(font, inPointSize);
 	DrawSetFillColor(font, mImpl->white);
+	DrawSetFontWeight(font, inBold ? 700 : 400);
 	MagickAnnotateImage(gradient_wand, font, 0.5f*(rect_width-text_width), (font_metrics[8]+ font_metrics[5]) + 0.5f*(rect_height-text_height), 0.0, inText);
 
 	return mImpl->ToGLTexture(gradient_wand, inTexture, outWidth, outHeight);
+}
+
+
+bool MagicWand::MakeTextTexture(GLuint inTexture, const char* inText, FontID inFontID, float inPointSize, bool inBold, int inAdditionalHorizSpace, int inAdditionalVertSpace, GLsizei& outWidth, GLsizei& outHeight)
+{
+	DrawingWand* font = mImpl->mFontWands[inFontID];
+	DrawSetFontSize(font, inPointSize);
+	
+	auto_scoped_ptr<MagickWand> empty_wand(NewMagickWand());
+	MagickReadImage(empty_wand,"xc:");
+	
+	double* font_metrics = MagickQueryFontMetrics(empty_wand, font, inText);
+	
+	float text_width = (float) font_metrics[4];
+	float text_height = (float) font_metrics[5];
+	
+	float radius = 4.0f;
+	float additional_size_base = (radius * (1.0f - (1.0f / sqrtf(2.0f))));
+	float additional_size[2];
+	additional_size[0] = 2.0f * additional_size_base + (float) inAdditionalHorizSpace;
+	additional_size[1] = 2.0f * additional_size_base + /*font_metrics[8]*/ + (float) inAdditionalVertSpace;
+
+	float rect_width = text_width+additional_size[0];
+	float rect_height = text_height+additional_size[1];
+
+	auto_scoped_ptr<MagickWand> wand(NewMagickWand());
+	MagickNewImage(wand, (size_t) (rect_width), (size_t) (rect_height), mImpl->transparent);
+
+	DrawSetFillAlpha(font, 1.0);
+	DrawSetFontSize(font, inPointSize);
+	DrawSetFillColor(font, mImpl->white);
+	DrawSetFontWeight(font, inBold ? 700 : 400);
+	MagickAnnotateImage(wand, font, 0.5f*(rect_width-text_width), (font_metrics[8]+ font_metrics[5]) + 0.5f*(rect_height-text_height), 0.0, inText);
+
+	return mImpl->ToGLTexture(wand, inTexture, outWidth, outHeight);
 }
 
 

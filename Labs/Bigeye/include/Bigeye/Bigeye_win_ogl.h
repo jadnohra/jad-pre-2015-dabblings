@@ -155,7 +155,7 @@ namespace BE
 	{
 	public:
 
-		bool		Create(const glm::vec2& inPos, const char* inText, MagicWand::FontID inFontID, float inPointSize, int inAdditionalHorizSpace, int inAdditionalVertSpace);
+		bool		Create(const glm::vec2& inPos, const char* inText, MagicWand::FontID inFontID, float inPointSize, bool inBold, int inAdditionalHorizSpace, int inAdditionalVertSpace);
 
 		virtual void Update(const App& inApp, float inTimeSecs, const SceneTransform& inParentTransform, bool inParentTransformDirty);
 		virtual void Render(const App& inApp, float inTimeSecs, const SceneTransform& inParentTransform, bool inParentTransformDirty);
@@ -167,6 +167,7 @@ namespace BE
 		std::string mText;
 		MagicWand::FontID mFontID;
 		float mPointSize;
+		bool mBold;
 		int mAdditionalHorizSpace;
 		int mAdditionalVertSpace;
 
