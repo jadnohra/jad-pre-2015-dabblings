@@ -95,6 +95,66 @@ public:
 		}
 	};
 
+	struct GradientCurve
+	{
+		float mExp;
+		float mFrom;
+		float mTo;
+		float mInvLength;
+
+		GradientCurve()
+		:	mExp(1.0f)
+		,	mFrom(0.0f)
+		,	mTo(1.0f)
+		,	mInvLength(1.0f)
+		{
+		}
+
+		GradientCurve(float inFrom, float inTo, float inExp)
+		{
+			mExp = inExp;
+			mFrom = inFrom;
+			mTo = inTo;
+			mInvLength = 1.0f / (mTo-mFrom);
+		}
+
+		float AdjustAndMap(float inValue) const
+		{
+			return (Map((inValue - mFrom) * mInvLength));
+		}
+
+		float Map(float inValue) const
+		{
+			return powf(inValue, mExp);
+		}
+	};
+
+	class GradientCurves
+	{
+	public:
+
+		int StartMap() const
+		{
+			return 0;
+		}
+
+		float Map(int& ioIndex, float inValue) const
+		{
+			if (ioIndex >= (int) mCurves.size())
+				return inValue;
+
+			if (mCurves[ioIndex].mTo >= inValue)
+				return mCurves[ioIndex].AdjustAndMap(inValue);
+
+			++ioIndex;
+			return Map(ioIndex, inValue);
+		}
+
+		typedef std::vector<GradientCurve> Curves;
+		Curves mCurves;
+	};
+	
+
 	unsigned char* temp_pixels;
 	size_t temp_total_component_count;
 
@@ -187,6 +247,18 @@ public:
 		return false;
 	}
 
+	void GetRoundingWandSpace(int inRounding, bool inStroke, int& outAdditionalHorizSpace, int& outAdditionalVertSpace)
+	{
+		outAdditionalHorizSpace = inRounding;
+		outAdditionalVertSpace = inRounding;
+
+		if (inStroke)
+		{
+			outAdditionalHorizSpace += 1.0f;
+			outAdditionalVertSpace += 1.0f;
+		}
+	}
+
 	// modifies source wand
 	void RoundWand(MagickWand* ioSourceWand, int inRounding, bool inStroke)
 	{
@@ -197,23 +269,30 @@ public:
 		DrawSetFillColor(round_drawing_wand, white);
 		if (inStroke)
 		{
+			DrawSetStrokeWidth(round_drawing_wand, 1.0f);
 			DrawSetStrokeColor(round_drawing_wand, black);
 		}
-		DrawRoundRectangle(round_drawing_wand, inRounding/2, inRounding/2, MagickGetImageWidth(round_wand)-inRounding/2,MagickGetImageHeight(round_wand)-inRounding/2, inRounding, inRounding);
+		//DrawRoundRectangle(round_drawing_wand, inRounding/2, inRounding/2, MagickGetImageWidth(round_wand)-inRounding/2,MagickGetImageHeight(round_wand)-inRounding/2, inRounding, inRounding);
+		DrawRoundRectangle(round_drawing_wand, 0.0, 0.0, MagickGetImageWidth(round_wand)-1,MagickGetImageHeight(round_wand)-1, inRounding, inRounding);
+		//DrawRoundRectangle(round_drawing_wand, 1.0, 1.0, MagickGetImageWidth(round_wand)-2,MagickGetImageHeight(round_wand)-2, inRounding, inRounding);
+		//DrawRoundRectangle(round_drawing_wand, 0.0, 0.0, MagickGetImageWidth(round_wand),MagickGetImageHeight(round_wand), inRounding, inRounding);
+		//DrawRoundRectangle(round_drawing_wand, 0.0, 0.0, MagickGetImageWidth(round_wand)-inRounding/2,MagickGetImageHeight(round_wand)-inRounding/2, inRounding, inRounding);
 
 		MagickDrawImage(round_wand, round_drawing_wand);
 		MagickCompositeImage(ioSourceWand, round_wand, DstInCompositeOp, 0, 0);
-
+		//MagickCompositeImage(ioSourceWand, round_wand, ReplaceCompositeOp, 0, 0);
+		
 		if (inStroke)
 		{
 			auto_scoped_ptr<MagickWand> stroke_round_wand(NewMagickWand());
-			MagickNewImage(stroke_round_wand, MagickGetImageWidth(ioSourceWand), MagickGetImageHeight(ioSourceWand), transparent);
-			DrawSetFillColor(round_drawing_wand, white);
+			MagickNewImage(stroke_round_wand, MagickGetImageWidth(ioSourceWand)+2, MagickGetImageHeight(ioSourceWand)+2, transparent);
+			DrawSetFillColor(round_drawing_wand, transparent);
 			DrawSetStrokeColor(round_drawing_wand, black);
+			DrawRoundRectangle(round_drawing_wand, 0.0, 0.0, MagickGetImageWidth(round_wand)-1,MagickGetImageHeight(round_wand)-1, inRounding, inRounding);
 			MagickDrawImage(stroke_round_wand, round_drawing_wand);
-			MagickCompositeImage(stroke_round_wand, round_wand, DstInCompositeOp, 0, 0);
-
+			
 			MagickCompositeImage(ioSourceWand, stroke_round_wand, MultiplyCompositeOp, 0, 0);
+			//MagickCompositeImage(ioSourceWand, stroke_round_wand, ReplaceCompositeOp, 0, 0);
 		}
 	}
 
@@ -236,30 +315,41 @@ public:
 	// Returns result
 	MagickWand* ShadowWand(MagickWand* inSourceWand, int inOffsetX=1, int inOffsetY=1, float inOpacity=40.0f, float inSigma=1.0f)
 	{
-		MagickWand* shadow_wand(CloneMagickWand(inSourceWand));
+		auto_scoped_ptr<MagickWand> shadow_wand(CloneMagickWand(inSourceWand));
 
 		//$shadow->setImageBackgroundColor( new ImagickPixel('black') );
 		MagickSetImageBackgroundColor(shadow_wand, black);
 
 		//$shadow->shadowImage( 40, 1, 1, 1 );
-		MagickShadowImage(shadow_wand, inOpacity, inSigma, 1, 1);
+		MagickShadowImage(shadow_wand, inOpacity, inSigma, 0, 0);
 
 		//$shadow->compositeImage( $im, Imagick::COMPOSITE_OVER, 0, 0 );
-		MagickCompositeImage(shadow_wand, inSourceWand, OverCompositeOp, inOffsetX, inOffsetY);
+		//MagickCompositeImage(shadow_wand, inSourceWand, OverCompositeOp, inOffsetX, inOffsetY);
 
-		return shadow_wand;
+		MagickWand* composite_wand = NewMagickWand();
+		int min_x = std::min(inOffsetX, 0);
+		int max_x = std::max(MagickGetImageWidth(inSourceWand), inOffsetX+MagickGetImageWidth(shadow_wand));
+		int min_y = std::min(inOffsetY, 0);
+		int max_y = std::max(MagickGetImageHeight(inSourceWand), inOffsetY+MagickGetImageHeight(shadow_wand));
+
+		MagickNewImage(composite_wand, max_x-min_x, max_y-min_y, transparent);
+		MagickCompositeImage(composite_wand, shadow_wand, OverCompositeOp, inOffsetX < 0 ? 0 : inOffsetX, inOffsetY < 0 ? 0 : inOffsetY);
+		MagickCompositeImage(composite_wand, inSourceWand, OverCompositeOp, inOffsetX < 0 ? -inOffsetX : 0, inOffsetY < 0 ? -inOffsetY : 0);
+		
+		return composite_wand;
 	}
 
-	MagickWand* GradientFillWand(size_t inWidth, size_t inHeight, glm::vec4 inColors[4])
+	MagickWand* GradientFillWand(size_t inWidth, size_t inHeight, size_t startOffsetX, size_t startOfsetY, 
+								glm::vec4* inColorStack, const GradientCurves* inVerticalCurves = NULL)
 	{
 		MagickWand* wand = NewMagickWand();
 		MagickNewImage(wand, inWidth, inHeight, transparent);
 
-		GradientFillWand(wand, inColors);
+		GradientFillWand(wand, startOffsetX, startOfsetY, inColorStack, inVerticalCurves);
 		return wand;
 	}
 
-	void GradientFillWand(MagickWand* ioSourceWand, glm::vec4 inColors[4])
+	void GradientFillWand(MagickWand* ioSourceWand, size_t startOffsetX, size_t startOfsetY, glm::vec4* inColorStack, const GradientCurves* inVerticalCurves = NULL)
 	{
 		auto_scoped_ptr<PixelIterator> iterator(NewPixelIterator(ioSourceWand));
 
@@ -270,27 +360,34 @@ public:
 		
 		size_t x,y;
 
-		float y_step = 1.0f / (float) height;
-		float x_step = 1.0f / (float) width;
+		float y_step = 1.0f / (float) (height-startOfsetY);
+		float x_step = 1.0f / (float) (width-startOffsetX);
 		float yf = 0.0f;
 		float xf = 0.0f;
 
 		glm::vec4 row_colors[2];
 
-		for(y=0;y<height;y++, yf+=y_step) {
+		int stack_index = inVerticalCurves ? inVerticalCurves->StartMap() : 0;
+
+		for(y=startOfsetY;y<height;y++, yf+=y_step) {
 			// Get the next row of the image as an array of PixelWands
 			PixelWand** pixels=PixelGetNextIteratorRow(iterator,&x);
 			// Set the row of wands to a simple gray scale gradient
 			
-			row_colors[0] = inColors[3] * yf + inColors[0] * (1.0f-yf);
-			row_colors[1] = inColors[2] * yf + inColors[1] * (1.0f-yf);
+			float mapped_yf = inVerticalCurves ? inVerticalCurves->Map(stack_index, yf) : yf;
+
+			row_colors[0] = inColorStack[stack_index*2+2] * mapped_yf + inColorStack[stack_index*2+0] * (1.0f-mapped_yf);
+			row_colors[1] = inColorStack[stack_index*2+3] * mapped_yf + inColorStack[stack_index*2+1] * (1.0f-mapped_yf);
+
+			float temp_dbg = row_colors[0].x * 255.0f;
 
 			xf = 0.0f;
-			for(x=0;x<width;x++, xf+=x_step) {
+			for(x=startOffsetX;x<width;x++, xf+=x_step) {
 
 				glm::vec4 color = row_colors[1]*xf + row_colors[0]* (1.0f-xf);
 				
 				sprintf(hex,"rgb(%d,%d,%d)", (int) (color.r * 255.0f),(int) (color.g * 255.0f),(int) (color.b * 255.0f));
+
 				PixelSetColor(pixels[x],hex);
 				PixelSetAlpha(pixels[x],color.a);
 			}
@@ -325,8 +422,10 @@ bool MagicWand::MakeTestButtonTexture(GLuint inTexture, GLsizei& outWidth, GLsiz
 	PixelSetColor(white_wand, "white");
 	PixelSetColor(red_wand, "red");
 	PixelSetColor(blue_wand, "blue");
+	//PixelSetColor(blue_wand, "black");
 	PixelSetColor(black_wand, "black");
 	PixelSetColor(col1_wand, "#4096EE");
+	//PixelSetColor(col1_wand, "black");
 	PixelSetColor(transparent_wand, "transparent");
 	auto_scoped_ptr<DrawingWand> drawing_wand(NewDrawingWand());
 	
@@ -434,34 +533,16 @@ bool MagicWand::MakeFrameTexture(GLuint inTexture, GLsizei& outWidth, GLsizei& o
 							glm::vec4(37.0f/255.0f, 37.0f/255.0f, 37.0f/255.0f, 1.0f), 
 							glm::vec4(37.0f/255.0f, 37.0f/255.0f, 37.0f/255.0f, 1.0f) };
 
-	auto_scoped_ptr<MagickWand> gradient_wand(mImpl->GradientFillWand(outWidth, outHeight, colors));
+	auto_scoped_ptr<MagickWand> gradient_wand(mImpl->GradientFillWand(outWidth, outHeight, 0, 0, colors));
 	mImpl->RoundWand(gradient_wand, 8, false);
 
 	int offset[2];
-	offset[0] = 4;
-	offset[1] = -4;
+	offset[0] = -4;
+	offset[1] = 4;
 
 	auto_scoped_ptr<MagickWand> shadowed_wand(mImpl->ShadowWand(gradient_wand, offset[0], offset[1], 40.0f, 1.5f));
 
-	outWidth += offset[0];
-	outHeight += offset[1];
-
 	return mImpl->ToGLTexture(shadowed_wand, inTexture, outWidth, outHeight);
-	
-	/*
-	auto_scoped_ptr<DrawingWand> draw(NewDrawingWand());
-	auto_scoped_ptr<PixelWand> color(NewPixelWand());
-	
-	PixelSetColor(color, "#00C8F0");
-
-	DrawSetFillColor(draw, color);
-	DrawSetStrokeColor(draw, color);
-	DrawRoundRectangle(draw, 0, 0 ,inWidth-1, inHeight-1, 8, 8);
-	
-	auto_scoped_ptr<MagickWand> shadowed_wand(mImpl->ShadowWand(draw, inWidth, inHeight));
-
-	return mImpl->ToGLTexture(shadowed_wand, inTexture, inWidth, inHeight);
-	*/
 }
 
 
@@ -470,15 +551,15 @@ bool MagicWand::MakeSliderFrameTexture(GLuint inTexture, GLsizei inLength, GLsiz
 	glm::vec3 maincolor(1.0f, 1.0f, 1.0f);
 	//glm::vec3 maincolor(0.0f, 0.0f, 0.0f);
 
-	glm::vec4 colors[4] = { glm::vec4(maincolor.r, maincolor.g, maincolor.b, 0.0f), 
-							glm::vec4(maincolor.r, maincolor.g, maincolor.b, 1.0f), 
-							glm::vec4(maincolor.r, maincolor.g, maincolor.b, 1.0f), 
-							glm::vec4(maincolor.r, maincolor.g, maincolor.b, 0.0f) };
+	glm::vec4 gradient_colors_stack[4] = { glm::vec4(maincolor.r, maincolor.g, maincolor.b, 0.0f), 
+											glm::vec4(maincolor.r, maincolor.g, maincolor.b, 1.0f), 
+											glm::vec4(maincolor.r, maincolor.g, maincolor.b, 1.0f), 
+											glm::vec4(maincolor.r, maincolor.g, maincolor.b, 0.0f) };
 
 	outWidth = inLength;
 	outHeight = 1;
 
-	auto_scoped_ptr<MagickWand> gradient_wand(mImpl->GradientFillWand(outWidth, outHeight, colors));
+	auto_scoped_ptr<MagickWand> gradient_wand(mImpl->GradientFillWand(outWidth, outHeight, 0, 0, gradient_colors_stack));
 	//return mImpl->ToGLTexture(gradient_wand, inTexture, outWidth, outHeight);
 
 	{
@@ -567,11 +648,6 @@ MagicWand::FontID MagicWand::LoadFont(const char* inPath)
 
 bool MagicWand::MakeButtonTexture(GLuint inTexture, const char* inText, FontID inFontID, float inPointSize, int inAdditionalHorizSpace, int inAdditionalVertSpace, GLsizei& outWidth, GLsizei& outHeight)
 {
-	glm::vec4 colors[4] = { glm::vec4(63.0f/255.0f, 63.0f/255.0f, 63/255.0f, 1.0f), 
-							glm::vec4(63.0f/255.0f, 63.0f/255.0f, 63/255.0f, 1.0f), 
-							glm::vec4(30.0f/255.0f, 30.0f/255.0f, 30/255.0f, 1.0f), 
-							glm::vec4(30.0f/255.0f, 30.0f/255.0f, 30/255.0f, 1.0f)  };
-
 	DrawingWand* font = mImpl->mFontWands[inFontID];
 	DrawSetFontSize(font, inPointSize);
 	
@@ -584,7 +660,7 @@ bool MagicWand::MakeButtonTexture(GLuint inTexture, const char* inText, FontID i
 	float text_height = (float) font_metrics[5];
 	
 	float radius = 4.0f;
-	float additional_size_base = (radius * (1.0f - (1.0f / sqrtf(2.0f)))) + 2.0f;
+	float additional_size_base = (radius * (1.0f - (1.0f / sqrtf(2.0f))));
 	float additional_size[2];
 	additional_size[0] = 2.0f * additional_size_base + (float) inAdditionalHorizSpace;
 	additional_size[1] = 2.0f * additional_size_base + /*font_metrics[8]*/ + (float) inAdditionalVertSpace;
@@ -592,7 +668,12 @@ bool MagicWand::MakeButtonTexture(GLuint inTexture, const char* inText, FontID i
 	float rect_width = text_width+additional_size[0];
 	float rect_height = text_height+additional_size[1];
 
-	auto_scoped_ptr<MagickWand> gradient_wand(mImpl->GradientFillWand((size_t) (rect_width), (size_t) (rect_height), colors));
+	glm::vec4 gradient_colors_stack[] = {	glm::vec4(255.0f/255.0f, 255.0f/255.0f, 255.0f/255.0f, 1.0f), 
+											glm::vec4(255.0f/255.0f, 255.0f/255.0f, 255.0f/255.0f, 1.0f), 
+											glm::vec4(30.0f/255.0f, 30.0f/255.0f, 30/255.0f, 1.0f), 
+											glm::vec4(30.0f/255.0f, 30.0f/255.0f, 30/255.0f, 1.0f)};
+
+	auto_scoped_ptr<MagickWand> gradient_wand(mImpl->GradientFillWand((size_t) (rect_width), (size_t) (rect_height), 0, 1, gradient_colors_stack));
 	mImpl->RoundWand(gradient_wand, radius, true);
 
 	DrawSetFillAlpha(font, 1.0);
@@ -601,6 +682,25 @@ bool MagicWand::MakeButtonTexture(GLuint inTexture, const char* inText, FontID i
 	MagickAnnotateImage(gradient_wand, font, 0.5f*(rect_width-text_width), (font_metrics[8]+ font_metrics[5]) + 0.5f*(rect_height-text_height), 0.0, inText);
 
 	return mImpl->ToGLTexture(gradient_wand, inTexture, outWidth, outHeight);
+}
+
+
+bool MagicWand::MakeTestTexture(GLuint inTexture, int inWidth, int inHeight, GLsizei& outWidth, GLsizei& outHeight)
+{
+	auto_scoped_ptr<MagickWand> wand(NewMagickWand());
+	auto_scoped_ptr<DrawingWand> draw(NewDrawingWand());
+
+	int rounding = 8;
+
+	//mImpl->GetRoundingWandSpace(rounding, true, additional_size[0], additional_size[1]);
+	MagickNewImage(wand, inWidth/* + additional_size[0]*/, inHeight/* + additional_size[1]*/, mImpl->white);
+	DrawSetFillColor(draw, mImpl->red);
+	//DrawSetStrokeWidth(draw, 0.0);
+	DrawSetStrokeColor(draw, mImpl->blue);
+	DrawRoundRectangle(draw, 0, 0, MagickGetImageWidth(wand)-1,MagickGetImageHeight(wand)-1, rounding, rounding);
+	MagickDrawImage(wand, draw);
+
+	return mImpl->ToGLTexture(wand, inTexture, outWidth, outHeight);
 }
 
 

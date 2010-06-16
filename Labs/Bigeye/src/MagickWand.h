@@ -24,6 +24,7 @@ namespace BE
 		bool MakeSliderFrameTexture(GLuint inTexture, GLsizei inLength, GLsizei& outWidth, GLsizei& outHeight);
 		bool MakeSliderMarkerTexture(GLuint inTexture, GLsizei& outWidth, GLsizei& outHeight);
 		bool MakeButtonTexture(GLuint inTexture, const char* inText, FontID inFontID, float inPointSize, int inAdditionalHorizSpace, int inAdditionalVertSpace, GLsizei& outWidth, GLsizei& outHeight);
+		bool MakeTestTexture(GLuint inTexture, int inWidth, int inHeight, GLsizei& outWidth, GLsizei& outHeight);
 
 		FontID LoadFont(const char* inPath);
 

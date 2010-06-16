@@ -91,6 +91,66 @@ void ChildWidgetContainer::Render(const App& inApp, float inTimeSecs, const Scen
 }
 
 
+bool SimpleButtonWidget::Create(const glm::vec2& inPos, const char* inText, MagicWand::FontID inFontID, float inPointSize, int inAdditionalHorizSpace, int inAdditionalVertSpace)
+{
+	mPos = to3d_point(inPos);
+	mText = inText;
+	mFontID = inFontID;
+	mPointSize = inPointSize;
+	mAdditionalHorizSpace = inAdditionalHorizSpace;
+	mAdditionalVertSpace = inAdditionalVertSpace;
+
+	return true;
+}
+
+
+void SimpleButtonWidget::UpdateGeometry(const App& inApp, const glm::vec2& inWorldPos)
+{
+	if (!mButtonTexture.IsCreated())
+	{
+		mButtonTexture.AutoCreate();
+
+		GLsizei tex_dims[2];
+
+		inApp.GetWand().MakeButtonTexture(mButtonTexture.mTexture, mText.c_str(), mFontID, mPointSize, mAdditionalHorizSpace, mAdditionalVertSpace,  tex_dims[0], tex_dims[1]);
+		mButtonTexSize[0] = tex_dims[0];
+		mButtonTexSize[1] = tex_dims[1];
+	}
+}
+
+
+void SimpleButtonWidget::Update(const App& inApp, float inTimeSecs, const SceneTransform& inParentTransform, bool inParentTransformDirty)
+{
+	if (inParentTransformDirty || !mButtonTexture.IsCreated())
+	{
+		glm::vec3 world_pos = inParentTransform * mPos;
+		UpdateGeometry(inApp, to2d_point(world_pos));
+	}
+}
+
+void SimpleButtonWidget::Render(const App& inApp, float inTimeSecs, const SceneTransform& inParentTransform, bool inParentTransformDirty)
+{
+	glm::vec2 world_pos = to2d_point(inParentTransform * mPos);
+	
+	inApp.GetOGLStateManager().Enable(EOGLState_TextureWidget);
+	{
+		glBindTexture(GL_TEXTURE_2D, mButtonTexture.mTexture);
+		glTexParameteri(GL_TEXTURE_2D,GL_TEXTURE_MIN_FILTER,GL_NEAREST);	// Linear Filtering
+		glTexParameteri(GL_TEXTURE_2D,GL_TEXTURE_MAG_FILTER,GL_NEAREST);	// Linear Filtering
+		
+		glTexEnvi(GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_REPLACE);
+		//glColor4f(1.0f,1.0f,1.0f,1.0f);			
+
+		glBegin(GL_QUADS);
+			 glTexCoord2f(0.0f,0.0f); glVertex2f(world_pos.x,world_pos.y);
+			 glTexCoord2f(1.0f,0.0f); glVertex2f(world_pos.x+mButtonTexSize.x,world_pos.y);
+			 glTexCoord2f(1.0f,1.0f); glVertex2f(world_pos.x+mButtonTexSize.x,world_pos.y+mButtonTexSize.y);
+			 glTexCoord2f(0.0f,1.0f); glVertex2f(world_pos.x,world_pos.y+mButtonTexSize.y);
+		glEnd();
+	}
+}
+
+
 bool SimpleSliderWidget::Create(const glm::vec2& inPos, const glm::vec2& inSize)
 {
 	mPos = to3d_point(inPos);
@@ -104,6 +164,7 @@ bool SimpleSliderWidget::Create(const glm::vec2& inPos, const glm::vec2& inSize)
 
 void SimpleSliderWidget::UpdateGeometry(const App& inApp, const glm::vec2& inWorldPos)
 {
+	if (!mFrameTexture.IsCreated())
 	{
 		mFrameTexture.AutoCreate();
 		mMarkerTexture.AutoCreate();
@@ -143,7 +204,7 @@ void SimpleSliderWidget::Render(const App& inApp, float inTimeSecs, const SceneT
 
 	glm::vec2 marker_world_pos = world_pos;
 	vert2d(marker_world_pos) -= 0.5f * vert2d(mMarkerTexSize);
-	horiz2d(marker_world_pos) += 0.3f * horiz2d(mFrameTexSize);
+	horiz2d(marker_world_pos) += mSliderPos * horiz2d(mFrameTexSize);
 
 	inApp.GetOGLStateManager().Enable(EOGLState_TextureWidget);
 	{
@@ -271,14 +332,18 @@ bool MagicWandTestTextureWidget::Create(const App& inApp, const glm::vec2& inPos
 
 	mTexture.AutoCreate();
 
-	//if (!MagicWand::MakeTestButtonTexture(mTexture.mTexture, dims[0], dims[1]))
+	//if (!inApp.GetWand().MakeTestButtonTexture(mTexture.mTexture, dims[0], dims[1]))
 	//	return false;
 
 	//if (!MagicWand::MakeSliderFrameTexture(mTexture.mTexture, 100, dims[0], dims[1]))
 	//	return false;
 	
-	if (!inApp.GetWand().MakeButtonTexture(mTexture.mTexture, "BigEye ;)", 0, 12.0f, 10, 2, dims[0], dims[1]))
+	//if (!inApp.GetWand().MakeButtonTexture(mTexture.mTexture, "BigEye ;)", 0, 12.0f, 10, 2, dims[0], dims[1]))
+	//	return false;
+
+	if (!inApp.GetWand().MakeTestTexture(mTexture.mTexture, 50, 180, dims[0], dims[1]))
 		return false;
+	
 
 	mSize.x = (float) dims[0];
 	mSize.y = (float) dims[1];
@@ -329,6 +394,7 @@ bool SimplePanelWidget::Create(const glm::vec2& inPos, const glm::vec2& inSize)
 void SimplePanelWidget::UpdateGeometry(const App& inApp, const glm::vec2& inWorldPos)
 {
 	// TODO try colors like in : http://www.gameanim.com/2009/08/27/street-fighter-iv-facial-controls/
+	if (!mTexture.IsCreated())
 	{
 		mTexture.AutoCreate();
 		GLsizei dims[2];
@@ -699,11 +765,40 @@ void NativeWindowWidget::Test(App& inApp)
 		{
 			SimpleSliderWidget* slider_widget = new SimpleSliderWidget();
 			slider_widget->Create(glm::vec2(2.0f, pos_vert), glm::vec2(150.0f, 0.0f));
+			slider_widget->SetSliderPos(0.3f);
 			pos_vert += mDefaultFont.GetPixelHeight();
 
 			children.mChildWidgets.push_back(slider_widget);
 		}
 
+		{
+			SimpleSliderWidget* slider_widget = new SimpleSliderWidget();
+			slider_widget->Create(glm::vec2(2.0f, pos_vert), glm::vec2(150.0f, 0.0f));
+			slider_widget->SetSliderPos(0.6f);
+			
+			pos_vert += mDefaultFont.GetPixelHeight();
+
+			children.mChildWidgets.push_back(slider_widget);
+		}
+
+		{
+			SimpleButtonWidget* button_widget = new SimpleButtonWidget();
+			button_widget->Create(glm::vec2(8.0f, pos_vert), "Big eye ;)",  0, 12.0f, 10, 2);
+			
+			pos_vert += 2.0f * mDefaultFont.GetPixelHeight();
+
+			children.mChildWidgets.push_back(button_widget);
+		}
+
+
+		{
+			SimpleButtonWidget* button_widget = new SimpleButtonWidget();
+			button_widget->Create(glm::vec2(8.0f, pos_vert), "Biger eye!",  0, 16.0f, 10, 2);
+			
+			pos_vert += mDefaultFont.GetPixelHeight();
+
+			children.mChildWidgets.push_back(button_widget);
+		}
 
 		
 	}

@@ -151,11 +151,38 @@ namespace BE
 	};
 
 
+	class SimpleButtonWidget : public Widget
+	{
+	public:
+
+		bool		Create(const glm::vec2& inPos, const char* inText, MagicWand::FontID inFontID, float inPointSize, int inAdditionalHorizSpace, int inAdditionalVertSpace);
+
+		virtual void Update(const App& inApp, float inTimeSecs, const SceneTransform& inParentTransform, bool inParentTransformDirty);
+		virtual void Render(const App& inApp, float inTimeSecs, const SceneTransform& inParentTransform, bool inParentTransformDirty);
+
+	protected:
+
+		void UpdateGeometry(const App& inApp, const glm::vec2& inWorldPos);
+
+		std::string mText;
+		MagicWand::FontID mFontID;
+		float mPointSize;
+		int mAdditionalHorizSpace;
+		int mAdditionalVertSpace;
+
+		glm::vec3 mPos;
+		glm::vec2 mButtonTexSize;
+
+		OGLTexture mButtonTexture;
+	};
+
 	class SimpleSliderWidget : public Widget
 	{
 	public:
 
 		bool		Create(const glm::vec2& inPos, const glm::vec2& inSize);
+
+		void		SetSliderPos(float inPos)	{ mSliderPos = inPos; }
 
 		virtual void Update(const App& inApp, float inTimeSecs, const SceneTransform& inParentTransform, bool inParentTransformDirty);
 		virtual void Render(const App& inApp, float inTimeSecs, const SceneTransform& inParentTransform, bool inParentTransformDirty);
