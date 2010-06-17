@@ -202,6 +202,7 @@ namespace BE
 
 	protected:
 
+		glm::vec2 GetSliderWorldPos(const glm::vec2& inWorldPos) const;
 		void UpdateGeometry(const App& inApp, const glm::vec2& inWorldPos);
 
 		glm::vec3 mPos;
@@ -212,6 +213,8 @@ namespace BE
 		glm::vec2 mFrameTexSize;
 		OGLTexture mMarkerTexture;
 		glm::vec2 mMarkerTexSize;
+
+		bool mHasMouseSliderFocus;
 	};
 
 	class SimplePanelWidget : public Widget

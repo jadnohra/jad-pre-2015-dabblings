@@ -194,7 +194,8 @@ bool SimpleSliderWidget::Create(const glm::vec2& inPos, const glm::vec2& inSize)
 	mPos = to3d_point(inPos);
 	mSize = inSize;
 
-	mSliderPos = 0.2f;
+	mHasMouseSliderFocus = false;
+	mSliderPos = 0.5f;
 
 	return true;
 }
@@ -225,13 +226,39 @@ void SimpleSliderWidget::UpdateGeometry(const App& inApp, const glm::vec2& inWor
 
 void SimpleSliderWidget::Update(const App& inApp, float inTimeSecs, const SceneTransform& inParentTransform, bool inParentTransformDirty)
 {
+	glm::vec2 world_pos = to2d_point(inParentTransform * mPos);
+
 	if (inParentTransformDirty || !mMarkerTexture.IsCreated())
 	{
-		glm::vec3 world_pos = inParentTransform * mPos;
-		UpdateGeometry(inApp, to2d_point(world_pos));
+		UpdateGeometry(inApp, world_pos);
+	}
+
+	bool is_mouse_left_down = (inApp.GetInputState(INPUT_MOUSE_LEFT) > 0.0f);
+
+	if (is_mouse_left_down || mHasMouseSliderFocus)
+	{
+		glm::vec2 marker_world_pos = GetSliderWorldPos(world_pos);
+
+		if (WidgetUtil::IsMouseInRectangle(inApp, marker_world_pos, mMarkerTexSize))
+		{
+			mHasMouseSliderFocus = true;
+		}
+		else
+		{
+			mHasMouseSliderFocus = is_mouse_left_down;
+		}
 	}
 }
 
+
+glm::vec2 SimpleSliderWidget::GetSliderWorldPos(const glm::vec2& inWorldPos) const
+{
+	glm::vec2 marker_world_pos = inWorldPos;
+	vert2d(marker_world_pos) -= 0.5f * vert2d(mMarkerTexSize);
+	horiz2d(marker_world_pos) += mSliderPos * horiz2d(mFrameTexSize);
+
+	return marker_world_pos;
+}
 
 void SimpleSliderWidget::Render(const App& inApp, float inTimeSecs, const SceneTransform& inParentTransform, bool inParentTransformDirty)
 {
@@ -240,9 +267,7 @@ void SimpleSliderWidget::Render(const App& inApp, float inTimeSecs, const SceneT
 	glm::vec2 frame_world_pos = world_pos;
 	vert2d(frame_world_pos) -= 0.5f * vert2d(mFrameTexSize);
 
-	glm::vec2 marker_world_pos = world_pos;
-	vert2d(marker_world_pos) -= 0.5f * vert2d(mMarkerTexSize);
-	horiz2d(marker_world_pos) += mSliderPos * horiz2d(mFrameTexSize);
+	glm::vec2 marker_world_pos = GetSliderWorldPos(world_pos);
 
 	inApp.GetOGLStateManager().Enable(EOGLState_TextureWidget);
 	{
