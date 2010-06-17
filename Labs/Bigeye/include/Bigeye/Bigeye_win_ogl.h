@@ -20,6 +20,13 @@ namespace BE
 	};
 
 
+	class WidgetUtil
+	{
+	public:
+
+		static bool IsMouseInRectangle(const App& inApp, const glm::vec2& inWidgetWorldPos, const glm::vec2& inWidgetSize);
+	};
+
 	class Widget
 	{
 	public:
@@ -157,6 +164,8 @@ namespace BE
 
 		bool		Create(const glm::vec2& inPos, const char* inText, MagicWand::FontID inFontID, float inPointSize, bool inBold, int inAdditionalHorizSpace, int inAdditionalVertSpace);
 
+		void		SetIsPressed(bool inIsPressed);
+
 		virtual void Update(const App& inApp, float inTimeSecs, const SceneTransform& inParentTransform, bool inParentTransformDirty);
 		virtual void Render(const App& inApp, float inTimeSecs, const SceneTransform& inParentTransform, bool inParentTransformDirty);
 
@@ -170,11 +179,14 @@ namespace BE
 		bool mBold;
 		int mAdditionalHorizSpace;
 		int mAdditionalVertSpace;
+		bool mIsPressed;
 
 		glm::vec3 mPos;
 		glm::vec2 mButtonTexSize;
+		glm::vec2 mPressedButtonTexSize;
 
 		OGLTexture mButtonTexture;
+		OGLTexture mPressedButtonTexture;
 	};
 
 	class SimpleSliderWidget : public Widget
@@ -257,6 +269,22 @@ namespace BE
 		OGLFontInstance		 mDefaultFont;	
 	};
 
+	enum EInputID
+	{
+		INPUT_INVALID,
+		INPUT_MOUSE_START,
+		INPUT_MOUSE_LEFT,
+		INPUT_MOUSE_LEFT_CHANGED,
+		INPUT_MOUSE_MIDDLE,
+		INPUT_MOUSE_MIDDLE_CHANGED,
+		INPUT_MOUSE_RIGHT,
+		INPUT_MOUSE_RIGHT_CHANGED,
+		INPUT_MOUSE_X,
+		INPUT_MOUSE_Y,
+		INPUT_MOUSE_MOVED,
+		INPUT_MOUSE_END,
+	};
+
 	struct InputEventInfo
 	{
 		int inputID;
@@ -273,10 +301,11 @@ namespace BE
 
 		bool					Create(const char* inWindowName, int inWidth, int inHeight);
 
-		float					GetInputState(int inInputID);
-		int						GetInputEventCount();
-		const InputEventInfo&	GetInputEvent(int inIndex);
+		float					GetInputState(int inInputID) const;
+		int						GetInputEventCount() const;
+		const InputEventInfo&	GetInputEvent(int inIndex) const;
 		void					ConsumeInputEvents();
+		const glm::vec2&		GetMousePos() const;
 
 		bool					Update(float inTimeSecs);
 
@@ -287,10 +316,25 @@ namespace BE
 
 	protected:
 
+		void					PrepareInputForUpdate();
+
 		HINSTANCE				mHINSTANCE;
 		NativeWindowWidget*		mWindow;
 		OGLStateManager			mOGLStateManager;
 		mutable MagicWand		mWand;
+
+		bool					mMouseMoved;
+		glm::vec2				mMousePos;
+		glm::vec2				mLastMousePos;
+		bool					mLastMouseLeft;
+		bool					mMouseLeft;
+		bool					mMouseLeftChanged;
+		bool					mLastMouseMiddle;
+		bool					mMouseMiddle;
+		bool					mMouseMiddleChanged;
+		bool					mLastMouseRight;
+		bool					mMouseRight;
+		bool					mMouseRightChanged;
 	};
 
 	class WideString

@@ -100,10 +100,15 @@ bool SimpleButtonWidget::Create(const glm::vec2& inPos, const char* inText, Magi
 	mBold = inBold;
 	mAdditionalHorizSpace = inAdditionalHorizSpace;
 	mAdditionalVertSpace = inAdditionalVertSpace;
+	mIsPressed = false;
 
 	return true;
 }
 
+void SimpleButtonWidget::SetIsPressed(bool inIsPressed)
+{
+	mIsPressed = inIsPressed;
+}
 
 void SimpleButtonWidget::UpdateGeometry(const App& inApp, const glm::vec2& inWorldPos)
 {
@@ -113,19 +118,48 @@ void SimpleButtonWidget::UpdateGeometry(const App& inApp, const glm::vec2& inWor
 
 		GLsizei tex_dims[2];
 
-		inApp.GetWand().MakeButtonTexture(mButtonTexture.mTexture, mText.c_str(), mFontID, mPointSize, mBold, mAdditionalHorizSpace, mAdditionalVertSpace,  tex_dims[0], tex_dims[1]);
+		inApp.GetWand().MakeButtonTexture(mButtonTexture.mTexture, false, mText.c_str(), mFontID, mPointSize, mBold, mAdditionalHorizSpace, mAdditionalVertSpace,  tex_dims[0], tex_dims[1]);
 		mButtonTexSize[0] = tex_dims[0];
 		mButtonTexSize[1] = tex_dims[1];
+
+		mPressedButtonTexture.AutoCreate();
+		inApp.GetWand().MakeButtonTexture(mPressedButtonTexture.mTexture, true, mText.c_str(), mFontID, mPointSize, mBold, mAdditionalHorizSpace, mAdditionalVertSpace,  tex_dims[0], tex_dims[1]);
+		mPressedButtonTexSize[0] = tex_dims[0];
+		mPressedButtonTexSize[1] = tex_dims[1];
 	}
+}
+
+
+bool WidgetUtil::IsMouseInRectangle(const App& inApp, const glm::vec2& inWidgetWorldPos, const glm::vec2& inWidgetSize)
+{
+	glm::vec2 local_mouse_pos = inApp.GetMousePos() - inWidgetWorldPos;
+
+	if (local_mouse_pos.x < 0.0f || local_mouse_pos.y < 0.0f)
+		return false;
+
+	glm::vec2 local_mouse_pos_in_rect = inWidgetSize - local_mouse_pos;
+	
+	return (local_mouse_pos_in_rect.x > 0.0f && local_mouse_pos_in_rect.y > 0.0f);
 }
 
 
 void SimpleButtonWidget::Update(const App& inApp, float inTimeSecs, const SceneTransform& inParentTransform, bool inParentTransformDirty)
 {
+	glm::vec3 world_pos = inParentTransform * mPos;
+
 	if (inParentTransformDirty || !mButtonTexture.IsCreated())
 	{
-		glm::vec3 world_pos = inParentTransform * mPos;
 		UpdateGeometry(inApp, to2d_point(world_pos));
+	}
+	
+	if ((inApp.GetInputState(INPUT_MOUSE_LEFT) > 0.0f)
+		&& (WidgetUtil::IsMouseInRectangle(inApp, to2d_point(world_pos), mButtonTexSize)))
+	{
+		mIsPressed = true;
+	}
+	else
+	{
+		mIsPressed = false;
 	}
 }
 
@@ -133,9 +167,12 @@ void SimpleButtonWidget::Render(const App& inApp, float inTimeSecs, const SceneT
 {
 	glm::vec2 world_pos = to2d_point(inParentTransform * mPos);
 	
+	GLuint tex = mIsPressed ? mPressedButtonTexture.mTexture : mButtonTexture.mTexture;
+	const glm::vec2& tex_size = mIsPressed ? mPressedButtonTexSize : mButtonTexSize;
+
 	inApp.GetOGLStateManager().Enable(EOGLState_TextureWidget);
 	{
-		glBindTexture(GL_TEXTURE_2D, mButtonTexture.mTexture);
+		glBindTexture(GL_TEXTURE_2D, tex);
 		glTexParameteri(GL_TEXTURE_2D,GL_TEXTURE_MIN_FILTER,GL_NEAREST);	// Linear Filtering
 		glTexParameteri(GL_TEXTURE_2D,GL_TEXTURE_MAG_FILTER,GL_NEAREST);	// Linear Filtering
 		
@@ -144,9 +181,9 @@ void SimpleButtonWidget::Render(const App& inApp, float inTimeSecs, const SceneT
 
 		glBegin(GL_QUADS);
 			 glTexCoord2f(0.0f,0.0f); glVertex2f(world_pos.x,world_pos.y);
-			 glTexCoord2f(1.0f,0.0f); glVertex2f(world_pos.x+mButtonTexSize.x,world_pos.y);
-			 glTexCoord2f(1.0f,1.0f); glVertex2f(world_pos.x+mButtonTexSize.x,world_pos.y+mButtonTexSize.y);
-			 glTexCoord2f(0.0f,1.0f); glVertex2f(world_pos.x,world_pos.y+mButtonTexSize.y);
+			 glTexCoord2f(1.0f,0.0f); glVertex2f(world_pos.x+tex_size.x,world_pos.y);
+			 glTexCoord2f(1.0f,1.0f); glVertex2f(world_pos.x+tex_size.x,world_pos.y+tex_size.y);
+			 glTexCoord2f(0.0f,1.0f); glVertex2f(world_pos.x,world_pos.y+tex_size.y);
 		glEnd();
 	}
 }
@@ -796,6 +833,16 @@ void NativeWindowWidget::Test(App& inApp)
 
 		{
 			SimpleButtonWidget* button_widget = new SimpleButtonWidget();
+			button_widget->Create(glm::vec2(8.0f, pos_vert), "Pressed eye ;)",  0, 12.0f, false, 10, 2);
+			button_widget->SetIsPressed(true);
+			
+			pos_vert += 1.5f * mDefaultFont.GetPixelHeight();
+
+			children.mChildWidgets.push_back(button_widget);
+		}
+
+		{
+			SimpleButtonWidget* button_widget = new SimpleButtonWidget();
 			button_widget->Create(glm::vec2(8.0f, pos_vert), "Bold eye ;)",  0, 12.0f, true, 10, 2);
 			
 			pos_vert += 2.0f * mDefaultFont.GetPixelHeight();
@@ -806,13 +853,12 @@ void NativeWindowWidget::Test(App& inApp)
 
 		{
 			SimpleButtonWidget* button_widget = new SimpleButtonWidget();
-			button_widget->Create(glm::vec2(8.0f, pos_vert), "Biger eye!",  0, 16.0f, false, 10, 2);
+			button_widget->Create(glm::vec2(8.0f, pos_vert), "Bigger eye!",  0, 16.0f, false, 10, 2);
 			
 			pos_vert += mDefaultFont.GetPixelHeight();
 
 			children.mChildWidgets.push_back(button_widget);
 		}
-
 		
 	}
 	
@@ -897,6 +943,16 @@ void NativeWindowWidget::Render(const App& inApp, float inTimeSecs, const SceneT
 App::App()
 :	mWindow(NULL)
 {
+	mMouseMoved = false;
+	mLastMouseLeft = false;
+	mMouseLeft = false;
+	mMouseLeftChanged = false;
+	mLastMouseMiddle = false;
+	mMouseMiddle = false;
+	mMouseMiddleChanged = false;
+	mLastMouseRight = false;
+	mMouseRight = false;
+	mMouseRightChanged = false;
 }
 
 
@@ -924,17 +980,84 @@ bool App::Create(const char* inWindowName, int inWidth, int inHeight)
 	return true;
 }
 
-float App::GetInputState(int inInputID)
+float App::GetInputState(int inInputID) const
 {
+	EInputID input_ID = (EInputID) inInputID;
+
+	if (input_ID > INPUT_MOUSE_START && input_ID < INPUT_MOUSE_END)
+	{
+		switch (input_ID)
+		{
+			case INPUT_MOUSE_LEFT:
+			{
+				return mMouseLeft;
+			}
+			break;
+
+			case INPUT_MOUSE_LEFT_CHANGED:
+			{
+				return mMouseLeftChanged;
+			}
+			break;
+
+			case INPUT_MOUSE_MIDDLE:
+			{
+				return mMouseMiddle;
+			}
+			break;
+
+			case INPUT_MOUSE_MIDDLE_CHANGED:
+			{
+				return mMouseMiddleChanged;
+			}
+			break;
+
+			case INPUT_MOUSE_RIGHT:
+			{
+				return mMouseRight;
+			}
+			break;
+
+			case INPUT_MOUSE_RIGHT_CHANGED:
+			{
+				return mMouseRightChanged;
+			}
+			break;
+
+			case INPUT_MOUSE_X:
+			{
+				return mMousePos.x;
+			}
+			break;
+
+			case INPUT_MOUSE_Y:
+			{
+				return mMousePos.y;
+			}
+			break;
+
+			case INPUT_MOUSE_MOVED:
+			{
+				return mMouseMoved ? 1.0f : 0.0f;
+			}
+			break;
+		}
+	}
+
 	return 0.0f;
 }
 
-int App::GetInputEventCount()
+const glm::vec2& App::GetMousePos() const
+{
+	return mMousePos;
+}
+
+int App::GetInputEventCount() const
 {
 	return 0;
 }
 
-const InputEventInfo& App::GetInputEvent(int inIndex)
+const InputEventInfo& App::GetInputEvent(int inIndex) const
 {
 	static InputEventInfo info;
 
@@ -942,9 +1065,35 @@ const InputEventInfo& App::GetInputEvent(int inIndex)
 }
 
 
-void App::ConsumeInputEvents()
+void App::ConsumeInputEvents() 
 {
 }
+
+void App::PrepareInputForUpdate()
+{
+	POINT point;
+	GetCursorPos(&point);
+	ScreenToClient(mWindow->GetHWND(), &point);
+
+	mLastMousePos = mMousePos;
+	mMousePos.x = point.x;
+	mMousePos.y = point.y;
+
+	mMouseMoved = !glm::areSimilar(mMousePos, mLastMousePos, 0.0f);
+
+	mLastMouseLeft = mMouseLeft;
+	mMouseLeft = GetKeyState(VK_LBUTTON) < 0;
+	mMouseLeftChanged = mMouseLeft != mLastMouseLeft;
+
+	mLastMouseMiddle = mMouseMiddle;
+	mMouseMiddle = GetKeyState(VK_LBUTTON) < 0;
+	mMouseMiddleChanged = mMouseMiddle != mLastMouseMiddle;
+
+	mLastMouseRight = mMouseRight;
+	mMouseRight = GetKeyState(VK_LBUTTON) < 0;
+	mMouseRightChanged = mMouseRight != mLastMouseRight;
+}
+
 
 bool App::Update(float inTimeSecs)
 {
@@ -969,6 +1118,7 @@ bool App::Update(float inTimeSecs)
 
 		SceneTransform identity;
 
+		PrepareInputForUpdate();
 		mWindow->Update(*this, inTimeSecs, identity, false);
 		mWindow->Render(*this, inTimeSecs, identity, false);
 

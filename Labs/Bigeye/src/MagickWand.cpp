@@ -542,13 +542,14 @@ bool MagicWand::MakeTestButtonTexture(GLuint inTexture, GLsizei& outWidth, GLsiz
 
 bool MagicWand::MakeFrameTexture(GLuint inTexture, GLsizei& outWidth, GLsizei& outHeight)
 {
-	glm::vec4 colors[4] = { glm::vec4(82.0f/255.0f, 82.0f/255.0f, 82.0f/255.0f, 1.0f), 
-							glm::vec4(82.0f/255.0f, 82.0f/255.0f, 82.0f/255.0f, 1.0f), 
-							glm::vec4(37.0f/255.0f, 37.0f/255.0f, 37.0f/255.0f, 1.0f), 
-							glm::vec4(37.0f/255.0f, 37.0f/255.0f, 37.0f/255.0f, 1.0f) };
+	static glm::vec4 colors[4] = { 
+			glm::vec4(82.0f/255.0f, 82.0f/255.0f, 82.0f/255.0f, 1.0f), 
+			glm::vec4(82.0f/255.0f, 82.0f/255.0f, 82.0f/255.0f, 1.0f), 
+			glm::vec4(37.0f/255.0f, 37.0f/255.0f, 37.0f/255.0f, 1.0f), 
+			glm::vec4(37.0f/255.0f, 37.0f/255.0f, 37.0f/255.0f, 1.0f) };
 
 	auto_scoped_ptr<MagickWand> gradient_wand(mImpl->GradientFillWand(outWidth, outHeight, 0, 0, colors));
-	mImpl->RoundWand(gradient_wand, 8, false);
+	mImpl->RoundWand(gradient_wand, 8, true);
 
 	int offset[2];
 	offset[0] = -4;
@@ -565,10 +566,11 @@ bool MagicWand::MakeSliderFrameTexture(GLuint inTexture, GLsizei inLength, GLsiz
 	glm::vec3 maincolor(1.0f, 1.0f, 1.0f);
 	//glm::vec3 maincolor(0.0f, 0.0f, 0.0f);
 
-	glm::vec4 gradient_colors_stack[4] = { glm::vec4(maincolor.r, maincolor.g, maincolor.b, 0.0f), 
-											glm::vec4(maincolor.r, maincolor.g, maincolor.b, 1.0f), 
-											glm::vec4(maincolor.r, maincolor.g, maincolor.b, 1.0f), 
-											glm::vec4(maincolor.r, maincolor.g, maincolor.b, 0.0f) };
+	static glm::vec4 gradient_colors_stack[4] = { 
+				glm::vec4(maincolor.r, maincolor.g, maincolor.b, 0.0f), 
+				glm::vec4(maincolor.r, maincolor.g, maincolor.b, 1.0f), 
+				glm::vec4(maincolor.r, maincolor.g, maincolor.b, 1.0f), 
+				glm::vec4(maincolor.r, maincolor.g, maincolor.b, 0.0f) };
 
 	outWidth = inLength;
 	outHeight = 1;
@@ -660,10 +662,13 @@ MagicWand::FontID MagicWand::LoadFont(const char* inPath)
 }
 
 
-bool MagicWand::MakeButtonTexture(GLuint inTexture, const char* inText, FontID inFontID, float inPointSize, bool inBold, int inAdditionalHorizSpace, int inAdditionalVertSpace, GLsizei& outWidth, GLsizei& outHeight)
+bool MagicWand::MakeButtonTexture(GLuint inTexture, bool inIsPressed, const char* inText, FontID inFontID, float inPointSize, bool inBold, int inAdditionalHorizSpace, int inAdditionalVertSpace, GLsizei& outWidth, GLsizei& outHeight)
 {
 	DrawingWand* font = mImpl->mFontWands[inFontID];
+	DrawSetFillAlpha(font, 1.0);
 	DrawSetFontSize(font, inPointSize);
+	DrawSetFillColor(font, inIsPressed ? mImpl->black : mImpl->white);
+	DrawSetFontWeight(font, inBold ? 700 : 400);
 	
 	auto_scoped_ptr<MagickWand> empty_wand(NewMagickWand());
 	MagickReadImage(empty_wand,"xc:");
@@ -682,12 +687,23 @@ bool MagicWand::MakeButtonTexture(GLuint inTexture, const char* inText, FontID i
 	float rect_width = text_width+additional_size[0];
 	float rect_height = text_height+additional_size[1];
 
-	glm::vec4 gradient_colors_stack[] = {	glm::vec4(85.0f/255.0f, 85/255.0f, 85/255.0f, 1.0f), 
-											glm::vec4(85/255.0f, 85/255.0f, 85/255.0f, 1.0f),
-											glm::vec4(37.0f/255.0f, 37.0f/255.0f, 37/255.0f, 1.0f), 
-											glm::vec4(37.0f/255.0f, 37.0f/255.0f, 37/255.0f, 1.0f),
-											glm::vec4(30.0f/255.0f, 30.0f/255.0f, 30/255.0f, 1.0f), 
-											glm::vec4(30.0f/255.0f, 30.0f/255.0f, 30/255.0f, 1.0f)};
+	static glm::vec4 gradient_colors_stack[] = {	
+					glm::vec4(85.0f/255.0f, 85/255.0f, 85/255.0f, 1.0f), 
+					glm::vec4(85/255.0f, 85/255.0f, 85/255.0f, 1.0f),
+					glm::vec4(37.0f/255.0f, 37.0f/255.0f, 37.0f/255.0f, 1.0f), 
+					glm::vec4(37.0f/255.0f, 37.0f/255.0f, 37.0f/255.0f, 1.0f),
+					glm::vec4(30.0f/255.0f, 30.0f/255.0f, 30.0f/255.0f, 1.0f), 
+					glm::vec4(30.0f/255.0f, 30.0f/255.0f, 30.0f/255.0f, 1.0f)};
+
+	static glm::vec4 pressed_gradient_colors_stack[] = {	
+					glm::vec4(110.0f/255.0f, 48/255.0f, 0.0/255.0f, 1.0f), 
+					glm::vec4(110.0f/255.0f, 48/255.0f, 0.0/255.0f, 1.0f),
+					glm::vec4(234.0f/255.0f, 107.0f/255.0f, 0.0f/255.0f, 1.0f), 
+					glm::vec4(234.0f/255.0f, 107.0f/255.0f, 0.0f/255.0f, 1.0f), 
+					glm::vec4(243.0f/255.0f, 111.0f/255.0f, 0.0f/255.0f, 1.0f), 
+					glm::vec4(243.0f/255.0f, 111.0f/255.0f, 0.0f/255.0f, 1.0f)};
+
+	glm::vec4* used_gradient_colors_stack = inIsPressed ? pressed_gradient_colors_stack : gradient_colors_stack;
 
 	MagickWandImpl::GradientCurves gradient_curves;
 	gradient_curves.mCurves.resize(2);
@@ -695,13 +711,10 @@ bool MagicWand::MakeButtonTexture(GLuint inTexture, const char* inText, FontID i
 	gradient_curves.mCurves[0] = MagickWandImpl::GradientCurve(0.0f, specular_fraction, 0.4f);
 	gradient_curves.mCurves[1] = MagickWandImpl::GradientCurve(specular_fraction, 1.0f, 1.0f);
 
-	auto_scoped_ptr<MagickWand> gradient_wand(mImpl->GradientFillWand((size_t) (rect_width), (size_t) (rect_height), 0, 1, gradient_colors_stack, &gradient_curves));
+
+	auto_scoped_ptr<MagickWand> gradient_wand(mImpl->GradientFillWand((size_t) (rect_width), (size_t) (rect_height), 0, 1, used_gradient_colors_stack, &gradient_curves));
 	mImpl->RoundWand(gradient_wand, radius, true);
 
-	DrawSetFillAlpha(font, 1.0);
-	DrawSetFontSize(font, inPointSize);
-	DrawSetFillColor(font, mImpl->white);
-	DrawSetFontWeight(font, inBold ? 700 : 400);
 	MagickAnnotateImage(gradient_wand, font, 0.5f*(rect_width-text_width), (font_metrics[8]+ font_metrics[5]) + 0.5f*(rect_height-text_height), 0.0, inText);
 
 	return mImpl->ToGLTexture(gradient_wand, inTexture, outWidth, outHeight);
