@@ -211,10 +211,13 @@ namespace BE
 
 		OGLTexture mFrameTexture;
 		glm::vec2 mFrameTexSize;
+		OGLTexture mPressedMarkerTexture;
 		OGLTexture mMarkerTexture;
 		glm::vec2 mMarkerTexSize;
 
 		bool mHasMouseSliderFocus;
+		glm::vec2 mMouseSliderFocusStartMousePos;
+		float mMouseSliderFocusStartSliderPos;
 	};
 
 	class SimplePanelWidget : public Widget

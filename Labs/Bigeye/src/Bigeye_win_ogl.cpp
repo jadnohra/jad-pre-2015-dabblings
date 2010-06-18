@@ -207,19 +207,23 @@ void SimpleSliderWidget::UpdateGeometry(const App& inApp, const glm::vec2& inWor
 	{
 		mFrameTexture.AutoCreate();
 		mMarkerTexture.AutoCreate();
+		mPressedMarkerTexture.AutoCreate();
 
 		GLsizei tex_dims[2];
 
-		inApp.GetWand().MakeSliderFrameTexture(mFrameTexture.mTexture, mSize.x, tex_dims[0], tex_dims[1]);
+		inApp.GetWand().MakeSliderFrameTexture2(mFrameTexture.mTexture, mSize.x, "Slide", 0, 12.0, false, 2, 2, tex_dims[0], tex_dims[1]);
+		//inApp.GetWand().MakeSliderFrameTexture(mFrameTexture.mTexture, mSize.x, tex_dims[0], tex_dims[1]);
 		mFrameTexSize[0] = tex_dims[0];
 		mFrameTexSize[1] = tex_dims[1];
 
-		inApp.GetWand().MakeSliderMarkerTexture(mMarkerTexture.mTexture, tex_dims[0], tex_dims[1]);
+		inApp.GetWand().MakeSliderMarkerTexture2(mMarkerTexture.mTexture, false, tex_dims[1], tex_dims[0], tex_dims[1]);
 		//tex_dims[0] = 40;
 		//tex_dims[1] = 20;
 		//MagicWand::MakeFrameTexture(mMarkerTexture.mTexture, tex_dims[0], tex_dims[1]);
 		mMarkerTexSize[0] = tex_dims[0];
 		mMarkerTexSize[1] = tex_dims[1];
+
+		inApp.GetWand().MakeSliderMarkerTexture2(mPressedMarkerTexture.mTexture, true, tex_dims[1], tex_dims[0], tex_dims[1]);
 	}
 }
 
@@ -234,20 +238,41 @@ void SimpleSliderWidget::Update(const App& inApp, float inTimeSecs, const SceneT
 	}
 
 	bool is_mouse_left_down = (inApp.GetInputState(INPUT_MOUSE_LEFT) > 0.0f);
+	bool has_mouse_slider_focus = false;
 
-	if (is_mouse_left_down || mHasMouseSliderFocus)
+	if (is_mouse_left_down)
 	{
 		glm::vec2 marker_world_pos = GetSliderWorldPos(world_pos);
 
 		if (WidgetUtil::IsMouseInRectangle(inApp, marker_world_pos, mMarkerTexSize))
 		{
-			mHasMouseSliderFocus = true;
+			has_mouse_slider_focus = true;
 		}
 		else
 		{
-			mHasMouseSliderFocus = is_mouse_left_down;
+			has_mouse_slider_focus = mHasMouseSliderFocus;
 		}
 	}
+
+	if (has_mouse_slider_focus)
+	{
+		glm::vec2 mouse_pos = inApp.GetMousePos();
+
+		if (!mHasMouseSliderFocus)
+		{
+			mMouseSliderFocusStartMousePos = mouse_pos;
+			mMouseSliderFocusStartSliderPos = mSliderPos;
+		}
+
+		float pos_diff = mouse_pos.x - mMouseSliderFocusStartMousePos.x;
+		float new_slider_pos = mMouseSliderFocusStartSliderPos  + (pos_diff / (float) mFrameTexSize.x);
+		new_slider_pos = std::max(0.0f, new_slider_pos);
+		new_slider_pos = std::min(1.0f, new_slider_pos);
+
+		SetSliderPos(new_slider_pos);
+	}
+
+	mHasMouseSliderFocus = has_mouse_slider_focus;
 }
 
 
@@ -255,7 +280,7 @@ glm::vec2 SimpleSliderWidget::GetSliderWorldPos(const glm::vec2& inWorldPos) con
 {
 	glm::vec2 marker_world_pos = inWorldPos;
 	vert2d(marker_world_pos) -= 0.5f * vert2d(mMarkerTexSize);
-	horiz2d(marker_world_pos) += mSliderPos * horiz2d(mFrameTexSize);
+	horiz2d(marker_world_pos) += 2 + mSliderPos * (horiz2d(mFrameTexSize) - (horiz2d(mMarkerTexSize)+4));
 
 	return marker_world_pos;
 }
@@ -287,7 +312,7 @@ void SimpleSliderWidget::Render(const App& inApp, float inTimeSecs, const SceneT
 	}
 
 	{
-		glBindTexture(GL_TEXTURE_2D, mMarkerTexture.mTexture);
+		glBindTexture(GL_TEXTURE_2D, mHasMouseSliderFocus ? mPressedMarkerTexture.mTexture : mMarkerTexture.mTexture);
 		// I do not know why things break if I do not set these params again here!!! find out!
 		glTexParameteri(GL_TEXTURE_2D,GL_TEXTURE_MIN_FILTER,GL_NEAREST);	// Linear Filtering
 		glTexParameteri(GL_TEXTURE_2D,GL_TEXTURE_MAG_FILTER,GL_NEAREST);	// Linear Filtering
@@ -830,19 +855,19 @@ void NativeWindowWidget::Test(App& inApp)
 
 		{
 			SimpleSliderWidget* slider_widget = new SimpleSliderWidget();
-			slider_widget->Create(glm::vec2(2.0f, pos_vert), glm::vec2(150.0f, 0.0f));
+			slider_widget->Create(glm::vec2(8.0f, pos_vert), glm::vec2(150.0f, 0.0f));
 			slider_widget->SetSliderPos(0.3f);
-			pos_vert += mDefaultFont.GetPixelHeight();
+			pos_vert += 1.5f * mDefaultFont.GetPixelHeight();
 
 			children.mChildWidgets.push_back(slider_widget);
 		}
 
 		{
 			SimpleSliderWidget* slider_widget = new SimpleSliderWidget();
-			slider_widget->Create(glm::vec2(2.0f, pos_vert), glm::vec2(150.0f, 0.0f));
+			slider_widget->Create(glm::vec2(8.0f, pos_vert), glm::vec2(150.0f, 0.0f));
 			slider_widget->SetSliderPos(0.6f);
 			
-			pos_vert += mDefaultFont.GetPixelHeight();
+			pos_vert += 1.5f * mDefaultFont.GetPixelHeight();
 
 			children.mChildWidgets.push_back(slider_widget);
 		}

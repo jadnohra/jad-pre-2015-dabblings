@@ -662,6 +662,88 @@ MagicWand::FontID MagicWand::LoadFont(const char* inPath)
 }
 
 
+bool MagicWand::MakeSliderFrameTexture2(GLuint inTexture, GLsizei inLength, const char* inText, FontID inFontID, float inPointSize, bool inBold, int inAdditionalHorizSpace, int inAdditionalVertSpace, GLsizei& outWidth, GLsizei& outHeight)
+{
+	DrawingWand* font = mImpl->mFontWands[inFontID];
+	DrawSetFillAlpha(font, 1.0);
+	DrawSetFontSize(font, inPointSize);
+	DrawSetFillColor(font, mImpl->white);
+	DrawSetFontWeight(font, inBold ? 700 : 400);
+	
+	auto_scoped_ptr<MagickWand> empty_wand(NewMagickWand());
+	MagickReadImage(empty_wand,"xc:");
+	
+	double* font_metrics = MagickQueryFontMetrics(empty_wand, font, inText);
+	
+	float text_width = (float) font_metrics[4];
+	float text_height = (float) font_metrics[5];
+	
+	float radius = 4.0f;
+	float additional_size_base = (radius * (1.0f - (1.0f / sqrtf(2.0f))));
+	float additional_size[2];
+	additional_size[0] = 2.0f * additional_size_base + (float) inAdditionalHorizSpace;
+	additional_size[1] = 2.0f * additional_size_base + /*font_metrics[8]*/ + (float) inAdditionalVertSpace;
+
+	
+
+	float rect_width = text_width+additional_size[0];
+	float rect_height = text_height+additional_size[1];
+
+	if (inLength > text_width + additional_size[0])
+	{
+		additional_size[0] = 0.0f;
+		rect_width = inLength;
+	}
+
+	static glm::vec4 gradient_colors_stack[] = {	
+					glm::vec4(0.0f/255.0f, 0.0f/255.0f, 0.0f/255.0f, 1.0f), 
+					glm::vec4(0.0f/255.0f, 0.0f/255.0f, 0.0f/255.0f, 1.0f), 
+					glm::vec4(30.0f/255.0f, 30.0f/255.0f, 30.0f/255.0f, 1.0f), 
+					glm::vec4(30.0f/255.0f, 30.0f/255.0f, 30.0f/255.0f, 1.0f),
+					glm::vec4(40.0f/255.0f, 40.0f/255.0f, 40.0f/255.0f, 1.0f),
+					glm::vec4(40.0f/255.0f, 40.0f/255.0f, 40.0f/255.0f, 1.0f)};
+
+	glm::vec4* used_gradient_colors_stack = gradient_colors_stack;
+
+	MagickWandImpl::GradientCurves gradient_curves;
+	gradient_curves.mCurves.resize(2);
+	float specular_fraction = 8.0f * (1.0f / rect_height);
+	gradient_curves.mCurves[0] = MagickWandImpl::GradientCurve(0.0f, specular_fraction, 0.4f);
+	gradient_curves.mCurves[1] = MagickWandImpl::GradientCurve(specular_fraction, 1.0f, 1.0f);
+
+
+	auto_scoped_ptr<MagickWand> gradient_wand(mImpl->GradientFillWand((size_t) (rect_width), (size_t) (rect_height), 0, 1, used_gradient_colors_stack, &gradient_curves));
+	mImpl->RoundWand(gradient_wand, radius, false);
+
+	MagickAnnotateImage(gradient_wand, font, inAdditionalHorizSpace, (font_metrics[8]+ font_metrics[5]) + 0.5f*(rect_height-text_height), 0.0, inText);
+
+	return mImpl->ToGLTexture(gradient_wand, inTexture, outWidth, outHeight);
+}
+
+
+bool MagicWand::MakeSliderMarkerTexture2(GLuint inTexture, bool inIsPressed, GLsizei inFrameHeight, GLsizei& outWidth, GLsizei& outHeight)
+{
+	auto_scoped_ptr<DrawingWand> draw(NewDrawingWand());
+	auto_scoped_ptr<PixelWand> fill(NewPixelWand());
+	auto_scoped_ptr<PixelWand> stroke(NewPixelWand());
+	
+	PixelSetColor(stroke, "#000000");
+	PixelSetAlpha(stroke, 0.4f);
+	PixelSetColor(fill, inIsPressed ? "#F06D00" : "#FFFFFF");
+	PixelSetAlpha(fill, inIsPressed ? 1.0f : 0.7f);
+
+	outHeight = inFrameHeight - 2;
+	outWidth = (3*outHeight)/4;
+
+	DrawSetStrokeWidth(draw, 1.5f);
+	DrawSetFillColor(draw, fill);
+	DrawSetStrokeColor(draw, stroke);
+	DrawRoundRectangle(draw, 1, 1,outWidth-1, outHeight-1, 3, 3);
+	
+	return mImpl->ToGLTexture(draw, inTexture, outWidth, outHeight);
+}
+
+
 bool MagicWand::MakeButtonTexture(GLuint inTexture, bool inIsPressed, const char* inText, FontID inFontID, float inPointSize, bool inBold, int inAdditionalHorizSpace, int inAdditionalVertSpace, GLsizei& outWidth, GLsizei& outHeight)
 {
 	DrawingWand* font = mImpl->mFontWands[inFontID];
