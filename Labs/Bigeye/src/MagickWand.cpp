@@ -712,10 +712,11 @@ bool MagicWand::MakeSliderFrameTexture2(GLuint inTexture, GLsizei inLength, cons
 	gradient_curves.mCurves[1] = MagickWandImpl::GradientCurve(specular_fraction, 1.0f, 1.0f);
 
 
-	auto_scoped_ptr<MagickWand> gradient_wand(mImpl->GradientFillWand((size_t) (rect_width), (size_t) (rect_height), 0, 1, used_gradient_colors_stack, &gradient_curves));
+	auto_scoped_ptr<MagickWand> gradient_wand(mImpl->GradientFillWand((size_t) (rect_width), (size_t) (rect_height), 0, 0, used_gradient_colors_stack, &gradient_curves));
 	mImpl->RoundWand(gradient_wand, radius, false);
 
-	MagickAnnotateImage(gradient_wand, font, inAdditionalHorizSpace, (font_metrics[8]+ font_metrics[5]) + 0.5f*(rect_height-text_height), 0.0, inText);
+	//font_metrics[5] - font_metrics[8]+/*(font_metrics[8]+ font_metrics[5]) +*/ 0.5f*(rect_height-text_height)
+	MagickAnnotateImage(gradient_wand, font, inAdditionalHorizSpace, text_height, 0.0, inText);
 
 	return mImpl->ToGLTexture(gradient_wand, inTexture, outWidth, outHeight);
 }
@@ -735,10 +736,10 @@ bool MagicWand::MakeSliderMarkerTexture2(GLuint inTexture, bool inIsPressed, GLs
 	outHeight = inFrameHeight - 2;
 	outWidth = (3*outHeight)/4;
 
-	DrawSetStrokeWidth(draw, 1.5f);
+	DrawSetStrokeWidth(draw, 1.0f);
 	DrawSetFillColor(draw, fill);
 	DrawSetStrokeColor(draw, stroke);
-	DrawRoundRectangle(draw, 1, 1,outWidth-1, outHeight-1, 3, 3);
+	DrawRoundRectangle(draw, 0, 0,outWidth-1, outHeight-1, 3, 3);
 	
 	return mImpl->ToGLTexture(draw, inTexture, outWidth, outHeight);
 }
@@ -797,7 +798,8 @@ bool MagicWand::MakeButtonTexture(GLuint inTexture, bool inIsPressed, const char
 	auto_scoped_ptr<MagickWand> gradient_wand(mImpl->GradientFillWand((size_t) (rect_width), (size_t) (rect_height), 0, 1, used_gradient_colors_stack, &gradient_curves));
 	mImpl->RoundWand(gradient_wand, radius, true);
 
-	MagickAnnotateImage(gradient_wand, font, 0.5f*(rect_width-text_width), (font_metrics[8]+ font_metrics[5]) + 0.5f*(rect_height-text_height), 0.0, inText);
+	//(font_metrics[8]+ font_metrics[5]) + 0.5f*(rect_height-text_height)
+	MagickAnnotateImage(gradient_wand, font, 0.5f*(rect_width-text_width), text_height, 0.0, inText);
 
 	return mImpl->ToGLTexture(gradient_wand, inTexture, outWidth, outHeight);
 }
