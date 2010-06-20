@@ -1,6 +1,7 @@
 #include "MagickWand.h"
 #include <stdio.h>
 #include <vector>
+#include "float.h"
 
 #ifdef _DEBUG
 	#pragma comment (lib, "CORE_DB_bzlib_.lib")	
@@ -166,6 +167,9 @@ public:
 	auto_scoped_ptr<PixelWand> black;
 	auto_scoped_ptr<PixelWand> black_mask;
 	auto_scoped_ptr<PixelWand> blue1;
+	auto_scoped_ptr<PixelWand> orange1;
+	auto_scoped_ptr<PixelWand> yellow;
+	auto_scoped_ptr<PixelWand> yellow1;
 	auto_scoped_ptr<PixelWand> transparent;
 
 	typedef std::vector<DrawingWand*> FontWands;
@@ -181,6 +185,9 @@ public:
 	,	black(NewPixelWand())
 	,	black_mask(NewPixelWand())
 	,	blue1(NewPixelWand())
+	,	orange1(NewPixelWand())
+	,	yellow(NewPixelWand())
+	,	yellow1(NewPixelWand())
 	,	transparent(NewPixelWand())
 	{
 		PixelSetColor(white, "white");
@@ -190,6 +197,9 @@ public:
 		PixelSetColor(black_mask, "black");
 		PixelSetAlpha(black_mask, 0.0);
 		PixelSetColor(blue1, "#4096EE");
+		PixelSetColor(orange1, "#F06D00");
+		PixelSetColor(yellow, "#FFFF00");
+		PixelSetColor(yellow1, "#F9AB16");
 		PixelSetColor(transparent, "transparent");
 	}
 
@@ -422,6 +432,28 @@ public:
 };
 
 
+MagicWand::TextInfo::TextInfo()
+:	mFontID(0)
+,	mPointSize(12.0f)
+,	mBold(false)
+{
+}
+
+MagicWand::TextInfo::TextInfo(const char* inText, FontID inFontID, float inPointSize, bool inBold, const glm::vec2& inMinEmptySpace)
+:	mText(inText)
+,	mFontID(inFontID)
+,	mPointSize(inPointSize)
+,	mBold(inBold)
+,	mMinEmptySpace(inMinEmptySpace)
+{
+}
+
+MagicWand::SizeConstraints::SizeConstraints()
+{
+	mMaxSize.x = FLT_MAX;
+	mMaxSize.y = FLT_MAX;
+}
+
 bool MagicWand::MakeTestButtonTexture(GLuint inTexture, GLsizei& outWidth, GLsizei& outHeight)
 {
 	bool was_read = false;
@@ -561,85 +593,6 @@ bool MagicWand::MakeFrameTexture(GLuint inTexture, GLsizei& outWidth, GLsizei& o
 }
 
 
-bool MagicWand::MakeSliderFrameTexture(GLuint inTexture, GLsizei inLength, GLsizei& outWidth, GLsizei& outHeight)
-{
-	glm::vec3 maincolor(1.0f, 1.0f, 1.0f);
-	//glm::vec3 maincolor(0.0f, 0.0f, 0.0f);
-
-	static glm::vec4 gradient_colors_stack[4] = { 
-				glm::vec4(maincolor.r, maincolor.g, maincolor.b, 0.0f), 
-				glm::vec4(maincolor.r, maincolor.g, maincolor.b, 1.0f), 
-				glm::vec4(maincolor.r, maincolor.g, maincolor.b, 1.0f), 
-				glm::vec4(maincolor.r, maincolor.g, maincolor.b, 0.0f) };
-
-	outWidth = inLength;
-	outHeight = 1;
-
-	auto_scoped_ptr<MagickWand> gradient_wand(mImpl->GradientFillWand(outWidth, outHeight, 0, 0, gradient_colors_stack));
-	//return mImpl->ToGLTexture(gradient_wand, inTexture, outWidth, outHeight);
-
-	{
-		auto_scoped_ptr<DrawingWand> draw(NewDrawingWand());
-		
-		DrawSetFillColor(draw, mImpl->white);
-		DrawSetStrokeColor(draw, mImpl->white);
-		DrawSetStrokeWidth(draw, 0.0f);
-
-		PointInfo points[3];
-		points[0].x = 0.0f;
-		points[0].y = 0.5f;
-		points[1].x = inLength;
-		points[1].y = 0.0;
-		points[2].x = inLength;
-		points[2].y = 1.0f;
-
-		DrawPolygon(draw, 3, points);
-
-		auto_scoped_ptr<MagickWand> poly_wand(mImpl->DrawToWand(draw, outWidth, outHeight, mImpl->transparent));
-
-		MagickCompositeImage(gradient_wand, poly_wand, DstInCompositeOp, 0, 0);
-	}
-
-	return mImpl->ToGLTexture(gradient_wand, inTexture, outWidth, outHeight);
-}
-
-bool MagicWand::MakeSliderMarkerTexture(GLuint inTexture, GLsizei& outWidth, GLsizei& outHeight)
-{
-	auto_scoped_ptr<DrawingWand> draw(NewDrawingWand());
-	auto_scoped_ptr<PixelWand> fill(NewPixelWand());
-	auto_scoped_ptr<PixelWand> stroke(NewPixelWand());
-	
-	//http://www.colorsontheweb.com/colorwizard.asp
-
-	PixelSetColor(stroke, "#000000");
-	PixelSetAlpha(stroke, 0.4f);
-	//PixelSetColor(fill, "#F47100");
-	//PixelSetColor(fill, "#F0A000");
-	//PixelSetColor(fill, "#0077F0");
-	//PixelSetColor(fill, "#F37103");
-	PixelSetColor(fill, "#F27100");
-	PixelSetAlpha(fill, 1.0f);
-
-	outWidth = 25;
-	outHeight = 12;
-
-	DrawSetStrokeWidth(draw, 1.5f);
-	DrawSetFillColor(draw, fill);
-	DrawSetStrokeColor(draw, stroke);
-	DrawRoundRectangle(draw, 2, 2 ,outWidth-2, outHeight-2, 3, 3);
-	
-	//auto_scoped_ptr<MagickWand> test_wand(mImpl->DrawToWand(draw, outWidth, outHeight, mImpl->red));
-	//MagickWriteImage(test_wand, "test.bmp");
-
-	//auto_scoped_ptr<MagickWand> shadowed_wand(mImpl->ShadowWand(draw, outWidth, outHeight));
-	//return mImpl->ToGLTexture(shadowed_wand, inTexture, outWidth, outHeight);
-
-	return mImpl->ToGLTexture(draw, inTexture, outWidth, outHeight);
-
-	//auto_scoped_ptr<MagickWand> shadowed_wand(mImpl->ShadowWand(draw, inWidth, inHeight));
-	//return mImpl->ToGLTexture(shadowed_wand, inTexture, inWidth, inHeight);
-}
-
 bool MagicWand::ReadImageToGLTexture(const char* inPath, GLuint inTexture, GLsizei& outWidth, GLsizei& outHeight)
 {
 	bool was_read = false;
@@ -662,18 +615,18 @@ MagicWand::FontID MagicWand::LoadFont(const char* inPath)
 }
 
 
-bool MagicWand::MakeSliderFrameTexture2(GLuint inTexture, GLsizei inLength, const char* inText, FontID inFontID, float inPointSize, bool inBold, int inAdditionalHorizSpace, int inAdditionalVertSpace, GLsizei& outWidth, GLsizei& outHeight)
+bool MagicWand::MakeSliderFrameTexture(GLuint inTexture, GLsizei inLength, const TextInfo& inTextInfo, const SizeConstraints& inSizeConstraints, GLsizei& outWidth, GLsizei& outHeight)
 {
-	DrawingWand* font = mImpl->mFontWands[inFontID];
+	DrawingWand* font = mImpl->mFontWands[inTextInfo.mFontID];
 	DrawSetFillAlpha(font, 1.0);
-	DrawSetFontSize(font, inPointSize);
+	DrawSetFontSize(font, inTextInfo.mPointSize);
 	DrawSetFillColor(font, mImpl->white);
-	DrawSetFontWeight(font, inBold ? 700 : 400);
+	DrawSetFontWeight(font, inTextInfo.mBold ? 700 : 400);
 	
 	auto_scoped_ptr<MagickWand> empty_wand(NewMagickWand());
 	MagickReadImage(empty_wand,"xc:");
 	
-	double* font_metrics = MagickQueryFontMetrics(empty_wand, font, inText);
+	double* font_metrics = MagickQueryFontMetrics(empty_wand, font, inTextInfo.mText.c_str());
 	
 	float text_width = (float) font_metrics[4];
 	float text_height = (float) font_metrics[5];
@@ -681,10 +634,8 @@ bool MagicWand::MakeSliderFrameTexture2(GLuint inTexture, GLsizei inLength, cons
 	float radius = 4.0f;
 	float additional_size_base = (radius * (1.0f - (1.0f / sqrtf(2.0f))));
 	float additional_size[2];
-	additional_size[0] = 2.0f * additional_size_base + (float) inAdditionalHorizSpace;
-	additional_size[1] = 2.0f * additional_size_base + /*font_metrics[8]*/ + (float) inAdditionalVertSpace;
-
-	
+	additional_size[0] = 2.0f * additional_size_base + inTextInfo.mMinEmptySpace.x;
+	additional_size[1] = 2.0f * additional_size_base + /*font_metrics[8]*/ + inTextInfo.mMinEmptySpace.y;
 
 	float rect_width = text_width+additional_size[0];
 	float rect_height = text_height+additional_size[1];
@@ -694,6 +645,12 @@ bool MagicWand::MakeSliderFrameTexture2(GLuint inTexture, GLsizei inLength, cons
 		additional_size[0] = 0.0f;
 		rect_width = inLength;
 	}
+
+	rect_width = std::max(rect_width, horiz2d(inSizeConstraints.mMinSize));
+	rect_height = std::max(rect_height, vert2d(inSizeConstraints.mMinSize));
+
+	rect_width = std::min(rect_width, horiz2d(inSizeConstraints.mMaxSize));
+	rect_height = std::min(rect_height, vert2d(inSizeConstraints.mMaxSize));
 
 	static glm::vec4 gradient_colors_stack[] = {	
 					glm::vec4(0.0f/255.0f, 0.0f/255.0f, 0.0f/255.0f, 1.0f), 
@@ -716,13 +673,13 @@ bool MagicWand::MakeSliderFrameTexture2(GLuint inTexture, GLsizei inLength, cons
 	mImpl->RoundWand(gradient_wand, radius, false);
 
 	//font_metrics[5] - font_metrics[8]+/*(font_metrics[8]+ font_metrics[5]) +*/ 0.5f*(rect_height-text_height)
-	MagickAnnotateImage(gradient_wand, font, inAdditionalHorizSpace, text_height, 0.0, inText);
+	MagickAnnotateImage(gradient_wand, font, inTextInfo.mMinEmptySpace.x, text_height, 0.0, inTextInfo.mText.c_str());
 
 	return mImpl->ToGLTexture(gradient_wand, inTexture, outWidth, outHeight);
 }
 
 
-bool MagicWand::MakeSliderMarkerTexture2(GLuint inTexture, bool inIsPressed, GLsizei inFrameHeight, GLsizei& outWidth, GLsizei& outHeight)
+bool MagicWand::MakeSliderMarkerTexture(GLuint inTexture, WidgetState inWidgetState, GLsizei inFrameHeight, GLsizei& outWidth, GLsizei& outHeight)
 {
 	auto_scoped_ptr<DrawingWand> draw(NewDrawingWand());
 	auto_scoped_ptr<PixelWand> fill(NewPixelWand());
@@ -730,8 +687,10 @@ bool MagicWand::MakeSliderMarkerTexture2(GLuint inTexture, bool inIsPressed, GLs
 	
 	PixelSetColor(stroke, "#000000");
 	PixelSetAlpha(stroke, 0.4f);
-	PixelSetColor(fill, inIsPressed ? "#F06D00" : "#FFFFFF");
-	PixelSetAlpha(fill, inIsPressed ? 1.0f : 0.7f);
+	if (inWidgetState == WIDGET_NORMAL) PixelSetColor(fill, "#FFFFFF");
+	if (inWidgetState == WIDGET_PRESSED) PixelSetColor(fill, "#F06D00");
+	if (inWidgetState == WIDGET_HIGHLIGHTED) PixelSetColor(fill, "#F9AB16");
+	PixelSetAlpha(fill, inWidgetState == WIDGET_PRESSED ? 1.0f : 0.7f);
 
 	outHeight = inFrameHeight - 2;
 	outWidth = (3*outHeight)/4;
@@ -745,18 +704,20 @@ bool MagicWand::MakeSliderMarkerTexture2(GLuint inTexture, bool inIsPressed, GLs
 }
 
 
-bool MagicWand::MakeButtonTexture(GLuint inTexture, bool inIsPressed, const char* inText, FontID inFontID, float inPointSize, bool inBold, int inAdditionalHorizSpace, int inAdditionalVertSpace, GLsizei& outWidth, GLsizei& outHeight)
+bool MagicWand::MakeButtonTexture(GLuint inTexture, WidgetState inWidgetState, const TextInfo& inTextInfo, const SizeConstraints& inSizeConstraints, GLsizei& outWidth, GLsizei& outHeight)
 {
-	DrawingWand* font = mImpl->mFontWands[inFontID];
+	DrawingWand* font = mImpl->mFontWands[inTextInfo.mFontID];
 	DrawSetFillAlpha(font, 1.0);
-	DrawSetFontSize(font, inPointSize);
-	DrawSetFillColor(font, inIsPressed ? mImpl->black : mImpl->white);
-	DrawSetFontWeight(font, inBold ? 700 : 400);
+	DrawSetFontSize(font, inTextInfo.mPointSize);
+	if (inWidgetState == WIDGET_PRESSED) DrawSetFillColor(font, mImpl->black);
+	if (inWidgetState == WIDGET_NORMAL) DrawSetFillColor(font, mImpl->white);
+	if (inWidgetState == WIDGET_HIGHLIGHTED) DrawSetFillColor(font, mImpl->yellow1);
+	DrawSetFontWeight(font, inTextInfo.mBold ? 700 : 400);
 	
 	auto_scoped_ptr<MagickWand> empty_wand(NewMagickWand());
 	MagickReadImage(empty_wand,"xc:");
 	
-	double* font_metrics = MagickQueryFontMetrics(empty_wand, font, inText);
+	double* font_metrics = MagickQueryFontMetrics(empty_wand, font, inTextInfo.mText.c_str());
 	
 	float text_width = (float) font_metrics[4];
 	float text_height = (float) font_metrics[5];
@@ -764,11 +725,17 @@ bool MagicWand::MakeButtonTexture(GLuint inTexture, bool inIsPressed, const char
 	float radius = 4.0f;
 	float additional_size_base = (radius * (1.0f - (1.0f / sqrtf(2.0f))));
 	float additional_size[2];
-	additional_size[0] = 2.0f * additional_size_base + (float) inAdditionalHorizSpace;
-	additional_size[1] = 2.0f * additional_size_base + /*font_metrics[8]*/ + (float) inAdditionalVertSpace;
+	additional_size[0] = 2.0f * additional_size_base + inTextInfo.mMinEmptySpace.x;
+	additional_size[1] = 2.0f * additional_size_base + /*font_metrics[8]*/ + inTextInfo.mMinEmptySpace.y;
 
 	float rect_width = text_width+additional_size[0];
 	float rect_height = text_height+additional_size[1];
+
+	rect_width = std::max(rect_width, horiz2d(inSizeConstraints.mMinSize));
+	rect_height = std::max(rect_height, vert2d(inSizeConstraints.mMinSize));
+
+	rect_width = std::min(rect_width, horiz2d(inSizeConstraints.mMaxSize));
+	rect_height = std::min(rect_height, vert2d(inSizeConstraints.mMaxSize));
 
 	static glm::vec4 gradient_colors_stack[] = {	
 					glm::vec4(85.0f/255.0f, 85/255.0f, 85/255.0f, 1.0f), 
@@ -786,7 +753,7 @@ bool MagicWand::MakeButtonTexture(GLuint inTexture, bool inIsPressed, const char
 					glm::vec4(243.0f/255.0f, 111.0f/255.0f, 0.0f/255.0f, 1.0f), 
 					glm::vec4(243.0f/255.0f, 111.0f/255.0f, 0.0f/255.0f, 1.0f)};
 
-	glm::vec4* used_gradient_colors_stack = inIsPressed ? pressed_gradient_colors_stack : gradient_colors_stack;
+	glm::vec4* used_gradient_colors_stack = inWidgetState == WIDGET_PRESSED ? pressed_gradient_colors_stack : gradient_colors_stack;
 
 	MagickWandImpl::GradientCurves gradient_curves;
 	gradient_curves.mCurves.resize(2);
@@ -799,21 +766,24 @@ bool MagicWand::MakeButtonTexture(GLuint inTexture, bool inIsPressed, const char
 	mImpl->RoundWand(gradient_wand, radius, true);
 
 	//(font_metrics[8]+ font_metrics[5]) + 0.5f*(rect_height-text_height)
-	MagickAnnotateImage(gradient_wand, font, 0.5f*(rect_width-text_width), text_height, 0.0, inText);
+	MagickAnnotateImage(gradient_wand, font, 0.5f*(rect_width-text_width), text_height, 0.0, inTextInfo.mText.c_str());
 
 	return mImpl->ToGLTexture(gradient_wand, inTexture, outWidth, outHeight);
 }
 
 
-bool MagicWand::MakeTextTexture(GLuint inTexture, const char* inText, FontID inFontID, float inPointSize, bool inBold, int inAdditionalHorizSpace, int inAdditionalVertSpace, GLsizei& outWidth, GLsizei& outHeight)
+bool MagicWand::MakeTextTexture(GLuint inTexture, const TextInfo& inTextInfo, const SizeConstraints& inSizeConstraints, GLsizei& outWidth, GLsizei& outHeight)
 {
-	DrawingWand* font = mImpl->mFontWands[inFontID];
-	DrawSetFontSize(font, inPointSize);
+	DrawingWand* font = mImpl->mFontWands[inTextInfo.mFontID];
+	DrawSetFillAlpha(font, 1.0);
+	DrawSetFontSize(font, inTextInfo.mPointSize);
+	DrawSetFillColor(font, mImpl->white);
+	DrawSetFontWeight(font, inTextInfo.mBold ? 700 : 400);
 	
 	auto_scoped_ptr<MagickWand> empty_wand(NewMagickWand());
 	MagickReadImage(empty_wand,"xc:");
 	
-	double* font_metrics = MagickQueryFontMetrics(empty_wand, font, inText);
+	double* font_metrics = MagickQueryFontMetrics(empty_wand, font, inTextInfo.mText.c_str());
 	
 	float text_width = (float) font_metrics[4];
 	float text_height = (float) font_metrics[5];
@@ -821,20 +791,22 @@ bool MagicWand::MakeTextTexture(GLuint inTexture, const char* inText, FontID inF
 	float radius = 4.0f;
 	float additional_size_base = (radius * (1.0f - (1.0f / sqrtf(2.0f))));
 	float additional_size[2];
-	additional_size[0] = 2.0f * additional_size_base + (float) inAdditionalHorizSpace;
-	additional_size[1] = 2.0f * additional_size_base + /*font_metrics[8]*/ + (float) inAdditionalVertSpace;
+	additional_size[0] = 2.0f * additional_size_base + inTextInfo.mMinEmptySpace.x;
+	additional_size[1] = 2.0f * additional_size_base + /*font_metrics[8]*/ + inTextInfo.mMinEmptySpace.y;
 
 	float rect_width = text_width+additional_size[0];
 	float rect_height = text_height+additional_size[1];
 
+	rect_width = std::max(rect_width, horiz2d(inSizeConstraints.mMinSize));
+	rect_height = std::max(rect_height, vert2d(inSizeConstraints.mMinSize));
+
+	rect_width = std::min(rect_width, horiz2d(inSizeConstraints.mMaxSize));
+	rect_height = std::min(rect_height, vert2d(inSizeConstraints.mMaxSize));
+
 	auto_scoped_ptr<MagickWand> wand(NewMagickWand());
 	MagickNewImage(wand, (size_t) (rect_width), (size_t) (rect_height), mImpl->transparent);
 
-	DrawSetFillAlpha(font, 1.0);
-	DrawSetFontSize(font, inPointSize);
-	DrawSetFillColor(font, mImpl->white);
-	DrawSetFontWeight(font, inBold ? 700 : 400);
-	MagickAnnotateImage(wand, font, 0.5f*(rect_width-text_width), (font_metrics[8]+ font_metrics[5]) + 0.5f*(rect_height-text_height), 0.0, inText);
+	MagickAnnotateImage(wand, font, 0.5f*(rect_width-text_width), text_height, 0.0, inTextInfo.mText.c_str());
 
 	return mImpl->ToGLTexture(wand, inTexture, outWidth, outHeight);
 }

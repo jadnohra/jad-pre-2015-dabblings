@@ -91,15 +91,12 @@ void ChildWidgetContainer::Render(const App& inApp, float inTimeSecs, const Scen
 }
 
 
-bool SimpleButtonWidget::Create(const glm::vec2& inPos, const char* inText, MagicWand::FontID inFontID, float inPointSize, bool inBold, int inAdditionalHorizSpace, int inAdditionalVertSpace)
+bool SimpleButtonWidget::Create(const glm::vec2& inPos, const MagicWand::TextInfo& inTextInfo, const MagicWand::SizeConstraints& inSizeConstraints)
 {
 	mPos = to3d_point(inPos);
-	mText = inText;
-	mFontID = inFontID;
-	mPointSize = inPointSize;
-	mBold = inBold;
-	mAdditionalHorizSpace = inAdditionalHorizSpace;
-	mAdditionalVertSpace = inAdditionalVertSpace;
+	mTextInfo = inTextInfo;
+	mSizeConstraints = inSizeConstraints;
+	mIsHighlighted = false;
 	mIsPressed = false;
 
 	return true;
@@ -115,17 +112,18 @@ void SimpleButtonWidget::UpdateGeometry(const App& inApp, const glm::vec2& inWor
 	if (!mButtonTexture.IsCreated())
 	{
 		mButtonTexture.AutoCreate();
+		mPressedButtonTexture.AutoCreate();
+		mHighlightedButtonTexture.AutoCreate();
 
 		GLsizei tex_dims[2];
 
-		inApp.GetWand().MakeButtonTexture(mButtonTexture.mTexture, false, mText.c_str(), mFontID, mPointSize, mBold, mAdditionalHorizSpace, mAdditionalVertSpace,  tex_dims[0], tex_dims[1]);
+		inApp.GetWand().MakeButtonTexture(mButtonTexture.mTexture, MagicWand::WIDGET_NORMAL, mTextInfo, mSizeConstraints, tex_dims[0], tex_dims[1]);
 		mButtonTexSize[0] = tex_dims[0];
 		mButtonTexSize[1] = tex_dims[1];
 
-		mPressedButtonTexture.AutoCreate();
-		inApp.GetWand().MakeButtonTexture(mPressedButtonTexture.mTexture, true, mText.c_str(), mFontID, mPointSize, mBold, mAdditionalHorizSpace, mAdditionalVertSpace,  tex_dims[0], tex_dims[1]);
-		mPressedButtonTexSize[0] = tex_dims[0];
-		mPressedButtonTexSize[1] = tex_dims[1];
+		
+		inApp.GetWand().MakeButtonTexture(mPressedButtonTexture.mTexture, MagicWand::WIDGET_PRESSED, mTextInfo, mSizeConstraints, tex_dims[0], tex_dims[1]);
+		inApp.GetWand().MakeButtonTexture(mHighlightedButtonTexture.mTexture, MagicWand::WIDGET_HIGHLIGHTED, mTextInfo, mSizeConstraints, tex_dims[0], tex_dims[1]);
 	}
 }
 
@@ -152,14 +150,18 @@ void SimpleButtonWidget::Update(const App& inApp, float inTimeSecs, const SceneT
 		UpdateGeometry(inApp, to2d_point(world_pos));
 	}
 	
-	if ((inApp.GetInputState(INPUT_MOUSE_LEFT) > 0.0f)
-		&& (WidgetUtil::IsMouseInRectangle(inApp, to2d_point(world_pos), mButtonTexSize)))
+	if (WidgetUtil::IsMouseInRectangle(inApp, to2d_point(world_pos), mButtonTexSize))
 	{
-		mIsPressed = true;
+		mIsHighlighted = true;
+
+		if (inApp.GetInputState(INPUT_MOUSE_LEFT) > 0.0f)
+			mIsPressed = true;
+		else
+			mIsPressed = false;
 	}
 	else
 	{
-		mIsPressed = false;
+		mIsHighlighted = false;
 	}
 }
 
@@ -167,8 +169,8 @@ void SimpleButtonWidget::Render(const App& inApp, float inTimeSecs, const SceneT
 {
 	glm::vec2 world_pos = to2d_point(inParentTransform * mPos);
 	
-	GLuint tex = mIsPressed ? mPressedButtonTexture.mTexture : mButtonTexture.mTexture;
-	const glm::vec2& tex_size = mIsPressed ? mPressedButtonTexSize : mButtonTexSize;
+	GLuint tex = mIsPressed ? mPressedButtonTexture.mTexture : (mIsHighlighted ? mHighlightedButtonTexture.mTexture : mButtonTexture.mTexture);
+	const glm::vec2& tex_size = mButtonTexSize;
 
 	inApp.GetOGLStateManager().Enable(EOGLState_TextureWidget);
 	{
@@ -189,12 +191,16 @@ void SimpleButtonWidget::Render(const App& inApp, float inTimeSecs, const SceneT
 }
 
 
-bool SimpleSliderWidget::Create(const glm::vec2& inPos, const glm::vec2& inSize)
+bool SimpleSliderWidget::Create(const glm::vec2& inPos, const glm::vec2& inSize, const MagicWand::TextInfo& inTextInfo, const MagicWand::SizeConstraints& inSizeConstraints)
 {
 	mPos = to3d_point(inPos);
 	mSize = inSize;
 
+	mTextInfo = inTextInfo;
+	mSizeConstraints = inSizeConstraints;
+
 	mHasMouseSliderFocus = false;
+	mIsHighlighted = false;
 	mSliderPos = 0.5f;
 
 	return true;
@@ -208,22 +214,20 @@ void SimpleSliderWidget::UpdateGeometry(const App& inApp, const glm::vec2& inWor
 		mFrameTexture.AutoCreate();
 		mMarkerTexture.AutoCreate();
 		mPressedMarkerTexture.AutoCreate();
+		mHighlightedMarkerTexture.AutoCreate();
 
 		GLsizei tex_dims[2];
 
-		inApp.GetWand().MakeSliderFrameTexture2(mFrameTexture.mTexture, mSize.x, "Slide", 0, 12.0, false, 2, 2, tex_dims[0], tex_dims[1]);
-		//inApp.GetWand().MakeSliderFrameTexture(mFrameTexture.mTexture, mSize.x, tex_dims[0], tex_dims[1]);
+		inApp.GetWand().MakeSliderFrameTexture(mFrameTexture.mTexture, mSize.x, mTextInfo, mSizeConstraints, tex_dims[0], tex_dims[1]);
 		mFrameTexSize[0] = tex_dims[0];
 		mFrameTexSize[1] = tex_dims[1];
 
-		inApp.GetWand().MakeSliderMarkerTexture2(mMarkerTexture.mTexture, false, tex_dims[1], tex_dims[0], tex_dims[1]);
-		//tex_dims[0] = 40;
-		//tex_dims[1] = 20;
-		//MagicWand::MakeFrameTexture(mMarkerTexture.mTexture, tex_dims[0], tex_dims[1]);
+		inApp.GetWand().MakeSliderMarkerTexture(mMarkerTexture.mTexture, MagicWand::WIDGET_NORMAL, tex_dims[1], tex_dims[0], tex_dims[1]);
 		mMarkerTexSize[0] = tex_dims[0];
 		mMarkerTexSize[1] = tex_dims[1];
 
-		inApp.GetWand().MakeSliderMarkerTexture2(mPressedMarkerTexture.mTexture, true, tex_dims[1], tex_dims[0], tex_dims[1]);
+		inApp.GetWand().MakeSliderMarkerTexture(mPressedMarkerTexture.mTexture, MagicWand::WIDGET_PRESSED, tex_dims[1], tex_dims[0], tex_dims[1]);
+		inApp.GetWand().MakeSliderMarkerTexture(mHighlightedMarkerTexture.mTexture, MagicWand::WIDGET_HIGHLIGHTED, tex_dims[1], tex_dims[0], tex_dims[1]);
 	}
 }
 
@@ -237,13 +241,13 @@ void SimpleSliderWidget::Update(const App& inApp, float inTimeSecs, const SceneT
 		UpdateGeometry(inApp, world_pos);
 	}
 
+	glm::vec2 marker_world_pos = GetSliderWorldPos(world_pos);
 	bool is_mouse_left_down = (inApp.GetInputState(INPUT_MOUSE_LEFT) > 0.0f);
+	bool is_mouse_in_rect = WidgetUtil::IsMouseInRectangle(inApp, world_pos, mFrameTexSize);
 	bool has_mouse_slider_focus = false;
 
 	if (is_mouse_left_down)
 	{
-		glm::vec2 marker_world_pos = GetSliderWorldPos(world_pos);
-
 		if (WidgetUtil::IsMouseInRectangle(inApp, marker_world_pos, mMarkerTexSize))
 		{
 			has_mouse_slider_focus = true;
@@ -253,7 +257,9 @@ void SimpleSliderWidget::Update(const App& inApp, float inTimeSecs, const SceneT
 			has_mouse_slider_focus = mHasMouseSliderFocus;
 		}
 	}
-
+	
+	mIsHighlighted = is_mouse_in_rect;
+	
 	if (has_mouse_slider_focus)
 	{
 		glm::vec2 mouse_pos = inApp.GetMousePos();
@@ -279,7 +285,6 @@ void SimpleSliderWidget::Update(const App& inApp, float inTimeSecs, const SceneT
 glm::vec2 SimpleSliderWidget::GetSliderWorldPos(const glm::vec2& inWorldPos) const
 {
 	glm::vec2 marker_world_pos = inWorldPos;
-	vert2d(marker_world_pos) -= 0.5f * vert2d(mMarkerTexSize);
 	horiz2d(marker_world_pos) += 2 + mSliderPos * (horiz2d(mFrameTexSize) - (horiz2d(mMarkerTexSize)+4));
 
 	return marker_world_pos;
@@ -290,8 +295,6 @@ void SimpleSliderWidget::Render(const App& inApp, float inTimeSecs, const SceneT
 	glm::vec2 world_pos = to2d_point(inParentTransform * mPos);
 
 	glm::vec2 frame_world_pos = world_pos;
-	vert2d(frame_world_pos) -= 0.5f * vert2d(mFrameTexSize);
-
 	glm::vec2 marker_world_pos = GetSliderWorldPos(world_pos);
 
 	inApp.GetOGLStateManager().Enable(EOGLState_TextureWidget);
@@ -312,7 +315,7 @@ void SimpleSliderWidget::Render(const App& inApp, float inTimeSecs, const SceneT
 	}
 
 	{
-		glBindTexture(GL_TEXTURE_2D, mHasMouseSliderFocus ? mPressedMarkerTexture.mTexture : mMarkerTexture.mTexture);
+		glBindTexture(GL_TEXTURE_2D, mHasMouseSliderFocus ? mPressedMarkerTexture.mTexture : (mIsHighlighted ? mHighlightedMarkerTexture.mTexture : mMarkerTexture.mTexture));
 		// I do not know why things break if I do not set these params again here!!! find out!
 		glTexParameteri(GL_TEXTURE_2D,GL_TEXTURE_MIN_FILTER,GL_NEAREST);	// Linear Filtering
 		glTexParameteri(GL_TEXTURE_2D,GL_TEXTURE_MAG_FILTER,GL_NEAREST);	// Linear Filtering
@@ -429,7 +432,7 @@ bool MagicWandTestTextureWidget::Create(const App& inApp, const glm::vec2& inPos
 	//if (!inApp.GetWand().MakeButtonTexture(mTexture.mTexture, "BigEye ;)", 0, 12.0f, false, 10, 2, dims[0], dims[1]))
 	//	return false;
 
-	if (!inApp.GetWand().MakeTextTexture(mTexture.mTexture, "BigEye blends", 0, 12.0f, true, 10, 2, dims[0], dims[1]))
+	if (!inApp.GetWand().MakeTextTexture(mTexture.mTexture, MagicWand::TextInfo("BigEye floating font AA", 0, 12.0f, false, glm::vec2(10.0f, 2.0f)),MagicWand::SizeConstraints(), dims[0], dims[1]))
 		return false;
 
 	//if (!inApp.GetWand().MakeTestTexture(mTexture.mTexture, 50, 180, dims[0], dims[1]))
@@ -855,7 +858,10 @@ void NativeWindowWidget::Test(App& inApp)
 
 		{
 			SimpleSliderWidget* slider_widget = new SimpleSliderWidget();
-			slider_widget->Create(glm::vec2(8.0f, pos_vert), glm::vec2(150.0f, 0.0f));
+			MagicWand::SizeConstraints sizeConstraints;
+			horiz2d(sizeConstraints.mMinSize) = 120.0f;
+			horiz2d(sizeConstraints.mMaxSize) = 120.0f;
+			slider_widget->Create(glm::vec2(8.0f, pos_vert), glm::vec2(150.0f, 0.0f), MagicWand::TextInfo("Slide", 0, 12.0f, false, glm::vec2(2.0f, 2.0f)), sizeConstraints);
 			slider_widget->SetSliderPos(0.3f);
 			pos_vert += 1.5f * mDefaultFont.GetPixelHeight();
 
@@ -864,7 +870,10 @@ void NativeWindowWidget::Test(App& inApp)
 
 		{
 			SimpleSliderWidget* slider_widget = new SimpleSliderWidget();
-			slider_widget->Create(glm::vec2(8.0f, pos_vert), glm::vec2(150.0f, 0.0f));
+			MagicWand::SizeConstraints sizeConstraints;
+			horiz2d(sizeConstraints.mMinSize) = 120.0f;
+			horiz2d(sizeConstraints.mMaxSize) = 120.0f;
+			slider_widget->Create(glm::vec2(8.0f, pos_vert), glm::vec2(150.0f, 0.0f), MagicWand::TextInfo("BoldSlide", 0, 12.0f, true, glm::vec2(2.0f, 2.0f)), sizeConstraints);
 			slider_widget->SetSliderPos(0.6f);
 			
 			pos_vert += 1.5f * mDefaultFont.GetPixelHeight();
@@ -874,7 +883,10 @@ void NativeWindowWidget::Test(App& inApp)
 
 		{
 			SimpleButtonWidget* button_widget = new SimpleButtonWidget();
-			button_widget->Create(glm::vec2(8.0f, pos_vert), "Big eye ;)",  0, 12.0f, false, 10, 2);
+			MagicWand::SizeConstraints sizeConstraints;
+			horiz2d(sizeConstraints.mMinSize) = 120.0f;
+			horiz2d(sizeConstraints.mMaxSize) = 120.0f;
+			button_widget->Create(glm::vec2(8.0f, pos_vert), MagicWand::TextInfo("Big eye ;)", 0, 12.0f, false, glm::vec2(10.0f, 2.0f)), sizeConstraints);
 			
 			pos_vert += 1.5f * mDefaultFont.GetPixelHeight();
 
@@ -883,7 +895,10 @@ void NativeWindowWidget::Test(App& inApp)
 
 		{
 			SimpleButtonWidget* button_widget = new SimpleButtonWidget();
-			button_widget->Create(glm::vec2(8.0f, pos_vert), "Pressed eye ;)",  0, 12.0f, false, 10, 2);
+			MagicWand::SizeConstraints sizeConstraints;
+			horiz2d(sizeConstraints.mMinSize) = 120.0f;
+			horiz2d(sizeConstraints.mMaxSize) = 120.0f;
+			button_widget->Create(glm::vec2(8.0f, pos_vert), MagicWand::TextInfo("Pressed eye ;)", 0, 12.0f, false, glm::vec2(10.0f, 2.0f)), sizeConstraints);
 			button_widget->SetIsPressed(true);
 			
 			pos_vert += 1.5f * mDefaultFont.GetPixelHeight();
@@ -893,7 +908,10 @@ void NativeWindowWidget::Test(App& inApp)
 
 		{
 			SimpleButtonWidget* button_widget = new SimpleButtonWidget();
-			button_widget->Create(glm::vec2(8.0f, pos_vert), "Bold eye ;)",  0, 12.0f, true, 10, 2);
+			MagicWand::SizeConstraints sizeConstraints;
+			horiz2d(sizeConstraints.mMinSize) = 120.0f;
+			horiz2d(sizeConstraints.mMaxSize) = 120.0f;
+			button_widget->Create(glm::vec2(8.0f, pos_vert), MagicWand::TextInfo("Bold eye ;)", 0, 12.0f, true, glm::vec2(10.0f, 2.0f)), sizeConstraints);
 			
 			pos_vert += 2.0f * mDefaultFont.GetPixelHeight();
 
@@ -903,7 +921,10 @@ void NativeWindowWidget::Test(App& inApp)
 
 		{
 			SimpleButtonWidget* button_widget = new SimpleButtonWidget();
-			button_widget->Create(glm::vec2(8.0f, pos_vert), "Bigger eye!",  0, 16.0f, false, 10, 2);
+			MagicWand::SizeConstraints sizeConstraints;
+			horiz2d(sizeConstraints.mMinSize) = 120.0f;
+			horiz2d(sizeConstraints.mMaxSize) = 120.0f;
+			button_widget->Create(glm::vec2(8.0f, pos_vert),MagicWand::TextInfo("Bigger eye ;)", 0, 16.0f, false, glm::vec2(10.0f, 2.0f)), sizeConstraints);
 			
 			pos_vert += mDefaultFont.GetPixelHeight();
 

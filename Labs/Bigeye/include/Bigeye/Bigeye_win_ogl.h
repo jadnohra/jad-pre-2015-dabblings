@@ -162,7 +162,7 @@ namespace BE
 	{
 	public:
 
-		bool		Create(const glm::vec2& inPos, const char* inText, MagicWand::FontID inFontID, float inPointSize, bool inBold, int inAdditionalHorizSpace, int inAdditionalVertSpace);
+		bool		Create(const glm::vec2& inPos, const MagicWand::TextInfo& inTextInfo, const MagicWand::SizeConstraints& inSizeConstraints);
 
 		void		SetIsPressed(bool inIsPressed);
 
@@ -173,19 +173,16 @@ namespace BE
 
 		void UpdateGeometry(const App& inApp, const glm::vec2& inWorldPos);
 
-		std::string mText;
-		MagicWand::FontID mFontID;
-		float mPointSize;
-		bool mBold;
-		int mAdditionalHorizSpace;
-		int mAdditionalVertSpace;
+		MagicWand::TextInfo mTextInfo;
+		MagicWand::SizeConstraints mSizeConstraints;
 		bool mIsPressed;
+		bool mIsHighlighted;
 
 		glm::vec3 mPos;
 		glm::vec2 mButtonTexSize;
-		glm::vec2 mPressedButtonTexSize;
 
 		OGLTexture mButtonTexture;
+		OGLTexture mHighlightedButtonTexture;
 		OGLTexture mPressedButtonTexture;
 	};
 
@@ -193,7 +190,7 @@ namespace BE
 	{
 	public:
 
-		bool		Create(const glm::vec2& inPos, const glm::vec2& inSize);
+		bool		Create(const glm::vec2& inPos, const glm::vec2& inSize, const MagicWand::TextInfo& inTextInfo, const MagicWand::SizeConstraints& inSizeConstraints);
 
 		void		SetSliderPos(float inPos)	{ mSliderPos = inPos; }
 
@@ -205,6 +202,9 @@ namespace BE
 		glm::vec2 GetSliderWorldPos(const glm::vec2& inWorldPos) const;
 		void UpdateGeometry(const App& inApp, const glm::vec2& inWorldPos);
 
+		MagicWand::TextInfo mTextInfo;
+		MagicWand::SizeConstraints mSizeConstraints;
+
 		glm::vec3 mPos;
 		glm::vec2 mSize;
 		float mSliderPos;
@@ -212,9 +212,11 @@ namespace BE
 		OGLTexture mFrameTexture;
 		glm::vec2 mFrameTexSize;
 		OGLTexture mPressedMarkerTexture;
+		OGLTexture mHighlightedMarkerTexture;
 		OGLTexture mMarkerTexture;
 		glm::vec2 mMarkerTexSize;
 
+		bool mIsHighlighted;
 		bool mHasMouseSliderFocus;
 		glm::vec2 mMouseSliderFocusStartMousePos;
 		float mMouseSliderFocusStartSliderPos;
