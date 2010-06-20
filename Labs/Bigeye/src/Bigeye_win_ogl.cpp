@@ -873,8 +873,17 @@ void NativeWindowWidget::Test(App& inApp)
 	}
 
 	{
+		SimpleTextWidget* text_widget = new SimpleTextWidget();
+		text_widget->Create(inApp, glm::vec2(820.0f, 25.0f), MagicWand::TextInfo("Tools", 0, 14.0f, true, glm::vec2(0.0f, 0.0f)), MagicWand::SizeConstraints());
+			
+		//pos_vert += vert2d(text_widget->GetSize(inApp)) + 2.0f * height_offset;
+
+		mChildren.mChildWidgets.push_back(text_widget);
+	}
+
+	{
 		SimplePanelWidget* widget = new SimplePanelWidget();
-		widget->Create(glm::vec2(820.0f, 50.0f), glm::vec2(180.0f, 250.0f), MagicWand::FRAME_NORMAL);
+		widget->Create(glm::vec2(820.0f, 55.0f), glm::vec2(180.0f, 250.0f), MagicWand::FRAME_NORMAL);
 		mChildren.mChildWidgets.push_back(widget);
 
 		ChildWidgetContainer& children = widget->GetChildren();
@@ -883,17 +892,8 @@ void NativeWindowWidget::Test(App& inApp)
 		horiz2d(sizeConstraints.mMinSize) = 150.0f;
 		horiz2d(sizeConstraints.mMaxSize) = 150.0f;
 		
-		float pos_vert = 2.0f;
+		float pos_vert = 6.0f;
 		float height_offset = 6.0f;
-
-		{
-			SimpleTextWidget* text_widget = new SimpleTextWidget();
-			text_widget->Create(inApp, glm::vec2(8.0f, pos_vert), MagicWand::TextInfo("Tools", 0, 14.0f, true, glm::vec2(10.0f, 2.0f)), MagicWand::SizeConstraints());
-			
-			pos_vert += vert2d(text_widget->GetSize(inApp)) + 2.0f * height_offset;
-
-			children.mChildWidgets.push_back(text_widget);
-		}
 
 		{
 			SimpleSliderWidget* slider_widget = new SimpleSliderWidget();
