@@ -91,23 +91,26 @@ void ChildWidgetContainer::Render(const App& inApp, float inTimeSecs, const Scen
 }
 
 
-bool SimpleButtonWidget::Create(const glm::vec2& inPos, const MagicWand::TextInfo& inTextInfo, const MagicWand::SizeConstraints& inSizeConstraints)
+bool SimpleButtonWidget::Create(const glm::vec2& inPos, bool inIsToggleButton, const MagicWand::TextInfo& inTextInfo, const MagicWand::SizeConstraints& inSizeConstraints)
 {
 	mPos = to3d_point(inPos);
 	mTextInfo = inTextInfo;
 	mSizeConstraints = inSizeConstraints;
 	mIsHighlighted = false;
 	mIsPressed = false;
+	mIsMousePressed = false;
+	mIsToggleButton = inIsToggleButton;
+	mIsToggled = false;
 
 	return true;
 }
 
-void SimpleButtonWidget::SetIsPressed(bool inIsPressed)
+void SimpleButtonWidget::SetIsToggled(bool inIsToggled)
 {
-	mIsPressed = inIsPressed;
+	mIsToggled = inIsToggled;
 }
 
-void SimpleButtonWidget::UpdateGeometry(const App& inApp, const glm::vec2& inWorldPos)
+void SimpleButtonWidget::CreateTextures(const App& inApp)
 {
 	if (!mButtonTexture.IsCreated())
 	{
@@ -145,23 +148,36 @@ void SimpleButtonWidget::Update(const App& inApp, float inTimeSecs, const SceneT
 {
 	glm::vec3 world_pos = inParentTransform * mPos;
 
-	if (inParentTransformDirty || !mButtonTexture.IsCreated())
+	if (!mButtonTexture.IsCreated())
 	{
-		UpdateGeometry(inApp, to2d_point(world_pos));
+		CreateTextures(inApp);
 	}
 	
+	bool was_mouse_pressed = mIsMousePressed;
+
 	if (WidgetUtil::IsMouseInRectangle(inApp, to2d_point(world_pos), mButtonTexSize))
 	{
 		mIsHighlighted = true;
 
 		if (inApp.GetInputState(INPUT_MOUSE_LEFT) > 0.0f)
-			mIsPressed = true;
+			mIsMousePressed = true;
 		else
-			mIsPressed = false;
+			mIsMousePressed = false;
 	}
 	else
 	{
+		mIsMousePressed = false;
 		mIsHighlighted = false;
+	}
+
+	if (mIsToggleButton)
+	{
+		if (was_mouse_pressed && !mIsMousePressed)
+			mIsToggled = !mIsToggled;
+	}
+	else
+	{
+		mIsPressed = mIsMousePressed;
 	}
 }
 
@@ -169,7 +185,8 @@ void SimpleButtonWidget::Render(const App& inApp, float inTimeSecs, const SceneT
 {
 	glm::vec2 world_pos = to2d_point(inParentTransform * mPos);
 	
-	GLuint tex = mIsPressed ? mPressedButtonTexture.mTexture : (mIsHighlighted ? mHighlightedButtonTexture.mTexture : mButtonTexture.mTexture);
+	bool is_pressed = mIsMousePressed || (mIsToggleButton && mIsToggled);
+	GLuint tex = is_pressed ? mPressedButtonTexture.mTexture : (mIsHighlighted ? mHighlightedButtonTexture.mTexture : mButtonTexture.mTexture);
 	const glm::vec2& tex_size = mButtonTexSize;
 
 	inApp.GetOGLStateManager().Enable(EOGLState_TextureWidget);
@@ -207,7 +224,7 @@ bool SimpleSliderWidget::Create(const glm::vec2& inPos, const glm::vec2& inSize,
 }
 
 
-void SimpleSliderWidget::UpdateGeometry(const App& inApp, const glm::vec2& inWorldPos)
+void SimpleSliderWidget::CreateTextures(const App& inApp)
 {
 	if (!mFrameTexture.IsCreated())
 	{
@@ -236,9 +253,9 @@ void SimpleSliderWidget::Update(const App& inApp, float inTimeSecs, const SceneT
 {
 	glm::vec2 world_pos = to2d_point(inParentTransform * mPos);
 
-	if (inParentTransformDirty || !mMarkerTexture.IsCreated())
+	if (!mMarkerTexture.IsCreated())
 	{
-		UpdateGeometry(inApp, world_pos);
+		CreateTextures(inApp);
 	}
 
 	glm::vec2 marker_world_pos = GetSliderWorldPos(world_pos);
@@ -485,7 +502,7 @@ bool SimplePanelWidget::Create(const glm::vec2& inPos, const glm::vec2& inSize)
 }
 
 
-void SimplePanelWidget::UpdateGeometry(const App& inApp, const glm::vec2& inWorldPos)
+void SimplePanelWidget::CreateTextures(const App& inApp)
 {
 	// TODO try colors like in : http://www.gameanim.com/2009/08/27/street-fighter-iv-facial-controls/
 	if (!mTexture.IsCreated())
@@ -503,10 +520,9 @@ void SimplePanelWidget::UpdateGeometry(const App& inApp, const glm::vec2& inWorl
 
 void SimplePanelWidget::Update(const App& inApp, float inTimeSecs, const SceneTransform& inParentTransform, bool inParentTransformDirty)
 {
-	if (inParentTransformDirty || !mTexture.IsCreated())
+	if (!mTexture.IsCreated())
 	{
-		glm::vec3 world_pos = inParentTransform * mPos;
-		UpdateGeometry(inApp, to2d_point(world_pos));
+		CreateTextures(inApp);
 	}
 
 	SceneTransform local_transform;
@@ -834,8 +850,12 @@ void NativeWindowWidget::Test(App& inApp)
 
 		ChildWidgetContainer& children = widget->GetChildren();
 
-		float pos_vert = 2.0f;
-		pos_vert += mDefaultFont.GetPixelHeight();
+		MagicWand::SizeConstraints sizeConstraints;
+		horiz2d(sizeConstraints.mMinSize) = 140.0f;
+		horiz2d(sizeConstraints.mMaxSize) = 140.0f;
+		
+		float pos_vert = 10.0f;
+		float height_offset = 6.0f;
 
 		/*
 		{
@@ -858,79 +878,68 @@ void NativeWindowWidget::Test(App& inApp)
 
 		{
 			SimpleSliderWidget* slider_widget = new SimpleSliderWidget();
-			MagicWand::SizeConstraints sizeConstraints;
-			horiz2d(sizeConstraints.mMinSize) = 120.0f;
-			horiz2d(sizeConstraints.mMaxSize) = 120.0f;
 			slider_widget->Create(glm::vec2(8.0f, pos_vert), glm::vec2(150.0f, 0.0f), MagicWand::TextInfo("Slide", 0, 12.0f, false, glm::vec2(2.0f, 2.0f)), sizeConstraints);
 			slider_widget->SetSliderPos(0.3f);
-			pos_vert += 1.5f * mDefaultFont.GetPixelHeight();
+			pos_vert += vert2d(slider_widget->GetSize(inApp)) + height_offset;
 
 			children.mChildWidgets.push_back(slider_widget);
 		}
 
 		{
 			SimpleSliderWidget* slider_widget = new SimpleSliderWidget();
-			MagicWand::SizeConstraints sizeConstraints;
-			horiz2d(sizeConstraints.mMinSize) = 120.0f;
-			horiz2d(sizeConstraints.mMaxSize) = 120.0f;
-			slider_widget->Create(glm::vec2(8.0f, pos_vert), glm::vec2(150.0f, 0.0f), MagicWand::TextInfo("BoldSlide", 0, 12.0f, true, glm::vec2(2.0f, 2.0f)), sizeConstraints);
+			slider_widget->Create(glm::vec2(8.0f, pos_vert), glm::vec2(150.0f, 0.0f), MagicWand::TextInfo("Bold Slide", 0, 12.0f, true, glm::vec2(2.0f, 2.0f)), sizeConstraints);
 			slider_widget->SetSliderPos(0.6f);
 			
-			pos_vert += 1.5f * mDefaultFont.GetPixelHeight();
+			pos_vert += vert2d(slider_widget->GetSize(inApp)) + height_offset;
 
 			children.mChildWidgets.push_back(slider_widget);
 		}
 
 		{
 			SimpleButtonWidget* button_widget = new SimpleButtonWidget();
-			MagicWand::SizeConstraints sizeConstraints;
-			horiz2d(sizeConstraints.mMinSize) = 120.0f;
-			horiz2d(sizeConstraints.mMaxSize) = 120.0f;
-			button_widget->Create(glm::vec2(8.0f, pos_vert), MagicWand::TextInfo("Big eye ;)", 0, 12.0f, false, glm::vec2(10.0f, 2.0f)), sizeConstraints);
+			button_widget->Create(glm::vec2(8.0f, pos_vert), false, MagicWand::TextInfo("Big eye ;)", 0, 12.0f, false, glm::vec2(10.0f, 2.0f)), sizeConstraints);
 			
-			pos_vert += 1.5f * mDefaultFont.GetPixelHeight();
+			pos_vert += vert2d(button_widget->GetSize(inApp)) + height_offset;
 
 			children.mChildWidgets.push_back(button_widget);
 		}
 
 		{
 			SimpleButtonWidget* button_widget = new SimpleButtonWidget();
-			MagicWand::SizeConstraints sizeConstraints;
-			horiz2d(sizeConstraints.mMinSize) = 120.0f;
-			horiz2d(sizeConstraints.mMaxSize) = 120.0f;
-			button_widget->Create(glm::vec2(8.0f, pos_vert), MagicWand::TextInfo("Pressed eye ;)", 0, 12.0f, false, glm::vec2(10.0f, 2.0f)), sizeConstraints);
-			button_widget->SetIsPressed(true);
+			button_widget->Create(glm::vec2(8.0f, pos_vert), false, MagicWand::TextInfo("Bigger eye ;)", 0, 16.0f, false, glm::vec2(10.0f, 2.0f)), sizeConstraints);
 			
-			pos_vert += 1.5f * mDefaultFont.GetPixelHeight();
+			pos_vert += vert2d(button_widget->GetSize(inApp)) + height_offset;
 
 			children.mChildWidgets.push_back(button_widget);
 		}
 
 		{
 			SimpleButtonWidget* button_widget = new SimpleButtonWidget();
-			MagicWand::SizeConstraints sizeConstraints;
-			horiz2d(sizeConstraints.mMinSize) = 120.0f;
-			horiz2d(sizeConstraints.mMaxSize) = 120.0f;
-			button_widget->Create(glm::vec2(8.0f, pos_vert), MagicWand::TextInfo("Bold eye ;)", 0, 12.0f, true, glm::vec2(10.0f, 2.0f)), sizeConstraints);
+			button_widget->Create(glm::vec2(8.0f, pos_vert), false, MagicWand::TextInfo("Bold eye ;)", 0, 12.0f, true, glm::vec2(10.0f, 2.0f)), sizeConstraints);
 			
-			pos_vert += 2.0f * mDefaultFont.GetPixelHeight();
+			pos_vert += vert2d(button_widget->GetSize(inApp)) + height_offset;
 
 			children.mChildWidgets.push_back(button_widget);
 		}
-
 
 		{
 			SimpleButtonWidget* button_widget = new SimpleButtonWidget();
-			MagicWand::SizeConstraints sizeConstraints;
-			horiz2d(sizeConstraints.mMinSize) = 120.0f;
-			horiz2d(sizeConstraints.mMaxSize) = 120.0f;
-			button_widget->Create(glm::vec2(8.0f, pos_vert),MagicWand::TextInfo("Bigger eye ;)", 0, 16.0f, false, glm::vec2(10.0f, 2.0f)), sizeConstraints);
+			button_widget->Create(glm::vec2(8.0f, pos_vert), true, MagicWand::TextInfo("Toggled eye ;)", 0, 12.0f, false, glm::vec2(10.0f, 2.0f)), sizeConstraints);
+			button_widget->SetIsToggled(true);
 			
-			pos_vert += mDefaultFont.GetPixelHeight();
+			pos_vert += vert2d(button_widget->GetSize(inApp)) + height_offset;
 
 			children.mChildWidgets.push_back(button_widget);
 		}
-		
+
+		{
+			SimpleButtonWidget* button_widget = new SimpleButtonWidget();
+			button_widget->Create(glm::vec2(8.0f, pos_vert), true, MagicWand::TextInfo("Unoggled eye ;)", 0, 12.0f, false, glm::vec2(10.0f, 2.0f)), sizeConstraints);
+			
+			pos_vert += vert2d(button_widget->GetSize(inApp)) + height_offset;
+
+			children.mChildWidgets.push_back(button_widget);
+		}
 	}
 	
 	/*

@@ -27,12 +27,14 @@ namespace BE
 		static bool IsMouseInRectangle(const App& inApp, const glm::vec2& inWidgetWorldPos, const glm::vec2& inWidgetSize);
 	};
 
+
 	class Widget
 	{
 	public:
 
 		virtual void Update(const App& inApp, float inTimeSecs, const SceneTransform& inParentTransform, bool inParentTransformDirty) {}
 		virtual void Render(const App& inApp, float inTimeSecs, const SceneTransform& inParentTransform, bool inParentTransformDirty) {}
+		virtual glm::vec2 GetSize(const App& inApp) { return glm::vec2(); }
 	};
 
 
@@ -135,6 +137,7 @@ namespace BE
 		bool		Create(const App& inApp, const glm::vec2& inPos, const char* inTexturePath);
 
 		virtual void Render(const App& inApp, float inTimeSecs, const SceneTransform& inParentTransform, bool inParentTransformDirty);
+		virtual glm::vec2 GetSize(const App& inApp) { return mSize; }
 
 	protected:
 
@@ -162,20 +165,25 @@ namespace BE
 	{
 	public:
 
-		bool		Create(const glm::vec2& inPos, const MagicWand::TextInfo& inTextInfo, const MagicWand::SizeConstraints& inSizeConstraints);
+		bool		Create(const glm::vec2& inPos, bool inIsToggleButton, const MagicWand::TextInfo& inTextInfo, const MagicWand::SizeConstraints& inSizeConstraints);
 
-		void		SetIsPressed(bool inIsPressed);
+		void		SetIsToggled(bool inIsToggled);
 
 		virtual void Update(const App& inApp, float inTimeSecs, const SceneTransform& inParentTransform, bool inParentTransformDirty);
 		virtual void Render(const App& inApp, float inTimeSecs, const SceneTransform& inParentTransform, bool inParentTransformDirty);
 
+		virtual glm::vec2 GetSize(const App& inApp) { CreateTextures(inApp); return mButtonTexSize; }
+
 	protected:
 
-		void UpdateGeometry(const App& inApp, const glm::vec2& inWorldPos);
+		void CreateTextures(const App& inApp);
 
 		MagicWand::TextInfo mTextInfo;
 		MagicWand::SizeConstraints mSizeConstraints;
+		bool mIsToggleButton;
+		bool mIsMousePressed;
 		bool mIsPressed;
+		bool mIsToggled;
 		bool mIsHighlighted;
 
 		glm::vec3 mPos;
@@ -197,10 +205,12 @@ namespace BE
 		virtual void Update(const App& inApp, float inTimeSecs, const SceneTransform& inParentTransform, bool inParentTransformDirty);
 		virtual void Render(const App& inApp, float inTimeSecs, const SceneTransform& inParentTransform, bool inParentTransformDirty);
 
+		virtual glm::vec2 GetSize(const App& inApp) { CreateTextures(inApp); return mMarkerTexSize; }
+
 	protected:
 
 		glm::vec2 GetSliderWorldPos(const glm::vec2& inWorldPos) const;
-		void UpdateGeometry(const App& inApp, const glm::vec2& inWorldPos);
+		void CreateTextures(const App& inApp);
 
 		MagicWand::TextInfo mTextInfo;
 		MagicWand::SizeConstraints mSizeConstraints;
@@ -235,9 +245,11 @@ namespace BE
 		virtual void Update(const App& inApp, float inTimeSecs, const SceneTransform& inParentTransform, bool inParentTransformDirty);
 		virtual void Render(const App& inApp, float inTimeSecs, const SceneTransform& inParentTransform, bool inParentTransformDirty);
 
+		virtual glm::vec2 GetSize(const App& inApp) { CreateTextures(inApp); return mSize; }
+
 	protected:
 
-		void UpdateGeometry(const App& inApp, const glm::vec2& inWorldPos);
+		void CreateTextures(const App& inApp);
 
 		glm::vec3 mPos;
 		glm::vec2 mSize;
