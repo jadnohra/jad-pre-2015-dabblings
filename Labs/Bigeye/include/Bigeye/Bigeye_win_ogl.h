@@ -150,14 +150,17 @@ namespace BE
 	{
 	public:
 
-		bool		Create(const glm::vec2& inPos, const char* inText = "");
+		bool		Create(const App& inApp, const glm::vec2& inPos, const MagicWand::TextInfo& inTextInfo, const MagicWand::SizeConstraints& inSizeConstraints);
 
 		virtual void Render(const App& inApp, float inTimeSecs, const SceneTransform& inParentTransform, bool inParentTransformDirty);
+		virtual glm::vec2 GetSize(const App& inApp) { return mTextTexSize; }
 
 	protected:
 
 		glm::vec3 mPos;
-		std::string mText;
+		glm::vec2 mTextTexSize;
+
+		OGLTexture mTextTexture;
 	};
 
 

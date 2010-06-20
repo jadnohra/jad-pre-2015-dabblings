@@ -4,7 +4,7 @@ int main()
 {
 	BE::App app;
 
-	app.Create("Bigeye", 800, 600);
+	app.Create("Bigeye", 1024, 768);
 
 	while (app.Update(0.0f))
 	{

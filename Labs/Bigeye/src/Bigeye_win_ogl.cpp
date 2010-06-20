@@ -350,10 +350,15 @@ void SimpleSliderWidget::Render(const App& inApp, float inTimeSecs, const SceneT
 }
 
 
-bool SimpleTextWidget::Create(const glm::vec2& inPos, const char* inText)
+bool SimpleTextWidget::Create(const App& inApp, const glm::vec2& inPos, const MagicWand::TextInfo& inTextInfo, const MagicWand::SizeConstraints& inSizeConstraints)
 {
 	mPos = to3d_point(inPos);
-	mText = inText;
+
+	mTextTexture.AutoCreate();
+	GLsizei tex_dims[2];
+	inApp.GetWand().MakeTextTexture(mTextTexture.mTexture, inTextInfo, inSizeConstraints, tex_dims[0], tex_dims[1]);
+	mTextTexSize[0] = tex_dims[0];
+	mTextTexSize[1] = tex_dims[1];
 
 	return true;
 }
@@ -363,10 +368,21 @@ void SimpleTextWidget::Render(const App& inApp, float inTimeSecs, const SceneTra
 {
 	glm::vec3 world_pos = inParentTransform * mPos;
 
+	inApp.GetOGLStateManager().Enable(EOGLState_TextureWidget);
 	{
-		const OGLState_FontRender* font_render = (const OGLState_FontRender*) inApp.GetOGLStateManager().Enable(EOGLState_FontRender);
-		//glColor4f(1.0f, 1.0f, 1.0f,1.0f);
-		font_render->Render(mText.c_str(), world_pos.x, world_pos.y);
+		glBindTexture(GL_TEXTURE_2D, mTextTexture.mTexture);
+		glTexParameteri(GL_TEXTURE_2D,GL_TEXTURE_MIN_FILTER,GL_NEAREST);	// Linear Filtering
+		glTexParameteri(GL_TEXTURE_2D,GL_TEXTURE_MAG_FILTER,GL_NEAREST);	// Linear Filtering
+		
+		glTexEnvi(GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_REPLACE);
+		//glColor4f(1.0f,1.0f,1.0f,1.0f);			
+
+		glBegin(GL_QUADS);
+			 glTexCoord2f(0.0f,0.0f); glVertex2f(world_pos.x,world_pos.y);
+			 glTexCoord2f(1.0f,0.0f); glVertex2f(world_pos.x+mTextTexSize.x,world_pos.y);
+			 glTexCoord2f(1.0f,1.0f); glVertex2f(world_pos.x+mTextTexSize.x,world_pos.y+mTextTexSize.y);
+			 glTexCoord2f(0.0f,1.0f); glVertex2f(world_pos.x,world_pos.y+mTextTexSize.y);
+		glEnd();
 	}
 }
 
@@ -845,36 +861,26 @@ void NativeWindowWidget::Test(App& inApp)
 
 	{
 		SimplePanelWidget* widget = new SimplePanelWidget();
-		widget->Create(glm::vec2(130.0f, 240.0f), glm::vec2(200.0f, 200.0f));
+		widget->Create(glm::vec2(820.0f, 50.0f), glm::vec2(180.0f, 250.0f));
 		mChildren.mChildWidgets.push_back(widget);
 
 		ChildWidgetContainer& children = widget->GetChildren();
 
 		MagicWand::SizeConstraints sizeConstraints;
-		horiz2d(sizeConstraints.mMinSize) = 140.0f;
-		horiz2d(sizeConstraints.mMaxSize) = 140.0f;
+		horiz2d(sizeConstraints.mMinSize) = 150.0f;
+		horiz2d(sizeConstraints.mMaxSize) = 150.0f;
 		
-		float pos_vert = 10.0f;
+		float pos_vert = 2.0f;
 		float height_offset = 6.0f;
 
-		/*
 		{
 			SimpleTextWidget* text_widget = new SimpleTextWidget();
-			text_widget->Create(glm::vec2(2.0f, pos_vert), "Hey you");
-			pos_vert += mDefaultFont.GetPixelHeight();
+			text_widget->Create(inApp, glm::vec2(8.0f, pos_vert), MagicWand::TextInfo("Tools", 0, 14.0f, true, glm::vec2(10.0f, 2.0f)), MagicWand::SizeConstraints());
+			
+			pos_vert += vert2d(text_widget->GetSize(inApp)) + 2.0f * height_offset;
 
 			children.mChildWidgets.push_back(text_widget);
 		}
-
-		{
-			SimpleTextWidget* text_widget = new SimpleTextWidget();
-			text_widget->Create(glm::vec2(2.0f, pos_vert), "Hey you ...");
-			pos_vert += mDefaultFont.GetPixelHeight();
-
-			children.mChildWidgets.push_back(text_widget);
-		}
-		*/
-
 
 		{
 			SimpleSliderWidget* slider_widget = new SimpleSliderWidget();
@@ -895,14 +901,30 @@ void NativeWindowWidget::Test(App& inApp)
 			children.mChildWidgets.push_back(slider_widget);
 		}
 
-		{
-			SimpleButtonWidget* button_widget = new SimpleButtonWidget();
-			button_widget->Create(glm::vec2(8.0f, pos_vert), false, MagicWand::TextInfo("Big eye ;)", 0, 12.0f, false, glm::vec2(10.0f, 2.0f)), sizeConstraints);
-			
-			pos_vert += vert2d(button_widget->GetSize(inApp)) + height_offset;
+		pos_vert += 4.0f;
 
+		{
+			MagicWand::SizeConstraints halfSizeConstraints = sizeConstraints;
+
+			horiz2d(halfSizeConstraints.mMaxSize) = (horiz2d(halfSizeConstraints.mMaxSize) / 2.0f) - 4.0f;
+			horiz2d(halfSizeConstraints.mMinSize) = horiz2d(halfSizeConstraints.mMaxSize);
+
+			SimpleButtonWidget* button_widget = new SimpleButtonWidget();
+			button_widget->Create(glm::vec2(8.0f, pos_vert), false, MagicWand::TextInfo("Big eye ;)", 0, 12.0f, false, glm::vec2(10.0f, 2.0f)), halfSizeConstraints);
+			
 			children.mChildWidgets.push_back(button_widget);
+
+			{
+				SimpleButtonWidget* button_widget = new SimpleButtonWidget();
+				button_widget->Create(glm::vec2(horiz2d(halfSizeConstraints.mMinSize) + 6.0f + 8.0f, pos_vert), false, MagicWand::TextInfo("Bold eye ;)", 0, 12.0f, true, glm::vec2(10.0f, 2.0f)), halfSizeConstraints);
+			
+				children.mChildWidgets.push_back(button_widget);
+			}
+
+			pos_vert += vert2d(button_widget->GetSize(inApp)) + height_offset;
 		}
+
+		
 
 		{
 			SimpleButtonWidget* button_widget = new SimpleButtonWidget();
@@ -912,15 +934,7 @@ void NativeWindowWidget::Test(App& inApp)
 
 			children.mChildWidgets.push_back(button_widget);
 		}
-
-		{
-			SimpleButtonWidget* button_widget = new SimpleButtonWidget();
-			button_widget->Create(glm::vec2(8.0f, pos_vert), false, MagicWand::TextInfo("Bold eye ;)", 0, 12.0f, true, glm::vec2(10.0f, 2.0f)), sizeConstraints);
-			
-			pos_vert += vert2d(button_widget->GetSize(inApp)) + height_offset;
-
-			children.mChildWidgets.push_back(button_widget);
-		}
+	
 
 		{
 			SimpleButtonWidget* button_widget = new SimpleButtonWidget();
@@ -998,7 +1012,7 @@ void NativeWindowWidget::Render(const App& inApp, float inTimeSecs, const SceneT
 
 	glClearColor(0.0f, 0.0f, 0.0f, 1.0f);
 	glClearColor(39.0f/255.0f, 39.0f/255.0f, 39.0f/255.0f, 1.0f);
-	glClearColor(176.0f/255.0f, 176.0f/255.0f, 176.0f/255.0f, 1.0f);
+	//glClearColor(176.0f/255.0f, 176.0f/255.0f, 176.0f/255.0f, 1.0f);
 	//glClearColor(49.0f/255.0f, 140.0f/255.0f, 231.0f / 255.0f, 1.0f);
 	
 	//glClearColor(100.0f/255.0f, 149.0f/255.0f, 237.0f / 255.0f, 1.0f);
