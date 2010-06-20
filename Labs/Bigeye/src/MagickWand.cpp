@@ -572,25 +572,59 @@ bool MagicWand::MakeTestButtonTexture(GLuint inTexture, GLsizei& outWidth, GLsiz
 }
 
 
-bool MagicWand::MakeFrameTexture(GLuint inTexture, GLsizei& outWidth, GLsizei& outHeight)
+bool MagicWand::MakeFrameTexture(FrameType inType, GLuint inTexture, GLsizei& outWidth, GLsizei& outHeight)
 {
-	static glm::vec4 colors[4] = { 
-			glm::vec4(82.0f/255.0f, 82.0f/255.0f, 82.0f/255.0f, 1.0f), 
-			glm::vec4(82.0f/255.0f, 82.0f/255.0f, 82.0f/255.0f, 1.0f), 
-			glm::vec4(37.0f/255.0f, 37.0f/255.0f, 37.0f/255.0f, 1.0f), 
-			glm::vec4(37.0f/255.0f, 37.0f/255.0f, 37.0f/255.0f, 1.0f) };
+	if (inType == FRAME_NORMAL)
+	{
 
-	auto_scoped_ptr<MagickWand> gradient_wand(mImpl->GradientFillWand(outWidth, outHeight, 0, 0, colors));
-	mImpl->RoundWand(gradient_wand, 8, true);
+		static glm::vec4 colors[4] = { 
+				glm::vec4(82.0f/255.0f, 82.0f/255.0f, 82.0f/255.0f, 1.0f), 
+				glm::vec4(82.0f/255.0f, 82.0f/255.0f, 82.0f/255.0f, 1.0f), 
+				glm::vec4(37.0f/255.0f, 37.0f/255.0f, 37.0f/255.0f, 1.0f), 
+				glm::vec4(37.0f/255.0f, 37.0f/255.0f, 37.0f/255.0f, 1.0f) };
 
-	int offset[2];
-	offset[0] = -4;
-	offset[1] = 4;
+		auto_scoped_ptr<MagickWand> gradient_wand(mImpl->GradientFillWand(outWidth, outHeight, 0, 0, colors));
+		mImpl->RoundWand(gradient_wand, 8, true);
 
-	auto_scoped_ptr<MagickWand> shadowed_wand(mImpl->ShadowWand(gradient_wand, offset[0], offset[1], 40.0f, 1.5f));
+		int offset[2];
+		offset[0] = -4;
+		offset[1] = 4;
 
-	return mImpl->ToGLTexture(shadowed_wand, inTexture, outWidth, outHeight);
+		auto_scoped_ptr<MagickWand> shadowed_wand(mImpl->ShadowWand(gradient_wand, offset[0], offset[1], 40.0f, 1.5f));
+
+		return mImpl->ToGLTexture(shadowed_wand, inTexture, outWidth, outHeight);
+	}
+	else if (inType == FRAME_NORMAL_CUT_UPPER)
+	{
+		static glm::vec4 colors[4] = { 
+			glm::vec4(39.0f/255.0f, 39.0f/255.0f, 39.0f/255.0f, 1.0f), 
+			glm::vec4(39.0f/255.0f, 39.0f/255.0f, 39.0f/255.0f, 1.0f), 
+			glm::vec4(39.0f/255.0f, 39.0f/255.0f, 39.0f/255.0f, 1.0f), 
+			glm::vec4(39.0f/255.0f, 39.0f/255.0f, 39.0f/255.0f, 1.0f) };
+
+		auto_scoped_ptr<MagickWand> gradient_wand(mImpl->GradientFillWand(outWidth, outHeight, 0, 8, colors));
+		mImpl->RoundWand(gradient_wand, 8, true);
+
+		auto_scoped_ptr<MagickWand> cut_wand(NewMagickWand());
+		MagickNewImage(cut_wand, MagickGetImageWidth(gradient_wand), MagickGetImageHeight(gradient_wand)-8, mImpl->transparent);
+
+		MagickCompositeImage(cut_wand, gradient_wand, OverCompositeOp, 0, -8);
+
+		int offset[2];
+		offset[0] = -2;
+		offset[1] = 4;
+
+		// TODO make shadow larger .. (from both sides)
+		auto_scoped_ptr<MagickWand> shadowed_wand(mImpl->ShadowWand(cut_wand, offset[0], offset[1], 40.0f, 1.5f));
+		
+		//return mImpl->ToGLTexture(cut_wand, inTexture, outWidth, outHeight);
+		//return mImpl->ToGLTexture(gradient_wand, inTexture, outWidth, outHeight);
+		return mImpl->ToGLTexture(shadowed_wand, inTexture, outWidth, outHeight);
+	}
+
+	return false;
 }
+
 
 
 bool MagicWand::ReadImageToGLTexture(const char* inPath, GLuint inTexture, GLsizei& outWidth, GLsizei& outHeight)

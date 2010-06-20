@@ -44,12 +44,18 @@ namespace BE
 			WIDGET_HIGHLIGHTED
 		};
 
+		enum FrameType
+		{
+			FRAME_NORMAL,
+			FRAME_NORMAL_CUT_UPPER,
+		};
+
 		MagicWand();
 		~MagicWand();
 
 		bool ReadImageToGLTexture(const char* inPath, GLuint inTexture, GLsizei& outWidth, GLsizei& outHeight);
 		bool MakeTestButtonTexture(GLuint inTexture, GLsizei& outWidth, GLsizei& outHeight);
-		bool MakeFrameTexture(GLuint inTexture, GLsizei& outWidth, GLsizei& outHeight);
+		bool MakeFrameTexture(FrameType inType, GLuint inTexture, GLsizei& outWidth, GLsizei& outHeight);
 		bool MakeSliderFrameTexture(GLuint inTexture, GLsizei inLength, const TextInfo& inTextInfo, const SizeConstraints& inSizeConstraints, GLsizei& outWidth, GLsizei& outHeight);
 		bool MakeSliderMarkerTexture(GLuint inTexture, WidgetState inWidgetState, GLsizei inFrameHeight, GLsizei& outWidth, GLsizei& outHeight);
 		bool MakeButtonTexture(GLuint inTexture, WidgetState inWidgetState, const TextInfo& inTextInfo, const SizeConstraints& inSizeConstraints, GLsizei& outWidth, GLsizei& outHeight);

@@ -241,7 +241,7 @@ namespace BE
 
 		SimplePanelWidget();
 
-		bool		Create(const glm::vec2& inPos, const glm::vec2& inSize);
+		bool		Create(const glm::vec2& inPos, const glm::vec2& inSize, MagicWand::FrameType inType);
 
 		ChildWidgetContainer& GetChildren() { return mChildren; } 
 
@@ -253,6 +253,8 @@ namespace BE
 	protected:
 
 		void CreateTextures(const App& inApp);
+
+		MagicWand::FrameType mType;
 
 		glm::vec3 mPos;
 		glm::vec2 mSize;

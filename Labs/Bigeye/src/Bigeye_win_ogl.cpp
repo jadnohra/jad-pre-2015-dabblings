@@ -508,10 +508,11 @@ SimplePanelWidget::SimplePanelWidget()
 }
 
 
-bool SimplePanelWidget::Create(const glm::vec2& inPos, const glm::vec2& inSize)
+bool SimplePanelWidget::Create(const glm::vec2& inPos, const glm::vec2& inSize, MagicWand::FrameType inType)
 {
 	mPos = to3d_point(inPos);
 	mSize = inSize;
+	mType = inType;
 	
 
 	return true;
@@ -527,7 +528,7 @@ void SimplePanelWidget::CreateTextures(const App& inApp)
 		GLsizei dims[2];
 		dims[0] = mSize.x;
 		dims[1] = mSize.y;
-		inApp.GetWand().MakeFrameTexture(mTexture.mTexture, dims[0], dims[1]);
+		inApp.GetWand().MakeFrameTexture(mType, mTexture.mTexture, dims[0], dims[1]);
 		mSize.x = dims[0];
 		mSize.y = dims[1];
 	}
@@ -840,28 +841,40 @@ bool NativeWindowWidget::Create(App& inApp, const WideString& inWindowName, int 
 
 void NativeWindowWidget::Test(App& inApp)
 {
+	/*
 	{
 		MagicWandTestTextureWidget* widget = new MagicWandTestTextureWidget();
 		widget->Create(inApp, glm::vec2(400.0f, 400.0f));
 		mChildren.mChildWidgets.push_back(widget);
 	}
+	*/
 
+	/*
 	{
 		SimpleTextureWidget* widget = new SimpleTextureWidget();
 		//widget->Create(glm::vec2(200.0f, 100.0f), "media/tiny_test.bmp");
 		widget->Create(inApp, glm::vec2(200.0f, 100.0f), "media/imagick_button.png");
 		mChildren.mChildWidgets.push_back(widget);
 	}
+	*/
 
+	/*
 	{
 		SimplePanelWidget* widget = new SimplePanelWidget();
 		widget->Create(glm::vec2(10.0f, 100.0f), glm::vec2(50.0f, 200.0f));
 		mChildren.mChildWidgets.push_back(widget);
 	}
+	*/
 
 	{
 		SimplePanelWidget* widget = new SimplePanelWidget();
-		widget->Create(glm::vec2(820.0f, 50.0f), glm::vec2(180.0f, 250.0f));
+		widget->Create(glm::vec2(10.0f, 30.0f), glm::vec2(780.0f, 720.0f), MagicWand::FRAME_NORMAL_CUT_UPPER);
+		mChildren.mChildWidgets.push_back(widget);
+	}
+
+	{
+		SimplePanelWidget* widget = new SimplePanelWidget();
+		widget->Create(glm::vec2(820.0f, 50.0f), glm::vec2(180.0f, 250.0f), MagicWand::FRAME_NORMAL);
 		mChildren.mChildWidgets.push_back(widget);
 
 		ChildWidgetContainer& children = widget->GetChildren();
