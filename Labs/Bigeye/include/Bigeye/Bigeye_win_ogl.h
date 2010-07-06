@@ -3,6 +3,7 @@
 #define _INCLUDED_BIGEYE_BIGEYE_WIN_OGL_H
 
 #include <windows.h>
+#include <stack>
 #include "BEMath.h"
 #include "OGL.h"
 #include "OGLState.h"
@@ -42,8 +43,6 @@ namespace BE
 	{
 		EOGLState_Reset,
 		EOGLState_NativeWindowWidget,
-		EOGLState_NormalWidget,
-		EOGLState_ShadowWidget,
 		EOGLState_TextureWidget,
 		EOGLState_FontRender,
 		EOGLState_Count,
@@ -65,22 +64,6 @@ namespace BE
 	};
 
 	class OGLState_TextureWidget : public OGLState
-	{
-	public:
-
-		virtual void	Set();
-	};
-
-
-	class OGLState_NormalWidget : public OGLState
-	{
-	public:
-
-		virtual void	Set();
-	};
-
-
-	class OGLState_ShadowWidget : public OGLState
 	{
 	public:
 
@@ -281,7 +264,39 @@ namespace BE
 
 		HWND			GetHWND() const	{ return mHWND; }
 
+		void			PushScissor(const glm::vec2& inPos, const glm::vec2& inSize) const; 
+		void			PopScissor() const; 
+
+		GLint			GetViewportWidth() const { return mViewportWidth; }
+		GLint			GetViewportHeight() const { return mViewportHeight; }
+
 	protected:
+
+		struct ScissorStackElement
+		{
+			GLint mPosX;
+			GLint mPosY;
+			GLint mWidth;
+			GLint mHeight;
+
+			ScissorStackElement()
+			:	mPosX(0)
+			,	mPosY(0)
+			,	mWidth(0)
+			,	mHeight(0)
+			{
+			}
+
+			ScissorStackElement(const glm::vec2& inPos, const glm::vec2& inSize)
+			:	mPosX((GLint) inPos.x)
+			,	mPosY((GLint) inPos.y)
+			,	mWidth((GLint) inSize.x)
+			,	mHeight((GLint) inSize.y)
+			{
+			}
+		};
+
+		typedef std::stack<ScissorStackElement> ScissorStack;
 
 		void			Destroy();
 		void			Test(App& inApp);
@@ -292,6 +307,9 @@ namespace BE
 		HGLRC	mHRC;
 		ChildWidgetContainer mChildren;
 		OGLFontInstance		 mDefaultFont;	
+		mutable ScissorStack mScissorStack;	
+		GLint mViewportWidth;
+		GLint mViewportHeight;
 	};
 
 	enum EInputID
@@ -338,6 +356,9 @@ namespace BE
 		const OGLStateManager&	GetOGLStateManager() const		{ return mOGLStateManager; }
 		OGLStateManager&		GetOGLStateManager()			{ return mOGLStateManager; }
 		MagicWand&				GetWand() const					{ return mWand; }
+
+		void					PushScissor(const glm::vec2& inPos, const glm::vec2& inSize) const	{ mWindow->PushScissor(inPos, inSize); }
+		void					PopScissor() const													{ mWindow->PopScissor(); }
 
 	protected:
 

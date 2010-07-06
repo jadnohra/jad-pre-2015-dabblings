@@ -554,43 +554,33 @@ void SimplePanelWidget::Render(const App& inApp, float inTimeSecs, const SceneTr
 	glm::vec3 world_pos = inParentTransform * mPos;
 
 	inApp.GetOGLStateManager().Enable(EOGLState_TextureWidget);
+	
 	{
-		glBindTexture(GL_TEXTURE_2D, mTexture.mTexture);
-		glTexParameteri(GL_TEXTURE_2D,GL_TEXTURE_MIN_FILTER,GL_NEAREST);	// Linear Filtering
-		glTexParameteri(GL_TEXTURE_2D,GL_TEXTURE_MAG_FILTER,GL_NEAREST);	// Linear Filtering
-		
-		glTexEnvi(GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_REPLACE);
-		//glColor4f(1.0f,1.0f,1.0f,1.0f);			
+		{
+			glBindTexture(GL_TEXTURE_2D, mTexture.mTexture);
+			glTexParameteri(GL_TEXTURE_2D,GL_TEXTURE_MIN_FILTER,GL_NEAREST);	// Linear Filtering
+			glTexParameteri(GL_TEXTURE_2D,GL_TEXTURE_MAG_FILTER,GL_NEAREST);	// Linear Filtering
+			
+			glTexEnvi(GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_REPLACE);
+			//glColor4f(1.0f,1.0f,1.0f,1.0f);			
 
-		glBegin(GL_QUADS);
-			 glTexCoord2f(0.0f,0.0f); glVertex2f(world_pos.x,world_pos.y);
-			 glTexCoord2f(1.0f,0.0f); glVertex2f(world_pos.x+mSize.x,world_pos.y);
-			 glTexCoord2f(1.0f,1.0f); glVertex2f(world_pos.x+mSize.x,world_pos.y+mSize.y);
-			 glTexCoord2f(0.0f,1.0f); glVertex2f(world_pos.x,world_pos.y+mSize.y);
-		glEnd();
+			glBegin(GL_QUADS);
+				 glTexCoord2f(0.0f,0.0f); glVertex2f(world_pos.x,world_pos.y);
+				 glTexCoord2f(1.0f,0.0f); glVertex2f(world_pos.x+mSize.x,world_pos.y);
+				 glTexCoord2f(1.0f,1.0f); glVertex2f(world_pos.x+mSize.x,world_pos.y+mSize.y);
+				 glTexCoord2f(0.0f,1.0f); glVertex2f(world_pos.x,world_pos.y+mSize.y);
+			glEnd();
+		}
+
+
+		inApp.PushScissor(to2d_point(world_pos), mSize);
+		{
+			SceneTransform local_transform;
+			local_transform[2] = mPos;
+			mChildren.Render(inApp, inTimeSecs, inParentTransform, local_transform, inParentTransformDirty || false);
+		}
+		inApp.PopScissor();
 	}
-
-
-	{
-		SceneTransform local_transform;
-		local_transform[2] = mPos;
-		mChildren.Render(inApp, inTimeSecs, inParentTransform, local_transform, inParentTransformDirty || false);
-	}
-}
-
-
-void OGLState_NormalWidget::Set()
-{
-	glDisable(GL_BLEND);
-	glDisable(GL_TEXTURE_2D);
-}
-
-
-void OGLState_ShadowWidget::Set()
-{
-	glEnable(GL_BLEND);
-	glBlendFunc(GL_DST_COLOR,GL_ZERO);
-	glDisable(GL_TEXTURE_2D);
 }
 
 
@@ -600,6 +590,36 @@ void OGLState_TextureWidget::Set()
 	glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 	glEnable(GL_BLEND);
 	glEnable(GL_TEXTURE_2D);
+}
+
+
+void NativeWindowWidget::PushScissor(const glm::vec2& inPos, const glm::vec2& inSize) const
+{
+	mScissorStack.push(ScissorStackElement(inPos, inSize));
+
+	if (mScissorStack.size() == 1)
+	{
+		glEnable(GL_SCISSOR_TEST);
+	}
+
+	const ScissorStackElement& top = mScissorStack.top();
+	glScissor(top.mPosX, mViewportHeight-(top.mPosY+top.mHeight), top.mWidth, top.mHeight);
+}
+
+
+void NativeWindowWidget::PopScissor() const
+{
+	mScissorStack.pop();
+
+	if (mScissorStack.empty())
+	{
+		glDisable(GL_SCISSOR_TEST);
+	}
+	else
+	{
+		const ScissorStackElement& top = mScissorStack.top();
+		glScissor(top.mPosX, top.mPosY, top.mWidth, top.mHeight);
+	}
 }
 
 
@@ -826,8 +846,6 @@ bool NativeWindowWidget::Create(App& inApp, const WideString& inWindowName, int 
 		inApp.GetOGLStateManager().StartBuild(EOGLState_Count);
 		inApp.GetOGLStateManager().BuildSetState(new OGLState(), EOGLState_Reset);
 		inApp.GetOGLStateManager().BuildSetState(new OGLState_NativeWindowWidget(*this), EOGLState_NativeWindowWidget);
-		inApp.GetOGLStateManager().BuildSetState(new OGLState_NormalWidget(), EOGLState_NormalWidget, EOGLState_NativeWindowWidget);
-		inApp.GetOGLStateManager().BuildSetState(new OGLState_ShadowWidget(), EOGLState_ShadowWidget, EOGLState_NativeWindowWidget);
 		inApp.GetOGLStateManager().BuildSetState(new OGLState_FontRender(mDefaultFont), EOGLState_FontRender, EOGLState_NativeWindowWidget);
 		inApp.GetOGLStateManager().BuildSetState(new OGLState_TextureWidget(), EOGLState_TextureWidget, EOGLState_NativeWindowWidget);
 		inApp.GetOGLStateManager().EndBuild();
@@ -961,12 +979,25 @@ void NativeWindowWidget::Test(App& inApp)
 
 		{
 			SimpleButtonWidget* button_widget = new SimpleButtonWidget();
-			button_widget->Create(glm::vec2(8.0f, pos_vert), true, MagicWand::TextInfo("Unoggled eye ;)", 0, 12.0f, false, glm::vec2(10.0f, 2.0f)), sizeConstraints);
+			button_widget->Create(glm::vec2(8.0f, pos_vert), true, MagicWand::TextInfo("Untoggled eye ;)", 0, 12.0f, false, glm::vec2(10.0f, 2.0f)), sizeConstraints);
 			
 			pos_vert += vert2d(button_widget->GetSize(inApp)) + height_offset;
 
 			children.mChildWidgets.push_back(button_widget);
 		}
+
+
+		/*
+		{
+			MagicWand::SizeConstraints sizeConstraints;
+			SimpleButtonWidget* button_widget = new SimpleButtonWidget();
+			button_widget->Create(glm::vec2(8.0f, pos_vert), true, MagicWand::TextInfo("Scissorrrrrrrrrrrrrrrrrrrrr testtttttttt", 0, 12.0f, false, glm::vec2(10.0f, 2.0f)), sizeConstraints);
+			
+			pos_vert += vert2d(button_widget->GetSize(inApp)) + height_offset;
+
+			children.mChildWidgets.push_back(button_widget);
+		}
+		*/
 	}
 	
 	/*
@@ -986,19 +1017,16 @@ OGLState_NativeWindowWidget::OGLState_NativeWindowWidget(NativeWindowWidget& inP
 
 void OGLState_NativeWindowWidget::Set()
 {
-	RECT rect;
-	GetClientRect(mParent.GetHWND(), &rect);							
+	GLint viewport_width = mParent.GetViewportWidth();
+	GLint viewport_height = mParent.GetViewportHeight();
 
-	int window_width=rect.right-rect.left;							
-	int window_height=rect.bottom-rect.top;		
-
-	glViewport(0, 0, (GLsizei)(window_width), (GLsizei)(window_height));
+	glViewport(0, 0, (GLsizei)(viewport_width), (GLsizei)(viewport_height));
 	glClear(GL_COLOR_BUFFER_BIT);
 
 	glMatrixMode(GL_PROJECTION);
 	glLoadIdentity();
 	//glOrtho(0.0f, window_width, window_height, 0.0f, -1.0f, 1.0f);
-	glOrtho(0.0f, window_width, window_height, 0.0f, -1.0f, 1.0f);
+	glOrtho(0.0f, viewport_width, viewport_height, 0.0f, -1.0f, 1.0f);
 
 
 	glMatrixMode( GL_MODELVIEW );
@@ -1010,11 +1038,19 @@ void OGLState_NativeWindowWidget::Set()
 
 	//glPolygonMode( GL_FRONT_AND_BACK, GL_LINE );
 	//glPolygonMode( GL_FRONT_AND_BACK, GL_FILL );
+
+	//PushScissor(glm::vec2(0.0f, 0.0f), glm::vec2(window_width, window_height));
 }
 
 
 void NativeWindowWidget::Update(const App& inApp, float inTimeSecs, const SceneTransform& inParentTransform, bool inParentTransformDirty) 
 {
+	RECT rect;
+	GetClientRect(GetHWND(), &rect);							
+
+	mViewportWidth = rect.right-rect.left;							
+	mViewportHeight = rect.bottom-rect.top;		
+
 	mChildren.Update(inApp, inTimeSecs, inParentTransform, kIdentitySceneTransform, inParentTransformDirty || false);
 }
 
