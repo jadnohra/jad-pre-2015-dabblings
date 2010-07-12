@@ -255,19 +255,11 @@
 			>
 		</File>
 		<File
-			RelativePath="..\..\src\ShapeUtil.cpp"
-			>
-		</File>
-		<File
-			RelativePath="..\..\src\ShapeUtil.h"
-			>
-		</File>
-		<File
 			RelativePath="..\..\src\smart_ptr.h"
 			>
 		</File>
 		<File
-			RelativePath="..\..\src\stb_truetype.h"
+			RelativePath="..\..\src\strtk.hpp"
 			>
 		</File>
 		<File

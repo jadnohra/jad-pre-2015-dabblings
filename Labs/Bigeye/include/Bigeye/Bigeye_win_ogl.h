@@ -35,6 +35,7 @@ namespace BE
 
 		virtual void Update(const App& inApp, float inTimeSecs, const SceneTransform& inParentTransform, bool inParentTransformDirty) {}
 		virtual void Render(const App& inApp, float inTimeSecs, const SceneTransform& inParentTransform, bool inParentTransformDirty) {}
+		virtual glm::vec3 GetLocalPosition(const App& inApp) { return glm::vec3(); }
 		virtual glm::vec2 GetSize(const App& inApp) { return glm::vec2(); }
 	};
 
@@ -78,7 +79,7 @@ namespace BE
 		ChildWidgetContainer(bool inDeleteWidgets);
 		~ChildWidgetContainer();
 
-		void SetDelectWidgets(bool inDeleteWidgets);
+		void SetDeleteWidgets(bool inDeleteWidgets);
 
 		void	Delete();
 		void	Update(const App& inApp, float inTimeSecs, const SceneTransform& inParentTransform, const SceneTransform& inParentLocalTransform, bool inParentTransformDirty);
@@ -102,6 +103,7 @@ namespace BE
 		bool		Create(const App& inApp, const glm::vec2& inPos);
 
 		virtual void Render(const App& inApp, float inTimeSecs, const SceneTransform& inParentTransform, bool inParentTransformDirty);
+		virtual glm::vec3 GetLocalPosition(const App& inApp) { return mPos; }
 
 	protected:
 
@@ -121,6 +123,7 @@ namespace BE
 
 		virtual void Render(const App& inApp, float inTimeSecs, const SceneTransform& inParentTransform, bool inParentTransformDirty);
 		virtual glm::vec2 GetSize(const App& inApp) { return mSize; }
+		virtual glm::vec3 GetLocalPosition(const App& inApp) { return mPos; }
 
 	protected:
 
@@ -137,6 +140,7 @@ namespace BE
 
 		virtual void Render(const App& inApp, float inTimeSecs, const SceneTransform& inParentTransform, bool inParentTransformDirty);
 		virtual glm::vec2 GetSize(const App& inApp) { return mTextTexSize; }
+		virtual glm::vec3 GetLocalPosition(const App& inApp) { return mPos; }
 
 	protected:
 
@@ -159,6 +163,7 @@ namespace BE
 		virtual void Render(const App& inApp, float inTimeSecs, const SceneTransform& inParentTransform, bool inParentTransformDirty);
 
 		virtual glm::vec2 GetSize(const App& inApp) { CreateTextures(inApp); return mButtonTexSize; }
+		virtual glm::vec3 GetLocalPosition(const App& inApp) { return mPos; }
 
 	protected:
 
@@ -184,14 +189,22 @@ namespace BE
 	{
 	public:
 
+		enum EType
+		{
+			Horizontal, Vertical
+		};
+
 		bool		Create(const glm::vec2& inPos, const glm::vec2& inSize, const MagicWand::TextInfo& inTextInfo, const MagicWand::SizeConstraints& inSizeConstraints);
+		bool		CreateVertical(const glm::vec2& inPos, const glm::vec2& inSize);
 
 		void		SetSliderPos(float inPos)	{ mSliderPos = inPos; }
+		float		GetSliderPos() const		{ return mSliderPos; }
 
 		virtual void Update(const App& inApp, float inTimeSecs, const SceneTransform& inParentTransform, bool inParentTransformDirty);
 		virtual void Render(const App& inApp, float inTimeSecs, const SceneTransform& inParentTransform, bool inParentTransformDirty);
 
 		virtual glm::vec2 GetSize(const App& inApp) { CreateTextures(inApp); return mMarkerTexSize; }
+		virtual glm::vec3 GetLocalPosition(const App& inApp) { return mPos; }
 
 	protected:
 
@@ -200,6 +213,7 @@ namespace BE
 
 		MagicWand::TextInfo mTextInfo;
 		MagicWand::SizeConstraints mSizeConstraints;
+		EType mType;
 
 		glm::vec3 mPos;
 		glm::vec2 mSize;
@@ -222,9 +236,14 @@ namespace BE
 	{
 	public:
 
+		enum EOverflowSliderType
+		{
+			NoOverflowSlider, OverflowSlider, AutoOverflowSlider
+		};
+
 		SimplePanelWidget();
 
-		bool		Create(const glm::vec2& inPos, const glm::vec2& inSize, MagicWand::FrameType inType);
+		bool		Create(const glm::vec2& inPos, const glm::vec2& inSize, MagicWand::FrameType inType, EOverflowSliderType inOverflowSliderType);
 
 		ChildWidgetContainer& GetChildren() { return mChildren; } 
 
@@ -232,18 +251,26 @@ namespace BE
 		virtual void Render(const App& inApp, float inTimeSecs, const SceneTransform& inParentTransform, bool inParentTransformDirty);
 
 		virtual glm::vec2 GetSize(const App& inApp) { CreateTextures(inApp); return mSize; }
+		virtual glm::vec3 GetLocalPosition(const App& inApp) { return mPos; }
 
 	protected:
 
 		void CreateTextures(const App& inApp);
 
 		MagicWand::FrameType mType;
-
+		EOverflowSliderType mOverflowSliderType;
+		
 		glm::vec3 mPos;
 		glm::vec2 mSize;
+		glm::vec2 mScissorPos;
+		glm::vec2 mScissorSize;
+		glm::vec2 mOverflowPosOffset;
+		SimpleSliderWidget mOverflowSlider;
+		float mOverflowSpaceSize;
 
 		OGLTexture mTexture;
 		ChildWidgetContainer mChildren;
+		ChildWidgetContainer mAutoChildren;
 	};
 
 
@@ -306,7 +333,6 @@ namespace BE
 		HDC		mHDC;
 		HGLRC	mHRC;
 		ChildWidgetContainer mChildren;
-		OGLFontInstance		 mDefaultFont;	
 		mutable ScissorStack mScissorStack;	
 		GLint mViewportWidth;
 		GLint mViewportHeight;

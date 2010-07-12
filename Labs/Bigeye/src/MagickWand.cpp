@@ -572,8 +572,15 @@ bool MagicWand::MakeTestButtonTexture(GLuint inTexture, GLsizei& outWidth, GLsiz
 }
 
 
-bool MagicWand::MakeFrameTexture(FrameType inType, GLuint inTexture, GLsizei& outWidth, GLsizei& outHeight)
+bool MagicWand::MakeFrameTexture(FrameType inType, GLuint inTexture, GLsizei& outWidth, GLsizei& outHeight, glm::vec2& outInternalPos, glm::vec2& outInternalSize)
 {
+	int shadow_offset[2];
+	int round_radius = 8;
+	bool ret = false;
+
+	GLsizei inWidth = outWidth;
+	GLsizei inHeight = outHeight;
+
 	if (inType == FRAME_NORMAL)
 	{
 
@@ -586,13 +593,12 @@ bool MagicWand::MakeFrameTexture(FrameType inType, GLuint inTexture, GLsizei& ou
 		auto_scoped_ptr<MagickWand> gradient_wand(mImpl->GradientFillWand(outWidth, outHeight, 0, 0, colors));
 		mImpl->RoundWand(gradient_wand, 8, true);
 
-		int offset[2];
-		offset[0] = -4;
-		offset[1] = 4;
+		shadow_offset[0] = -4;
+		shadow_offset[1] = 4;
 
-		auto_scoped_ptr<MagickWand> shadowed_wand(mImpl->ShadowWand(gradient_wand, offset[0], offset[1], 40.0f, 1.5f));
+		auto_scoped_ptr<MagickWand> shadowed_wand(mImpl->ShadowWand(gradient_wand, shadow_offset[0], shadow_offset[1], 40.0f, 1.5f));
 
-		return mImpl->ToGLTexture(shadowed_wand, inTexture, outWidth, outHeight);
+		ret = mImpl->ToGLTexture(shadowed_wand, inTexture, outWidth, outHeight);
 	}
 	else if (inType == FRAME_NORMAL_CUT_UPPER)
 	{
@@ -610,19 +616,23 @@ bool MagicWand::MakeFrameTexture(FrameType inType, GLuint inTexture, GLsizei& ou
 
 		MagickCompositeImage(cut_wand, gradient_wand, OverCompositeOp, 0, -8);
 
-		int offset[2];
-		offset[0] = -2;
-		offset[1] = 4;
+		shadow_offset[0] = -2;
+		shadow_offset[1] = 4;
 
 		// TODO make shadow larger .. (from both sides)
-		auto_scoped_ptr<MagickWand> shadowed_wand(mImpl->ShadowWand(cut_wand, offset[0], offset[1], 40.0f, 1.5f));
+		auto_scoped_ptr<MagickWand> shadowed_wand(mImpl->ShadowWand(cut_wand, shadow_offset[0], shadow_offset[1], 40.0f, 1.5f));
 		
 		//return mImpl->ToGLTexture(cut_wand, inTexture, outWidth, outHeight);
 		//return mImpl->ToGLTexture(gradient_wand, inTexture, outWidth, outHeight);
-		return mImpl->ToGLTexture(shadowed_wand, inTexture, outWidth, outHeight);
+		ret = mImpl->ToGLTexture(shadowed_wand, inTexture, outWidth, outHeight);
 	}
 
-	return false;
+	outInternalPos.x = 1.0f + shadow_offset[0] < 0 ? (float) -shadow_offset[0] : 0.0f;
+	outInternalPos.y = 1.0f + shadow_offset[1] < 0 ? (float) -shadow_offset[1] : 0.0f;
+	outInternalSize.x = (float) inWidth;
+	outInternalSize.y = (float) inHeight;
+	
+	return ret;
 }
 
 
@@ -706,12 +716,40 @@ bool MagicWand::MakeSliderFrameTexture(GLuint inTexture, GLsizei inLength, const
 	auto_scoped_ptr<MagickWand> gradient_wand(mImpl->GradientFillWand((size_t) (rect_width), (size_t) (rect_height), 0, 0, used_gradient_colors_stack, &gradient_curves));
 	mImpl->RoundWand(gradient_wand, radius, false);
 
-	//font_metrics[5] - font_metrics[8]+/*(font_metrics[8]+ font_metrics[5]) +*/ 0.5f*(rect_height-text_height)
 	MagickAnnotateImage(gradient_wand, font, inTextInfo.mMinEmptySpace.x, text_height, 0.0, inTextInfo.mText.c_str());
 
 	return mImpl->ToGLTexture(gradient_wand, inTexture, outWidth, outHeight);
 }
 
+
+bool MagicWand::MakeVerticalSliderFrameTexture(GLuint inTexture, GLsizei inWidth, GLsizei inHeight, GLsizei& outWidth, GLsizei& outHeight)
+{
+	float rect_width = (float) inWidth;
+	float rect_height = (float) inHeight;
+	float radius = 4.0f;
+
+	static glm::vec4 gradient_colors_stack[] = {	
+					glm::vec4(0.0f/255.0f, 0.0f/255.0f, 0.0f/255.0f, 1.0f), 
+					glm::vec4(0.0f/255.0f, 0.0f/255.0f, 0.0f/255.0f, 1.0f), 
+					glm::vec4(30.0f/255.0f, 30.0f/255.0f, 30.0f/255.0f, 1.0f), 
+					glm::vec4(30.0f/255.0f, 30.0f/255.0f, 30.0f/255.0f, 1.0f),
+					glm::vec4(40.0f/255.0f, 40.0f/255.0f, 40.0f/255.0f, 1.0f),
+					glm::vec4(40.0f/255.0f, 40.0f/255.0f, 40.0f/255.0f, 1.0f)};
+
+	glm::vec4* used_gradient_colors_stack = gradient_colors_stack;
+
+	MagickWandImpl::GradientCurves gradient_curves;
+	gradient_curves.mCurves.resize(2);
+	float specular_fraction = 0.9f; //8.0f * (1.0f / rect_height);
+	gradient_curves.mCurves[0] = MagickWandImpl::GradientCurve(0.0f, specular_fraction, 0.4f);
+	gradient_curves.mCurves[1] = MagickWandImpl::GradientCurve(specular_fraction, 1.0f, 1.0f);
+
+
+	auto_scoped_ptr<MagickWand> gradient_wand(mImpl->GradientFillWand((size_t) (rect_width), (size_t) (rect_height), 0, 0, used_gradient_colors_stack, &gradient_curves));
+	mImpl->RoundWand(gradient_wand, radius, false);
+
+	return mImpl->ToGLTexture(gradient_wand, inTexture, outWidth, outHeight);
+}
 
 bool MagicWand::MakeSliderMarkerTexture(GLuint inTexture, WidgetState inWidgetState, GLsizei inFrameHeight, GLsizei& outWidth, GLsizei& outHeight)
 {
@@ -728,6 +766,31 @@ bool MagicWand::MakeSliderMarkerTexture(GLuint inTexture, WidgetState inWidgetSt
 
 	outHeight = inFrameHeight - 2;
 	outWidth = (3*outHeight)/4;
+
+	DrawSetStrokeWidth(draw, 1.0f);
+	DrawSetFillColor(draw, fill);
+	DrawSetStrokeColor(draw, stroke);
+	DrawRoundRectangle(draw, 0, 0,outWidth-1, outHeight-1, 3, 3);
+	
+	return mImpl->ToGLTexture(draw, inTexture, outWidth, outHeight);
+}
+
+
+bool MagicWand::MakeVerticalSliderMarkerTexture(GLuint inTexture, WidgetState inWidgetState, GLsizei inFrameWidth, GLsizei& outWidth, GLsizei& outHeight)
+{
+	auto_scoped_ptr<DrawingWand> draw(NewDrawingWand());
+	auto_scoped_ptr<PixelWand> fill(NewPixelWand());
+	auto_scoped_ptr<PixelWand> stroke(NewPixelWand());
+	
+	PixelSetColor(stroke, "#000000");
+	PixelSetAlpha(stroke, 0.4f);
+	if (inWidgetState == WIDGET_NORMAL) PixelSetColor(fill, "#FFFFFF");
+	if (inWidgetState == WIDGET_PRESSED) PixelSetColor(fill, "#F06D00");
+	if (inWidgetState == WIDGET_HIGHLIGHTED) PixelSetColor(fill, "#F9AB16");
+	PixelSetAlpha(fill, inWidgetState == WIDGET_PRESSED ? 1.0f : 0.7f);
+
+	outWidth = inFrameWidth - 2;
+	outHeight = (3*outWidth)/4;
 
 	DrawSetStrokeWidth(draw, 1.0f);
 	DrawSetFillColor(draw, fill);

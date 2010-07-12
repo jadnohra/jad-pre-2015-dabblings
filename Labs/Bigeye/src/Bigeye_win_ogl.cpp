@@ -1,8 +1,8 @@
 #ifdef WIN32
 #include "../include/Bigeye/Bigeye_win_ogl.h"
 #include "ARB_Multisample.h"
-#include "ShapeUtil.h"
 #include "MagickWand.h"
+#include "strtk.hpp"
 
 namespace BE
 {
@@ -57,7 +57,7 @@ ChildWidgetContainer::~ChildWidgetContainer()
 }
 
 
-void ChildWidgetContainer::SetDelectWidgets(bool inDeleteWidgets)
+void ChildWidgetContainer::SetDeleteWidgets(bool inDeleteWidgets)
 {
 	mDeleteWidgets = inDeleteWidgets;
 }
@@ -210,11 +210,26 @@ void SimpleButtonWidget::Render(const App& inApp, float inTimeSecs, const SceneT
 
 bool SimpleSliderWidget::Create(const glm::vec2& inPos, const glm::vec2& inSize, const MagicWand::TextInfo& inTextInfo, const MagicWand::SizeConstraints& inSizeConstraints)
 {
+	mType = Horizontal;
 	mPos = to3d_point(inPos);
 	mSize = inSize;
 
 	mTextInfo = inTextInfo;
 	mSizeConstraints = inSizeConstraints;
+
+	mHasMouseSliderFocus = false;
+	mIsHighlighted = false;
+	mSliderPos = 0.5f;
+	
+	return true;
+}
+
+
+bool SimpleSliderWidget::CreateVertical(const glm::vec2& inPos, const glm::vec2& inSize)
+{
+	mType = Vertical;
+	mPos = to3d_point(inPos);
+	mSize = inSize;
 
 	mHasMouseSliderFocus = false;
 	mIsHighlighted = false;
@@ -235,16 +250,31 @@ void SimpleSliderWidget::CreateTextures(const App& inApp)
 
 		GLsizei tex_dims[2];
 
-		inApp.GetWand().MakeSliderFrameTexture(mFrameTexture.mTexture, mSize.x, mTextInfo, mSizeConstraints, tex_dims[0], tex_dims[1]);
+		if (mType == Horizontal)
+			inApp.GetWand().MakeSliderFrameTexture(mFrameTexture.mTexture, mSize.x, mTextInfo, mSizeConstraints, tex_dims[0], tex_dims[1]);
+		else
+			inApp.GetWand().MakeVerticalSliderFrameTexture(mFrameTexture.mTexture, mSize.x, mSize.y, tex_dims[0], tex_dims[1]);
+
 		mFrameTexSize[0] = tex_dims[0];
 		mFrameTexSize[1] = tex_dims[1];
 
-		inApp.GetWand().MakeSliderMarkerTexture(mMarkerTexture.mTexture, MagicWand::WIDGET_NORMAL, tex_dims[1], tex_dims[0], tex_dims[1]);
+		if (mType == Horizontal)
+			inApp.GetWand().MakeSliderMarkerTexture(mMarkerTexture.mTexture, MagicWand::WIDGET_NORMAL, tex_dims[1], tex_dims[0], tex_dims[1]);
+		else
+			inApp.GetWand().MakeVerticalSliderMarkerTexture(mMarkerTexture.mTexture, MagicWand::WIDGET_NORMAL, tex_dims[0], tex_dims[0], tex_dims[1]);
+
 		mMarkerTexSize[0] = tex_dims[0];
 		mMarkerTexSize[1] = tex_dims[1];
 
-		inApp.GetWand().MakeSliderMarkerTexture(mPressedMarkerTexture.mTexture, MagicWand::WIDGET_PRESSED, tex_dims[1], tex_dims[0], tex_dims[1]);
-		inApp.GetWand().MakeSliderMarkerTexture(mHighlightedMarkerTexture.mTexture, MagicWand::WIDGET_HIGHLIGHTED, tex_dims[1], tex_dims[0], tex_dims[1]);
+		if (mType == Horizontal)
+			inApp.GetWand().MakeSliderMarkerTexture(mPressedMarkerTexture.mTexture, MagicWand::WIDGET_PRESSED, tex_dims[1], tex_dims[0], tex_dims[1]);
+		else
+			inApp.GetWand().MakeVerticalSliderMarkerTexture(mPressedMarkerTexture.mTexture, MagicWand::WIDGET_PRESSED, tex_dims[0], tex_dims[0], tex_dims[1]);
+	
+		if (mType == Horizontal)
+			inApp.GetWand().MakeSliderMarkerTexture(mHighlightedMarkerTexture.mTexture, MagicWand::WIDGET_HIGHLIGHTED, tex_dims[1], tex_dims[0], tex_dims[1]);
+		else
+			inApp.GetWand().MakeVerticalSliderMarkerTexture(mHighlightedMarkerTexture.mTexture, MagicWand::WIDGET_HIGHLIGHTED, tex_dims[0], tex_dims[0], tex_dims[1]);
 	}
 }
 
@@ -287,8 +317,20 @@ void SimpleSliderWidget::Update(const App& inApp, float inTimeSecs, const SceneT
 			mMouseSliderFocusStartSliderPos = mSliderPos;
 		}
 
-		float pos_diff = mouse_pos.x - mMouseSliderFocusStartMousePos.x;
-		float new_slider_pos = mMouseSliderFocusStartSliderPos  + (pos_diff / (float) mFrameTexSize.x);
+		float pos_diff = 0.0f;
+		float new_slider_pos = 0.0f;
+
+		if (mType == Horizontal)
+		{
+			pos_diff = mouse_pos.x - mMouseSliderFocusStartMousePos.x;
+			new_slider_pos = mMouseSliderFocusStartSliderPos  + (pos_diff / (float) mFrameTexSize.x);
+		}
+		else
+		{
+			pos_diff = mouse_pos.y - mMouseSliderFocusStartMousePos.y;
+			new_slider_pos = mMouseSliderFocusStartSliderPos  + (pos_diff / (float) mFrameTexSize.y);
+		}
+
 		new_slider_pos = std::max(0.0f, new_slider_pos);
 		new_slider_pos = std::min(1.0f, new_slider_pos);
 
@@ -302,7 +344,15 @@ void SimpleSliderWidget::Update(const App& inApp, float inTimeSecs, const SceneT
 glm::vec2 SimpleSliderWidget::GetSliderWorldPos(const glm::vec2& inWorldPos) const
 {
 	glm::vec2 marker_world_pos = inWorldPos;
-	horiz2d(marker_world_pos) += 2 + mSliderPos * (horiz2d(mFrameTexSize) - (horiz2d(mMarkerTexSize)+4));
+
+	if (mType == Horizontal)
+		horiz2d(marker_world_pos) += 2 + mSliderPos * (horiz2d(mFrameTexSize) - (horiz2d(mMarkerTexSize)+4));
+	else
+	{
+		horiz2d(marker_world_pos) += 0.5f * (horiz2d(mFrameTexSize) - (horiz2d(mMarkerTexSize)));
+		vert2d(marker_world_pos) += 2 + mSliderPos * (vert2d(mFrameTexSize) - (vert2d(mMarkerTexSize)+4));
+	}
+
 
 	return marker_world_pos;
 }
@@ -504,17 +554,18 @@ void MagicWandTestTextureWidget::Render(const App& inApp, float inTimeSecs, cons
 
 SimplePanelWidget::SimplePanelWidget()
 :	mChildren(true)
+,	mAutoChildren(false)
 {
 }
 
 
-bool SimplePanelWidget::Create(const glm::vec2& inPos, const glm::vec2& inSize, MagicWand::FrameType inType)
+bool SimplePanelWidget::Create(const glm::vec2& inPos, const glm::vec2& inSize, MagicWand::FrameType inType, EOverflowSliderType inOverflowSliderType)
 {
 	mPos = to3d_point(inPos);
 	mSize = inSize;
 	mType = inType;
+	mOverflowSliderType = inOverflowSliderType;
 	
-
 	return true;
 }
 
@@ -528,9 +579,12 @@ void SimplePanelWidget::CreateTextures(const App& inApp)
 		GLsizei dims[2];
 		dims[0] = mSize.x;
 		dims[1] = mSize.y;
-		inApp.GetWand().MakeFrameTexture(mType, mTexture.mTexture, dims[0], dims[1]);
+		inApp.GetWand().MakeFrameTexture(mType, mTexture.mTexture, dims[0], dims[1], mScissorPos, mScissorSize);
 		mSize.x = dims[0];
 		mSize.y = dims[1];
+
+		vert2d(mScissorPos) += 1.0f;
+		vert2d(mScissorSize) -= 2.0f;
 	}
 }
 
@@ -542,10 +596,53 @@ void SimplePanelWidget::Update(const App& inApp, float inTimeSecs, const SceneTr
 		CreateTextures(inApp);
 	}
 
-	SceneTransform local_transform;
-	local_transform[2] = mPos;
+	{
+		SceneTransform local_transform;
+		local_transform[2] = mPos;
 
-	mChildren.Update(inApp, inTimeSecs, inParentTransform, local_transform, inParentTransformDirty || false);
+		local_transform[2] += to3d_point(mOverflowPosOffset);
+		mChildren.Update(inApp, inTimeSecs, inParentTransform, local_transform, inParentTransformDirty || false);
+	}
+
+	if (mOverflowSliderType == AutoOverflowSlider)
+	{
+		float max_local_pos_vertical = 0.0f;
+
+		for (size_t i=0; i<mChildren.mChildWidgets.size(); ++i)
+		{
+			float local_pos_vertical = vert2d(to2d_point(mChildren.mChildWidgets[i]->GetLocalPosition(inApp))) + vert2d(mChildren.mChildWidgets[i]->GetSize(inApp));
+
+			if (local_pos_vertical > max_local_pos_vertical)
+				max_local_pos_vertical = local_pos_vertical;
+		}
+
+		mOverflowSliderType = max_local_pos_vertical > vert2d(mScissorSize) ? OverflowSlider : NoOverflowSlider;
+		
+		if (mOverflowSliderType == OverflowSlider)
+			mOverflowSpaceSize = (max_local_pos_vertical - vert2d(mScissorSize)) + 4.0f;
+	}
+
+	if (mOverflowSliderType == OverflowSlider)
+	{
+		if (mAutoChildren.mChildWidgets.empty())
+		{
+			{
+				mOverflowSlider.CreateVertical(glm::vec2(horiz2d(mSize) - 14.0f - 8.0f, 6.0f), glm::vec2(14.0f, vert2d(mSize)-24.0f));
+				mOverflowSlider.SetSliderPos(0.0f);
+
+				mAutoChildren.mChildWidgets.push_back(&mOverflowSlider);
+			}
+		}
+	}
+
+	{
+		SceneTransform local_transform;
+		local_transform[2] = mPos;
+
+		mAutoChildren.Update(inApp, inTimeSecs, inParentTransform, local_transform, inParentTransformDirty || false);
+	}
+
+	vert2d(mOverflowPosOffset) = -mOverflowSpaceSize * mOverflowSlider.GetSliderPos();
 }
 
 
@@ -573,10 +670,14 @@ void SimplePanelWidget::Render(const App& inApp, float inTimeSecs, const SceneTr
 		}
 
 
-		inApp.PushScissor(to2d_point(world_pos), mSize);
+		inApp.PushScissor(to2d_point(world_pos) + mScissorPos, mScissorSize);
 		{
 			SceneTransform local_transform;
 			local_transform[2] = mPos;
+			
+			mAutoChildren.Render(inApp, inTimeSecs, inParentTransform, local_transform, inParentTransformDirty || false);
+
+			local_transform[2] += to3d_point(mOverflowPosOffset);
 			mChildren.Render(inApp, inTimeSecs, inParentTransform, local_transform, inParentTransformDirty || false);
 		}
 		inApp.PopScissor();
@@ -840,13 +941,12 @@ bool NativeWindowWidget::Create(App& inApp, const WideString& inWindowName, int 
 	//ReshapeGL (window->init.width, window->init.height);				// Reshape Our GL Window
 
 	{
-		mDefaultFont.Create("media/DroidSans.ttf", 16.0f);
 		inApp.GetWand().LoadFont("media/DroidSans.ttf");
 
 		inApp.GetOGLStateManager().StartBuild(EOGLState_Count);
 		inApp.GetOGLStateManager().BuildSetState(new OGLState(), EOGLState_Reset);
 		inApp.GetOGLStateManager().BuildSetState(new OGLState_NativeWindowWidget(*this), EOGLState_NativeWindowWidget);
-		inApp.GetOGLStateManager().BuildSetState(new OGLState_FontRender(mDefaultFont), EOGLState_FontRender, EOGLState_NativeWindowWidget);
+		//inApp.GetOGLStateManager().BuildSetState(new OGLState_FontRender(mDefaultFont), EOGLState_FontRender, EOGLState_NativeWindowWidget);
 		inApp.GetOGLStateManager().BuildSetState(new OGLState_TextureWidget(), EOGLState_TextureWidget, EOGLState_NativeWindowWidget);
 		inApp.GetOGLStateManager().EndBuild();
 	}
@@ -884,15 +984,19 @@ void NativeWindowWidget::Test(App& inApp)
 	}
 	*/
 
+	
+	// Takes time to fill gradient
+	/*
 	{
 		SimplePanelWidget* widget = new SimplePanelWidget();
-		widget->Create(glm::vec2(10.0f, 30.0f), glm::vec2(780.0f, 720.0f), MagicWand::FRAME_NORMAL_CUT_UPPER);
+		widget->Create(glm::vec2(10.0f, 30.0f), glm::vec2(780.0f, 720.0f), MagicWand::FRAME_NORMAL_CUT_UPPER, SimplePanelWidget::NoOverflowSlider);
 		mChildren.mChildWidgets.push_back(widget);
 	}
+	*/
 
 	{
 		SimpleTextWidget* text_widget = new SimpleTextWidget();
-		text_widget->Create(inApp, glm::vec2(820.0f, 25.0f), MagicWand::TextInfo("Tools", 0, 14.0f, true, glm::vec2(0.0f, 0.0f)), MagicWand::SizeConstraints());
+		text_widget->Create(inApp, glm::vec2(800.0f, 25.0f), MagicWand::TextInfo("Tools", 0, 14.0f, true, glm::vec2(0.0f, 0.0f)), MagicWand::SizeConstraints());
 			
 		//pos_vert += vert2d(text_widget->GetSize(inApp)) + 2.0f * height_offset;
 
@@ -901,7 +1005,7 @@ void NativeWindowWidget::Test(App& inApp)
 
 	{
 		SimplePanelWidget* widget = new SimplePanelWidget();
-		widget->Create(glm::vec2(820.0f, 55.0f), glm::vec2(180.0f, 250.0f), MagicWand::FRAME_NORMAL);
+		widget->Create(glm::vec2(800.0f, 55.0f), glm::vec2(200.0f, 250.0f), MagicWand::FRAME_NORMAL, SimplePanelWidget::AutoOverflowSlider);
 		mChildren.mChildWidgets.push_back(widget);
 
 		ChildWidgetContainer& children = widget->GetChildren();
@@ -980,6 +1084,20 @@ void NativeWindowWidget::Test(App& inApp)
 		{
 			SimpleButtonWidget* button_widget = new SimpleButtonWidget();
 			button_widget->Create(glm::vec2(8.0f, pos_vert), true, MagicWand::TextInfo("Untoggled eye ;)", 0, 12.0f, false, glm::vec2(10.0f, 2.0f)), sizeConstraints);
+			
+			pos_vert += vert2d(button_widget->GetSize(inApp)) + height_offset;
+
+			children.mChildWidgets.push_back(button_widget);
+		}
+
+
+		for (int i=0; i<10; ++i)
+		{
+			std::string filler_name;
+			strtk::construct(filler_name, "", "Filler ", i);
+
+			SimpleButtonWidget* button_widget = new SimpleButtonWidget();
+			button_widget->Create(glm::vec2(8.0f, pos_vert), true, MagicWand::TextInfo(filler_name.c_str(), 0, 12.0f, false, glm::vec2(10.0f, 2.0f)), sizeConstraints);
 			
 			pos_vert += vert2d(button_widget->GetSize(inApp)) + height_offset;
 
