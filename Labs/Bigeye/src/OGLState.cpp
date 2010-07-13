@@ -266,6 +266,8 @@ OGLState* OGLStateManager::Enable(OGLState* inState) const
 					{
 						if (IsAncestor(mCurrentStateStack.back()->mStateManagerIndex, state_index))
 							break;
+
+						mCurrentStateStack.pop_back();
 					} 
 
 					if (!mCurrentStateStack.empty())
@@ -283,6 +285,8 @@ OGLState* OGLStateManager::Enable(OGLState* inState) const
 				if (IsAncestor(mRootStates[i]->mStateManagerIndex, state_index))
 				{
 					closest_ancestor = mRootStates[i];
+					closest_ancestor->Set();
+					mCurrentStateStack.push_back(closest_ancestor);
 					break;
 				}
 			}

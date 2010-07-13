@@ -489,7 +489,7 @@ void SimpleTextureWidget::Render(const App& inApp, float inTimeSecs, const Scene
 
 
 SimpleRenderToTextureWidget::SimpleRenderToTextureWidget()
-:	mChildren(true)
+:	mScene(NULL)
 {
 }
 
@@ -512,22 +512,23 @@ bool SimpleRenderToTextureWidget::Create(const App& inApp, const glm::vec2& inPo
 
 void SimpleRenderToTextureWidget::Update(const App& inApp, float inTimeSecs, const SceneTransform& inParentTransform, bool inParentTransformDirty)
 {
-	
+	if (mScene)
+		mScene->Update(inApp, *this, inTimeSecs);
 }
 
 
 void SimpleRenderToTextureWidget::Render(const App& inApp, float inTimeSecs, const SceneTransform& inParentTransform, bool inParentTransformDirty)
 {
+	//return;
+
 	glm::vec3 world_pos = inParentTransform * mPos;
 
 	inApp.PushRenderToTexture(to2d_point(world_pos), mTexture);
 	{
-		SceneTransform local_transform;
-		local_transform[2] = mPos;
-		mChildren.Render(inApp, inTimeSecs, inParentTransform, local_transform, inParentTransformDirty || false);
+		if (mScene)
+			mScene->Render(inApp, *this, inTimeSecs);
 	}
 	inApp.PopRenderToTexture();
-
 
 	inApp.GetOGLStateManager().Enable(EOGLState_TextureWidget);
 	{
@@ -539,10 +540,11 @@ void SimpleRenderToTextureWidget::Render(const App& inApp, float inTimeSecs, con
 		//glColor4f(1.0f,1.0f,1.0f,1.0f);			
 
 		glBegin(GL_QUADS);
-			 glTexCoord2f(0.0f,0.0f); glVertex2f(world_pos.x,world_pos.y);
-			 glTexCoord2f(1.0f,0.0f); glVertex2f(world_pos.x+mSize.x,world_pos.y);
-			 glTexCoord2f(1.0f,1.0f); glVertex2f(world_pos.x+mSize.x,world_pos.y+mSize.y);
-			 glTexCoord2f(0.0f,1.0f); glVertex2f(world_pos.x,world_pos.y+mSize.y);
+			 // here we invert the coordinates because the texture is stored bottom up (??not sure??)
+			 glTexCoord2f(0.0f,1.0f); glVertex2f(world_pos.x,world_pos.y);
+			 glTexCoord2f(1.0f,1.0f); glVertex2f(world_pos.x+mSize.x,world_pos.y);
+			 glTexCoord2f(1.0f,0.0f); glVertex2f(world_pos.x+mSize.x,world_pos.y+mSize.y);
+			 glTexCoord2f(0.0f,0.0f); glVertex2f(world_pos.x,world_pos.y+mSize.y);
 		glEnd();
 	}
 }
@@ -805,8 +807,14 @@ OGLRenderToTexture* NativeWindowWidget::PopRenderToTexture() const
 		ret = top.mObject;
 		top.mObject->EndRender();
 	}
-
+	
 	mRenderToTextureStack.pop();
+
+	if (mRenderToTextureStack.empty())
+	{
+		mApp->GetOGLStateManager().Enable(EOGLState_Reset);
+	}
+
 	return ret;
 }
 
@@ -816,6 +824,7 @@ NativeWindowWidget::NativeWindowWidget()
 ,	mHRC(NULL)
 ,	mIsWNDCLASSRegistered(false)
 ,	mChildren(true)
+,	mApp(NULL)
 {
 }
 
@@ -897,6 +906,7 @@ LRESULT CALLBACK NativeWindowWidget::WindowProc(HWND hWnd, UINT uMsg, WPARAM wPa
 
 bool NativeWindowWidget::Create(App& inApp, const WideString& inWindowName, int inWidth, int inHeight)
 {
+	mApp = &inApp;
 	DWORD windowStyle = WS_OVERLAPPEDWINDOW;							
 	DWORD windowExtendedStyle = WS_EX_APPWINDOW;					
 
@@ -1043,6 +1053,105 @@ bool NativeWindowWidget::Create(App& inApp, const WideString& inWindowName, int 
 }
 
 
+class TestScene : public SimpleRenderToTextureWidget::Scene
+{
+public:
+
+	void Render(const App& inApp, SimpleRenderToTextureWidget& inParent, float inTimeSecs)	
+	{
+		glDisable(GL_BLEND);
+		glDisable(GL_TEXTURE_2D);
+
+		glClearDepth(1.0f);
+		glClear(GL_DEPTH_BUFFER_BIT);
+
+		glMatrixMode(GL_PROJECTION);						// Select The Projection Matrix
+		glLoadIdentity();									// Reset The Projection Matrix
+
+		// Calculate The Aspect Ratio Of The Window
+		gluPerspective(45.0f,(GLfloat)inParent.GetSize(inApp).x/(GLfloat)inParent.GetSize(inApp).y,0.1f,100.0f);
+
+		glMatrixMode(GL_MODELVIEW);							// Select The Modelview Matrix
+		glLoadIdentity();		
+
+		glShadeModel(GL_SMOOTH);							// Enable Smooth Shading
+		glEnable(GL_DEPTH_TEST);							// Enables Depth Testing
+		glDepthFunc(GL_LEQUAL);
+		glHint(GL_PERSPECTIVE_CORRECTION_HINT, GL_NICEST);	// Really Nice Perspective Calculations
+
+		float rtri = 16.0f * inTimeSecs;
+		float rquad = 128.0f * -inTimeSecs;
+
+		glLoadIdentity();									// Reset The Current Modelview Matrix
+		glTranslatef(-1.5f,0.0f,-6.0f);						// Move Left 1.5 Units And Into The Screen 6.0
+		glRotatef(rtri,0.0f,1.0f,0.0f);						// Rotate The Triangle On The Y axis ( NEW )
+		glBegin(GL_TRIANGLES);								// Start Drawing A Triangle
+			glColor3f(1.0f,0.0f,0.0f);						// Red
+			glVertex3f( 0.0f, 1.0f, 0.0f);					// Top Of Triangle (Front)
+			glColor3f(0.0f,1.0f,0.0f);						// Green
+			glVertex3f(-1.0f,-1.0f, 1.0f);					// Left Of Triangle (Front)
+			glColor3f(0.0f,0.0f,1.0f);						// Blue
+			glVertex3f( 1.0f,-1.0f, 1.0f);					// Right Of Triangle (Front)
+			glColor3f(1.0f,0.0f,0.0f);						// Red
+			glVertex3f( 0.0f, 1.0f, 0.0f);					// Top Of Triangle (Right)
+			glColor3f(0.0f,0.0f,1.0f);						// Blue
+			glVertex3f( 1.0f,-1.0f, 1.0f);					// Left Of Triangle (Right)
+			glColor3f(0.0f,1.0f,0.0f);						// Green
+			glVertex3f( 1.0f,-1.0f, -1.0f);					// Right Of Triangle (Right)
+			glColor3f(1.0f,0.0f,0.0f);						// Red
+			glVertex3f( 0.0f, 1.0f, 0.0f);					// Top Of Triangle (Back)
+			glColor3f(0.0f,1.0f,0.0f);						// Green
+			glVertex3f( 1.0f,-1.0f, -1.0f);					// Left Of Triangle (Back)
+			glColor3f(0.0f,0.0f,1.0f);						// Blue
+			glVertex3f(-1.0f,-1.0f, -1.0f);					// Right Of Triangle (Back)
+			glColor3f(1.0f,0.0f,0.0f);						// Red
+			glVertex3f( 0.0f, 1.0f, 0.0f);					// Top Of Triangle (Left)
+			glColor3f(0.0f,0.0f,1.0f);						// Blue
+			glVertex3f(-1.0f,-1.0f,-1.0f);					// Left Of Triangle (Left)
+			glColor3f(0.0f,1.0f,0.0f);						// Green
+			glVertex3f(-1.0f,-1.0f, 1.0f);					// Right Of Triangle (Left)
+		glEnd();											// Done Drawing The Pyramid
+
+		glLoadIdentity();									// Reset The Current Modelview Matrix
+		glTranslatef(1.5f,0.0f,-7.0f);						// Move Right 1.5 Units And Into The Screen 7.0
+		glRotatef(rquad,1.0f,1.0f,1.0f);					// Rotate The Quad On The X axis ( NEW )
+		glBegin(GL_QUADS);									// Draw A Quad
+			glColor3f(0.0f,1.0f,0.0f);						// Set The Color To Green
+			glVertex3f( 1.0f, 1.0f,-1.0f);					// Top Right Of The Quad (Top)
+			glVertex3f(-1.0f, 1.0f,-1.0f);					// Top Left Of The Quad (Top)
+			glVertex3f(-1.0f, 1.0f, 1.0f);					// Bottom Left Of The Quad (Top)
+			glVertex3f( 1.0f, 1.0f, 1.0f);					// Bottom Right Of The Quad (Top)
+			glColor3f(1.0f,0.5f,0.0f);						// Set The Color To Orange
+			glVertex3f( 1.0f,-1.0f, 1.0f);					// Top Right Of The Quad (Bottom)
+			glVertex3f(-1.0f,-1.0f, 1.0f);					// Top Left Of The Quad (Bottom)
+			glVertex3f(-1.0f,-1.0f,-1.0f);					// Bottom Left Of The Quad (Bottom)
+			glVertex3f( 1.0f,-1.0f,-1.0f);					// Bottom Right Of The Quad (Bottom)
+			glColor3f(1.0f,0.0f,0.0f);						// Set The Color To Red
+			glVertex3f( 1.0f, 1.0f, 1.0f);					// Top Right Of The Quad (Front)
+			glVertex3f(-1.0f, 1.0f, 1.0f);					// Top Left Of The Quad (Front)
+			glVertex3f(-1.0f,-1.0f, 1.0f);					// Bottom Left Of The Quad (Front)
+			glVertex3f( 1.0f,-1.0f, 1.0f);					// Bottom Right Of The Quad (Front)
+			glColor3f(1.0f,1.0f,0.0f);						// Set The Color To Yellow
+			glVertex3f( 1.0f,-1.0f,-1.0f);					// Top Right Of The Quad (Back)
+			glVertex3f(-1.0f,-1.0f,-1.0f);					// Top Left Of The Quad (Back)
+			glVertex3f(-1.0f, 1.0f,-1.0f);					// Bottom Left Of The Quad (Back)
+			glVertex3f( 1.0f, 1.0f,-1.0f);					// Bottom Right Of The Quad (Back)
+			glColor3f(0.0f,0.0f,1.0f);						// Set The Color To Blue
+			glVertex3f(-1.0f, 1.0f, 1.0f);					// Top Right Of The Quad (Left)
+			glVertex3f(-1.0f, 1.0f,-1.0f);					// Top Left Of The Quad (Left)
+			glVertex3f(-1.0f,-1.0f,-1.0f);					// Bottom Left Of The Quad (Left)
+			glVertex3f(-1.0f,-1.0f, 1.0f);					// Bottom Right Of The Quad (Left)
+			glColor3f(1.0f,0.0f,1.0f);						// Set The Color To Violet
+			glVertex3f( 1.0f, 1.0f,-1.0f);					// Top Right Of The Quad (Right)
+			glVertex3f( 1.0f, 1.0f, 1.0f);					// Top Left Of The Quad (Right)
+			glVertex3f( 1.0f,-1.0f, 1.0f);					// Bottom Left Of The Quad (Right)
+			glVertex3f( 1.0f,-1.0f,-1.0f);					// Bottom Right Of The Quad (Right)
+		glEnd();											// Done Drawing The Quad
+	}
+};
+TestScene mTestScene;
+SimpleRenderToTextureWidget* mTestWidget;
+
 void NativeWindowWidget::Test(App& inApp)
 {
 	//GLenum err = glewInit();
@@ -1076,20 +1185,21 @@ void NativeWindowWidget::Test(App& inApp)
 
 	
 	// Takes time to fill gradient
-	/*
 	{
 		SimplePanelWidget* widget = new SimplePanelWidget();
 		widget->Create(glm::vec2(10.0f, 30.0f), glm::vec2(780.0f, 720.0f), MagicWand::FRAME_NORMAL_CUT_UPPER, SimplePanelWidget::NoOverflowSlider);
 		mChildren.mChildWidgets.push_back(widget);
 	}
-	*/
 
 #if 1
 	{
 		SimpleRenderToTextureWidget* widget = new SimpleRenderToTextureWidget();
 		widget->Create(inApp, glm::vec2(10.0f, 30.0f), glm::vec2(640.0f, 480.0f));
+		widget->SetScene(&mTestScene);
 		mChildren.mChildWidgets.push_back(widget);
+		mTestWidget = widget;
 	}
+
 #endif
 
 	{
@@ -1257,16 +1367,17 @@ void OGLState_NativeWindowWidget::Set()
 	GLint viewport_height = mParent.GetViewportHeight();
 
 	glViewport(0, 0, (GLsizei)(viewport_width), (GLsizei)(viewport_height));
-	glClear(GL_COLOR_BUFFER_BIT);
+	//glClear(GL_COLOR_BUFFER_BIT);
 
 	glMatrixMode(GL_PROJECTION);
 	glLoadIdentity();
 	//glOrtho(0.0f, window_width, window_height, 0.0f, -1.0f, 1.0f);
 	glOrtho(0.0f, viewport_width, viewport_height, 0.0f, -1.0f, 1.0f);
 
-
 	glMatrixMode( GL_MODELVIEW );
 	glLoadIdentity();
+
+	glDisable(GL_DEPTH_TEST);
 
 	// For 2D pixel precise mode
 	//glTranslatef (0.375f, 0.375f, 0.0f);
@@ -1297,7 +1408,7 @@ void NativeWindowWidget::Render(const App& inApp, float inTimeSecs, const SceneT
 
 	glClearColor(0.0f, 0.0f, 0.0f, 1.0f);
 	glClearColor(39.0f/255.0f, 39.0f/255.0f, 39.0f/255.0f, 1.0f);
-	glClearColor(176.0f/255.0f, 176.0f/255.0f, 176.0f/255.0f, 1.0f);
+	//glClearColor(176.0f/255.0f, 176.0f/255.0f, 176.0f/255.0f, 1.0f);
 	//glClearColor(49.0f/255.0f, 140.0f/255.0f, 231.0f / 255.0f, 1.0f);
 	//glClearColor(255.0f/255.0f, 255.0f/255.0f, 255.0f/255.0f, 1.0f);
 	
@@ -1306,6 +1417,7 @@ void NativeWindowWidget::Render(const App& inApp, float inTimeSecs, const SceneT
 	//glClearColor(1.0f, 1.0f, 1.0f, 1.0f);
 	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);	// Clear Screen And Depth Buffer
 
+	//mTestScene.Render(inApp, *mTestWidget, inTimeSecs);
 	mChildren.Render(inApp, inTimeSecs, inParentTransform, kIdentitySceneTransform, inParentTransformDirty || false);
 
 	{

@@ -136,12 +136,19 @@ namespace BE
 	{
 	public:
 
+		class Scene
+		{
+		public:
+
+			virtual void Update(const App& inApp, SimpleRenderToTextureWidget& inParent, float inTimeSecs)	{}
+			virtual void Render(const App& inApp, SimpleRenderToTextureWidget& inParent, float inTimeSecs)	{}
+		};
+
 		SimpleRenderToTextureWidget();
 		virtual ~SimpleRenderToTextureWidget();
 
 		bool		Create(const App& inApp, const glm::vec2& inPos, const glm::vec2& inSize);
-
-		ChildWidgetContainer& GetChildren() { return mChildren; } 
+		void		SetScene(Scene* inScene)		{ mScene = inScene; }
 
 		virtual void Update(const App& inApp, float inTimeSecs, const SceneTransform& inParentTransform, bool inParentTransformDirty);
 		virtual void Render(const App& inApp, float inTimeSecs, const SceneTransform& inParentTransform, bool inParentTransformDirty);
@@ -155,7 +162,7 @@ namespace BE
 		glm::vec3 mPos;
 		glm::vec2 mSize;
 
-		ChildWidgetContainer mChildren;
+		Scene* mScene;
 	};
 
 	class SimpleTextWidget : public Widget
@@ -380,6 +387,7 @@ namespace BE
 		void			Destroy();
 		void			Test(App& inApp);
 
+		App*	mApp;
 		bool	mIsWNDCLASSRegistered;
 		HWND	mHWND;
 		HDC		mHDC;

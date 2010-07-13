@@ -6,8 +6,11 @@ int main()
 
 	app.Create("Bigeye", 1024, 768);
 
-	while (app.Update(0.0f))
+	TimerMillis timer;
+
+	while (app.Update(timer.GetTimeSecs()))
 	{
+		timer.CacheTime();
 	}
 
 	return 0;
