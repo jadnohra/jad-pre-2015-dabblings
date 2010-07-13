@@ -8,7 +8,6 @@
 #include "OGL.h"
 #include "OGLState.h"
 #include "OGLFontRender.h"
-#include "RoundedRectangle.h"
 #include "MagickWand.h"
 
 namespace BE
@@ -130,6 +129,33 @@ namespace BE
 		GLuint mTexture;
 		glm::vec3 mPos;
 		glm::vec2 mSize;
+	};
+
+
+	class SimpleRenderToTextureWidget : public Widget
+	{
+	public:
+
+		SimpleRenderToTextureWidget();
+		virtual ~SimpleRenderToTextureWidget();
+
+		bool		Create(const App& inApp, const glm::vec2& inPos, const glm::vec2& inSize);
+
+		ChildWidgetContainer& GetChildren() { return mChildren; } 
+
+		virtual void Update(const App& inApp, float inTimeSecs, const SceneTransform& inParentTransform, bool inParentTransformDirty);
+		virtual void Render(const App& inApp, float inTimeSecs, const SceneTransform& inParentTransform, bool inParentTransformDirty);
+
+		virtual glm::vec2 GetSize(const App& inApp) { return mSize; }
+		virtual glm::vec3 GetLocalPosition(const App& inApp) { return mPos; }
+
+	protected:
+
+		OGLRenderToTexture mTexture;
+		glm::vec3 mPos;
+		glm::vec2 mSize;
+
+		ChildWidgetContainer mChildren;
 	};
 
 	class SimpleTextWidget : public Widget
@@ -294,6 +320,9 @@ namespace BE
 		void			PushScissor(const glm::vec2& inPos, const glm::vec2& inSize) const; 
 		void			PopScissor() const; 
 
+		void			PushRenderToTexture(const glm::vec2& inPos, OGLRenderToTexture& inObject) const;
+		OGLRenderToTexture*			PopRenderToTexture() const;
+
 		GLint			GetViewportWidth() const { return mViewportWidth; }
 		GLint			GetViewportHeight() const { return mViewportHeight; }
 
@@ -323,7 +352,30 @@ namespace BE
 			}
 		};
 
+		struct RenderToTextureStackElement
+		{
+			GLint mPosX;
+			GLint mPosY;
+
+			OGLRenderToTexture*	mObject;
+
+			RenderToTextureStackElement()
+			:	mPosX(0)
+			,	mPosY(0)
+			,	mObject(NULL)
+			{
+			}
+
+			RenderToTextureStackElement(const glm::vec2& inPos, OGLRenderToTexture& inObject)
+			:	mPosX((GLint) inPos.x)
+			,	mPosY((GLint) inPos.y)
+			,	mObject(&inObject)
+			{
+			}
+		};
+
 		typedef std::stack<ScissorStackElement> ScissorStack;
+		typedef std::stack<RenderToTextureStackElement> RenderToTextureStack;
 
 		void			Destroy();
 		void			Test(App& inApp);
@@ -334,6 +386,7 @@ namespace BE
 		HGLRC	mHRC;
 		ChildWidgetContainer mChildren;
 		mutable ScissorStack mScissorStack;	
+		mutable RenderToTextureStack mRenderToTextureStack;	
 		GLint mViewportWidth;
 		GLint mViewportHeight;
 	};
@@ -385,6 +438,9 @@ namespace BE
 
 		void					PushScissor(const glm::vec2& inPos, const glm::vec2& inSize) const	{ mWindow->PushScissor(inPos, inSize); }
 		void					PopScissor() const													{ mWindow->PopScissor(); }
+
+		void			PushRenderToTexture(const glm::vec2& inPos, OGLRenderToTexture& inObject) const { mWindow->PushRenderToTexture(inPos, inObject); }
+		OGLRenderToTexture*			PopRenderToTexture() const											{ return mWindow->PopRenderToTexture(); }
 
 	protected:
 

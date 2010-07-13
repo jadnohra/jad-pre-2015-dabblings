@@ -41,7 +41,7 @@
 			<Tool
 				Name="VCCLCompilerTool"
 				Optimization="0"
-				AdditionalIncludeDirectories="../../../Dependencies/;../../../Dependencies/ImageMagickWand/include"
+				AdditionalIncludeDirectories="../../../Dependencies/;../../../Dependencies/ImageMagickWand/include;../../../Dependencies/glew-1.5.4/include"
 				PreprocessorDefinitions="WIN32;_DEBUG;_CONSOLE"
 				MinimalRebuild="true"
 				BasicRuntimeChecks="3"
@@ -63,7 +63,7 @@
 				Name="VCLinkerTool"
 				OutputFile="$(OutDir)\$(ProjectName)_d.exe"
 				LinkIncremental="2"
-				AdditionalLibraryDirectories="../../../Dependencies/freeglut;../../../Dependencies/ImageMagickWand/lib"
+				AdditionalLibraryDirectories="../../../Dependencies/freeglut;../../../Dependencies/ImageMagickWand/lib;../../../Dependencies/glew-1.5.4/lib"
 				GenerateDebugInformation="true"
 				SubSystem="1"
 				TargetMachine="1"
@@ -117,7 +117,7 @@
 				Name="VCCLCompilerTool"
 				Optimization="2"
 				EnableIntrinsicFunctions="true"
-				AdditionalIncludeDirectories="../../../Dependencies/;../../../Dependencies/ImageMagickWand/include"
+				AdditionalIncludeDirectories="../../../Dependencies/;../../../Dependencies/ImageMagickWand/include;../../../Dependencies/glew-1.5.4/include"
 				PreprocessorDefinitions="WIN32;NDEBUG;_CONSOLE"
 				RuntimeLibrary="2"
 				EnableFunctionLevelLinking="true"
@@ -137,7 +137,7 @@
 			<Tool
 				Name="VCLinkerTool"
 				LinkIncremental="1"
-				AdditionalLibraryDirectories="../../../Dependencies/freeglut;../../../Dependencies/ImageMagickWand/lib"
+				AdditionalLibraryDirectories="../../../Dependencies/freeglut;../../../Dependencies/ImageMagickWand/lib;../../../Dependencies/glew-1.5.4/lib"
 				GenerateDebugInformation="true"
 				SubSystem="1"
 				OptimizeReferences="2"
@@ -223,6 +223,10 @@
 			>
 		</File>
 		<File
+			RelativePath="..\..\src\OGL.cpp"
+			>
+		</File>
+		<File
 			RelativePath="..\..\src\OGL.h"
 			>
 		</File>
@@ -244,14 +248,6 @@
 		</File>
 		<File
 			RelativePath="..\..\src\Platform.h"
-			>
-		</File>
-		<File
-			RelativePath="..\..\src\RoundedRectangle.cpp"
-			>
-		</File>
-		<File
-			RelativePath="..\..\src\RoundedRectangle.h"
 			>
 		</File>
 		<File

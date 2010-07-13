@@ -488,6 +488,66 @@ void SimpleTextureWidget::Render(const App& inApp, float inTimeSecs, const Scene
 }
 
 
+SimpleRenderToTextureWidget::SimpleRenderToTextureWidget()
+:	mChildren(true)
+{
+}
+
+SimpleRenderToTextureWidget::~SimpleRenderToTextureWidget()
+{
+}
+
+bool SimpleRenderToTextureWidget::Create(const App& inApp, const glm::vec2& inPos, const glm::vec2& inSize)
+{
+	mPos = to3d_point(inPos);
+
+	if (!mTexture.Create((GLsizei) inSize.x, (GLsizei) inSize.y))
+		return false;
+
+	mSize = inSize;
+
+	return true;
+}
+
+
+void SimpleRenderToTextureWidget::Update(const App& inApp, float inTimeSecs, const SceneTransform& inParentTransform, bool inParentTransformDirty)
+{
+	
+}
+
+
+void SimpleRenderToTextureWidget::Render(const App& inApp, float inTimeSecs, const SceneTransform& inParentTransform, bool inParentTransformDirty)
+{
+	glm::vec3 world_pos = inParentTransform * mPos;
+
+	inApp.PushRenderToTexture(to2d_point(world_pos), mTexture);
+	{
+		SceneTransform local_transform;
+		local_transform[2] = mPos;
+		mChildren.Render(inApp, inTimeSecs, inParentTransform, local_transform, inParentTransformDirty || false);
+	}
+	inApp.PopRenderToTexture();
+
+
+	inApp.GetOGLStateManager().Enable(EOGLState_TextureWidget);
+	{
+		mTexture.Bind();
+		glTexParameteri(GL_TEXTURE_2D,GL_TEXTURE_MIN_FILTER,GL_NEAREST);	// Linear Filtering
+		glTexParameteri(GL_TEXTURE_2D,GL_TEXTURE_MAG_FILTER,GL_NEAREST);	// Linear Filtering
+		
+		glTexEnvi(GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_REPLACE);
+		//glColor4f(1.0f,1.0f,1.0f,1.0f);			
+
+		glBegin(GL_QUADS);
+			 glTexCoord2f(0.0f,0.0f); glVertex2f(world_pos.x,world_pos.y);
+			 glTexCoord2f(1.0f,0.0f); glVertex2f(world_pos.x+mSize.x,world_pos.y);
+			 glTexCoord2f(1.0f,1.0f); glVertex2f(world_pos.x+mSize.x,world_pos.y+mSize.y);
+			 glTexCoord2f(0.0f,1.0f); glVertex2f(world_pos.x,world_pos.y+mSize.y);
+		glEnd();
+	}
+}
+
+
 MagicWandTestTextureWidget::MagicWandTestTextureWidget()
 {
 }
@@ -565,6 +625,7 @@ bool SimplePanelWidget::Create(const glm::vec2& inPos, const glm::vec2& inSize, 
 	mSize = inSize;
 	mType = inType;
 	mOverflowSliderType = inOverflowSliderType;
+	mOverflowSpaceSize = 0.0f;
 	
 	return true;
 }
@@ -606,6 +667,7 @@ void SimplePanelWidget::Update(const App& inApp, float inTimeSecs, const SceneTr
 
 	if (mOverflowSliderType == AutoOverflowSlider)
 	{
+		mOverflowSpaceSize = 0.0f;
 		float max_local_pos_vertical = 0.0f;
 
 		for (size_t i=0; i<mChildren.mChildWidgets.size(); ++i)
@@ -723,6 +785,30 @@ void NativeWindowWidget::PopScissor() const
 	}
 }
 
+
+void NativeWindowWidget::PushRenderToTexture(const glm::vec2& inPos, OGLRenderToTexture& inObject) const
+{
+	mRenderToTextureStack.push(RenderToTextureStackElement(inPos, inObject));
+
+	const RenderToTextureStackElement& top = mRenderToTextureStack.top();
+	top.mObject->BeginRender();
+}
+
+OGLRenderToTexture* NativeWindowWidget::PopRenderToTexture() const
+{
+
+	OGLRenderToTexture* ret = NULL;
+
+	if (!mRenderToTextureStack.empty())
+	{
+		const RenderToTextureStackElement& top = mRenderToTextureStack.top();
+		ret = top.mObject;
+		top.mObject->EndRender();
+	}
+
+	mRenderToTextureStack.pop();
+	return ret;
+}
 
 NativeWindowWidget::NativeWindowWidget()
 :	mHWND(NULL)
@@ -959,6 +1045,10 @@ bool NativeWindowWidget::Create(App& inApp, const WideString& inWindowName, int 
 
 void NativeWindowWidget::Test(App& inApp)
 {
+	//GLenum err = glewInit();
+	//GLuint mFrameBufferID;
+	//glGenFramebuffersEXT(1, &mFrameBufferID);
+
 	/*
 	{
 		MagicWandTestTextureWidget* widget = new MagicWandTestTextureWidget();
@@ -993,6 +1083,14 @@ void NativeWindowWidget::Test(App& inApp)
 		mChildren.mChildWidgets.push_back(widget);
 	}
 	*/
+
+#if 1
+	{
+		SimpleRenderToTextureWidget* widget = new SimpleRenderToTextureWidget();
+		widget->Create(inApp, glm::vec2(10.0f, 30.0f), glm::vec2(640.0f, 480.0f));
+		mChildren.mChildWidgets.push_back(widget);
+	}
+#endif
 
 	{
 		SimpleTextWidget* text_widget = new SimpleTextWidget();
@@ -1091,6 +1189,7 @@ void NativeWindowWidget::Test(App& inApp)
 		}
 
 
+#if 0
 		for (int i=0; i<10; ++i)
 		{
 			std::string filler_name;
@@ -1103,6 +1202,25 @@ void NativeWindowWidget::Test(App& inApp)
 
 			children.mChildWidgets.push_back(button_widget);
 		}
+#endif
+
+#if 1
+		{
+			pos_vert += 100.0f;
+
+			int i = 66;
+
+			std::string filler_name;
+			strtk::construct(filler_name, "", "Filler ", i);
+
+			SimpleButtonWidget* button_widget = new SimpleButtonWidget();
+			button_widget->Create(glm::vec2(8.0f, pos_vert), true, MagicWand::TextInfo(filler_name.c_str(), 0, 12.0f, false, glm::vec2(10.0f, 2.0f)), sizeConstraints);
+			
+			pos_vert += vert2d(button_widget->GetSize(inApp)) + height_offset;
+
+			children.mChildWidgets.push_back(button_widget);
+		}
+#endif
 
 
 		/*
@@ -1179,8 +1297,9 @@ void NativeWindowWidget::Render(const App& inApp, float inTimeSecs, const SceneT
 
 	glClearColor(0.0f, 0.0f, 0.0f, 1.0f);
 	glClearColor(39.0f/255.0f, 39.0f/255.0f, 39.0f/255.0f, 1.0f);
-	//glClearColor(176.0f/255.0f, 176.0f/255.0f, 176.0f/255.0f, 1.0f);
+	glClearColor(176.0f/255.0f, 176.0f/255.0f, 176.0f/255.0f, 1.0f);
 	//glClearColor(49.0f/255.0f, 140.0f/255.0f, 231.0f / 255.0f, 1.0f);
+	//glClearColor(255.0f/255.0f, 255.0f/255.0f, 255.0f/255.0f, 1.0f);
 	
 	//glClearColor(100.0f/255.0f, 149.0f/255.0f, 237.0f / 255.0f, 1.0f);
 	//glClearColor(75.0f/255.0f, 146.0f/255.0f, 219.0f / 255.0f, 1.0f);
