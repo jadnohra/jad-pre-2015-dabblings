@@ -3,6 +3,8 @@
 
 #include <vector>
 #include <queue>
+#include <map>
+#include <algorithm>
 #include "Assert.h"
 #include "OGL.h"
 
@@ -262,7 +264,7 @@ namespace BE
 		virtual							~RenderNode()				{}
 
 		virtual RenderNodeDependency*	GetDependency()					{ return NULL; }
-		virtual void					Execute(Renderer& inRenderer)	{}
+		virtual void					Render(Renderer& inRenderer)	{}
 	};
 	
 
@@ -289,6 +291,25 @@ namespace BE
 			return inParent.AddChild(inNode, *mArrayPool);
 		}
 
+		void Render(Renderer& inRenderer)
+		{
+			Render(inRenderer, mRoot);
+		}
+
+		void Render(Renderer& inRenderer, TreeNode& inTreeNode)
+		{
+			if (inTreeNode.mChildren != NULL)
+			{
+				for (size_t i=0; i<inTreeNode.mChildren->mNodes.size(); ++i)
+				{
+					Render(inRenderer, (inTreeNode.mChildren->mNodes[i]));
+				}
+			}
+
+			if (inTreeNode.mNode != NULL)
+				inTreeNode.mNode->Render(inRenderer);
+		}
+
 		class DependencyContext
 		{
 		friend class RenderTree;
@@ -313,7 +334,8 @@ namespace BE
 			inContext.mWalkQueue.pop();
 
 			while (node != NULL
-					&& node->mNode->GetDependency() == NULL)
+					&& (node->mNode == NULL || node->mNode->GetDependency() == NULL)
+					)
 			{
 				if (node->mChildren != NULL)
 				{
@@ -321,6 +343,16 @@ namespace BE
 					{
 						inContext.mWalkQueue.push(&node->mChildren->mNodes[i]);
 					}
+				}
+
+				if (!inContext.mWalkQueue.empty())
+				{
+					node = inContext.mWalkQueue.front();
+					inContext.mWalkQueue.pop();
+				}
+				else
+				{
+					node = NULL;
 				}
 			}
 
@@ -371,8 +403,9 @@ namespace BE
 
 			~TreeNode()
 			{
-				gAssert(mNode == NULL);
-				gAssert(mChildren == NULL);
+				// We need this for copied nodes
+				//gAssert(mNode == NULL);
+				//gAssert(mChildren == NULL);
 			}
 
 			TreeNode& AddChild(RenderNode& inNode, TreeNodeArrayPool& inArrayPool)
@@ -380,7 +413,7 @@ namespace BE
 				if (mChildren == NULL)
 					mChildren = &inArrayPool.Get();
 
-				mChildren->Add(inNode);
+				return mChildren->Add(inNode);
 			}
 		};
 
@@ -451,6 +484,12 @@ namespace BE
 
 		void Render()
 		{
+			OrderTrees();
+
+			for (size_t i=0; i<mOrderedRenderTrees.size(); ++i)
+			{
+				mOrderedRenderTrees[i]->Render(*this);
+			}
 		}
 
 	protected:
@@ -471,19 +510,26 @@ namespace BE
 			OrderConstraint(RenderTree* inFirst, RenderTree* inSecond)
 			:	mFirst(inFirst)
 			,	mSecond(inSecond)
+			,	mChainIndex(-1)
 			{
 			}
 		};
 
-		struct RenderTreeOrder
+		struct RenderTreeOrdering
 		{
-			int mRenderTreeIndex;
+			size_t mRenderTreeIndex;
 			int mOrderIndex;
+
+			bool operator<(const RenderTreeOrdering& inComp) const
+			{
+				return mOrderIndex < inComp.mOrderIndex;
+			}
 		};
 
 		typedef std::vector<OrderConstraint> OrderConstraints;
 		typedef std::vector<size_t> OrderConstraintChain;
 		typedef std::vector<OrderConstraintChain> OrderConstraintChains;
+		typedef std::vector<RenderTreeOrdering> RenderTreeOrderings;
 
 		void OrderTrees()
 		{
@@ -499,9 +545,9 @@ namespace BE
 
 					while ((dependency = mRenderTrees[i]->NextDependency(context)) != NULL)
 					{
-						for (size_t j=0; j<dependency->mTrees.size(); ++i)
+						for (size_t j=0; j<dependency->mTrees.size(); ++j)
 						{
-							all_constrains.push_back(OrderConstraint(mRenderTrees[i], dependency->mTrees[j]));
+							all_constrains.push_back(OrderConstraint(dependency->mTrees[j], mRenderTrees[i]));
 						}
 					}
 				}
@@ -532,8 +578,12 @@ namespace BE
 					all_constrains[first_constraint_index].mChainIndex = chain_index;
 					--unchained_constraint_count;
 
-					while (unchained_constraint_count != 0)
+					int last_run_unchained_constraint_count = -1;
+
+					while (unchained_constraint_count != last_run_unchained_constraint_count)
 					{
+						last_run_unchained_constraint_count = unchained_constraint_count;
+
 						RenderTree* extremity_left = all_constrains[chain.front()].mFirst;
 						RenderTree* extremity_right = all_constrains[chain.front()].mSecond;
 
@@ -571,8 +621,58 @@ namespace BE
 
 			//
 			{
-				1. set all tree order to -1
-				2. loop thru all chains, with a counter and set it on the tree if not already set, 
+				//1. set all tree order to -1
+				//2. loop thru all chains, with a counter and set it on the tree if not already set, 
+				
+
+				RenderTreeOrderings orderings;
+				orderings.resize(mRenderTrees.size());
+
+				for (size_t i=0; i<orderings.size(); ++i)
+				{
+					orderings[i].mOrderIndex = -1;
+					orderings[i].mRenderTreeIndex = i;
+				}
+
+				typedef std::map<RenderTree*, size_t> TreeToIndexMap;
+				TreeToIndexMap treeToIndexMap;
+
+				for (size_t i=0; i<mRenderTrees.size(); ++i)
+				{
+					treeToIndexMap[mRenderTrees[i]] = i;
+				}
+
+
+				int global_ordering_counter = 0;
+
+				for (size_t i=0; i<chains.size(); ++i)
+				{
+					OrderConstraintChain& chain = chains[i];
+
+					for (size_t j=0; j<chain.size(); ++j)
+					{
+						size_t first_tree_index = treeToIndexMap[all_constrains[chain[j]].mFirst];
+						size_t second_tree_index = treeToIndexMap[all_constrains[chain[j]].mSecond];
+
+						if (orderings[first_tree_index].mOrderIndex == -1)
+						{
+							orderings[first_tree_index].mOrderIndex = global_ordering_counter++;
+						}
+
+						if (orderings[second_tree_index].mOrderIndex == -1)
+						{
+							orderings[second_tree_index].mOrderIndex = global_ordering_counter++;
+						}
+					}
+				}
+
+				std::sort(orderings.begin(), orderings.end());
+
+				mOrderedRenderTrees.resize(orderings.size());
+				for (size_t i=0; i<mOrderedRenderTrees.size(); ++i)
+				{
+					mOrderedRenderTrees[i] = mRenderTrees[orderings[i].mRenderTreeIndex];
+				}
 			}
 		}
 
@@ -586,6 +686,8 @@ namespace BE
 		RenderTrees mOrderedRenderTrees;
 	};
 
+
+	void gTestRenderer();
 }
 
 #endif
