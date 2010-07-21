@@ -10,6 +10,37 @@
 
 namespace BE
 {
+	class Renderer;
+
+	class CompactRenderState
+	{
+	public:
+
+		union
+		{
+			struct
+			{
+				unsigned enable_depth : 1;
+				unsigned enable_texture : 1;
+				unsigned enable_blend : 1;
+				unsigned enable_scissor_test : 1;
+			};
+
+			struct
+			{
+				unsigned __int32 All;
+			};
+		};
+
+		CompactRenderState() : All(0) {}
+
+		inline bool operator==(const CompactRenderState& inComp) const { return All == inComp.All; }
+		inline bool operator!=(const CompactRenderState& inComp) const { return All != inComp.All; }
+		inline CompactRenderState& operator=(const CompactRenderState& inRef) { All = inRef.All; }
+
+		void Apply(Renderer& renderer);
+	};
+
 	/*
 	class RenderState
 	{
@@ -275,9 +306,10 @@ namespace BE
 		struct TreeNode;
 		class TreeNodeArrayPool;
 
-		RenderTree(TreeNodeArrayPool& inPool)
+		RenderTree(TreeNodeArrayPool& inPool, bool inAutoDestroyRenderNodes)
 		:	mArrayPool(&inPool)
 		,	mNodeCount(1)
+		,	mAutoDestroyRenderNodes(inAutoDestroyRenderNodes)
 		{
 		}
 
@@ -364,7 +396,7 @@ namespace BE
 		
 		~RenderTree()
 		{
-			mRoot.Destroy(*mArrayPool);
+			mRoot.Destroy(*mArrayPool, mAutoDestroyRenderNodes);
 		}
 
 	public:
@@ -388,17 +420,21 @@ namespace BE
 			{
 			}
 
-			void Destroy(TreeNodeArrayPool& inArrayPool)
+			void Destroy(TreeNodeArrayPool& inArrayPool, bool inAutoDestroyRenderNodes)
 			{
 				if (mChildren != NULL)
 				{
 					for (size_t i=0; i<mChildren->mNodes.size(); ++i)
-						mChildren->mNodes[i].Destroy(inArrayPool);
+						mChildren->mNodes[i].Destroy(inArrayPool, inAutoDestroyRenderNodes);
 
 					inArrayPool.Put(*mChildren);
 				}
 
-				delete mNode;
+				if (inAutoDestroyRenderNodes)
+					delete mNode;
+
+				mChildren = NULL;
+				mNode = NULL;
 			}
 
 			~TreeNode()
@@ -466,6 +502,7 @@ namespace BE
 		
 
 		TreeNodeArrayPool* mArrayPool;
+		bool mAutoDestroyRenderNodes;
 		TreeNode mRoot;
 		int mNodeCount;
 	};
@@ -474,9 +511,14 @@ namespace BE
 	{
 	public:
 
-		RenderTree& NewTree()
+		Renderer()
 		{
-			RenderTree* new_tree = new RenderTree(mTreeNodeArrayPool);
+			mIsValidCompactRenderState = false;
+		}
+
+		RenderTree& NewTree(bool inAutoDestroyRenderNodes)
+		{
+			RenderTree* new_tree = new RenderTree(mTreeNodeArrayPool, inAutoDestroyRenderNodes);
 			mRenderTrees.push_back(new_tree);
 
 			return *new_tree;
@@ -484,12 +526,34 @@ namespace BE
 
 		void Render()
 		{
+			mIsValidCompactRenderState = false;
+
 			OrderTrees();
 
 			for (size_t i=0; i<mOrderedRenderTrees.size(); ++i)
 			{
 				mOrderedRenderTrees[i]->Render(*this);
 			}
+		}
+
+		bool HasCurrentCompactRenderState()
+		{
+			return mIsValidCompactRenderState;
+		}
+
+		CompactRenderState& GetCurrentCompactRenderState()
+		{
+			return mCompactRenderState;
+		}
+
+		bool SetCurrentCompactRenderState(const CompactRenderState& inCompactRenderState)
+		{
+			mCompactRenderState =  inCompactRenderState;
+		}
+
+		void InvalidateCurrentCompactRenderState()
+		{
+			mIsValidCompactRenderState = false;
 		}
 
 	protected:
@@ -676,7 +740,6 @@ namespace BE
 			}
 		}
 
-
 	protected:
 
 		typedef std::vector<RenderTree*> RenderTrees;
@@ -684,6 +747,9 @@ namespace BE
 		RenderTree::TreeNodeArrayPool mTreeNodeArrayPool;
 		RenderTrees mRenderTrees;
 		RenderTrees mOrderedRenderTrees;
+
+		bool mIsValidCompactRenderState;
+		CompactRenderState mCompactRenderState;
 	};
 
 

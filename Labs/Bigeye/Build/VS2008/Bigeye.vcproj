@@ -211,6 +211,14 @@
 			>
 		</File>
 		<File
+			RelativePath="..\..\src\BigeyeRenderNodes.cpp"
+			>
+		</File>
+		<File
+			RelativePath="..\..\src\BigeyeRenderNodes.h"
+			>
+		</File>
+		<File
 			RelativePath="..\..\src\glext.h"
 			>
 		</File>
