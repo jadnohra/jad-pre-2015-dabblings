@@ -11,7 +11,7 @@
 #endif
 
 #ifdef WIN32
-	#include <windows.h>
+	#include "Platform.h"
 	#define FREEGLUT_STATIC
 	#include "freeglut/GL/freeglut.h"
 	#include "freeglut/GL/freeglut_ext.h"

@@ -7,7 +7,7 @@
 namespace BE
 {
 
-	typedef glm::mat3 SceneTransform;
+	typedef glm::mat4 SceneTransform;
 	static const SceneTransform kIdentitySceneTransform;
 
 	static const glm::vec2 kvec2d_up(0.0f, -1.0f);
@@ -25,10 +25,11 @@ namespace BE
 	inline const float& vert2d(const glm::vec2& inVec) { return inVec.y; }
 	inline const float& horiz2d(const glm::vec2& inVec) { return inVec.x; }
 
+
 	inline glm::vec2 to2d_point(const glm::vec3& inVec) { return glm::vec2(inVec.x, inVec.y); }
 	inline glm::vec2 to2d_dir(const glm::vec3& inVec) { return glm::vec2(inVec.x, inVec.y); }
 
-	inline glm::vec3 to3d_point(const glm::vec2& inVec) { return glm::vec3(inVec.x, inVec.y, 1.0f); }
+	inline glm::vec3 to3d_point(const glm::vec2& inVec) { return glm::vec3(inVec.x, inVec.y, 0.0f); }
 	inline glm::vec3 to3d_dir(const glm::vec2& inVec) { return glm::vec3(inVec.x, inVec.y, 0.0f); }
 
 

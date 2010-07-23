@@ -8,7 +8,7 @@
 
 ========================================================================================*/
 
-#include <windows.h>
+#include "Platform.h"
 #include <gl/gl.h>
 #include <gl/glu.h>
 

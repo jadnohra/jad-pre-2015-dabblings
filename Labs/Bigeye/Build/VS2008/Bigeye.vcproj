@@ -219,6 +219,22 @@
 			>
 		</File>
 		<File
+			RelativePath="..\..\src\BigeyeRenderTreeBuilder.cpp"
+			>
+		</File>
+		<File
+			RelativePath="..\..\src\BigeyeRenderTreeBuilder.h"
+			>
+		</File>
+		<File
+			RelativePath="..\..\src\BigeyeWidgets.cpp"
+			>
+		</File>
+		<File
+			RelativePath="..\..\src\BigeyeWidgets.h"
+			>
+		</File>
+		<File
 			RelativePath="..\..\src\glext.h"
 			>
 		</File>
@@ -244,14 +260,6 @@
 		</File>
 		<File
 			RelativePath="..\..\src\OGL.h"
-			>
-		</File>
-		<File
-			RelativePath="..\..\src\OGLFontRender.cpp"
-			>
-		</File>
-		<File
-			RelativePath="..\..\src\OGLFontRender.h"
 			>
 		</File>
 		<File

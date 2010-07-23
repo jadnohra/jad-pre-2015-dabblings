@@ -17,7 +17,6 @@ namespace BE
 
 		CompactRenderState mRenderState;
 	};
-
 }
 
 #endif

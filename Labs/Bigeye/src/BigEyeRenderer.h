@@ -36,7 +36,7 @@ namespace BE
 
 		inline bool operator==(const CompactRenderState& inComp) const { return All == inComp.All; }
 		inline bool operator!=(const CompactRenderState& inComp) const { return All != inComp.All; }
-		inline CompactRenderState& operator=(const CompactRenderState& inRef) { All = inRef.All; }
+		inline CompactRenderState& operator=(const CompactRenderState& inRef) { All = inRef.All; return *this; }
 
 		void Apply(Renderer& renderer);
 	};
@@ -546,7 +546,7 @@ namespace BE
 			return mCompactRenderState;
 		}
 
-		bool SetCurrentCompactRenderState(const CompactRenderState& inCompactRenderState)
+		void SetCurrentCompactRenderState(const CompactRenderState& inCompactRenderState)
 		{
 			mCompactRenderState =  inCompactRenderState;
 		}
