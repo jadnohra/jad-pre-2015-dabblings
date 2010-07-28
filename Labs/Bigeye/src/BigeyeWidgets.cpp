@@ -1187,9 +1187,11 @@ void NativeWindowWidget::Test(const WidgetContext& inContext)
 
 #ifdef TEST_RENDER_NEW
 	{
-			float pos_vert = 60.0f;
-			float height_offset = 6.0f;
+		float pos_vert = 60.0f;
+		float height_offset = 6.0f;
 
+
+		{
 			SimpleButtonWidget* button_widget = new SimpleButtonWidget();
 			button_widget->Create(inContext, glm::vec2(8.0f, pos_vert), true, MagicWand::TextInfo("Toggled eye ;)", 0, 12.0f, false, glm::vec2(10.0f, 2.0f)), MagicWand::SizeConstraints());
 			button_widget->SetIsToggled(true);
@@ -1197,6 +1199,17 @@ void NativeWindowWidget::Test(const WidgetContext& inContext)
 			pos_vert += vert2d(button_widget->GetSize()) + height_offset;
 
 			mChildren.mChildWidgets.push_back(button_widget);
+		}
+
+		{
+			SimpleButtonWidget* button_widget = new SimpleButtonWidget();
+			button_widget->Create(inContext, glm::vec2(8.0f, pos_vert), true, MagicWand::TextInfo("NEW renderer ;)", 0, 16.0f, true, glm::vec2(10.0f, 2.0f)), MagicWand::SizeConstraints());
+			button_widget->SetIsToggled(true);
+			
+			pos_vert += vert2d(button_widget->GetSize()) + height_offset;
+
+			mChildren.mChildWidgets.push_back(button_widget);
+		}
 	}
 
 	return;
