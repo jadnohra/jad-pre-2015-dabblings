@@ -24,11 +24,6 @@ void CompactRenderState::Apply(Renderer& renderer)
 	else
 		glDisable(GL_BLEND);
 
-	if (enable_scissor_test)
-		glEnable(GL_SCISSOR_TEST);
-	else
-		glDisable(GL_SCISSOR_TEST);
-
 	renderer.SetCurrentCompactRenderState(*this);
 }
 

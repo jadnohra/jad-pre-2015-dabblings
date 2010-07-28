@@ -23,7 +23,6 @@ namespace BE
 				unsigned enable_depth : 1;
 				unsigned enable_texture : 1;
 				unsigned enable_blend : 1;
-				unsigned enable_scissor_test : 1;
 			};
 
 			struct
@@ -330,6 +329,9 @@ namespace BE
 
 		void Render(Renderer& inRenderer, TreeNode& inTreeNode)
 		{
+			if (inTreeNode.mNode != NULL)
+				inTreeNode.mNode->Render(inRenderer);
+			
 			if (inTreeNode.mChildren != NULL)
 			{
 				for (size_t i=0; i<inTreeNode.mChildren->mNodes.size(); ++i)
@@ -337,9 +339,6 @@ namespace BE
 					Render(inRenderer, (inTreeNode.mChildren->mNodes[i]));
 				}
 			}
-
-			if (inTreeNode.mNode != NULL)
-				inTreeNode.mNode->Render(inRenderer);
 		}
 
 		class DependencyContext
@@ -534,6 +533,13 @@ namespace BE
 			{
 				mOrderedRenderTrees[i]->Render(*this);
 			}
+
+			for (size_t i=0; i<mRenderTrees.size(); ++i)
+			{
+				delete mRenderTrees[i];
+			}
+			mRenderTrees.clear();
+			mOrderedRenderTrees.clear();
 		}
 
 		bool HasCurrentCompactRenderState()

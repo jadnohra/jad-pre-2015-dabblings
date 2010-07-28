@@ -68,6 +68,14 @@ void ChildWidgetContainer::Render(const WidgetContext& inContext, const SceneTra
 		mChildWidgets[i]->Render(inContext, parent_world_tfm, inParentTransformDirty);
 }
 
+void ChildWidgetContainer::RenderBuild(const WidgetContext& inContext, const SceneTransform& inParentTransform, const SceneTransform& inParentLocalTransform, bool inParentTransformDirty)
+{
+	SceneTransform parent_world_tfm = inParentTransform * inParentLocalTransform;
+
+	for (size_t i=0; i<mChildWidgets.size(); ++i)
+		mChildWidgets[i]->RenderBuild(inContext, parent_world_tfm, inParentTransformDirty);
+}
+
 
 bool SimpleButtonWidget::Create(const WidgetContext& inContext, const glm::vec2& inPos, bool inIsToggleButton, const MagicWand::TextInfo& inTextInfo, const MagicWand::SizeConstraints& inSizeConstraints)
 {
@@ -81,6 +89,9 @@ bool SimpleButtonWidget::Create(const WidgetContext& inContext, const glm::vec2&
 	mIsToggleButton = inIsToggleButton;
 	mIsToggled = false;
 
+	mRenderState.enable_depth = 1;
+	mRenderState.enable_texture = 1;
+	mRenderState.enable_blend = 1;
 	CreateTextures(inContext);
 
 	return true;
@@ -176,6 +187,43 @@ void SimpleButtonWidget::Render(const WidgetContext& inContext, const SceneTrans
 		glTexParameteri(GL_TEXTURE_2D,GL_TEXTURE_MAG_FILTER,GL_NEAREST);	// Linear Filtering
 		
 		glTexEnvi(GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_REPLACE);
+		//glColor4f(1.0f,1.0f,1.0f,1.0f);			
+
+		glBegin(GL_QUADS);
+			 glTexCoord2f(0.0f,0.0f); glVertex3f(world_pos.x,world_pos.y,world_pos.z);
+			 glTexCoord2f(1.0f,0.0f); glVertex3f(world_pos.x+tex_size.x,world_pos.y,world_pos.z);
+			 glTexCoord2f(1.0f,1.0f); glVertex3f(world_pos.x+tex_size.x,world_pos.y+tex_size.y,world_pos.z);
+			 glTexCoord2f(0.0f,1.0f); glVertex3f(world_pos.x,world_pos.y+tex_size.y,world_pos.z);
+		glEnd();
+	}
+}
+
+
+void SimpleButtonWidget::RenderBuild(const WidgetContext& inContext, const SceneTransform& inParentTransform, bool inParentTransformDirty)
+{
+	mRenderWorldPos = gWidgetTransform(inParentTransform, mPos);
+
+	inContext.mRenderTreeBuilder.BranchUp(0, *this);
+	inContext.mRenderTreeBuilder.BranchDown(0);
+}
+
+
+void SimpleButtonWidget::Render(Renderer& inRenderer)
+{
+	glm::vec3& world_pos = mRenderWorldPos;
+	
+	bool is_pressed = mIsMousePressed || (mIsToggleButton && mIsToggled);
+	GLuint tex = is_pressed ? mPressedButtonTexture.mTexture : (mIsHighlighted ? mHighlightedButtonTexture.mTexture : mButtonTexture.mTexture);
+	const glm::vec2& tex_size = mButtonTexSize;
+
+	mRenderState.Apply(inRenderer);
+	{
+		glBindTexture(GL_TEXTURE_2D, tex);
+		glTexParameteri(GL_TEXTURE_2D,GL_TEXTURE_MIN_FILTER,GL_NEAREST);	// Linear Filtering
+		glTexParameteri(GL_TEXTURE_2D,GL_TEXTURE_MAG_FILTER,GL_NEAREST);	// Linear Filtering
+		
+		glTexEnvi(GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_REPLACE);
+		glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 		//glColor4f(1.0f,1.0f,1.0f,1.0f);			
 
 		glBegin(GL_QUADS);
@@ -1137,6 +1185,23 @@ void NativeWindowWidget::Test(const WidgetContext& inContext)
 	//GLuint mFrameBufferID;
 	//glGenFramebuffersEXT(1, &mFrameBufferID);
 
+#ifdef TEST_RENDER_NEW
+	{
+			float pos_vert = 60.0f;
+			float height_offset = 6.0f;
+
+			SimpleButtonWidget* button_widget = new SimpleButtonWidget();
+			button_widget->Create(inContext, glm::vec2(8.0f, pos_vert), true, MagicWand::TextInfo("Toggled eye ;)", 0, 12.0f, false, glm::vec2(10.0f, 2.0f)), MagicWand::SizeConstraints());
+			button_widget->SetIsToggled(true);
+			
+			pos_vert += vert2d(button_widget->GetSize()) + height_offset;
+
+			mChildren.mChildWidgets.push_back(button_widget);
+	}
+
+	return;
+#endif
+
 	/*
 	{
 		MagicWandTestTextureWidget* widget = new MagicWandTestTextureWidget();
@@ -1409,6 +1474,36 @@ void NativeWindowWidget::Render(const WidgetContext& inContext, const SceneTrans
 
 	SwapBuffers(mHDC);
 	inContext.mApp.GetOGLStateManager().Enable(EOGLState_Reset);
+}
+
+
+void NativeWindowWidget::RenderBuild(const WidgetContext& inContext, const SceneTransform& inParentTransform, bool inParentTransformDirty)
+{
+	int render_tree = inContext.mRenderTreeBuilder.BranchUpNewTree(NULL, true, false);
+	
+	inContext.mRenderTreeBuilder.BranchUp(render_tree, *this);
+	mChildren.RenderBuild(inContext, inParentTransform, kIdentitySceneTransform, inParentTransformDirty || false);
+	inContext.mRenderTreeBuilder.BranchDown(render_tree);
+}
+
+void NativeWindowWidget::Render(Renderer& inRenderer)
+{
+	inRenderer.InvalidateCurrentCompactRenderState();
+	OGLState_NativeWindowWidget temp(*this);
+	temp.Set();
+
+	glClearColor(0.0f, 0.0f, 0.0f, 1.0f);
+	glClearColor(39.0f/255.0f, 39.0f/255.0f, 39.0f/255.0f, 1.0f);
+	//glClearColor(176.0f/255.0f, 176.0f/255.0f, 176.0f/255.0f, 1.0f);
+	//glClearColor(49.0f/255.0f, 140.0f/255.0f, 231.0f / 255.0f, 1.0f);
+	//glClearColor(255.0f/255.0f, 255.0f/255.0f, 255.0f/255.0f, 1.0f);
+	
+	//glClearColor(100.0f/255.0f, 149.0f/255.0f, 237.0f / 255.0f, 1.0f);
+	//glClearColor(75.0f/255.0f, 146.0f/255.0f, 219.0f / 255.0f, 1.0f);
+	//glClearColor(1.0f, 1.0f, 1.0f, 1.0f);
+	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);	// Clear Screen And Depth Buffer
+
+	//mTestScene.Render(inContext, *mTestWidget, inContext.mTimeSecs);
 }
 
 }

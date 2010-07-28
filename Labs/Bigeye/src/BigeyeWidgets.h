@@ -6,6 +6,7 @@
 #include "OGL.h"
 #include "OGLState.h"
 #include "MagickWand.h"
+#include "BigeyeRenderTreeBuilder.h"
 
 namespace BE 
 {
@@ -15,6 +16,8 @@ namespace BE
 	{
 		const App& mApp;
 		float mTimeSecs;
+
+		mutable RenderTreeBuilder mRenderTreeBuilder;
 
 		WidgetContext(const App& inApp, float inTimeSecs)
 		:	mApp(inApp)
@@ -32,12 +35,16 @@ namespace BE
 	};
 
 
-	class Widget
+	class Widget : public RenderNode
 	{
 	public:
 
 		virtual void Update(const WidgetContext& inContext, const SceneTransform& inParentTransform, bool inParentTransformDirty) {}
 		virtual void Render(const WidgetContext& inContext, const SceneTransform& inParentTransform, bool inParentTransformDirty) {}
+
+		virtual void RenderBuild(const WidgetContext& inContext, const SceneTransform& inParentTransform, bool inParentTransformDirty) {}
+		virtual void Render(Renderer& inRenderer) {}
+
 		virtual glm::vec3 GetLocalPosition() { return glm::vec3(); }
 		virtual glm::vec2 GetSize() { return glm::vec2(); }
 	};
@@ -88,6 +95,8 @@ namespace BE
 		void	Update(const WidgetContext& inContext, const SceneTransform& inParentTransform, const SceneTransform& inParentLocalTransform, bool inParentTransformDirty);
 		void	Render(const WidgetContext& inContext, const SceneTransform& inParentTransform, const SceneTransform& inParentLocalTransform, bool inParentTransformDirty);
 
+		void RenderBuild(const WidgetContext& inContext, const SceneTransform& inParentTransform, const SceneTransform& inParentLocalTransform, bool inParentTransformDirty);
+		
 	public:
 
 		typedef std::vector<Widget*> aWidgetPtr;
@@ -108,6 +117,9 @@ namespace BE
 		virtual void Render(const WidgetContext& inContext, const SceneTransform& inParentTransform, bool inParentTransformDirty);
 		virtual glm::vec3 GetLocalPosition() { return mPos; }
 
+		//virtual void RenderBuild(const WidgetContext& inContext, const SceneTransform& inParentTransform, bool inParentTransformDirty);
+		//virtual void Render(Renderer& inRenderer);
+
 	protected:
 
 		OGLTexture mTexture;
@@ -127,6 +139,9 @@ namespace BE
 		virtual void Render(const WidgetContext& inContext, const SceneTransform& inParentTransform, bool inParentTransformDirty);
 		virtual glm::vec2 GetSize() { return mSize; }
 		virtual glm::vec3 GetLocalPosition() { return mPos; }
+
+		//virtual void RenderBuild(const WidgetContext& inContext, const SceneTransform& inParentTransform, bool inParentTransformDirty);
+		//virtual void Render(Renderer& inRenderer);
 
 	protected:
 
@@ -160,6 +175,9 @@ namespace BE
 		virtual glm::vec2 GetSize() { return mSize; }
 		virtual glm::vec3 GetLocalPosition() { return mPos; }
 
+		//virtual void RenderBuild(const WidgetContext& inContext, const SceneTransform& inParentTransform, bool inParentTransformDirty);
+		//virtual void Render(Renderer& inRenderer);
+
 	protected:
 
 		OGLRenderToTexture mTexture;
@@ -178,6 +196,9 @@ namespace BE
 		virtual void Render(const WidgetContext& inContext, const SceneTransform& inParentTransform, bool inParentTransformDirty);
 		virtual glm::vec2 GetSize() { return mTextTexSize; }
 		virtual glm::vec3 GetLocalPosition() { return mPos; }
+
+		//virtual void RenderBuild(const WidgetContext& inContext, const SceneTransform& inParentTransform, bool inParentTransformDirty);
+		//virtual void Render(Renderer& inRenderer);
 
 	protected:
 
@@ -199,8 +220,11 @@ namespace BE
 		virtual void Update(const WidgetContext& inContext, const SceneTransform& inParentTransform, bool inParentTransformDirty);
 		virtual void Render(const WidgetContext& inContext, const SceneTransform& inParentTransform, bool inParentTransformDirty);
 
-		virtual glm::vec2 GetSize() { /*CreateTextures(inApp);*/ return mButtonTexSize; }
+		virtual glm::vec2 GetSize() {  return mButtonTexSize; }
 		virtual glm::vec3 GetLocalPosition() { return mPos; }
+
+		virtual void RenderBuild(const WidgetContext& inContext, const SceneTransform& inParentTransform, bool inParentTransformDirty);
+		virtual void Render(Renderer& inRenderer);
 
 	protected:
 
@@ -220,6 +244,9 @@ namespace BE
 		OGLTexture mButtonTexture;
 		OGLTexture mHighlightedButtonTexture;
 		OGLTexture mPressedButtonTexture;
+
+		CompactRenderState mRenderState;
+		glm::vec3 mRenderWorldPos;
 	};
 
 	class SimpleSliderWidget : public Widget
@@ -240,8 +267,11 @@ namespace BE
 		virtual void Update(const WidgetContext& inContext, const SceneTransform& inParentTransform, bool inParentTransformDirty);
 		virtual void Render(const WidgetContext& inContext, const SceneTransform& inParentTransform, bool inParentTransformDirty);
 
-		virtual glm::vec2 GetSize() { /*CreateTextures(inApp);*/ return mMarkerTexSize; }
+		virtual glm::vec2 GetSize() {  return mMarkerTexSize; }
 		virtual glm::vec3 GetLocalPosition() { return mPos; }
+
+		//virtual void RenderBuild(const WidgetContext& inContext, const SceneTransform& inParentTransform, bool inParentTransformDirty);
+		//virtual void Render(Renderer& inRenderer);
 
 	protected:
 
@@ -287,8 +317,11 @@ namespace BE
 		virtual void Update(const WidgetContext& inContext, const SceneTransform& inParentTransform, bool inParentTransformDirty);
 		virtual void Render(const WidgetContext& inContext, const SceneTransform& inParentTransform, bool inParentTransformDirty);
 
-		virtual glm::vec2 GetSize() { /*CreateTextures(inApp);*/ return mSize; }
+		virtual glm::vec2 GetSize() {  return mSize; }
 		virtual glm::vec3 GetLocalPosition() { return mPos; }
+
+		//virtual void RenderBuild(const WidgetContext& inContext, const SceneTransform& inParentTransform, bool inParentTransformDirty);
+		//virtual void Render(Renderer& inRenderer);
 
 	protected:
 
@@ -323,10 +356,14 @@ namespace BE
 		virtual void	Update(const WidgetContext& inContext, const SceneTransform& inParentTransform, bool inParentTransformDirty);
 		virtual void	Render(const WidgetContext& inContext, const SceneTransform& inParentTransform, bool inParentTransformDirty);
 
+		virtual void RenderBuild(const WidgetContext& inContext, const SceneTransform& inParentTransform, bool inParentTransformDirty);
+		virtual void Render(Renderer& inRenderer);
+
 		LRESULT CALLBACK WindowProc (HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam);
 		static LRESULT CALLBACK WindowProcProxy(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam);
 
 		HWND			GetHWND() const	{ return mHWND; }
+		HDC				GetHDC() const	{ return mHDC; }
 
 		void			PushScissor(const glm::vec2& inPos, const glm::vec2& inSize) const; 
 		void			PopScissor() const; 

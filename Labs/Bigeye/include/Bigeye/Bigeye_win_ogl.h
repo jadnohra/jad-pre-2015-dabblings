@@ -68,6 +68,11 @@ namespace BE
 		OGLStateManager			mOGLStateManager;
 		mutable MagicWand		mWand;
 
+#ifdef TEST_RENDER_NEW
+		Renderer				mRenderer;
+#endif
+
+
 		bool					mMouseMoved;
 		glm::vec2				mMousePos;
 		glm::vec2				mLastMousePos;
