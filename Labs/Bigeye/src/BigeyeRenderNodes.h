@@ -54,6 +54,11 @@ namespace BE
 		{
 		}
 
+		PushScissorNode()
+		:	mPushPopStack(NULL)
+		{
+		}
+
 		virtual void Render(Renderer& inRenderer)	
 		{
 			Set(inRenderer);
@@ -73,6 +78,11 @@ namespace BE
 
 		PopScissorNode(PushPopNodeStack& inPushPopStack)
 		:	mPushPopStack(&inPushPopStack)
+		{
+		}
+
+		PopScissorNode()
+		:	mPushPopStack(NULL)
 		{
 		}
 

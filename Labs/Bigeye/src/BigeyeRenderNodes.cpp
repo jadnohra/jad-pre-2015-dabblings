@@ -10,7 +10,7 @@ void PushScissorNode::Set(Renderer& inRenderer)
 	glGetIntegerv(GL_VIEWPORT, viewport);
 
 	glEnable(GL_SCISSOR_TEST);
-	glScissor((int) horiz2d(mScissorInfo.mPos), viewport[1]-((int) vert2d(mScissorInfo.mPos)+(int) vert2d(mScissorInfo.mSize)), (int) horiz2d(mScissorInfo.mSize), (int) vert2d(mScissorInfo.mSize));
+	glScissor((int) horiz2d(mScissorInfo.mPos), viewport[3]-((int) vert2d(mScissorInfo.mPos)+(int) vert2d(mScissorInfo.mSize)), (int) horiz2d(mScissorInfo.mSize), (int) vert2d(mScissorInfo.mSize));
 }
 
 void PopScissorNode::DisableScissor(Renderer& inRenderer)

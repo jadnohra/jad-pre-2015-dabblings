@@ -252,6 +252,10 @@ bool SimpleSliderWidget::Create(const WidgetContext& inContext, const glm::vec2&
 	
 	CreateTextures(inContext);
 
+	mRenderState.enable_depth = 1;
+	mRenderState.enable_texture = 1;
+	mRenderState.enable_blend = 1;
+
 	return true;
 }
 
@@ -268,6 +272,10 @@ bool SimpleSliderWidget::CreateVertical(const WidgetContext& inContext, const gl
 	mSliderPos = 0.5f;
 
 	CreateTextures(inContext);
+
+	mRenderState.enable_depth = 1;
+	mRenderState.enable_texture = 1;
+	mRenderState.enable_blend = 1;
 
 	return true;
 }
@@ -431,6 +439,57 @@ void SimpleSliderWidget::Render(const WidgetContext& inContext, const SceneTrans
 }
 
 
+void SimpleSliderWidget::RenderBuild(const WidgetContext& inContext, const SceneTransform& inParentTransform, bool inParentTransformDirty)
+{
+	mRenderWorldPos = gWidgetTransform(inParentTransform, mPos);
+
+	inContext.mRenderTreeBuilder.BranchUp(0, *this);
+	inContext.mRenderTreeBuilder.BranchDown(0);
+}
+
+
+void SimpleSliderWidget::Render(Renderer& inRenderer)
+{
+	glm::vec3 world_pos = mRenderWorldPos;
+
+	glm::vec3 frame_world_pos = world_pos;
+	glm::vec3 marker_world_pos = GetSliderWorldPos(world_pos);
+
+	mRenderState.Apply(inRenderer);
+	{
+		glBindTexture(GL_TEXTURE_2D, mFrameTexture.mTexture);
+		glTexParameteri(GL_TEXTURE_2D,GL_TEXTURE_MIN_FILTER,GL_NEAREST);	// Linear Filtering
+		glTexParameteri(GL_TEXTURE_2D,GL_TEXTURE_MAG_FILTER,GL_NEAREST);	// Linear Filtering
+		
+		glTexEnvi(GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_REPLACE);
+		//glColor4f(1.0f,1.0f,1.0f,1.0f);			
+
+		glBegin(GL_QUADS);
+			 glTexCoord2f(0.0f,0.0f); glVertex3f(frame_world_pos.x,frame_world_pos.y,frame_world_pos.z);
+			 glTexCoord2f(1.0f,0.0f); glVertex3f(frame_world_pos.x+mFrameTexSize.x,frame_world_pos.y,frame_world_pos.z);
+			 glTexCoord2f(1.0f,1.0f); glVertex3f(frame_world_pos.x+mFrameTexSize.x,frame_world_pos.y+mFrameTexSize.y,frame_world_pos.z);
+			 glTexCoord2f(0.0f,1.0f); glVertex3f(frame_world_pos.x,frame_world_pos.y+mFrameTexSize.y,frame_world_pos.z);
+		glEnd();
+	}
+
+	{
+		glBindTexture(GL_TEXTURE_2D, mHasMouseSliderFocus ? mPressedMarkerTexture.mTexture : (mIsHighlighted ? mHighlightedMarkerTexture.mTexture : mMarkerTexture.mTexture));
+		// I do not know why things break if I do not set these params again here!!! find out!
+		glTexParameteri(GL_TEXTURE_2D,GL_TEXTURE_MIN_FILTER,GL_NEAREST);	// Linear Filtering
+		glTexParameteri(GL_TEXTURE_2D,GL_TEXTURE_MAG_FILTER,GL_NEAREST);	// Linear Filtering
+		
+		glTexEnvi(GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_REPLACE);
+		//glColor4f(1.0f,1.0f,1.0f,1.0f);			
+	
+		glBegin(GL_QUADS);
+			 glTexCoord2f(0.0f,0.0f); glVertex3f(marker_world_pos.x,marker_world_pos.y,marker_world_pos.z);
+			 glTexCoord2f(1.0f,0.0f); glVertex3f(marker_world_pos.x+mMarkerTexSize.x,marker_world_pos.y,marker_world_pos.z);
+			 glTexCoord2f(1.0f,1.0f); glVertex3f(marker_world_pos.x+mMarkerTexSize.x,marker_world_pos.y+mMarkerTexSize.y,marker_world_pos.z);
+			 glTexCoord2f(0.0f,1.0f); glVertex3f(marker_world_pos.x,marker_world_pos.y+mMarkerTexSize.y,marker_world_pos.z);
+		glEnd();
+	}
+}
+
 bool SimpleTextWidget::Create(const WidgetContext& inContext, const glm::vec2& inPos, const MagicWand::TextInfo& inTextInfo, const MagicWand::SizeConstraints& inSizeConstraints)
 {
 	mPos = to3d_point(inPos);
@@ -442,6 +501,10 @@ bool SimpleTextWidget::Create(const WidgetContext& inContext, const glm::vec2& i
 	mTextTexSize[0] = tex_dims[0];
 	mTextTexSize[1] = tex_dims[1];
 
+	mRenderState.enable_depth = 1;
+	mRenderState.enable_texture = 1;
+	mRenderState.enable_blend = 1;
+
 	return true;
 }
 
@@ -451,6 +514,37 @@ void SimpleTextWidget::Render(const WidgetContext& inContext, const SceneTransfo
 	glm::vec3 world_pos = gWidgetTransform(inParentTransform, mPos);
 
 	inContext.mApp.GetOGLStateManager().Enable(EOGLState_TextureWidget);
+	{
+		glBindTexture(GL_TEXTURE_2D, mTextTexture.mTexture);
+		glTexParameteri(GL_TEXTURE_2D,GL_TEXTURE_MIN_FILTER,GL_NEAREST);	// Linear Filtering
+		glTexParameteri(GL_TEXTURE_2D,GL_TEXTURE_MAG_FILTER,GL_NEAREST);	// Linear Filtering
+		
+		glTexEnvi(GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_REPLACE);
+		//glColor4f(1.0f,1.0f,1.0f,1.0f);			
+
+		glBegin(GL_QUADS);
+			 glTexCoord2f(0.0f,0.0f); glVertex3f(world_pos.x,world_pos.y,world_pos.z);
+			 glTexCoord2f(1.0f,0.0f); glVertex3f(world_pos.x+mTextTexSize.x,world_pos.y,world_pos.z);
+			 glTexCoord2f(1.0f,1.0f); glVertex3f(world_pos.x+mTextTexSize.x,world_pos.y+mTextTexSize.y,world_pos.z);
+			 glTexCoord2f(0.0f,1.0f); glVertex3f(world_pos.x,world_pos.y+mTextTexSize.y,world_pos.z);
+		glEnd();
+	}
+}
+
+void SimpleTextWidget::RenderBuild(const WidgetContext& inContext, const SceneTransform& inParentTransform, bool inParentTransformDirty)
+{
+	mRenderWorldPos = gWidgetTransform(inParentTransform, mPos);
+
+	inContext.mRenderTreeBuilder.BranchUp(0, *this);
+	inContext.mRenderTreeBuilder.BranchDown(0);
+}
+
+
+void SimpleTextWidget::Render(Renderer& inRenderer)
+{
+	glm::vec3& world_pos = mRenderWorldPos;
+	
+	mRenderState.Apply(inRenderer);
 	{
 		glBindTexture(GL_TEXTURE_2D, mTextTexture.mTexture);
 		glTexParameteri(GL_TEXTURE_2D,GL_TEXTURE_MIN_FILTER,GL_NEAREST);	// Linear Filtering
@@ -494,6 +588,10 @@ bool SimpleTextureWidget::Create(const WidgetContext& inContext, const glm::vec2
 	mSize.x = (float) dims[0];
 	mSize.y = (float) dims[1];
 
+	mRenderState.enable_depth = 1;
+	mRenderState.enable_texture = 1;
+	mRenderState.enable_blend = 1;
+
 	return true;
 }
 
@@ -503,6 +601,38 @@ void SimpleTextureWidget::Render(const WidgetContext& inContext, const SceneTran
 	glm::vec3 world_pos = gWidgetTransform(inParentTransform, mPos);
 
 	inContext.mApp.GetOGLStateManager().Enable(EOGLState_TextureWidget);
+	{
+		glBindTexture(GL_TEXTURE_2D, mTexture);
+		glTexParameteri(GL_TEXTURE_2D,GL_TEXTURE_MIN_FILTER,GL_NEAREST);	// Linear Filtering
+		glTexParameteri(GL_TEXTURE_2D,GL_TEXTURE_MAG_FILTER,GL_NEAREST);	// Linear Filtering
+		
+		glTexEnvi(GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_REPLACE);
+		//glColor4f(1.0f,1.0f,1.0f,1.0f);			
+
+		glBegin(GL_QUADS);
+			 glTexCoord2f(0.0f,0.0f); glVertex3f(world_pos.x,world_pos.y,world_pos.z);
+			 glTexCoord2f(1.0f,0.0f); glVertex3f(world_pos.x+mSize.x,world_pos.y,world_pos.z);
+			 glTexCoord2f(1.0f,1.0f); glVertex3f(world_pos.x+mSize.x,world_pos.y+mSize.y,world_pos.z);
+			 glTexCoord2f(0.0f,1.0f); glVertex3f(world_pos.x,world_pos.y+mSize.y,world_pos.z);
+		glEnd();
+	}
+}
+
+
+void SimpleTextureWidget::RenderBuild(const WidgetContext& inContext, const SceneTransform& inParentTransform, bool inParentTransformDirty)
+{
+	mRenderWorldPos = gWidgetTransform(inParentTransform, mPos);
+
+	inContext.mRenderTreeBuilder.BranchUp(0, *this);
+	inContext.mRenderTreeBuilder.BranchDown(0);
+}
+
+
+void SimpleTextureWidget::Render(Renderer& inRenderer)
+{
+	glm::vec3& world_pos = mRenderWorldPos;
+	
+	mRenderState.Apply(inRenderer);
 	{
 		glBindTexture(GL_TEXTURE_2D, mTexture);
 		glTexParameteri(GL_TEXTURE_2D,GL_TEXTURE_MIN_FILTER,GL_NEAREST);	// Linear Filtering
@@ -622,6 +752,10 @@ bool MagicWandTestTextureWidget::Create(const WidgetContext& inContext, const gl
 	mSize.x = (float) dims[0];
 	mSize.y = (float) dims[1];
 
+	mRenderState.enable_depth = 1;
+	mRenderState.enable_texture = 1;
+	mRenderState.enable_blend = 1;
+
 	return true;
 }
 
@@ -631,6 +765,37 @@ void MagicWandTestTextureWidget::Render(const WidgetContext& inContext, const Sc
 	glm::vec3 world_pos = gWidgetTransform(inParentTransform, mPos);
 
 	inContext.mApp.GetOGLStateManager().Enable(EOGLState_TextureWidget);
+	{
+		glBindTexture(GL_TEXTURE_2D, mTexture.mTexture);
+		glTexParameteri(GL_TEXTURE_2D,GL_TEXTURE_MIN_FILTER,GL_NEAREST);	// Linear Filtering
+		glTexParameteri(GL_TEXTURE_2D,GL_TEXTURE_MAG_FILTER,GL_NEAREST);	// Linear Filtering
+		
+		glTexEnvi(GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_REPLACE);
+		//glColor4f(1.0f,1.0f,1.0f,1.0f);			
+
+		glBegin(GL_QUADS);
+			 glTexCoord2f(0.0f,0.0f); glVertex3f(world_pos.x,world_pos.y,world_pos.z);
+			 glTexCoord2f(1.0f,0.0f); glVertex3f(world_pos.x+mSize.x,world_pos.y,world_pos.z);
+			 glTexCoord2f(1.0f,1.0f); glVertex3f(world_pos.x+mSize.x,world_pos.y+mSize.y,world_pos.z);
+			 glTexCoord2f(0.0f,1.0f); glVertex3f(world_pos.x,world_pos.y+mSize.y,world_pos.z);
+		glEnd();
+	}
+}
+
+
+void MagicWandTestTextureWidget::RenderBuild(const WidgetContext& inContext, const SceneTransform& inParentTransform, bool inParentTransformDirty)
+{
+	mRenderWorldPos = gWidgetTransform(inParentTransform, mPos);
+
+	inContext.mRenderTreeBuilder.BranchUp(0, *this);
+	inContext.mRenderTreeBuilder.BranchDown(0);
+}
+
+void MagicWandTestTextureWidget::Render(Renderer& inRenderer)
+{
+	glm::vec3& world_pos = mRenderWorldPos;
+	
+	mRenderState.Apply(inRenderer);
 	{
 		glBindTexture(GL_TEXTURE_2D, mTexture.mTexture);
 		glTexParameteri(GL_TEXTURE_2D,GL_TEXTURE_MIN_FILTER,GL_NEAREST);	// Linear Filtering
@@ -666,6 +831,10 @@ bool SimplePanelWidget::Create(const WidgetContext& inContext, const glm::vec2& 
 	mOverflowSpaceSize = 0.0f;
 	
 	CreateTextures(inContext);
+
+	mRenderState.enable_depth = 1;
+	mRenderState.enable_texture = 1;
+	mRenderState.enable_blend = 1;
 
 	return true;
 }
@@ -772,6 +941,61 @@ void SimplePanelWidget::Render(const WidgetContext& inContext, const SceneTransf
 			mChildren.Render(inContext, inParentTransform, overflow_local_transform, inParentTransformDirty || false);
 		}
 		inContext.mApp.PopScissor();
+	}
+}
+
+
+void SimplePanelWidget::RenderBuild(const WidgetContext& inContext, const SceneTransform& inParentTransform, bool inParentTransformDirty)
+{
+	mRenderWorldPos = gWidgetTransform(inParentTransform, mPos);
+
+	inContext.mRenderTreeBuilder.BranchUp(0, *this);
+	{
+
+		mPushScissorNode.mPushPopStack = &inContext.mRenderTreeBuilder.GetScissorPushPopNodeStack(0);
+		mPushScissorNode.mScissorInfo = PushScissorNode::ScissorInfo(to2d_point(mRenderWorldPos) + mScissorPos, mScissorSize);
+
+		inContext.mRenderTreeBuilder.BranchUp(0, mPushScissorNode);
+		{
+		
+			SceneTransform local_transform = gWidgetTranslation(mPos);
+			mAutoChildren.RenderBuild(inContext, inParentTransform, local_transform, inParentTransformDirty || false);
+
+			SceneTransform overflow_local_transform = gWidgetTranslation(mPos + to3d_point(mOverflowPosOffset));
+			mChildren.RenderBuild(inContext, inParentTransform, overflow_local_transform, inParentTransformDirty || false);
+		}
+		inContext.mRenderTreeBuilder.BranchDown(0);
+
+		mPopScissorNode.mPushPopStack = mPushScissorNode.mPushPopStack;
+		inContext.mRenderTreeBuilder.BranchUp(0, mPopScissorNode);
+		inContext.mRenderTreeBuilder.BranchDown(0);
+	}
+	inContext.mRenderTreeBuilder.BranchDown(0);
+
+}
+
+
+void SimplePanelWidget::Render(Renderer& inRenderer)
+{
+	glm::vec3 world_pos = mRenderWorldPos;
+
+	mRenderState.Apply(inRenderer);
+	{
+		{
+			glBindTexture(GL_TEXTURE_2D, mTexture.mTexture);
+			glTexParameteri(GL_TEXTURE_2D,GL_TEXTURE_MIN_FILTER,GL_NEAREST);	// Linear Filtering
+			glTexParameteri(GL_TEXTURE_2D,GL_TEXTURE_MAG_FILTER,GL_NEAREST);	// Linear Filtering
+			
+			glTexEnvi(GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_REPLACE);
+			//glColor4f(1.0f,1.0f,1.0f,1.0f);			
+
+			glBegin(GL_QUADS);
+				 glTexCoord2f(0.0f,0.0f); glVertex3f(world_pos.x,world_pos.y,world_pos.z);
+				 glTexCoord2f(1.0f,0.0f); glVertex3f(world_pos.x+mSize.x,world_pos.y,world_pos.z);
+				 glTexCoord2f(1.0f,1.0f); glVertex3f(world_pos.x+mSize.x,world_pos.y+mSize.y,world_pos.z);
+				 glTexCoord2f(0.0f,1.0f); glVertex3f(world_pos.x,world_pos.y+mSize.y,world_pos.z);
+			glEnd();
+		}
 	}
 }
 
@@ -1185,7 +1409,7 @@ void NativeWindowWidget::Test(const WidgetContext& inContext)
 	//GLuint mFrameBufferID;
 	//glGenFramebuffersEXT(1, &mFrameBufferID);
 
-#ifdef TEST_RENDER_NEW
+#ifdef TEST_RENDER_NEW__
 	{
 		float pos_vert = 60.0f;
 		float height_offset = 6.0f;

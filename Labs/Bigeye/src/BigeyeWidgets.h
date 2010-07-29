@@ -117,14 +117,17 @@ namespace BE
 		virtual void Render(const WidgetContext& inContext, const SceneTransform& inParentTransform, bool inParentTransformDirty);
 		virtual glm::vec3 GetLocalPosition() { return mPos; }
 
-		//virtual void RenderBuild(const WidgetContext& inContext, const SceneTransform& inParentTransform, bool inParentTransformDirty);
-		//virtual void Render(Renderer& inRenderer);
+		virtual void RenderBuild(const WidgetContext& inContext, const SceneTransform& inParentTransform, bool inParentTransformDirty);
+		virtual void Render(Renderer& inRenderer);
 
 	protected:
 
 		OGLTexture mTexture;
 		glm::vec3 mPos;
 		glm::vec2 mSize;
+
+		CompactRenderState mRenderState;
+		glm::vec3 mRenderWorldPos;
 	};
 
 	class SimpleTextureWidget : public Widget
@@ -140,14 +143,17 @@ namespace BE
 		virtual glm::vec2 GetSize() { return mSize; }
 		virtual glm::vec3 GetLocalPosition() { return mPos; }
 
-		//virtual void RenderBuild(const WidgetContext& inContext, const SceneTransform& inParentTransform, bool inParentTransformDirty);
-		//virtual void Render(Renderer& inRenderer);
+		virtual void RenderBuild(const WidgetContext& inContext, const SceneTransform& inParentTransform, bool inParentTransformDirty);
+		virtual void Render(Renderer& inRenderer);
 
 	protected:
 
 		GLuint mTexture;
 		glm::vec3 mPos;
 		glm::vec2 mSize;
+
+		CompactRenderState mRenderState;
+		glm::vec3 mRenderWorldPos;
 	};
 
 
@@ -197,8 +203,8 @@ namespace BE
 		virtual glm::vec2 GetSize() { return mTextTexSize; }
 		virtual glm::vec3 GetLocalPosition() { return mPos; }
 
-		//virtual void RenderBuild(const WidgetContext& inContext, const SceneTransform& inParentTransform, bool inParentTransformDirty);
-		//virtual void Render(Renderer& inRenderer);
+		virtual void RenderBuild(const WidgetContext& inContext, const SceneTransform& inParentTransform, bool inParentTransformDirty);
+		virtual void Render(Renderer& inRenderer);
 
 	protected:
 
@@ -206,6 +212,9 @@ namespace BE
 		glm::vec2 mTextTexSize;
 
 		OGLTexture mTextTexture;
+
+		CompactRenderState mRenderState;
+		glm::vec3 mRenderWorldPos;
 	};
 
 
@@ -270,8 +279,8 @@ namespace BE
 		virtual glm::vec2 GetSize() {  return mMarkerTexSize; }
 		virtual glm::vec3 GetLocalPosition() { return mPos; }
 
-		//virtual void RenderBuild(const WidgetContext& inContext, const SceneTransform& inParentTransform, bool inParentTransformDirty);
-		//virtual void Render(Renderer& inRenderer);
+		virtual void RenderBuild(const WidgetContext& inContext, const SceneTransform& inParentTransform, bool inParentTransformDirty);
+		virtual void Render(Renderer& inRenderer);
 
 	protected:
 
@@ -297,6 +306,9 @@ namespace BE
 		bool mHasMouseSliderFocus;
 		glm::vec2 mMouseSliderFocusStartMousePos;
 		float mMouseSliderFocusStartSliderPos;
+
+		CompactRenderState mRenderState;
+		glm::vec3 mRenderWorldPos;
 	};
 
 	class SimplePanelWidget : public Widget
@@ -320,8 +332,8 @@ namespace BE
 		virtual glm::vec2 GetSize() {  return mSize; }
 		virtual glm::vec3 GetLocalPosition() { return mPos; }
 
-		//virtual void RenderBuild(const WidgetContext& inContext, const SceneTransform& inParentTransform, bool inParentTransformDirty);
-		//virtual void Render(Renderer& inRenderer);
+		virtual void RenderBuild(const WidgetContext& inContext, const SceneTransform& inParentTransform, bool inParentTransformDirty);
+		virtual void Render(Renderer& inRenderer);
 
 	protected:
 
@@ -341,6 +353,11 @@ namespace BE
 		OGLTexture mTexture;
 		ChildWidgetContainer mChildren;
 		ChildWidgetContainer mAutoChildren;
+
+		CompactRenderState mRenderState;
+		glm::vec3 mRenderWorldPos;
+		PushScissorNode mPushScissorNode;
+		PopScissorNode mPopScissorNode;
 	};
 
 
