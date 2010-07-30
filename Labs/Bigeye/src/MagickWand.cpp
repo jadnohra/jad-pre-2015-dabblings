@@ -59,7 +59,7 @@ template<>
 struct PtrDeletePolicy_delete<MagickWand> {
 
     static inline MagickWand* getDefault() { return NULL; }
-    static inline void doDelete(MagickWand* ptr) { ClearMagickWand(ptr); }
+    static inline void doDelete(MagickWand* ptr) { if (ptr) ClearMagickWand(ptr); }
 };
 
 
@@ -67,21 +67,21 @@ template<>
 struct PtrDeletePolicy_delete<PixelWand> {
 
     static inline PixelWand* getDefault() { return NULL; }
-    static inline void doDelete(PixelWand* ptr) { ClearPixelWand(ptr); }
+    static inline void doDelete(PixelWand* ptr) { if (ptr) ClearPixelWand(ptr); }
 };
 
 template<>
 struct PtrDeletePolicy_delete<DrawingWand> {
 
     static inline DrawingWand* getDefault() { return NULL; }
-    static inline void doDelete(DrawingWand* ptr) { ClearDrawingWand(ptr); }
+    static inline void doDelete(DrawingWand* ptr) { if (ptr) ClearDrawingWand(ptr); }
 };
 
 template<>
 struct PtrDeletePolicy_delete<PixelIterator> {
 
     static inline PixelIterator* getDefault() { return NULL; }
-    static inline void doDelete(PixelIterator* ptr) { ClearPixelIterator(ptr); }
+    static inline void doDelete(PixelIterator* ptr) { if (ptr) ClearPixelIterator(ptr); }
 };
 
 class MagickWandImpl
@@ -344,12 +344,22 @@ public:
 		int min_y = std::min(inOffsetY, 0);
 		int max_y = std::max(MagickGetImageHeight(inSourceWand), inOffsetY+MagickGetImageHeight(shadow_wand));
 
-		MagickNewImage(composite_wand, max_x-min_x, max_y-min_y, transparent);
+		MagickNewImage(composite_wand, max_x-min_x, max_y-min_y, transparent /*red*/);
 		MagickCompositeImage(composite_wand, shadow_wand, OverCompositeOp, inOffsetX < 0 ? 0 : inOffsetX, inOffsetY < 0 ? 0 : inOffsetY);
 		MagickCompositeImage(composite_wand, inSourceWand, OverCompositeOp, inOffsetX < 0 ? -inOffsetX : 0, inOffsetY < 0 ? -inOffsetY : 0);
 		
 		return composite_wand;
 	}
+
+
+	MagickWand* FillWand(size_t inWidth, size_t inHeight, const PixelWand& inColor)
+	{
+		MagickWand* wand = NewMagickWand();
+		MagickNewImage(wand, inWidth, inHeight, &inColor);
+	
+		return wand;
+	}
+
 
 	MagickWand* GradientFillWand(size_t inWidth, size_t inHeight, size_t startOffsetX, size_t startOfsetY, 
 								glm::vec4* inColorStack, const GradientCurves* inVerticalCurves = NULL)
@@ -360,6 +370,7 @@ public:
 		GradientFillWand(wand, startOffsetX, startOfsetY, inColorStack, inVerticalCurves);
 		return wand;
 	}
+
 
 	void GradientFillWand(MagickWand* ioSourceWand, size_t startOffsetX, size_t startOfsetY, glm::vec4* inColorStack, const GradientCurves* inVerticalCurves = NULL)
 	{
@@ -418,6 +429,36 @@ public:
 			// Sync writes the pixels back to the m_wand
 			PixelSyncIterator(iterator);
 		}
+	}
+
+	PixelWand* MakeColor(float inR, float  inG, float  inB)
+	{
+		return MakeColor255((int) (inR*255.0f), (int) (inG*255.0f), (int) (inB*255.0f));
+	}
+
+	PixelWand* MakeColor(float  inR, float  inG, float  inB, float  inA)
+	{
+		return MakeColor255((int) (inR*255.0f), (int) (inG*255.0f), (int) (inB*255.0f), (int) (inA*255.0f));
+	}
+
+	PixelWand* MakeColor255(int inR, int inG, int inB)
+	{
+		PixelWand* color = NewPixelWand();
+
+		char hex[128];
+		sprintf(hex,"rgb(%d,%d,%d)", inR, inG, inB);
+		PixelSetColor(color, hex);
+
+		return color;
+	}
+
+
+	PixelWand* MakeColor255(int inR, int inG, int inB, int inA)
+	{
+		PixelWand* color = MakeColor255(inR, inG, inB);
+		PixelSetAlpha(color, (float) inA/255.0f);
+
+		return color;
 	}
 
 	MagicWand::FontID LoadFont(const char* inPath)
@@ -572,7 +613,7 @@ bool MagicWand::MakeTestButtonTexture(GLuint inTexture, GLsizei& outWidth, GLsiz
 }
 
 
-bool MagicWand::MakeFrameTexture(FrameType inType, GLuint inTexture, GLsizei& outWidth, GLsizei& outHeight, glm::vec2& outInternalPos, glm::vec2& outInternalSize)
+bool MagicWand::MakeFrameTexture(FrameType inType, bool inUseGradient, GLuint inTexture, GLsizei& outWidth, GLsizei& outHeight, glm::vec2& outInternalPos, glm::vec2& outInternalSize)
 {
 	int shadow_offset[2];
 	int round_radius = 8;
@@ -590,13 +631,23 @@ bool MagicWand::MakeFrameTexture(FrameType inType, GLuint inTexture, GLsizei& ou
 				glm::vec4(37.0f/255.0f, 37.0f/255.0f, 37.0f/255.0f, 1.0f), 
 				glm::vec4(37.0f/255.0f, 37.0f/255.0f, 37.0f/255.0f, 1.0f) };
 
-		auto_scoped_ptr<MagickWand> gradient_wand(mImpl->GradientFillWand(outWidth, outHeight, 0, 0, colors));
-		mImpl->RoundWand(gradient_wand, 8, true);
+		auto_scoped_ptr<MagickWand> background_wand;
+
+		if (inUseGradient)
+		{
+			background_wand.reset(mImpl->GradientFillWand(outWidth, outHeight, 0, 0, colors));
+		}
+		else
+		{
+			background_wand.reset(mImpl->FillWand(outWidth, outHeight, *mImpl->black));
+		}
+
+		mImpl->RoundWand(background_wand, 8, true);
 
 		shadow_offset[0] = -4;
 		shadow_offset[1] = 4;
 
-		auto_scoped_ptr<MagickWand> shadowed_wand(mImpl->ShadowWand(gradient_wand, shadow_offset[0], shadow_offset[1], 40.0f, 1.5f));
+		auto_scoped_ptr<MagickWand> shadowed_wand(mImpl->ShadowWand(background_wand, shadow_offset[0], shadow_offset[1], 40.0f, 1.5f));
 
 		ret = mImpl->ToGLTexture(shadowed_wand, inTexture, outWidth, outHeight);
 	}
@@ -608,13 +659,24 @@ bool MagicWand::MakeFrameTexture(FrameType inType, GLuint inTexture, GLsizei& ou
 			glm::vec4(39.0f/255.0f, 39.0f/255.0f, 39.0f/255.0f, 1.0f), 
 			glm::vec4(39.0f/255.0f, 39.0f/255.0f, 39.0f/255.0f, 1.0f) };
 
-		auto_scoped_ptr<MagickWand> gradient_wand(mImpl->GradientFillWand(outWidth, outHeight, 0, 8, colors));
-		mImpl->RoundWand(gradient_wand, 8, true);
+		auto_scoped_ptr<MagickWand> background_wand;
+
+		if (inUseGradient && false)
+		{
+			background_wand.reset(mImpl->GradientFillWand(outWidth, outHeight, 0, 0, colors));
+		}
+		else
+		{
+			auto_scoped_ptr<PixelWand> color(mImpl->MakeColor255(39, 39, 39));
+			background_wand.reset(mImpl->FillWand(outWidth, outHeight, /**mImpl->white*/ *color));
+		}
+
+		//mImpl->RoundWand(background_wand, 8, true);
 
 		auto_scoped_ptr<MagickWand> cut_wand(NewMagickWand());
-		MagickNewImage(cut_wand, MagickGetImageWidth(gradient_wand), MagickGetImageHeight(gradient_wand)-8, mImpl->transparent);
+		MagickNewImage(cut_wand, MagickGetImageWidth(background_wand), MagickGetImageHeight(background_wand)-8, mImpl->transparent);
 
-		MagickCompositeImage(cut_wand, gradient_wand, OverCompositeOp, 0, -8);
+		MagickCompositeImage(cut_wand, background_wand, OverCompositeOp, 0, -8);
 
 		shadow_offset[0] = -2;
 		shadow_offset[1] = 4;
@@ -629,8 +691,8 @@ bool MagicWand::MakeFrameTexture(FrameType inType, GLuint inTexture, GLsizei& ou
 
 	outInternalPos.x = 1.0f + shadow_offset[0] < 0 ? (float) -shadow_offset[0] : 0.0f;
 	outInternalPos.y = 1.0f + shadow_offset[1] < 0 ? (float) -shadow_offset[1] : 0.0f;
-	outInternalSize.x = (float) inWidth;
-	outInternalSize.y = (float) inHeight;
+	outInternalSize.x = (float) inWidth + (shadow_offset[0] > 0 ? (float) -shadow_offset[0] : 0.0f);
+	outInternalSize.y = (float) inHeight + (shadow_offset[1] > 0 ? (float) -shadow_offset[1] : 0.0f);
 	
 	return ret;
 }

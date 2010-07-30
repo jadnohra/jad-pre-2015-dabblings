@@ -690,7 +690,7 @@ SimplePanelWidget::SimplePanelWidget()
 }
 
 
-bool SimplePanelWidget::Create(const WidgetContext& inContext, const glm::vec2& inPos, const glm::vec2& inSize, MagicWand::FrameType inType, EOverflowSliderType inOverflowSliderType)
+bool SimplePanelWidget::Create(const WidgetContext& inContext, const glm::vec2& inPos, const glm::vec2& inSize, MagicWand::FrameType inType, EOverflowSliderType inOverflowSliderType, bool inUseGradient)
 {
 	mPos = to3d_point(inPos);
 	mPos.z = 0.01f;
@@ -699,7 +699,7 @@ bool SimplePanelWidget::Create(const WidgetContext& inContext, const glm::vec2& 
 	mOverflowSliderType = inOverflowSliderType;
 	mOverflowSpaceSize = 0.0f;
 	
-	CreateTextures(inContext);
+	CreateTextures(inContext, inUseGradient);
 
 	mRenderState.enable_depth = 1;
 	mRenderState.enable_texture = 1;
@@ -709,7 +709,7 @@ bool SimplePanelWidget::Create(const WidgetContext& inContext, const glm::vec2& 
 }
 
 
-void SimplePanelWidget::CreateTextures(const WidgetContext& inContext)
+void SimplePanelWidget::CreateTextures(const WidgetContext& inContext, bool inUseGradient)
 {
 	// TODO try colors like in : http://www.gameanim.com/2009/08/27/street-fighter-iv-facial-controls/
 	if (!mTexture.IsCreated())
@@ -718,11 +718,11 @@ void SimplePanelWidget::CreateTextures(const WidgetContext& inContext)
 		GLsizei dims[2];
 		dims[0] = mSize.x;
 		dims[1] = mSize.y;
-		inContext.mApp.GetWand().MakeFrameTexture(mType, mTexture.mTexture, dims[0], dims[1], mScissorPos, mScissorSize);
+		inContext.mApp.GetWand().MakeFrameTexture(mType, inUseGradient, mTexture.mTexture, dims[0], dims[1], mScissorPos, mScissorSize);
 		mSize.x = dims[0];
 		mSize.y = dims[1];
 
-		vert2d(mScissorPos) += 1.0f;
+		//vert2d(mScissorPos) += 1.0f;
 		vert2d(mScissorSize) -= 2.0f;
 	}
 }
@@ -1206,24 +1206,27 @@ void NativeWindowWidget::Test(const WidgetContext& inContext)
 
 	
 	// Takes time to fill gradient
-#if 0
-	{
-		//SimplePanelWidget* widget = new SimplePanelWidget();
-		//widget->Create(inContext, glm::vec2(10.0f, 30.0f), glm::vec2(780.0f, 720.0f), MagicWand::FRAME_NORMAL_CUT_UPPER, SimplePanelWidget::NoOverflowSlider);
-		//mChildren.mChildWidgets.push_back(widget);
-	}
-#endif
-
 #if 1
 	{
-		SimpleRenderToTextureWidget* widget = new SimpleRenderToTextureWidget();
-		widget->Create(inContext, glm::vec2(10.0f, 30.0f), glm::vec2(640.0f, 480.0f));
-		widget->SetScene(&mTestScene);
+		SimplePanelWidget* widget = new SimplePanelWidget();
+		widget->Create(inContext, glm::vec2(10.0f, 30.0f), glm::vec2(780.0f, 720.0f), MagicWand::FRAME_NORMAL_CUT_UPPER, SimplePanelWidget::NoOverflowSlider, false);
 		mChildren.mChildWidgets.push_back(widget);
-		mTestWidget = widget;
-	}
 
+		SimplePanelWidget* parent_widget = widget;
+		ChildWidgetContainer& children = widget->GetChildren();
+
+#if 1
+		{
+			SimpleRenderToTextureWidget* widget = new SimpleRenderToTextureWidget();
+			widget->Create(inContext, glm::vec2(0.0f, 0.0f), parent_widget->GetInternalSize());
+			widget->SetScene(&mTestScene);
+			children.mChildWidgets.push_back(widget);
+		}
 #endif
+	}
+#endif
+
+
 
 	{
 		SimpleTextWidget* text_widget = new SimpleTextWidget();
@@ -1236,7 +1239,7 @@ void NativeWindowWidget::Test(const WidgetContext& inContext)
 
 	{
 		SimplePanelWidget* widget = new SimplePanelWidget();
-		widget->Create(inContext, glm::vec2(800.0f, 55.0f), glm::vec2(200.0f, 250.0f), MagicWand::FRAME_NORMAL, SimplePanelWidget::AutoOverflowSlider);
+		widget->Create(inContext, glm::vec2(800.0f, 55.0f), glm::vec2(200.0f, 250.0f), MagicWand::FRAME_NORMAL, SimplePanelWidget::AutoOverflowSlider, true);
 		mChildren.mChildWidgets.push_back(widget);
 
 		ChildWidgetContainer& children = widget->GetChildren();
@@ -1257,6 +1260,7 @@ void NativeWindowWidget::Test(const WidgetContext& inContext)
 			children.mChildWidgets.push_back(slider_widget);
 		}
 
+#if 1
 		{
 			SimpleSliderWidget* slider_widget = new SimpleSliderWidget();
 			slider_widget->Create(inContext, glm::vec2(8.0f, pos_vert), glm::vec2(150.0f, 0.0f), MagicWand::TextInfo("Bold Slide", 0, 12.0f, true, glm::vec2(2.0f, 2.0f)), sizeConstraints);
@@ -1320,7 +1324,7 @@ void NativeWindowWidget::Test(const WidgetContext& inContext)
 
 			children.mChildWidgets.push_back(button_widget);
 		}
-
+#endif
 
 #if 0
 		for (int i=0; i<10; ++i)
@@ -1433,6 +1437,7 @@ void NativeWindowWidget::Render(Renderer& inRenderer)
 
 	glClearColor(0.0f, 0.0f, 0.0f, 1.0f);
 	glClearColor(39.0f/255.0f, 39.0f/255.0f, 39.0f/255.0f, 1.0f);
+	//glClearColor(59.0f/255.0f, 59.0f/255.0f, 59.0f/255.0f, 1.0f);
 	//glClearColor(176.0f/255.0f, 176.0f/255.0f, 176.0f/255.0f, 1.0f);
 	//glClearColor(49.0f/255.0f, 140.0f/255.0f, 231.0f / 255.0f, 1.0f);
 	//glClearColor(255.0f/255.0f, 255.0f/255.0f, 255.0f/255.0f, 1.0f);

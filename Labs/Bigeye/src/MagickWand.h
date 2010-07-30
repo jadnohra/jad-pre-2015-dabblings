@@ -55,7 +55,7 @@ namespace BE
 
 		bool ReadImageToGLTexture(const char* inPath, GLuint inTexture, GLsizei& outWidth, GLsizei& outHeight);
 		bool MakeTestButtonTexture(GLuint inTexture, GLsizei& outWidth, GLsizei& outHeight);
-		bool MakeFrameTexture(FrameType inType, GLuint inTexture, GLsizei& outWidth, GLsizei& outHeight, glm::vec2& outInternalPos, glm::vec2& outInternalSize);
+		bool MakeFrameTexture(FrameType inType, bool inUseGradient, GLuint inTexture, GLsizei& outWidth, GLsizei& outHeight, glm::vec2& outInternalPos, glm::vec2& outInternalSize);
 		bool MakeSliderFrameTexture(GLuint inTexture, GLsizei inLength, const TextInfo& inTextInfo, const SizeConstraints& inSizeConstraints, GLsizei& outWidth, GLsizei& outHeight);
 		bool MakeVerticalSliderFrameTexture(GLuint inTexture, GLsizei inWidth, GLsizei inHeight, GLsizei& outWidth, GLsizei& outHeight);
 		bool MakeSliderMarkerTexture(GLuint inTexture, WidgetState inWidgetState, GLsizei inFrameHeight, GLsizei& outWidth, GLsizei& outHeight);

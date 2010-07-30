@@ -285,7 +285,7 @@ namespace BE
 
 		SimplePanelWidget();
 
-		bool		Create(const WidgetContext& inContext, const glm::vec2& inPos, const glm::vec2& inSize, MagicWand::FrameType inType, EOverflowSliderType inOverflowSliderType);
+		bool		Create(const WidgetContext& inContext, const glm::vec2& inPos, const glm::vec2& inSize, MagicWand::FrameType inType, EOverflowSliderType inOverflowSliderType, bool inUseGradient);
 
 		ChildWidgetContainer& GetChildren() { return mChildren; } 
 
@@ -294,12 +294,14 @@ namespace BE
 		virtual glm::vec2 GetSize() {  return mSize; }
 		virtual glm::vec3 GetLocalPosition() { return mPos; }
 
+		glm::vec2 GetInternalSize() {  return mScissorSize; }
+
 		virtual void RenderBuild(const WidgetContext& inContext, const SceneTransform& inParentTransform, bool inParentTransformDirty);
 		virtual void Render(Renderer& inRenderer);
 
 	protected:
 
-		void CreateTextures(const WidgetContext& inContext);
+		void CreateTextures(const WidgetContext& inContext, bool inUseGradient);
 
 		MagicWand::FrameType mType;
 		EOverflowSliderType mOverflowSliderType;

@@ -77,7 +77,7 @@ protected:
     T* m_Pointer;
 };
 
-template<class T, class DeletePolicy = PtrDeletePolicy_delete<T> > class auto_scoped_ptr : scoped_ptr<T, DeletePolicy> {
+template<class T, class DeletePolicy = PtrDeletePolicy_delete<T> > class auto_scoped_ptr : public scoped_ptr<T, DeletePolicy> {
 private:
 
 	typedef scoped_ptr<T, DeletePolicy> BaseT;
