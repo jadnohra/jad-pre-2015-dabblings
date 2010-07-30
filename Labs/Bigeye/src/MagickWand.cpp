@@ -317,15 +317,24 @@ public:
 		return wand;
 	}
 
+	
 	// Returns result
-	MagickWand* ShadowDrawWand(DrawingWand* draw, GLsizei inWidth, GLsizei inHeight, int inOffsetX=1, int inOffsetY=1, float inOpacity=40.0f, float inSigma=1.0f)
+	MagickWand* ShadowDrawWand(DrawingWand* draw, GLsizei inWidth, GLsizei inHeight, 
+								int& outSourceOffsetX, int& outSourceOffsetY,
+								float inShadowSizeRelOffsetX=0.0f, float inShadowSizeRelOffsetY=0.0f, 
+								int inOffsetX=0, int inOffsetY=0, 
+								float inOpacity=40.0f, float inSigma=1.0f)
 	{
 		auto_scoped_ptr<MagickWand> wand(DrawToWand(draw, inWidth, inHeight, transparent));
-		return ShadowWand(wand, inOffsetX, inOffsetY, inOpacity, inSigma);
+		return ShadowWand(wand, outSourceOffsetX, outSourceOffsetY, inShadowSizeRelOffsetX, inShadowSizeRelOffsetY, inOffsetX, inOffsetY, inOpacity, inSigma);
 	}
 
 	// Returns result
-	MagickWand* ShadowWand(MagickWand* inSourceWand, int inOffsetX=1, int inOffsetY=1, float inOpacity=40.0f, float inSigma=1.0f)
+	MagickWand* ShadowWand(MagickWand* inSourceWand,
+								int& outSourceOffsetX, int& outSourceOffsetY,
+								float inShadowSizeRelOffsetX=0.0f, float inShadowSizeRelOffsetY=0.0f, 
+								int inOffsetX=0, int inOffsetY=0, 
+								float inOpacity=40.0f, float inSigma=1.0f)
 	{
 		auto_scoped_ptr<MagickWand> shadow_wand(CloneMagickWand(inSourceWand));
 
@@ -338,18 +347,45 @@ public:
 		//$shadow->compositeImage( $im, Imagick::COMPOSITE_OVER, 0, 0 );
 		//MagickCompositeImage(shadow_wand, inSourceWand, OverCompositeOp, inOffsetX, inOffsetY);
 
-		MagickWand* composite_wand = NewMagickWand();
-		int min_x = std::min(inOffsetX, 0);
-		int max_x = std::max(MagickGetImageWidth(inSourceWand), inOffsetX+MagickGetImageWidth(shadow_wand));
-		int min_y = std::min(inOffsetY, 0);
-		int max_y = std::max(MagickGetImageHeight(inSourceWand), inOffsetY+MagickGetImageHeight(shadow_wand));
+		int orig_size_x = MagickGetImageWidth(inSourceWand);
+		int orig_size_y = MagickGetImageHeight(inSourceWand);
+		int shadow_size_x = MagickGetImageWidth(shadow_wand);
+		int shadow_size_y = MagickGetImageHeight(shadow_wand);
+		int shadow_size_diff_x = shadow_size_x - orig_size_x;
+		int shadow_size_diff_y = shadow_size_y - orig_size_y;
+		int source_center_offest_x = inOffsetX + (inShadowSizeRelOffsetX * 0.5f * shadow_size_diff_x);
+		int source_center_offest_y = inOffsetY + (inShadowSizeRelOffsetY * 0.5f * shadow_size_diff_y);
+		int shadow_center_left_corner_x = -shadow_size_x/2;
+		int shadow_center_left_corner_y = -shadow_size_y/2;
+		int shadow_center_right_corner_x = shadow_size_x/2;
+		int shadow_center_right_corner_y = shadow_size_y/2;
+		int source_center_left_corner_x = -(orig_size_x/2)+source_center_offest_x;
+		int source_center_left_corner_y = -(orig_size_y/2)+source_center_offest_y;
+		int source_center_right_corner_x = (orig_size_x/2)-source_center_offest_x;
+		int source_center_right_corner_y = (orig_size_y/2)-source_center_offest_y;
+		int composite_center_left_corner_x = std::min(shadow_center_left_corner_x, source_center_left_corner_x);
+		int composite_center_left_corner_y = std::min(shadow_center_left_corner_y, source_center_left_corner_y);
+		int composite_center_right_corner_x = std::max(shadow_center_right_corner_x, source_center_right_corner_x);
+		int composite_center_right_corner_y = std::max(shadow_center_right_corner_y, source_center_right_corner_y);
 
-		MagickNewImage(composite_wand, max_x-min_x, max_y-min_y, transparent /*red*/);
-		MagickCompositeImage(composite_wand, shadow_wand, OverCompositeOp, inOffsetX < 0 ? 0 : inOffsetX, inOffsetY < 0 ? 0 : inOffsetY);
-		MagickCompositeImage(composite_wand, inSourceWand, OverCompositeOp, inOffsetX < 0 ? -inOffsetX : 0, inOffsetY < 0 ? -inOffsetY : 0);
+		MagickWand* composite_wand = NewMagickWand();
+		MagickNewImage(composite_wand, composite_center_right_corner_x-composite_center_left_corner_x, 
+										composite_center_right_corner_y-composite_center_left_corner_y, transparent/*red*/);
 		
+		int shadow_wand_on_composite_offset_x = std::max(shadow_center_left_corner_x - source_center_left_corner_x, 0);
+		int shadow_wand_on_composite_offset_y = std::max(shadow_center_left_corner_y - source_center_left_corner_y, 0);
+		MagickCompositeImage(composite_wand, shadow_wand, OverCompositeOp, shadow_wand_on_composite_offset_x, shadow_wand_on_composite_offset_y);
+
+		int source_wand_on_composite_offset_x = std::max(source_center_left_corner_x - shadow_center_left_corner_x, 0);
+		int source_wand_on_composite_offset_y = std::max(source_center_left_corner_y - shadow_center_left_corner_y, 0);
+		MagickCompositeImage(composite_wand, inSourceWand, OverCompositeOp, source_wand_on_composite_offset_x, source_wand_on_composite_offset_y);
+		
+		outSourceOffsetX = source_wand_on_composite_offset_x;
+		outSourceOffsetY = source_wand_on_composite_offset_y;
+
 		return composite_wand;
 	}
+
 
 
 	MagickWand* FillWand(size_t inWidth, size_t inHeight, const PixelWand& inColor)
@@ -615,12 +651,14 @@ bool MagicWand::MakeTestButtonTexture(GLuint inTexture, GLsizei& outWidth, GLsiz
 
 bool MagicWand::MakeFrameTexture(FrameType inType, bool inUseGradient, GLuint inTexture, GLsizei& outWidth, GLsizei& outHeight, glm::vec2& outInternalPos, glm::vec2& outInternalSize)
 {
-	int shadow_offset[2];
+	int source_end_offset[2] = { 0, 0 };
 	int round_radius = 8;
 	bool ret = false;
 
 	GLsizei inWidth = outWidth;
 	GLsizei inHeight = outHeight;
+
+	int stroke_size = 0;
 
 	if (inType == FRAME_NORMAL)
 	{
@@ -642,12 +680,14 @@ bool MagicWand::MakeFrameTexture(FrameType inType, bool inUseGradient, GLuint in
 			background_wand.reset(mImpl->FillWand(outWidth, outHeight, *mImpl->black));
 		}
 
+		stroke_size = 1;
 		mImpl->RoundWand(background_wand, 8, true);
 
-		shadow_offset[0] = -4;
-		shadow_offset[1] = 4;
+		int offset_in_shadow[2];
+		offset_in_shadow[0] = -2;
+		offset_in_shadow[1] = -4;
 
-		auto_scoped_ptr<MagickWand> shadowed_wand(mImpl->ShadowWand(background_wand, shadow_offset[0], shadow_offset[1], 40.0f, 1.5f));
+		auto_scoped_ptr<MagickWand> shadowed_wand(mImpl->ShadowWand(background_wand, source_end_offset[0], source_end_offset[1], 0.0f, 0.0f, offset_in_shadow[0], offset_in_shadow[1], 40.0f, 1.5f));
 
 		ret = mImpl->ToGLTexture(shadowed_wand, inTexture, outWidth, outHeight);
 	}
@@ -668,31 +708,29 @@ bool MagicWand::MakeFrameTexture(FrameType inType, bool inUseGradient, GLuint in
 		else
 		{
 			auto_scoped_ptr<PixelWand> color(mImpl->MakeColor255(39, 39, 39));
-			background_wand.reset(mImpl->FillWand(outWidth, outHeight, /**mImpl->white*/ *color));
+			background_wand.reset(mImpl->FillWand(outWidth, outHeight, /* *mImpl->white */ *color));
 		}
 
 		//mImpl->RoundWand(background_wand, 8, true);
+		//auto_scoped_ptr<MagickWand> cut_wand(NewMagickWand());
+		//MagickNewImage(cut_wand, MagickGetImageWidth(background_wand), MagickGetImageHeight(background_wand)-8, mImpl->transparent);
+		//MagickCompositeImage(cut_wand, background_wand, OverCompositeOp, 0, -8);
 
-		auto_scoped_ptr<MagickWand> cut_wand(NewMagickWand());
-		MagickNewImage(cut_wand, MagickGetImageWidth(background_wand), MagickGetImageHeight(background_wand)-8, mImpl->transparent);
+		int offset_in_shadow[2];
+		offset_in_shadow[0] = -2;
+		offset_in_shadow[1] = -4;
 
-		MagickCompositeImage(cut_wand, background_wand, OverCompositeOp, 0, -8);
-
-		shadow_offset[0] = -2;
-		shadow_offset[1] = 4;
-
-		// TODO make shadow larger .. (from both sides)
-		auto_scoped_ptr<MagickWand> shadowed_wand(mImpl->ShadowWand(cut_wand, shadow_offset[0], shadow_offset[1], 40.0f, 1.5f));
+		auto_scoped_ptr<MagickWand> shadowed_wand(mImpl->ShadowWand(/*cut_wand*/ background_wand, source_end_offset[0], source_end_offset[1], 0.0f, 0.0f, offset_in_shadow[0], offset_in_shadow[1], 40.0f, 1.5f));
 		
 		//return mImpl->ToGLTexture(cut_wand, inTexture, outWidth, outHeight);
 		//return mImpl->ToGLTexture(gradient_wand, inTexture, outWidth, outHeight);
 		ret = mImpl->ToGLTexture(shadowed_wand, inTexture, outWidth, outHeight);
 	}
 
-	outInternalPos.x = 1.0f + shadow_offset[0] < 0 ? (float) -shadow_offset[0] : 0.0f;
-	outInternalPos.y = 1.0f + shadow_offset[1] < 0 ? (float) -shadow_offset[1] : 0.0f;
-	outInternalSize.x = (float) inWidth + (shadow_offset[0] > 0 ? (float) -shadow_offset[0] : 0.0f);
-	outInternalSize.y = (float) inHeight + (shadow_offset[1] > 0 ? (float) -shadow_offset[1] : 0.0f);
+	outInternalPos.x = source_end_offset[0] + stroke_size;
+	outInternalPos.y = source_end_offset[1] + stroke_size;
+	outInternalSize.x = (float) inWidth - (2*stroke_size);
+	outInternalSize.y = (float) inHeight - (2*stroke_size);
 	
 	return ret;
 }

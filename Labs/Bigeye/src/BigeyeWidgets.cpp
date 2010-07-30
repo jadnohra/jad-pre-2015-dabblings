@@ -723,7 +723,7 @@ void SimplePanelWidget::CreateTextures(const WidgetContext& inContext, bool inUs
 		mSize.y = dims[1];
 
 		//vert2d(mScissorPos) += 1.0f;
-		vert2d(mScissorSize) -= 2.0f;
+		//vert2d(mScissorSize) -= 2.0f;
 	}
 }
 
