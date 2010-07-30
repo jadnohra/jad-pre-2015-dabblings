@@ -60,14 +60,6 @@ void ChildWidgetContainer::Update(const WidgetContext& inContext, const SceneTra
 }
 
 
-void ChildWidgetContainer::Render(const WidgetContext& inContext, const SceneTransform& inParentTransform, const SceneTransform& inParentLocalTransform, bool inParentTransformDirty)
-{
-	SceneTransform parent_world_tfm = inParentTransform * inParentLocalTransform;
-
-	for (size_t i=0; i<mChildWidgets.size(); ++i)
-		mChildWidgets[i]->Render(inContext, parent_world_tfm, inParentTransformDirty);
-}
-
 void ChildWidgetContainer::RenderBuild(const WidgetContext& inContext, const SceneTransform& inParentTransform, const SceneTransform& inParentLocalTransform, bool inParentTransformDirty)
 {
 	SceneTransform parent_world_tfm = inParentTransform * inParentLocalTransform;
@@ -171,33 +163,6 @@ void SimpleButtonWidget::Update(const WidgetContext& inContext, const SceneTrans
 		mIsPressed = mIsMousePressed;
 	}
 }
-
-void SimpleButtonWidget::Render(const WidgetContext& inContext, const SceneTransform& inParentTransform, bool inParentTransformDirty)
-{
-	glm::vec3 world_pos = gWidgetTransform(inParentTransform, mPos);
-	
-	bool is_pressed = mIsMousePressed || (mIsToggleButton && mIsToggled);
-	GLuint tex = is_pressed ? mPressedButtonTexture.mTexture : (mIsHighlighted ? mHighlightedButtonTexture.mTexture : mButtonTexture.mTexture);
-	const glm::vec2& tex_size = mButtonTexSize;
-
-	inContext.mApp.GetOGLStateManager().Enable(EOGLState_TextureWidget);
-	{
-		glBindTexture(GL_TEXTURE_2D, tex);
-		glTexParameteri(GL_TEXTURE_2D,GL_TEXTURE_MIN_FILTER,GL_NEAREST);	// Linear Filtering
-		glTexParameteri(GL_TEXTURE_2D,GL_TEXTURE_MAG_FILTER,GL_NEAREST);	// Linear Filtering
-		
-		glTexEnvi(GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_REPLACE);
-		//glColor4f(1.0f,1.0f,1.0f,1.0f);			
-
-		glBegin(GL_QUADS);
-			 glTexCoord2f(0.0f,0.0f); glVertex3f(world_pos.x,world_pos.y,world_pos.z);
-			 glTexCoord2f(1.0f,0.0f); glVertex3f(world_pos.x+tex_size.x,world_pos.y,world_pos.z);
-			 glTexCoord2f(1.0f,1.0f); glVertex3f(world_pos.x+tex_size.x,world_pos.y+tex_size.y,world_pos.z);
-			 glTexCoord2f(0.0f,1.0f); glVertex3f(world_pos.x,world_pos.y+tex_size.y,world_pos.z);
-		glEnd();
-	}
-}
-
 
 void SimpleButtonWidget::RenderBuild(const WidgetContext& inContext, const SceneTransform& inParentTransform, bool inParentTransformDirty)
 {
@@ -396,47 +361,6 @@ glm::vec3 SimpleSliderWidget::GetSliderWorldPos(const glm::vec3& inWorldPos) con
 	return marker_world_pos_3d;
 }
 
-void SimpleSliderWidget::Render(const WidgetContext& inContext, const SceneTransform& inParentTransform, bool inParentTransformDirty)
-{
-	glm::vec3 world_pos = gWidgetTransform(inParentTransform, mPos);
-
-	glm::vec3 frame_world_pos = world_pos;
-	glm::vec3 marker_world_pos = GetSliderWorldPos(world_pos);
-
-	inContext.mApp.GetOGLStateManager().Enable(EOGLState_TextureWidget);
-	{
-		glBindTexture(GL_TEXTURE_2D, mFrameTexture.mTexture);
-		glTexParameteri(GL_TEXTURE_2D,GL_TEXTURE_MIN_FILTER,GL_NEAREST);	// Linear Filtering
-		glTexParameteri(GL_TEXTURE_2D,GL_TEXTURE_MAG_FILTER,GL_NEAREST);	// Linear Filtering
-		
-		glTexEnvi(GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_REPLACE);
-		//glColor4f(1.0f,1.0f,1.0f,1.0f);			
-
-		glBegin(GL_QUADS);
-			 glTexCoord2f(0.0f,0.0f); glVertex3f(frame_world_pos.x,frame_world_pos.y,frame_world_pos.z);
-			 glTexCoord2f(1.0f,0.0f); glVertex3f(frame_world_pos.x+mFrameTexSize.x,frame_world_pos.y,frame_world_pos.z);
-			 glTexCoord2f(1.0f,1.0f); glVertex3f(frame_world_pos.x+mFrameTexSize.x,frame_world_pos.y+mFrameTexSize.y,frame_world_pos.z);
-			 glTexCoord2f(0.0f,1.0f); glVertex3f(frame_world_pos.x,frame_world_pos.y+mFrameTexSize.y,frame_world_pos.z);
-		glEnd();
-	}
-
-	{
-		glBindTexture(GL_TEXTURE_2D, mHasMouseSliderFocus ? mPressedMarkerTexture.mTexture : (mIsHighlighted ? mHighlightedMarkerTexture.mTexture : mMarkerTexture.mTexture));
-		// I do not know why things break if I do not set these params again here!!! find out!
-		glTexParameteri(GL_TEXTURE_2D,GL_TEXTURE_MIN_FILTER,GL_NEAREST);	// Linear Filtering
-		glTexParameteri(GL_TEXTURE_2D,GL_TEXTURE_MAG_FILTER,GL_NEAREST);	// Linear Filtering
-		
-		glTexEnvi(GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_REPLACE);
-		//glColor4f(1.0f,1.0f,1.0f,1.0f);			
-	
-		glBegin(GL_QUADS);
-			 glTexCoord2f(0.0f,0.0f); glVertex3f(marker_world_pos.x,marker_world_pos.y,marker_world_pos.z);
-			 glTexCoord2f(1.0f,0.0f); glVertex3f(marker_world_pos.x+mMarkerTexSize.x,marker_world_pos.y,marker_world_pos.z);
-			 glTexCoord2f(1.0f,1.0f); glVertex3f(marker_world_pos.x+mMarkerTexSize.x,marker_world_pos.y+mMarkerTexSize.y,marker_world_pos.z);
-			 glTexCoord2f(0.0f,1.0f); glVertex3f(marker_world_pos.x,marker_world_pos.y+mMarkerTexSize.y,marker_world_pos.z);
-		glEnd();
-	}
-}
 
 
 void SimpleSliderWidget::RenderBuild(const WidgetContext& inContext, const SceneTransform& inParentTransform, bool inParentTransformDirty)
@@ -509,28 +433,6 @@ bool SimpleTextWidget::Create(const WidgetContext& inContext, const glm::vec2& i
 }
 
 
-void SimpleTextWidget::Render(const WidgetContext& inContext, const SceneTransform& inParentTransform, bool inParentTransformDirty)
-{
-	glm::vec3 world_pos = gWidgetTransform(inParentTransform, mPos);
-
-	inContext.mApp.GetOGLStateManager().Enable(EOGLState_TextureWidget);
-	{
-		glBindTexture(GL_TEXTURE_2D, mTextTexture.mTexture);
-		glTexParameteri(GL_TEXTURE_2D,GL_TEXTURE_MIN_FILTER,GL_NEAREST);	// Linear Filtering
-		glTexParameteri(GL_TEXTURE_2D,GL_TEXTURE_MAG_FILTER,GL_NEAREST);	// Linear Filtering
-		
-		glTexEnvi(GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_REPLACE);
-		//glColor4f(1.0f,1.0f,1.0f,1.0f);			
-
-		glBegin(GL_QUADS);
-			 glTexCoord2f(0.0f,0.0f); glVertex3f(world_pos.x,world_pos.y,world_pos.z);
-			 glTexCoord2f(1.0f,0.0f); glVertex3f(world_pos.x+mTextTexSize.x,world_pos.y,world_pos.z);
-			 glTexCoord2f(1.0f,1.0f); glVertex3f(world_pos.x+mTextTexSize.x,world_pos.y+mTextTexSize.y,world_pos.z);
-			 glTexCoord2f(0.0f,1.0f); glVertex3f(world_pos.x,world_pos.y+mTextTexSize.y,world_pos.z);
-		glEnd();
-	}
-}
-
 void SimpleTextWidget::RenderBuild(const WidgetContext& inContext, const SceneTransform& inParentTransform, bool inParentTransformDirty)
 {
 	mRenderWorldPos = gWidgetTransform(inParentTransform, mPos);
@@ -596,28 +498,6 @@ bool SimpleTextureWidget::Create(const WidgetContext& inContext, const glm::vec2
 }
 
 
-void SimpleTextureWidget::Render(const WidgetContext& inContext, const SceneTransform& inParentTransform, bool inParentTransformDirty)
-{
-	glm::vec3 world_pos = gWidgetTransform(inParentTransform, mPos);
-
-	inContext.mApp.GetOGLStateManager().Enable(EOGLState_TextureWidget);
-	{
-		glBindTexture(GL_TEXTURE_2D, mTexture);
-		glTexParameteri(GL_TEXTURE_2D,GL_TEXTURE_MIN_FILTER,GL_NEAREST);	// Linear Filtering
-		glTexParameteri(GL_TEXTURE_2D,GL_TEXTURE_MAG_FILTER,GL_NEAREST);	// Linear Filtering
-		
-		glTexEnvi(GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_REPLACE);
-		//glColor4f(1.0f,1.0f,1.0f,1.0f);			
-
-		glBegin(GL_QUADS);
-			 glTexCoord2f(0.0f,0.0f); glVertex3f(world_pos.x,world_pos.y,world_pos.z);
-			 glTexCoord2f(1.0f,0.0f); glVertex3f(world_pos.x+mSize.x,world_pos.y,world_pos.z);
-			 glTexCoord2f(1.0f,1.0f); glVertex3f(world_pos.x+mSize.x,world_pos.y+mSize.y,world_pos.z);
-			 glTexCoord2f(0.0f,1.0f); glVertex3f(world_pos.x,world_pos.y+mSize.y,world_pos.z);
-		glEnd();
-	}
-}
-
 
 void SimpleTextureWidget::RenderBuild(const WidgetContext& inContext, const SceneTransform& inParentTransform, bool inParentTransformDirty)
 {
@@ -670,6 +550,10 @@ bool SimpleRenderToTextureWidget::Create(const WidgetContext& inContext, const g
 
 	mSize = inSize;
 
+	mRenderState.enable_depth = 1;
+	mRenderState.enable_texture = 1;
+	mRenderState.enable_blend = 0;
+
 	return true;
 }
 
@@ -677,24 +561,32 @@ bool SimpleRenderToTextureWidget::Create(const WidgetContext& inContext, const g
 void SimpleRenderToTextureWidget::Update(const WidgetContext& inContext, const SceneTransform& inParentTransform, bool inParentTransformDirty)
 {
 	if (mScene)
-		mScene->Update(inContext, *this);
+		mScene->Update(inContext, *this, mTexture);
 }
 
 
-void SimpleRenderToTextureWidget::Render(const WidgetContext& inContext, const SceneTransform& inParentTransform, bool inParentTransformDirty)
+void SimpleRenderToTextureWidget::RenderBuild(const WidgetContext& inContext, const SceneTransform& inParentTransform, bool inParentTransformDirty)
 {
-	//return;
-
-	glm::vec3 world_pos = gWidgetTransform(inParentTransform, mPos);
-
-	inContext.mApp.PushRenderToTexture(to2d_point(world_pos), mTexture);
+	if (mScene)
 	{
-		if (mScene)
-			mScene->Render(inContext, *this);
-	}
-	inContext.mApp.PopRenderToTexture();
+		mRenderWorldPos = gWidgetTransform(inParentTransform, mPos);
 
-	inContext.mApp.GetOGLStateManager().Enable(EOGLState_TextureWidget);
+		mRenderNodeDependency.mTrees.clear();
+
+		inContext.mRenderTreeBuilder.BranchUp(0, *this);
+		inContext.mRenderTreeBuilder.BranchDown(0);
+
+		int render_to_texture_tree = inContext.mRenderTreeBuilder.BranchUpNewTree(mScene, false, this);
+		inContext.mRenderTreeBuilder.BranchDown(render_to_texture_tree);
+	}
+}
+
+
+void SimpleRenderToTextureWidget::Render(Renderer& inRenderer)
+{
+	glm::vec3& world_pos = mRenderWorldPos;
+	
+	mRenderState.Apply(inRenderer);
 	{
 		mTexture.Bind();
 		glTexParameteri(GL_TEXTURE_2D,GL_TEXTURE_MIN_FILTER,GL_NEAREST);	// Linear Filtering
@@ -757,29 +649,6 @@ bool MagicWandTestTextureWidget::Create(const WidgetContext& inContext, const gl
 	mRenderState.enable_blend = 1;
 
 	return true;
-}
-
-
-void MagicWandTestTextureWidget::Render(const WidgetContext& inContext, const SceneTransform& inParentTransform, bool inParentTransformDirty)
-{
-	glm::vec3 world_pos = gWidgetTransform(inParentTransform, mPos);
-
-	inContext.mApp.GetOGLStateManager().Enable(EOGLState_TextureWidget);
-	{
-		glBindTexture(GL_TEXTURE_2D, mTexture.mTexture);
-		glTexParameteri(GL_TEXTURE_2D,GL_TEXTURE_MIN_FILTER,GL_NEAREST);	// Linear Filtering
-		glTexParameteri(GL_TEXTURE_2D,GL_TEXTURE_MAG_FILTER,GL_NEAREST);	// Linear Filtering
-		
-		glTexEnvi(GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_REPLACE);
-		//glColor4f(1.0f,1.0f,1.0f,1.0f);			
-
-		glBegin(GL_QUADS);
-			 glTexCoord2f(0.0f,0.0f); glVertex3f(world_pos.x,world_pos.y,world_pos.z);
-			 glTexCoord2f(1.0f,0.0f); glVertex3f(world_pos.x+mSize.x,world_pos.y,world_pos.z);
-			 glTexCoord2f(1.0f,1.0f); glVertex3f(world_pos.x+mSize.x,world_pos.y+mSize.y,world_pos.z);
-			 glTexCoord2f(0.0f,1.0f); glVertex3f(world_pos.x,world_pos.y+mSize.y,world_pos.z);
-		glEnd();
-	}
 }
 
 
@@ -908,42 +777,6 @@ void SimplePanelWidget::Update(const WidgetContext& inContext, const SceneTransf
 }
 
 
-void SimplePanelWidget::Render(const WidgetContext& inContext, const SceneTransform& inParentTransform, bool inParentTransformDirty)
-{
-	glm::vec3 world_pos = gWidgetTransform(inParentTransform, mPos);
-
-	inContext.mApp.GetOGLStateManager().Enable(EOGLState_TextureWidget);
-	
-	{
-		{
-			glBindTexture(GL_TEXTURE_2D, mTexture.mTexture);
-			glTexParameteri(GL_TEXTURE_2D,GL_TEXTURE_MIN_FILTER,GL_NEAREST);	// Linear Filtering
-			glTexParameteri(GL_TEXTURE_2D,GL_TEXTURE_MAG_FILTER,GL_NEAREST);	// Linear Filtering
-			
-			glTexEnvi(GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_REPLACE);
-			//glColor4f(1.0f,1.0f,1.0f,1.0f);			
-
-			glBegin(GL_QUADS);
-				 glTexCoord2f(0.0f,0.0f); glVertex3f(world_pos.x,world_pos.y,world_pos.z);
-				 glTexCoord2f(1.0f,0.0f); glVertex3f(world_pos.x+mSize.x,world_pos.y,world_pos.z);
-				 glTexCoord2f(1.0f,1.0f); glVertex3f(world_pos.x+mSize.x,world_pos.y+mSize.y,world_pos.z);
-				 glTexCoord2f(0.0f,1.0f); glVertex3f(world_pos.x,world_pos.y+mSize.y,world_pos.z);
-			glEnd();
-		}
-
-
-		inContext.mApp.PushScissor(to2d_point(world_pos) + mScissorPos, mScissorSize);
-		{
-			SceneTransform local_transform = gWidgetTranslation(mPos);
-			mAutoChildren.Render(inContext, inParentTransform, local_transform, inParentTransformDirty || false);
-
-			SceneTransform overflow_local_transform = gWidgetTranslation(mPos + to3d_point(mOverflowPosOffset));
-			mChildren.Render(inContext, inParentTransform, overflow_local_transform, inParentTransformDirty || false);
-		}
-		inContext.mApp.PopScissor();
-	}
-}
-
 
 void SimplePanelWidget::RenderBuild(const WidgetContext& inContext, const SceneTransform& inParentTransform, bool inParentTransformDirty)
 {
@@ -999,75 +832,6 @@ void SimplePanelWidget::Render(Renderer& inRenderer)
 	}
 }
 
-
-void OGLState_TextureWidget::Set()
-{
-	//glDisable(GL_BLEND);
-	glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
-	glEnable(GL_BLEND);
-	glEnable(GL_TEXTURE_2D);
-}
-
-
-void NativeWindowWidget::PushScissor(const glm::vec2& inPos, const glm::vec2& inSize) const
-{
-	mScissorStack.push(ScissorStackElement(inPos, inSize));
-
-	if (mScissorStack.size() == 1)
-	{
-		glEnable(GL_SCISSOR_TEST);
-	}
-
-	const ScissorStackElement& top = mScissorStack.top();
-	glScissor(top.mPosX, mViewportHeight-(top.mPosY+top.mHeight), top.mWidth, top.mHeight);
-}
-
-
-void NativeWindowWidget::PopScissor() const
-{
-	mScissorStack.pop();
-
-	if (mScissorStack.empty())
-	{
-		glDisable(GL_SCISSOR_TEST);
-	}
-	else
-	{
-		const ScissorStackElement& top = mScissorStack.top();
-		glScissor(top.mPosX, top.mPosY, top.mWidth, top.mHeight);
-	}
-}
-
-
-void NativeWindowWidget::PushRenderToTexture(const glm::vec2& inPos, OGLRenderToTexture& inObject) const
-{
-	mRenderToTextureStack.push(RenderToTextureStackElement(inPos, inObject));
-
-	const RenderToTextureStackElement& top = mRenderToTextureStack.top();
-	top.mObject->BeginRender();
-}
-
-OGLRenderToTexture* NativeWindowWidget::PopRenderToTexture() const
-{
-
-	OGLRenderToTexture* ret = NULL;
-
-	if (!mRenderToTextureStack.empty())
-	{
-		const RenderToTextureStackElement& top = mRenderToTextureStack.top();
-		ret = top.mObject;
-		top.mObject->EndRender();
-	}
-	
-	mRenderToTextureStack.pop();
-
-	if (mRenderToTextureStack.empty())
-	{
-		mApp->GetOGLStateManager().Enable(EOGLState_Reset);
-	}
-
-	return ret;
-}
 
 NativeWindowWidget::NativeWindowWidget()
 :	mHWND(NULL)
@@ -1289,13 +1053,6 @@ bool NativeWindowWidget::Create(const WidgetContext& inContext, App& inApp, cons
 
 	{
 		mApp->GetWand().LoadFont("media/DroidSans.ttf");
-
-		mApp->GetOGLStateManager().StartBuild(EOGLState_Count);
-		mApp->GetOGLStateManager().BuildSetState(new OGLState(), EOGLState_Reset);
-		mApp->GetOGLStateManager().BuildSetState(new OGLState_NativeWindowWidget(*this), EOGLState_NativeWindowWidget);
-		//inContext.mApp.GetOGLStateManager().BuildSetState(new OGLState_FontRender(mDefaultFont), EOGLState_FontRender, EOGLState_NativeWindowWidget);
-		mApp->GetOGLStateManager().BuildSetState(new OGLState_TextureWidget(), EOGLState_TextureWidget, EOGLState_NativeWindowWidget);
-		mApp->GetOGLStateManager().EndBuild();
 	}
 
 	Test(inContext);
@@ -1308,8 +1065,22 @@ class TestScene : public SimpleRenderToTextureWidget::Scene
 {
 public:
 
-	void Render(const WidgetContext& inContext, SimpleRenderToTextureWidget& inParent)	
+	float mRenderTime;
+	glm::vec2 mSize;
+	OGLRenderToTexture* mTexture;
+
+	virtual void Update(const WidgetContext& inContext, SimpleRenderToTextureWidget& inParent, OGLRenderToTexture& inTexture)	
 	{
+		mSize.x = inParent.GetSize().x;
+		mSize.y = inParent.GetSize().y;
+		mRenderTime = inContext.mTimeSecs;
+		mTexture = &inTexture;
+	}
+
+	void Render(Renderer& inRenderer)	
+	{
+		mTexture->BeginRender();
+
 		glDisable(GL_BLEND);
 		glDisable(GL_TEXTURE_2D);
 
@@ -1320,7 +1091,7 @@ public:
 		glLoadIdentity();									// Reset The Projection Matrix
 
 		// Calculate The Aspect Ratio Of The Window
-		gluPerspective(45.0f,(GLfloat)inParent.GetSize().x/(GLfloat)inParent.GetSize().y,0.1f,100.0f);
+		gluPerspective(45.0f,(GLfloat)mSize.x/(GLfloat)mSize.y,0.1f,100.0f);
 
 		glMatrixMode(GL_MODELVIEW);							// Select The Modelview Matrix
 		glLoadIdentity();		
@@ -1330,8 +1101,8 @@ public:
 		glDepthFunc(GL_LEQUAL);
 		glHint(GL_PERSPECTIVE_CORRECTION_HINT, GL_NICEST);	// Really Nice Perspective Calculations
 
-		float rtri = 16.0f * inContext.mTimeSecs;
-		float rquad = 128.0f * -inContext.mTimeSecs;
+		float rtri = 16.0f * mRenderTime;
+		float rquad = 128.0f * -mRenderTime;
 
 		glLoadIdentity();									// Reset The Current Modelview Matrix
 		glTranslatef(-1.5f,0.0f,-6.0f);						// Move Left 1.5 Units And Into The Screen 6.0
@@ -1398,6 +1169,9 @@ public:
 			glVertex3f( 1.0f,-1.0f, 1.0f);					// Bottom Left Of The Quad (Right)
 			glVertex3f( 1.0f,-1.0f,-1.0f);					// Bottom Right Of The Quad (Right)
 		glEnd();											// Done Drawing The Quad
+
+
+		mTexture->EndRender();
 	}
 };
 TestScene mTestScene;
@@ -1405,40 +1179,6 @@ SimpleRenderToTextureWidget* mTestWidget;
 
 void NativeWindowWidget::Test(const WidgetContext& inContext)
 {
-	//GLenum err = glewInit();
-	//GLuint mFrameBufferID;
-	//glGenFramebuffersEXT(1, &mFrameBufferID);
-
-#ifdef TEST_RENDER_NEW__
-	{
-		float pos_vert = 60.0f;
-		float height_offset = 6.0f;
-
-
-		{
-			SimpleButtonWidget* button_widget = new SimpleButtonWidget();
-			button_widget->Create(inContext, glm::vec2(8.0f, pos_vert), true, MagicWand::TextInfo("Toggled eye ;)", 0, 12.0f, false, glm::vec2(10.0f, 2.0f)), MagicWand::SizeConstraints());
-			button_widget->SetIsToggled(true);
-			
-			pos_vert += vert2d(button_widget->GetSize()) + height_offset;
-
-			mChildren.mChildWidgets.push_back(button_widget);
-		}
-
-		{
-			SimpleButtonWidget* button_widget = new SimpleButtonWidget();
-			button_widget->Create(inContext, glm::vec2(8.0f, pos_vert), true, MagicWand::TextInfo("NEW renderer ;)", 0, 16.0f, true, glm::vec2(10.0f, 2.0f)), MagicWand::SizeConstraints());
-			button_widget->SetIsToggled(true);
-			
-			pos_vert += vert2d(button_widget->GetSize()) + height_offset;
-
-			mChildren.mChildWidgets.push_back(button_widget);
-		}
-	}
-
-	return;
-#endif
-
 	/*
 	{
 		MagicWandTestTextureWidget* widget = new MagicWandTestTextureWidget();
@@ -1474,7 +1214,7 @@ void NativeWindowWidget::Test(const WidgetContext& inContext)
 	}
 #endif
 
-#if 0
+#if 1
 	{
 		SimpleRenderToTextureWidget* widget = new SimpleRenderToTextureWidget();
 		widget->Create(inContext, glm::vec2(10.0f, 30.0f), glm::vec2(640.0f, 480.0f));
@@ -1639,40 +1379,6 @@ void NativeWindowWidget::Test(const WidgetContext& inContext)
 }
 
 
-OGLState_NativeWindowWidget::OGLState_NativeWindowWidget(NativeWindowWidget& inParent)
-:	mParent(inParent)
-{
-}
-
-void OGLState_NativeWindowWidget::Set()
-{
-	GLint viewport_width = mParent.GetViewportWidth();
-	GLint viewport_height = mParent.GetViewportHeight();
-
-	glViewport(0, 0, (GLsizei)(viewport_width), (GLsizei)(viewport_height));
-	//glClear(GL_COLOR_BUFFER_BIT);
-
-	glMatrixMode(GL_PROJECTION);
-	glLoadIdentity();
-	//glOrtho(0.0f, window_width, window_height, 0.0f, -1.0f, 1.0f);
-	glOrtho(0.0f, viewport_width, viewport_height, 0.0f, -1.0f, 1.0f);
-
-	glMatrixMode( GL_MODELVIEW );
-	glLoadIdentity();
-
-	//glDisable(GL_DEPTH_TEST);
-	glEnable(GL_DEPTH_TEST);
-
-	// For 2D pixel precise mode
-	//glTranslatef (0.375f, 0.375f, 0.0f);
-	//glTranslatef (0.5f, 0.5f, 0.0f);
-
-	//glPolygonMode( GL_FRONT_AND_BACK, GL_LINE );
-	//glPolygonMode( GL_FRONT_AND_BACK, GL_FILL );
-
-	//PushScissor(glm::vec2(0.0f, 0.0f), glm::vec2(window_width, window_height));
-}
-
 
 void NativeWindowWidget::Update(const WidgetContext& inContext, const SceneTransform& inParentTransform, bool inParentTransformDirty) 
 {
@@ -1686,48 +1392,44 @@ void NativeWindowWidget::Update(const WidgetContext& inContext, const SceneTrans
 }
 
 
-void NativeWindowWidget::Render(const WidgetContext& inContext, const SceneTransform& inParentTransform, bool inParentTransformDirty) 
-{
-	inContext.mApp.GetOGLStateManager().Enable(EOGLState_NativeWindowWidget);
-
-	glClearColor(0.0f, 0.0f, 0.0f, 1.0f);
-	glClearColor(39.0f/255.0f, 39.0f/255.0f, 39.0f/255.0f, 1.0f);
-	//glClearColor(176.0f/255.0f, 176.0f/255.0f, 176.0f/255.0f, 1.0f);
-	//glClearColor(49.0f/255.0f, 140.0f/255.0f, 231.0f / 255.0f, 1.0f);
-	//glClearColor(255.0f/255.0f, 255.0f/255.0f, 255.0f/255.0f, 1.0f);
-	
-	//glClearColor(100.0f/255.0f, 149.0f/255.0f, 237.0f / 255.0f, 1.0f);
-	//glClearColor(75.0f/255.0f, 146.0f/255.0f, 219.0f / 255.0f, 1.0f);
-	//glClearColor(1.0f, 1.0f, 1.0f, 1.0f);
-	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);	// Clear Screen And Depth Buffer
-
-	//mTestScene.Render(inContext, *mTestWidget, inContext.mTimeSecs);
-	mChildren.Render(inContext, inParentTransform, kIdentitySceneTransform, inParentTransformDirty || false);
-
-	{
-		//const OGLState_FontRender* font_render = (const OGLState_FontRender*) inContext.mApp.GetOGLStateManager().Enable(EOGLState_FontRender);
-		//font_render->Render("AbcdefGhIJK", 300.0f, 100.0f);
-	}
-
-	SwapBuffers(mHDC);
-	inContext.mApp.GetOGLStateManager().Enable(EOGLState_Reset);
-}
-
-
 void NativeWindowWidget::RenderBuild(const WidgetContext& inContext, const SceneTransform& inParentTransform, bool inParentTransformDirty)
 {
-	int render_tree = inContext.mRenderTreeBuilder.BranchUpNewTree(NULL, true, false);
-	
-	inContext.mRenderTreeBuilder.BranchUp(render_tree, *this);
+	int render_tree = inContext.mRenderTreeBuilder.BranchUpNewTree(this, false, NULL);
 	mChildren.RenderBuild(inContext, inParentTransform, kIdentitySceneTransform, inParentTransformDirty || false);
 	inContext.mRenderTreeBuilder.BranchDown(render_tree);
 }
 
 void NativeWindowWidget::Render(Renderer& inRenderer)
 {
+	{
+		GLint viewport_width = GetViewportWidth();
+		GLint viewport_height = GetViewportHeight();
+
+		glViewport(0, 0, (GLsizei)(viewport_width), (GLsizei)(viewport_height));
+		//glClear(GL_COLOR_BUFFER_BIT);
+
+		glMatrixMode(GL_PROJECTION);
+		glLoadIdentity();
+		//glOrtho(0.0f, window_width, window_height, 0.0f, -1.0f, 1.0f);
+		glOrtho(0.0f, viewport_width, viewport_height, 0.0f, -1.0f, 1.0f);
+
+		glMatrixMode( GL_MODELVIEW );
+		glLoadIdentity();
+
+		//glDisable(GL_DEPTH_TEST);
+		glEnable(GL_DEPTH_TEST);
+
+		// For 2D pixel precise mode
+		//glTranslatef (0.375f, 0.375f, 0.0f);
+		//glTranslatef (0.5f, 0.5f, 0.0f);
+
+		//glPolygonMode( GL_FRONT_AND_BACK, GL_LINE );
+		//glPolygonMode( GL_FRONT_AND_BACK, GL_FILL );
+
+		//PushScissor(glm::vec2(0.0f, 0.0f), glm::vec2(window_width, window_height));
+	}
+
 	inRenderer.InvalidateCurrentCompactRenderState();
-	OGLState_NativeWindowWidget temp(*this);
-	temp.Set();
 
 	glClearColor(0.0f, 0.0f, 0.0f, 1.0f);
 	glClearColor(39.0f/255.0f, 39.0f/255.0f, 39.0f/255.0f, 1.0f);

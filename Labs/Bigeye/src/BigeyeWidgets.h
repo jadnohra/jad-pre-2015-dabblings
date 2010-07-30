@@ -4,7 +4,6 @@
 #include <stack>
 #include "BEMath.h"
 #include "OGL.h"
-#include "OGLState.h"
 #include "MagickWand.h"
 #include "BigeyeRenderTreeBuilder.h"
 
@@ -40,8 +39,6 @@ namespace BE
 	public:
 
 		virtual void Update(const WidgetContext& inContext, const SceneTransform& inParentTransform, bool inParentTransformDirty) {}
-		virtual void Render(const WidgetContext& inContext, const SceneTransform& inParentTransform, bool inParentTransformDirty) {}
-
 		virtual void RenderBuild(const WidgetContext& inContext, const SceneTransform& inParentTransform, bool inParentTransformDirty) {}
 		virtual void Render(Renderer& inRenderer) {}
 
@@ -50,38 +47,6 @@ namespace BE
 	};
 
 
-	enum EOGLWidgetState
-	{
-		EOGLState_Reset,
-		EOGLState_NativeWindowWidget,
-		EOGLState_TextureWidget,
-		EOGLState_FontRender,
-		EOGLState_Count,
-	};
-
-
-	class NativeWindowWidget;
-	class OGLState_NativeWindowWidget : public OGLState
-	{
-	public:
-
-						OGLState_NativeWindowWidget(NativeWindowWidget& inParent);
-
-		virtual void	Set();
-
-	protected:
-
-		NativeWindowWidget& mParent;
-	};
-
-	class OGLState_TextureWidget : public OGLState
-	{
-	public:
-
-		virtual void	Set();
-	};
-
-	
 	class ChildWidgetContainer
 	{
 	public:
@@ -93,8 +58,6 @@ namespace BE
 
 		void	Delete();
 		void	Update(const WidgetContext& inContext, const SceneTransform& inParentTransform, const SceneTransform& inParentLocalTransform, bool inParentTransformDirty);
-		void	Render(const WidgetContext& inContext, const SceneTransform& inParentTransform, const SceneTransform& inParentLocalTransform, bool inParentTransformDirty);
-
 		void RenderBuild(const WidgetContext& inContext, const SceneTransform& inParentTransform, const SceneTransform& inParentLocalTransform, bool inParentTransformDirty);
 		
 	public:
@@ -114,7 +77,6 @@ namespace BE
 
 		bool		Create(const WidgetContext& inContext, const glm::vec2& inPos);
 
-		virtual void Render(const WidgetContext& inContext, const SceneTransform& inParentTransform, bool inParentTransformDirty);
 		virtual glm::vec3 GetLocalPosition() { return mPos; }
 
 		virtual void RenderBuild(const WidgetContext& inContext, const SceneTransform& inParentTransform, bool inParentTransformDirty);
@@ -139,7 +101,6 @@ namespace BE
 
 		bool		Create(const WidgetContext& inContext, const glm::vec2& inPos, const char* inTexturePath);
 
-		virtual void Render(const WidgetContext& inContext, const SceneTransform& inParentTransform, bool inParentTransformDirty);
 		virtual glm::vec2 GetSize() { return mSize; }
 		virtual glm::vec3 GetLocalPosition() { return mPos; }
 
@@ -161,12 +122,12 @@ namespace BE
 	{
 	public:
 
-		class Scene
+		class Scene : public RenderNode
 		{
 		public:
 
-			virtual void Update(const WidgetContext& inContext, SimpleRenderToTextureWidget& inParent)	{}
-			virtual void Render(const WidgetContext& inContext, SimpleRenderToTextureWidget& inParent)	{}
+			virtual void Update(const WidgetContext& inContext, SimpleRenderToTextureWidget& inParent, OGLRenderToTexture& inTexture)	{}
+			virtual void Render(Renderer& inRenderer)	{}
 		};
 
 		SimpleRenderToTextureWidget();
@@ -176,13 +137,14 @@ namespace BE
 		void		SetScene(Scene* inScene)		{ mScene = inScene; }
 
 		virtual void Update(const WidgetContext& inContext, const SceneTransform& inParentTransform, bool inParentTransformDirty);
-		virtual void Render(const WidgetContext& inContext, const SceneTransform& inParentTransform, bool inParentTransformDirty);
 
 		virtual glm::vec2 GetSize() { return mSize; }
 		virtual glm::vec3 GetLocalPosition() { return mPos; }
 
-		//virtual void RenderBuild(const WidgetContext& inContext, const SceneTransform& inParentTransform, bool inParentTransformDirty);
-		//virtual void Render(Renderer& inRenderer);
+		virtual void RenderBuild(const WidgetContext& inContext, const SceneTransform& inParentTransform, bool inParentTransformDirty);
+		virtual void Render(Renderer& inRenderer);
+
+		virtual RenderNodeDependency*	GetDependency()					{ return &mRenderNodeDependency; }
 
 	protected:
 
@@ -191,6 +153,10 @@ namespace BE
 		glm::vec2 mSize;
 
 		Scene* mScene;
+
+		RenderNodeDependency mRenderNodeDependency;
+		CompactRenderState mRenderState;
+		glm::vec3 mRenderWorldPos;
 	};
 
 	class SimpleTextWidget : public Widget
@@ -199,7 +165,6 @@ namespace BE
 
 		bool		Create(const WidgetContext& inContext, const glm::vec2& inPos, const MagicWand::TextInfo& inTextInfo, const MagicWand::SizeConstraints& inSizeConstraints);
 
-		virtual void Render(const WidgetContext& inContext, const SceneTransform& inParentTransform, bool inParentTransformDirty);
 		virtual glm::vec2 GetSize() { return mTextTexSize; }
 		virtual glm::vec3 GetLocalPosition() { return mPos; }
 
@@ -227,8 +192,7 @@ namespace BE
 		void		SetIsToggled(bool inIsToggled);
 
 		virtual void Update(const WidgetContext& inContext, const SceneTransform& inParentTransform, bool inParentTransformDirty);
-		virtual void Render(const WidgetContext& inContext, const SceneTransform& inParentTransform, bool inParentTransformDirty);
-
+		
 		virtual glm::vec2 GetSize() {  return mButtonTexSize; }
 		virtual glm::vec3 GetLocalPosition() { return mPos; }
 
@@ -274,8 +238,7 @@ namespace BE
 		float		GetSliderPos() const		{ return mSliderPos; }
 
 		virtual void Update(const WidgetContext& inContext, const SceneTransform& inParentTransform, bool inParentTransformDirty);
-		virtual void Render(const WidgetContext& inContext, const SceneTransform& inParentTransform, bool inParentTransformDirty);
-
+		
 		virtual glm::vec2 GetSize() {  return mMarkerTexSize; }
 		virtual glm::vec3 GetLocalPosition() { return mPos; }
 
@@ -327,8 +290,7 @@ namespace BE
 		ChildWidgetContainer& GetChildren() { return mChildren; } 
 
 		virtual void Update(const WidgetContext& inContext, const SceneTransform& inParentTransform, bool inParentTransformDirty);
-		virtual void Render(const WidgetContext& inContext, const SceneTransform& inParentTransform, bool inParentTransformDirty);
-
+		
 		virtual glm::vec2 GetSize() {  return mSize; }
 		virtual glm::vec3 GetLocalPosition() { return mPos; }
 
@@ -371,8 +333,7 @@ namespace BE
 		bool			Create(const WidgetContext& inContext, App& inApp, const WideString& inWindowName, int inWidth, int inHeight);
 
 		virtual void	Update(const WidgetContext& inContext, const SceneTransform& inParentTransform, bool inParentTransformDirty);
-		virtual void	Render(const WidgetContext& inContext, const SceneTransform& inParentTransform, bool inParentTransformDirty);
-
+		
 		virtual void RenderBuild(const WidgetContext& inContext, const SceneTransform& inParentTransform, bool inParentTransformDirty);
 		virtual void Render(Renderer& inRenderer);
 
@@ -382,65 +343,10 @@ namespace BE
 		HWND			GetHWND() const	{ return mHWND; }
 		HDC				GetHDC() const	{ return mHDC; }
 
-		void			PushScissor(const glm::vec2& inPos, const glm::vec2& inSize) const; 
-		void			PopScissor() const; 
-
-		void			PushRenderToTexture(const glm::vec2& inPos, OGLRenderToTexture& inObject) const;
-		OGLRenderToTexture*			PopRenderToTexture() const;
-
 		GLint			GetViewportWidth() const { return mViewportWidth; }
 		GLint			GetViewportHeight() const { return mViewportHeight; }
 
 	protected:
-
-		struct ScissorStackElement
-		{
-			GLint mPosX;
-			GLint mPosY;
-			GLint mWidth;
-			GLint mHeight;
-
-			ScissorStackElement()
-			:	mPosX(0)
-			,	mPosY(0)
-			,	mWidth(0)
-			,	mHeight(0)
-			{
-			}
-
-			ScissorStackElement(const glm::vec2& inPos, const glm::vec2& inSize)
-			:	mPosX((GLint) inPos.x)
-			,	mPosY((GLint) inPos.y)
-			,	mWidth((GLint) inSize.x)
-			,	mHeight((GLint) inSize.y)
-			{
-			}
-		};
-
-		struct RenderToTextureStackElement
-		{
-			GLint mPosX;
-			GLint mPosY;
-
-			OGLRenderToTexture*	mObject;
-
-			RenderToTextureStackElement()
-			:	mPosX(0)
-			,	mPosY(0)
-			,	mObject(NULL)
-			{
-			}
-
-			RenderToTextureStackElement(const glm::vec2& inPos, OGLRenderToTexture& inObject)
-			:	mPosX((GLint) inPos.x)
-			,	mPosY((GLint) inPos.y)
-			,	mObject(&inObject)
-			{
-			}
-		};
-
-		typedef std::stack<ScissorStackElement> ScissorStack;
-		typedef std::stack<RenderToTextureStackElement> RenderToTextureStack;
 
 		void			Destroy();
 		void			Test(const WidgetContext& inContext);
@@ -451,8 +357,6 @@ namespace BE
 		HDC		mHDC;
 		HGLRC	mHRC;
 		ChildWidgetContainer mChildren;
-		mutable ScissorStack mScissorStack;	
-		mutable RenderToTextureStack mRenderToTextureStack;	
 		GLint mViewportWidth;
 		GLint mViewportHeight;
 	};

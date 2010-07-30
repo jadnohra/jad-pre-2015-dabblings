@@ -49,15 +49,7 @@ namespace BE
 		bool					Update(float inTimeSecs);
 
 		HINSTANCE				GetHINSTANCE() const			{ return mHINSTANCE; }
-		const OGLStateManager&	GetOGLStateManager() const		{ return mOGLStateManager; }
-		OGLStateManager&		GetOGLStateManager()			{ return mOGLStateManager; }
 		MagicWand&				GetWand() const					{ return mWand; }
-
-		void					PushScissor(const glm::vec2& inPos, const glm::vec2& inSize) const	{ mWindow->PushScissor(inPos, inSize); }
-		void					PopScissor() const													{ mWindow->PopScissor(); }
-
-		void			PushRenderToTexture(const glm::vec2& inPos, OGLRenderToTexture& inObject) const { mWindow->PushRenderToTexture(inPos, inObject); }
-		OGLRenderToTexture*			PopRenderToTexture() const											{ return mWindow->PopRenderToTexture(); }
 
 	protected:
 
@@ -65,12 +57,9 @@ namespace BE
 
 		HINSTANCE				mHINSTANCE;
 		NativeWindowWidget*		mWindow;
-		OGLStateManager			mOGLStateManager;
 		mutable MagicWand		mWand;
 
-#ifdef TEST_RENDER_NEW
 		Renderer				mRenderer;
-#endif
 
 
 		bool					mMouseMoved;

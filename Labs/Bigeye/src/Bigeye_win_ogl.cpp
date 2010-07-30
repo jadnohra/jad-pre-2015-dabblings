@@ -186,14 +186,10 @@ bool App::Update(float inTimeSecs)
 		PrepareInputForUpdate();
 		WidgetContext widget_context(*this, inTimeSecs);
 		mWindow->Update(widget_context, identity, false);
-#ifdef TEST_RENDER_NEW
 		widget_context.mRenderTreeBuilder.Reset(mRenderer);
 		mWindow->RenderBuild(widget_context, identity, false);
 		mRenderer.Render();
 		SwapBuffers(mWindow->GetHDC());	// MOVE THIS!!
-#else
-		mWindow->Render(widget_context, identity, false);
-#endif
 
 		//else												
 		{

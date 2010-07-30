@@ -42,7 +42,7 @@
 				Name="VCCLCompilerTool"
 				Optimization="0"
 				AdditionalIncludeDirectories="../../../Dependencies/;../../../Dependencies/ImageMagickWand/include;../../../Dependencies/glew-1.5.4/include"
-				PreprocessorDefinitions="WIN32;_DEBUG;_CONSOLE;TEST_RENDER_NEW"
+				PreprocessorDefinitions="WIN32;_DEBUG;_CONSOLE"
 				MinimalRebuild="true"
 				BasicRuntimeChecks="3"
 				RuntimeLibrary="3"
@@ -260,14 +260,6 @@
 		</File>
 		<File
 			RelativePath="..\..\src\OGL.h"
-			>
-		</File>
-		<File
-			RelativePath="..\..\src\OGLState.cpp"
-			>
-		</File>
-		<File
-			RelativePath="..\..\src\OGLState.h"
 			>
 		</File>
 		<File

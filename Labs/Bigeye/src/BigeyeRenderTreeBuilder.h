@@ -52,18 +52,17 @@ namespace BE
 				tree_state->mTreeNodeStack.pop();
 		}
 
-		int BranchUpNewTree(RenderNode* inNode, bool inSetDependency, bool inAutoDestroyRenderNodes)
+		int BranchUpNewTree(RenderNode* inNode, bool inAutoDestroyRenderNodes, RenderNode* inDependentNode)
 		{
 			TreeBuildState* new_tree_state = new TreeBuildState();
 			new_tree_state->mTree = &mRenderer->NewTree(inAutoDestroyRenderNodes);
 
-			if (inNode)
 			{
 				new_tree_state->mTreeNodeStack.push(&new_tree_state->mTree->AddNode(*inNode));
 
-				if (inSetDependency)
+				if (inDependentNode)
 				{
-					RenderNodeDependency* dependency = inNode->GetDependency();
+					RenderNodeDependency* dependency = inDependentNode->GetDependency();
 					gAssert(dependency != NULL);
 
 					dependency->mTrees.push_back(new_tree_state->mTree);
@@ -73,6 +72,11 @@ namespace BE
 			mTreeBuildStates.push_back(new_tree_state);
 
 			return ((int) mTreeBuildStates.size() - 1);
+		}
+
+		RenderTree* GetRenderTree(int inTreeIndex)
+		{
+			 return mTreeBuildStates[inTreeIndex]->mTree;
 		}
 
 		PushPopNodeStack& GetScissorPushPopNodeStack(int inTreeIndex)
