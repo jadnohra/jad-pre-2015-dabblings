@@ -2,9 +2,9 @@
 <VisualStudioProject
 	ProjectType="Visual C++"
 	Version="9.00"
-	Name="Bigeye"
-	ProjectGUID="{837AA69E-17EE-42BC-9F49-D52678BFB0CE}"
-	RootNamespace="Bigeye"
+	Name="BigeyeDemo"
+	ProjectGUID="{53BF70DE-2247-4701-8A53-FDE50D178F6F}"
+	RootNamespace="BigeyeDemo"
 	Keyword="Win32Proj"
 	TargetFrameworkVersion="196613"
 	>
@@ -20,7 +20,7 @@
 			Name="Debug|Win32"
 			OutputDirectory="$(SolutionDir)\..\..\lib\"
 			IntermediateDirectory="$(SolutionDir)\BuildWorkFiles\$(ConfigurationName)"
-			ConfigurationType="4"
+			ConfigurationType="1"
 			CharacterSet="1"
 			>
 			<Tool
@@ -42,7 +42,7 @@
 				Name="VCCLCompilerTool"
 				Optimization="0"
 				AdditionalIncludeDirectories="../../../Dependencies/;../../../Dependencies/ImageMagickWand/include;../../../Dependencies/glew-1.5.4/include"
-				PreprocessorDefinitions="WIN32;_DEBUG;_LIB"
+				PreprocessorDefinitions="WIN32;_DEBUG;_CONSOLE"
 				MinimalRebuild="true"
 				BasicRuntimeChecks="3"
 				RuntimeLibrary="3"
@@ -60,13 +60,21 @@
 				Name="VCPreLinkEventTool"
 			/>
 			<Tool
-				Name="VCLibrarianTool"
+				Name="VCLinkerTool"
 				LinkLibraryDependencies="true"
-				OutputFile="$(OutDir)\$(ProjectName)_d.lib"
-				AdditionalLibraryDirectories="../../../Dependencies/freeglut;../../../Dependencies/ImageMagickWand/lib;../../../Dependencies/glew-1.5.4/lib"
+				UseLibraryDependencyInputs="false"
+				OutputFile="$(OutDir)\$(ProjectName)_d.exe"
+				LinkIncremental="2"
+				AdditionalLibraryDirectories="../../../Dependencies/freeglut;../../../Dependencies/ImageMagickWand/lib;../../../Dependencies/glew-1.5.4/lib;"
+				GenerateDebugInformation="true"
+				SubSystem="1"
+				TargetMachine="1"
 			/>
 			<Tool
 				Name="VCALinkTool"
+			/>
+			<Tool
+				Name="VCManifestTool"
 			/>
 			<Tool
 				Name="VCXDCMakeTool"
@@ -78,6 +86,9 @@
 				Name="VCFxCopTool"
 			/>
 			<Tool
+				Name="VCAppVerifierTool"
+			/>
+			<Tool
 				Name="VCPostBuildEventTool"
 			/>
 		</Configuration>
@@ -85,7 +96,7 @@
 			Name="Release|Win32"
 			OutputDirectory="$(SolutionDir)\..\..\lib\"
 			IntermediateDirectory="$(SolutionDir)\BuildWorkFiles\$(ConfigurationName)"
-			ConfigurationType="4"
+			ConfigurationType="1"
 			CharacterSet="1"
 			WholeProgramOptimization="1"
 			>
@@ -109,7 +120,7 @@
 				Optimization="2"
 				EnableIntrinsicFunctions="true"
 				AdditionalIncludeDirectories="../../../Dependencies/;../../../Dependencies/ImageMagickWand/include;../../../Dependencies/glew-1.5.4/include"
-				PreprocessorDefinitions="WIN32;NDEBUG;_LIB"
+				PreprocessorDefinitions="WIN32;NDEBUG;_CONSOLE"
 				RuntimeLibrary="2"
 				EnableFunctionLevelLinking="true"
 				UsePrecompiledHeader="0"
@@ -126,10 +137,20 @@
 				Name="VCPreLinkEventTool"
 			/>
 			<Tool
-				Name="VCLibrarianTool"
+				Name="VCLinkerTool"
+				LinkIncremental="1"
+				AdditionalLibraryDirectories="../../../Dependencies/freeglut;../../../Dependencies/ImageMagickWand/lib;../../../Dependencies/glew-1.5.4/lib"
+				GenerateDebugInformation="true"
+				SubSystem="1"
+				OptimizeReferences="2"
+				EnableCOMDATFolding="2"
+				TargetMachine="1"
 			/>
 			<Tool
 				Name="VCALinkTool"
+			/>
+			<Tool
+				Name="VCManifestTool"
 			/>
 			<Tool
 				Name="VCXDCMakeTool"
@@ -141,6 +162,9 @@
 				Name="VCFxCopTool"
 			/>
 			<Tool
+				Name="VCAppVerifierTool"
+			/>
+			<Tool
 				Name="VCPostBuildEventTool"
 			/>
 		</Configuration>
@@ -149,111 +173,7 @@
 	</References>
 	<Files>
 		<File
-			RelativePath="..\..\src\BE\ARB_Multisample.cpp"
-			>
-		</File>
-		<File
-			RelativePath="..\..\src\BE\ARB_Multisample.h"
-			>
-		</File>
-		<File
-			RelativePath="..\..\src\BE\Assert.h"
-			>
-		</File>
-		<File
-			RelativePath="..\..\src\BE\BEMath.h"
-			>
-		</File>
-		<File
-			RelativePath="..\..\src\BE\Bigeye.cpp"
-			>
-		</File>
-		<File
-			RelativePath="..\..\src\BE\Bigeye.h"
-			>
-		</File>
-		<File
-			RelativePath="..\..\src\BE\glext.h"
-			>
-		</File>
-		<File
-			RelativePath="..\..\src\BE\LibInclude.h"
-			>
-		</File>
-		<File
-			RelativePath="..\..\src\BE\MagickWand.cpp"
-			>
-		</File>
-		<File
-			RelativePath="..\..\src\BE\MagickWand.h"
-			>
-		</File>
-		<File
-			RelativePath="..\..\src\BE\MainWindow.cpp"
-			>
-		</File>
-		<File
-			RelativePath="..\..\src\BE\MainWindow.h"
-			>
-		</File>
-		<File
-			RelativePath="..\..\src\BE\meta_util.h"
-			>
-		</File>
-		<File
-			RelativePath="..\..\src\BE\OGL.cpp"
-			>
-		</File>
-		<File
-			RelativePath="..\..\src\BE\OGL.h"
-			>
-		</File>
-		<File
-			RelativePath="..\..\src\BE\Platform.h"
-			>
-		</File>
-		<File
-			RelativePath="..\..\src\BE\Renderer.cpp"
-			>
-		</File>
-		<File
-			RelativePath="..\..\src\BE\Renderer.h"
-			>
-		</File>
-		<File
-			RelativePath="..\..\src\BE\RenderNodes.cpp"
-			>
-		</File>
-		<File
-			RelativePath="..\..\src\BE\RenderNodes.h"
-			>
-		</File>
-		<File
-			RelativePath="..\..\src\BE\RenderTreeBuilder.cpp"
-			>
-		</File>
-		<File
-			RelativePath="..\..\src\BE\RenderTreeBuilder.h"
-			>
-		</File>
-		<File
-			RelativePath="..\..\src\BE\smart_ptr.h"
-			>
-		</File>
-		<File
-			RelativePath="..\..\src\BE\strtk.hpp"
-			>
-		</File>
-		<File
-			RelativePath="..\..\src\BE\wglext.h"
-			>
-		</File>
-		<File
-			RelativePath="..\..\src\BE\Widgets.cpp"
-			>
-		</File>
-		<File
-			RelativePath="..\..\src\BE\Widgets.h"
+			RelativePath="..\..\src\BE\Demo.cpp"
 			>
 		</File>
 	</Files>

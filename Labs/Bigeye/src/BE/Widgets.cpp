@@ -1,6 +1,6 @@
-#include "BigeyeWidgets.h"
+#include "Widgets.h"
 #include "ARB_Multisample.h"
-#include "../include/Bigeye/Bigeye_win_ogl.h"
+#include "MainWindow.h"
 #include <algorithm>
 #include "strtk.hpp"
 
@@ -104,13 +104,13 @@ void SimpleButtonWidget::CreateTextures(const WidgetContext& inContext)
 
 		GLsizei tex_dims[2];
 
-		inContext.mApp.GetWand().MakeButtonTexture(mButtonTexture.mTexture, MagicWand::WIDGET_NORMAL, mTextInfo, mSizeConstraints, tex_dims[0], tex_dims[1]);
-		mButtonTexSize[0] = tex_dims[0];
-		mButtonTexSize[1] = tex_dims[1];
+		inContext.mMainWindow.GetWand().MakeButtonTexture(mButtonTexture.mTexture, MagicWand::WIDGET_NORMAL, mTextInfo, mSizeConstraints, tex_dims[0], tex_dims[1]);
+		mButtonTexSize[0] = (float) tex_dims[0];
+		mButtonTexSize[1] = (float) tex_dims[1];
 
 		
-		inContext.mApp.GetWand().MakeButtonTexture(mPressedButtonTexture.mTexture, MagicWand::WIDGET_PRESSED, mTextInfo, mSizeConstraints, tex_dims[0], tex_dims[1]);
-		inContext.mApp.GetWand().MakeButtonTexture(mHighlightedButtonTexture.mTexture, MagicWand::WIDGET_HIGHLIGHTED, mTextInfo, mSizeConstraints, tex_dims[0], tex_dims[1]);
+		inContext.mMainWindow.GetWand().MakeButtonTexture(mPressedButtonTexture.mTexture, MagicWand::WIDGET_PRESSED, mTextInfo, mSizeConstraints, tex_dims[0], tex_dims[1]);
+		inContext.mMainWindow.GetWand().MakeButtonTexture(mHighlightedButtonTexture.mTexture, MagicWand::WIDGET_HIGHLIGHTED, mTextInfo, mSizeConstraints, tex_dims[0], tex_dims[1]);
 	}
 }
 
@@ -121,7 +121,7 @@ bool WidgetUtil::IsMouseInRectangle(const WidgetContext& inContext, const glm::v
 
 bool WidgetUtil::IsMouseInRectangle(const WidgetContext& inContext, const glm::vec2& inWidgetWorldPos, const glm::vec2& inWidgetSize)
 {
-	glm::vec2 local_mouse_pos = inContext.mApp.GetMousePos() - inWidgetWorldPos;
+	glm::vec2 local_mouse_pos = inContext.mMainWindow.GetMousePos() - inWidgetWorldPos;
 
 	if (local_mouse_pos.x < 0.0f || local_mouse_pos.y < 0.0f)
 		return false;
@@ -142,7 +142,7 @@ void SimpleButtonWidget::Update(const WidgetContext& inContext, const SceneTrans
 	{
 		mIsHighlighted = true;
 
-		if (inContext.mApp.GetInputState(INPUT_MOUSE_LEFT) > 0.0f)
+		if (inContext.mMainWindow.GetInputState(INPUT_MOUSE_LEFT) > 0.0f)
 			mIsMousePressed = true;
 		else
 			mIsMousePressed = false;
@@ -258,30 +258,30 @@ void SimpleSliderWidget::CreateTextures(const WidgetContext& inContext)
 		GLsizei tex_dims[2];
 
 		if (mType == Horizontal)
-			inContext.mApp.GetWand().MakeSliderFrameTexture(mFrameTexture.mTexture, mSize.x, mTextInfo, mSizeConstraints, tex_dims[0], tex_dims[1]);
+			inContext.mMainWindow.GetWand().MakeSliderFrameTexture(mFrameTexture.mTexture, (GLsizei) mSize.x, mTextInfo, mSizeConstraints, tex_dims[0], tex_dims[1]);
 		else
-			inContext.mApp.GetWand().MakeVerticalSliderFrameTexture(mFrameTexture.mTexture, mSize.x, mSize.y, tex_dims[0], tex_dims[1]);
+			inContext.mMainWindow.GetWand().MakeVerticalSliderFrameTexture(mFrameTexture.mTexture, (GLsizei) mSize.x, (GLsizei) mSize.y, tex_dims[0], tex_dims[1]);
 
-		mFrameTexSize[0] = tex_dims[0];
-		mFrameTexSize[1] = tex_dims[1];
+		mFrameTexSize[0] = (float) tex_dims[0];
+		mFrameTexSize[1] = (float) tex_dims[1];
 
 		if (mType == Horizontal)
-			inContext.mApp.GetWand().MakeSliderMarkerTexture(mMarkerTexture.mTexture, MagicWand::WIDGET_NORMAL, tex_dims[1], tex_dims[0], tex_dims[1]);
+			inContext.mMainWindow.GetWand().MakeSliderMarkerTexture(mMarkerTexture.mTexture, MagicWand::WIDGET_NORMAL, tex_dims[1], tex_dims[0], tex_dims[1]);
 		else
-			inContext.mApp.GetWand().MakeVerticalSliderMarkerTexture(mMarkerTexture.mTexture, MagicWand::WIDGET_NORMAL, tex_dims[0], tex_dims[0], tex_dims[1]);
+			inContext.mMainWindow.GetWand().MakeVerticalSliderMarkerTexture(mMarkerTexture.mTexture, MagicWand::WIDGET_NORMAL, tex_dims[0], tex_dims[0], tex_dims[1]);
 
-		mMarkerTexSize[0] = tex_dims[0];
-		mMarkerTexSize[1] = tex_dims[1];
+		mMarkerTexSize[0] = (float) tex_dims[0];
+		mMarkerTexSize[1] = (float) tex_dims[1];
 
 		if (mType == Horizontal)
-			inContext.mApp.GetWand().MakeSliderMarkerTexture(mPressedMarkerTexture.mTexture, MagicWand::WIDGET_PRESSED, tex_dims[1], tex_dims[0], tex_dims[1]);
+			inContext.mMainWindow.GetWand().MakeSliderMarkerTexture(mPressedMarkerTexture.mTexture, MagicWand::WIDGET_PRESSED, tex_dims[1], tex_dims[0], tex_dims[1]);
 		else
-			inContext.mApp.GetWand().MakeVerticalSliderMarkerTexture(mPressedMarkerTexture.mTexture, MagicWand::WIDGET_PRESSED, tex_dims[0], tex_dims[0], tex_dims[1]);
+			inContext.mMainWindow.GetWand().MakeVerticalSliderMarkerTexture(mPressedMarkerTexture.mTexture, MagicWand::WIDGET_PRESSED, tex_dims[0], tex_dims[0], tex_dims[1]);
 	
 		if (mType == Horizontal)
-			inContext.mApp.GetWand().MakeSliderMarkerTexture(mHighlightedMarkerTexture.mTexture, MagicWand::WIDGET_HIGHLIGHTED, tex_dims[1], tex_dims[0], tex_dims[1]);
+			inContext.mMainWindow.GetWand().MakeSliderMarkerTexture(mHighlightedMarkerTexture.mTexture, MagicWand::WIDGET_HIGHLIGHTED, tex_dims[1], tex_dims[0], tex_dims[1]);
 		else
-			inContext.mApp.GetWand().MakeVerticalSliderMarkerTexture(mHighlightedMarkerTexture.mTexture, MagicWand::WIDGET_HIGHLIGHTED, tex_dims[0], tex_dims[0], tex_dims[1]);
+			inContext.mMainWindow.GetWand().MakeVerticalSliderMarkerTexture(mHighlightedMarkerTexture.mTexture, MagicWand::WIDGET_HIGHLIGHTED, tex_dims[0], tex_dims[0], tex_dims[1]);
 	}
 }
 
@@ -291,7 +291,7 @@ void SimpleSliderWidget::Update(const WidgetContext& inContext, const SceneTrans
 	glm::vec3 world_pos = gWidgetTransform(inParentTransform, mPos);
 
 	glm::vec3 marker_world_pos = GetSliderWorldPos(world_pos);
-	bool is_mouse_left_down = (inContext.mApp.GetInputState(INPUT_MOUSE_LEFT) > 0.0f);
+	bool is_mouse_left_down = (inContext.mMainWindow.GetInputState(INPUT_MOUSE_LEFT) > 0.0f);
 	bool is_mouse_in_rect = WidgetUtil::IsMouseInRectangle(inContext, world_pos, mFrameTexSize);
 	bool has_mouse_slider_focus = false;
 
@@ -311,7 +311,7 @@ void SimpleSliderWidget::Update(const WidgetContext& inContext, const SceneTrans
 	
 	if (has_mouse_slider_focus)
 	{
-		glm::vec2 mouse_pos = inContext.mApp.GetMousePos();
+		glm::vec2 mouse_pos = inContext.mMainWindow.GetMousePos();
 
 		if (!mHasMouseSliderFocus)
 		{
@@ -421,9 +421,9 @@ bool SimpleTextWidget::Create(const WidgetContext& inContext, const glm::vec2& i
 
 	mTextTexture.AutoCreate();
 	GLsizei tex_dims[2];
-	inContext.mApp.GetWand().MakeTextTexture(mTextTexture.mTexture, inTextInfo, inSizeConstraints, tex_dims[0], tex_dims[1]);
-	mTextTexSize[0] = tex_dims[0];
-	mTextTexSize[1] = tex_dims[1];
+	inContext.mMainWindow.GetWand().MakeTextTexture(mTextTexture.mTexture, inTextInfo, inSizeConstraints, tex_dims[0], tex_dims[1]);
+	mTextTexSize[0] = (float) tex_dims[0];
+	mTextTexSize[1] = (float) tex_dims[1];
 
 	mRenderState.enable_depth = 1;
 	mRenderState.enable_texture = 1;
@@ -484,7 +484,7 @@ bool SimpleTextureWidget::Create(const WidgetContext& inContext, const glm::vec2
 
 	GLsizei dims[2];
 
-	if (!inContext.mApp.GetWand().ReadImageToGLTexture(inTexturePath, mTexture, dims[0], dims[1]))
+	if (!inContext.mMainWindow.GetWand().ReadImageToGLTexture(inTexturePath, mTexture, dims[0], dims[1]))
 		return false;
 
 	mSize.x = (float) dims[0];
@@ -625,19 +625,19 @@ bool MagicWandTestTextureWidget::Create(const WidgetContext& inContext, const gl
 
 	mTexture.AutoCreate();
 
-	//if (!inContext.mApp.GetWand().MakeTestButtonTexture(mTexture.mTexture, dims[0], dims[1]))
+	//if (!inContext.mMainWindow.GetWand().MakeTestButtonTexture(mTexture.mTexture, dims[0], dims[1]))
 	//	return false;
 
 	//if (!MagicWand::MakeSliderFrameTexture(mTexture.mTexture, 100, dims[0], dims[1]))
 	//	return false;
 	
-	//if (!inContext.mApp.GetWand().MakeButtonTexture(mTexture.mTexture, "BigEye ;)", 0, 12.0f, false, 10, 2, dims[0], dims[1]))
+	//if (!inContext.mMainWindow.GetWand().MakeButtonTexture(mTexture.mTexture, "Bigeye ;)", 0, 12.0f, false, 10, 2, dims[0], dims[1]))
 	//	return false;
 
-	if (!inContext.mApp.GetWand().MakeTextTexture(mTexture.mTexture, MagicWand::TextInfo("BigEye floating font AA", 0, 12.0f, false, glm::vec2(10.0f, 2.0f)),MagicWand::SizeConstraints(), dims[0], dims[1]))
+	if (!inContext.mMainWindow.GetWand().MakeTextTexture(mTexture.mTexture, MagicWand::TextInfo("Bigeye floating font AA", 0, 12.0f, false, glm::vec2(10.0f, 2.0f)),MagicWand::SizeConstraints(), dims[0], dims[1]))
 		return false;
 
-	//if (!inContext.mApp.GetWand().MakeTestTexture(mTexture.mTexture, 50, 180, dims[0], dims[1]))
+	//if (!inContext.mMainWindow.GetWand().MakeTestTexture(mTexture.mTexture, 50, 180, dims[0], dims[1]))
 	//	return false;
 	
 
@@ -711,19 +711,15 @@ bool SimplePanelWidget::Create(const WidgetContext& inContext, const glm::vec2& 
 
 void SimplePanelWidget::CreateTextures(const WidgetContext& inContext, bool inUseGradient)
 {
-	// TODO try colors like in : http://www.gameanim.com/2009/08/27/street-fighter-iv-facial-controls/
 	if (!mTexture.IsCreated())
 	{
 		mTexture.AutoCreate();
 		GLsizei dims[2];
-		dims[0] = mSize.x;
-		dims[1] = mSize.y;
-		inContext.mApp.GetWand().MakeFrameTexture(mType, inUseGradient, mTexture.mTexture, dims[0], dims[1], mScissorPos, mScissorSize);
-		mSize.x = dims[0];
-		mSize.y = dims[1];
-
-		//vert2d(mScissorPos) += 1.0f;
-		//vert2d(mScissorSize) -= 2.0f;
+		dims[0] = (GLsizei) mSize.x;
+		dims[1] = (GLsizei) mSize.y;
+		inContext.mMainWindow.GetWand().MakeFrameTexture(mType, inUseGradient, mTexture.mTexture, dims[0], dims[1], mScissorPos, mScissorSize);
+		mSize.x = (float) dims[0];
+		mSize.y = (float) dims[1];
 	}
 }
 
@@ -839,7 +835,7 @@ NativeWindowWidget::NativeWindowWidget()
 ,	mHRC(NULL)
 ,	mIsWNDCLASSRegistered(false)
 ,	mChildren(true)
-,	mApp(NULL)
+,	mMainWindow(NULL)
 {
 }
 
@@ -919,9 +915,9 @@ LRESULT CALLBACK NativeWindowWidget::WindowProc(HWND hWnd, UINT uMsg, WPARAM wPa
 }
 
 
-bool NativeWindowWidget::Create(const WidgetContext& inContext, App& inApp, const WideString& inWindowName, int inWidth, int inHeight)
+bool NativeWindowWidget::Create(const WidgetContext& inContext, MainWindow& inApp, const WideString& inWindowName, int inWidth, int inHeight)
 {
-	mApp = &inApp;
+	mMainWindow = &inApp;
 	DWORD windowStyle = WS_OVERLAPPEDWINDOW;							
 	DWORD windowExtendedStyle = WS_EX_APPWINDOW;					
 
@@ -964,7 +960,7 @@ bool NativeWindowWidget::Create(const WidgetContext& inContext, App& inApp, cons
 		windowClass.cbSize			= sizeof (WNDCLASSEXA);					// Size Of The windowClass Structure
 		windowClass.style			= CS_HREDRAW | CS_VREDRAW | CS_OWNDC;	// Redraws The Window For Any Movement / Resizing
 		windowClass.lpfnWndProc		= NativeWindowWidget::WindowProcProxy;	// WindowProc Handles Messages
-		windowClass.hInstance		= inContext.mApp.GetHINSTANCE();					// Set The Instance
+		windowClass.hInstance		= inContext.mMainWindow.GetHINSTANCE();					// Set The Instance
 		windowClass.hbrBackground	= (HBRUSH)(COLOR_APPWORKSPACE);			// Class Background Brush Color
 		windowClass.hCursor			= LoadCursor(NULL, IDC_ARROW);			// Load The Arrow Pointer
 		windowClass.lpszClassName	= inWindowName;							// Sets The Applications Classname
@@ -987,7 +983,7 @@ bool NativeWindowWidget::Create(const WidgetContext& inContext, App& inApp, cons
 								   windowRect.bottom - windowRect.top,	// Window Height
 								   HWND_DESKTOP,						// Desktop Is Window's Parent
 								   0,									// No Menu
-								   inContext.mApp.GetHINSTANCE(), // Pass The Window Instance
+								   inContext.mMainWindow.GetHINSTANCE(), // Pass The Window Instance
 								   this);
 
 	if (mHWND == 0)
@@ -1038,7 +1034,7 @@ bool NativeWindowWidget::Create(const WidgetContext& inContext, App& inApp, cons
 	
 	if(!arbMultisampleSupported && CHECK_FOR_MULTISAMPLE)
 	{
-		if(InitMultisample(inContext.mApp.GetHINSTANCE(), mHWND, pfd))
+		if(InitMultisample(inContext.mMainWindow.GetHINSTANCE(), mHWND, pfd))
 		{
 			
 			Destroy();
@@ -1052,7 +1048,7 @@ bool NativeWindowWidget::Create(const WidgetContext& inContext, App& inApp, cons
 	//ReshapeGL (window->init.width, window->init.height);				// Reshape Our GL Window
 
 	{
-		mApp->GetWand().LoadFont("media/DroidSans.ttf");
+		mMainWindow->GetWand().LoadFont("media/DroidSans.ttf");
 	}
 
 	Test(inContext);

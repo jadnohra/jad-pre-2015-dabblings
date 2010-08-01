@@ -1,45 +1,8 @@
 #include "MagickWand.h"
+#include "LibInclude.h"
 #include <stdio.h>
 #include <vector>
 #include "float.h"
-
-#ifdef _DEBUG
-	#pragma comment (lib, "CORE_DB_bzlib_.lib")	
-	#pragma comment (lib, "CORE_DB_coders_.lib")
-	#pragma comment (lib, "CORE_DB_filters_.lib")
-	#pragma comment (lib, "CORE_DB_jbig_.lib")
-	#pragma comment (lib, "CORE_DB_jp2_.lib")
-	#pragma comment (lib, "CORE_DB_jpeg_.lib")
-	#pragma comment (lib, "CORE_RL_lcms_.lib")
-	#pragma comment (lib, "CORE_DB_libxml_.lib")
-	#pragma comment (lib, "CORE_DB_magick_.lib")
-	#pragma comment (lib, "CORE_DB_png_.lib")
-	#pragma comment (lib, "CORE_DB_tiff_.lib")
-	#pragma comment (lib, "CORE_DB_ttf_.lib")
-	#pragma comment (lib, "CORE_DB_wand_.lib")
-	#pragma comment (lib, "CORE_DB_wmf_.lib")
-	#pragma comment (lib, "CORE_DB_xlib_.lib")
-	#pragma comment (lib, "CORE_DB_zlib_.lib")
-	#pragma comment (lib, "ws2_32.lib")
-#else
-	#pragma comment (lib, "CORE_RL_bzlib_.lib")	
-	#pragma comment (lib, "CORE_RL_coders_.lib")
-	#pragma comment (lib, "CORE_RL_filters_.lib")
-	#pragma comment (lib, "CORE_RL_jbig_.lib")
-	#pragma comment (lib, "CORE_RL_jp2_.lib")
-	#pragma comment (lib, "CORE_RL_jpeg_.lib")
-	#pragma comment (lib, "CORE_RL_lcms_.lib")
-	#pragma comment (lib, "CORE_RL_libxml_.lib")
-	#pragma comment (lib, "CORE_RL_magick_.lib")
-	#pragma comment (lib, "CORE_RL_png_.lib")
-	#pragma comment (lib, "CORE_RL_tiff_.lib")
-	#pragma comment (lib, "CORE_RL_ttf_.lib")
-	#pragma comment (lib, "CORE_RL_wand_.lib")
-	#pragma comment (lib, "CORE_RL_wmf_.lib")
-	#pragma comment (lib, "CORE_RL_xlib_.lib")
-	#pragma comment (lib, "CORE_RL_zlib_.lib")
-	#pragma comment (lib, "ws2_32.lib")
-#endif
 
 #define NeedFunctionPrototypes
 #define _MAGICKLIB_
@@ -264,8 +227,8 @@ public:
 
 		if (inStroke)
 		{
-			outAdditionalHorizSpace += 1.0f;
-			outAdditionalVertSpace += 1.0f;
+			outAdditionalHorizSpace += 1;
+			outAdditionalVertSpace += 1;
 		}
 	}
 
@@ -353,8 +316,8 @@ public:
 		int shadow_size_y = MagickGetImageHeight(shadow_wand);
 		int shadow_size_diff_x = shadow_size_x - orig_size_x;
 		int shadow_size_diff_y = shadow_size_y - orig_size_y;
-		int source_center_offest_x = inOffsetX + (inShadowSizeRelOffsetX * 0.5f * shadow_size_diff_x);
-		int source_center_offest_y = inOffsetY + (inShadowSizeRelOffsetY * 0.5f * shadow_size_diff_y);
+		int source_center_offest_x = (int) (inOffsetX + (inShadowSizeRelOffsetX * 0.5f * shadow_size_diff_x));
+		int source_center_offest_y = (int) (inOffsetY + (inShadowSizeRelOffsetY * 0.5f * shadow_size_diff_y));
 		int shadow_center_left_corner_x = -shadow_size_x/2;
 		int shadow_center_left_corner_y = -shadow_size_y/2;
 		int shadow_center_right_corner_x = shadow_size_x/2;
@@ -457,7 +420,10 @@ public:
 
 				glm::vec4 color = row_colors[1]*xf + row_colors[0]* (1.0f-xf);
 				
+#pragma warning( push )
+#pragma warning( disable : 4996 )
 				sprintf(hex,"rgb(%d,%d,%d)", (int) (color.r * 255.0f),(int) (color.g * 255.0f),(int) (color.b * 255.0f));
+#pragma warning( pop )
 
 				PixelSetColor(pixels[x],hex);
 				PixelSetAlpha(pixels[x],color.a);
@@ -482,7 +448,10 @@ public:
 		PixelWand* color = NewPixelWand();
 
 		char hex[128];
+#pragma warning( push )
+#pragma warning( disable : 4996 )
 		sprintf(hex,"rgb(%d,%d,%d)", inR, inG, inB);
+#pragma warning( pop )
 		PixelSetColor(color, hex);
 
 		return color;
@@ -600,7 +569,7 @@ bool MagicWand::MakeTestButtonTexture(GLuint inTexture, GLsizei& outWidth, GLsiz
 	DrawSetFillColor(drawing_wand, white_wand);
 
 	//$im->annotateImage( $draw, 38, 28, 0, "Submit" );
-	MagickAnnotateImage(test_wand, drawing_wand, 32, 28, 0, "Bigeye ! ;)");
+	MagickAnnotateImage(test_wand, drawing_wand, 32, 28, 0, " ! ;)");
 
 	//$im->trimImage( 0 );
 	MagickTrimImage(test_wand, 0);
@@ -727,8 +696,8 @@ bool MagicWand::MakeFrameTexture(FrameType inType, bool inUseGradient, GLuint in
 		ret = mImpl->ToGLTexture(shadowed_wand, inTexture, outWidth, outHeight);
 	}
 
-	outInternalPos.x = source_end_offset[0] + stroke_size;
-	outInternalPos.y = source_end_offset[1] + stroke_size;
+	outInternalPos.x = (float) (source_end_offset[0] + stroke_size);
+	outInternalPos.y = (float) (source_end_offset[1] + stroke_size);
 	outInternalSize.x = (float) inWidth - (2*stroke_size);
 	outInternalSize.y = (float) inHeight - (2*stroke_size);
 	
@@ -787,7 +756,7 @@ bool MagicWand::MakeSliderFrameTexture(GLuint inTexture, GLsizei inLength, const
 	if (inLength > text_width + additional_size[0])
 	{
 		additional_size[0] = 0.0f;
-		rect_width = inLength;
+		rect_width = (float) inLength;
 	}
 
 	rect_width = std::max(rect_width, horiz2d(inSizeConstraints.mMinSize));
@@ -814,7 +783,7 @@ bool MagicWand::MakeSliderFrameTexture(GLuint inTexture, GLsizei inLength, const
 
 
 	auto_scoped_ptr<MagickWand> gradient_wand(mImpl->GradientFillWand((size_t) (rect_width), (size_t) (rect_height), 0, 0, used_gradient_colors_stack, &gradient_curves));
-	mImpl->RoundWand(gradient_wand, radius, false);
+	mImpl->RoundWand(gradient_wand, (int) radius, false);
 
 	MagickAnnotateImage(gradient_wand, font, inTextInfo.mMinEmptySpace.x, text_height, 0.0, inTextInfo.mText.c_str());
 
@@ -846,7 +815,7 @@ bool MagicWand::MakeVerticalSliderFrameTexture(GLuint inTexture, GLsizei inWidth
 
 
 	auto_scoped_ptr<MagickWand> gradient_wand(mImpl->GradientFillWand((size_t) (rect_width), (size_t) (rect_height), 0, 0, used_gradient_colors_stack, &gradient_curves));
-	mImpl->RoundWand(gradient_wand, radius, false);
+	mImpl->RoundWand(gradient_wand, (int) radius, false);
 
 	return mImpl->ToGLTexture(gradient_wand, inTexture, outWidth, outHeight);
 }
@@ -960,7 +929,7 @@ bool MagicWand::MakeButtonTexture(GLuint inTexture, WidgetState inWidgetState, c
 
 
 	auto_scoped_ptr<MagickWand> gradient_wand(mImpl->GradientFillWand((size_t) (rect_width), (size_t) (rect_height), 0, 1, used_gradient_colors_stack, &gradient_curves));
-	mImpl->RoundWand(gradient_wand, radius, true);
+	mImpl->RoundWand(gradient_wand, (int) radius, true);
 
 	//(font_metrics[8]+ font_metrics[5]) + 0.5f*(rect_height-text_height)
 	MagickAnnotateImage(gradient_wand, font, 0.5f*(rect_width-text_width), text_height, 0.0, inTextInfo.mText.c_str());

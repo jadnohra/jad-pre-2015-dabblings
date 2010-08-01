@@ -1,9 +1,9 @@
 #ifdef WIN32
-#ifndef _INCLUDED_BIGEYE_BIGEYE_WIN_OGL_H
-#define _INCLUDED_BIGEYE_BIGEYE_WIN_OGL_H
+#ifndef _INCLUDED_BIGEYE_MAINWINDOW_H
+#define _INCLUDED_BIGEYE_MAINWINDOW_H
 
 #include "Platform.h"
-#include "BigeyeWidgets.h"
+#include "Widgets.h"
 
 namespace BE
 {

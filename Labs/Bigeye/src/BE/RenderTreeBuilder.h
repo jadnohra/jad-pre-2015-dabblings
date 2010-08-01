@@ -1,9 +1,9 @@
-#ifndef _INCLUDED_BIGEYE_BIGEYERENDERTREEBUILDER_H
-#define _INCLUDED_BIGEYE_BIGEYERENDERTREEBUILDER_H
+#ifndef _INCLUDED_BIGEYE_RenderTreeBuilder_H
+#define _INCLUDED_BIGEYE_RenderTreeBuilder_H
 
 #include <stack>
-#include "BigeyeRenderer.h"
-#include "BigeyeRenderNodes.h"
+#include "Renderer.h"
+#include "RenderNodes.h"
 
 namespace BE 
 {

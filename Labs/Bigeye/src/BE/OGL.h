@@ -1,22 +1,7 @@
 #ifndef _INCLUDED_BIGEYE_OGL_H
 #define _INCLUDED_BIGEYE_OGL_H
 
-// TODO!!!  (http://glew.sourceforge.net/install.html)
-//#define GLEW_STATIC 
-#include "GL/glew.h"
-#ifdef GLEW_STATIC 
-	#pragma comment (lib, "glew32s.lib")	
-#else
-	#pragma comment (lib, "glew32.lib")	
-#endif
-
-#ifdef WIN32
-	#include "Platform.h"
-	#define FREEGLUT_STATIC
-	#include "freeglut/GL/freeglut.h"
-	#include "freeglut/GL/freeglut_ext.h"
-#endif
-
+#include "LibInclude.h"
 
 class OGLewInit
 {

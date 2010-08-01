@@ -1,5 +1,5 @@
 #ifdef WIN32
-#include "../include/Bigeye/Bigeye_win_ogl.h"
+#include "MainWindow.h"
 
 namespace BE
 {
@@ -141,8 +141,8 @@ void MainWindow::PrepareInputForUpdate()
 	ScreenToClient(mWindow->GetHWND(), &point);
 
 	mLastMousePos = mMousePos;
-	mMousePos.x = point.x;
-	mMousePos.y = point.y;
+	mMousePos.x = (float) point.x;
+	mMousePos.y = (float) point.y;
 
 	mMouseMoved = !glm::areSimilar(mMousePos, mLastMousePos, 0.0f);
 

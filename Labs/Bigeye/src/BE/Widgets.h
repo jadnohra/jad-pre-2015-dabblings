@@ -5,21 +5,21 @@
 #include "BEMath.h"
 #include "OGL.h"
 #include "MagickWand.h"
-#include "BigeyeRenderTreeBuilder.h"
+#include "RenderTreeBuilder.h"
 
 namespace BE 
 {
-	class App;
+	class MainWindow;
 
 	struct WidgetContext
 	{
-		const App& mApp;
+		const MainWindow& mMainWindow;
 		float mTimeSecs;
 
 		mutable RenderTreeBuilder mRenderTreeBuilder;
 
-		WidgetContext(const App& inApp, float inTimeSecs)
-		:	mApp(inApp)
+		WidgetContext(const MainWindow& inApp, float inTimeSecs)
+		:	mMainWindow(inApp)
 		,	mTimeSecs(inTimeSecs)
 		{
 		}
@@ -332,7 +332,7 @@ namespace BE
 						NativeWindowWidget();
 						~NativeWindowWidget();
 
-		bool			Create(const WidgetContext& inContext, App& inApp, const WideString& inWindowName, int inWidth, int inHeight);
+		bool			Create(const WidgetContext& inContext, MainWindow& inApp, const WideString& inWindowName, int inWidth, int inHeight);
 
 		virtual void	Update(const WidgetContext& inContext, const SceneTransform& inParentTransform, bool inParentTransformDirty);
 		
@@ -353,7 +353,7 @@ namespace BE
 		void			Destroy();
 		void			Test(const WidgetContext& inContext);
 
-		App*	mApp;
+		MainWindow*	mMainWindow;
 		bool	mIsWNDCLASSRegistered;
 		HWND	mHWND;
 		HDC		mHDC;

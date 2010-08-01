@@ -1,4 +1,4 @@
-#include "BigEyeRenderer.h"
+#include "Renderer.h"
 
 namespace BE
 {
