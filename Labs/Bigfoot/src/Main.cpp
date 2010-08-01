@@ -11,7 +11,10 @@ public:
 
 	virtual void Update(const BE::WidgetContext& context, BE::SimpleRenderToTextureWidget& inParent, BE::OGLRenderToTexture& inTexture);
 	virtual void Render(BE::Renderer& inRenderer);
+
+	void RenderScene(BE::Renderer& inRenderer);
 };
+
 
 void CreateWidgets(BE::MainWindow& inWindow, BigfootScene& inScene);
 
@@ -35,6 +38,7 @@ int main()
 	
 	return 0;
 }
+
 
 void CreateWidgets(BE::MainWindow& inWindow, BigfootScene& inScene)
 {
@@ -61,49 +65,8 @@ void CreateWidgets(BE::MainWindow& inWindow, BigfootScene& inScene)
 }
 
 
-void BigfootScene::Update(const BE::WidgetContext& context, BE::SimpleRenderToTextureWidget& inParent, BE::OGLRenderToTexture& inTexture)	
+void BigfootScene::RenderScene(BE::Renderer& inRenderer)
 {
-	mSize.x = inParent.GetSize().x;
-	mSize.y = inParent.GetSize().y;
-	mRenderTime = context.mTimeSecs;
-	mTexture = &inTexture;
-}
-
-
-void BigfootScene::Render(BE::Renderer& inRenderer)	
-{
-	mTexture->BeginRender();
-
-	glDisable(GL_BLEND);
-	glDisable(GL_TEXTURE_2D);
-
-	glClearColor(39.0f/255.0f, 39.0f/255.0f, 39.0f/255.0f, 1.0f);
-	//glClearColor(59.0f/255.0f, 59.0f/255.0f, 59.0f/255.0f, 1.0f);
-	//glClearColor(176.0f/255.0f, 176.0f/255.0f, 176.0f/255.0f, 1.0f);
-	//glClearColor(49.0f/255.0f, 140.0f/255.0f, 231.0f / 255.0f, 1.0f);
-	//glClearColor(255.0f/255.0f, 255.0f/255.0f, 255.0f/255.0f, 1.0f);
-
-	//glClearColor(100.0f/255.0f, 149.0f/255.0f, 237.0f / 255.0f, 1.0f);
-	glClearColor(75.0f/255.0f, 146.0f/255.0f, 219.0f / 255.0f, 1.0f);
-
-	glClearDepth(1.0f);
-	glClear(GL_DEPTH_BUFFER_BIT);
-	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-
-	glMatrixMode(GL_PROJECTION);						// Select The Projection Matrix
-	glLoadIdentity();									// Reset The Projection Matrix
-
-	// Calculate The Aspect Ratio Of The Window
-	gluPerspective(45.0f,(GLfloat)mSize.x/(GLfloat)mSize.y,0.1f,100.0f);
-
-	glMatrixMode(GL_MODELVIEW);							// Select The Modelview Matrix
-	glLoadIdentity();		
-
-	glShadeModel(GL_SMOOTH);							// Enable Smooth Shading
-	glEnable(GL_DEPTH_TEST);							// Enables Depth Testing
-	glDepthFunc(GL_LEQUAL);
-	glHint(GL_PERSPECTIVE_CORRECTION_HINT, GL_NICEST);	// Really Nice Perspective Calculations
-
 	float rtri = 16.0f * mRenderTime;
 	float rquad = 128.0f * -mRenderTime;
 
@@ -174,5 +137,53 @@ void BigfootScene::Render(BE::Renderer& inRenderer)
 	glEnd();											// Done Drawing The Quad
 
 
+}
+
+
+void BigfootScene::Update(const BE::WidgetContext& context, BE::SimpleRenderToTextureWidget& inParent, BE::OGLRenderToTexture& inTexture)	
+{
+	mSize.x = inParent.GetSize().x;
+	mSize.y = inParent.GetSize().y;
+	mRenderTime = context.mTimeSecs;
+	mTexture = &inTexture;
+}
+
+
+void BigfootScene::Render(BE::Renderer& inRenderer)	
+{
+	mTexture->BeginRender();
+
+	glDisable(GL_BLEND);
+	glDisable(GL_TEXTURE_2D);
+
+	glClearColor(39.0f/255.0f, 39.0f/255.0f, 39.0f/255.0f, 1.0f);
+	//glClearColor(59.0f/255.0f, 59.0f/255.0f, 59.0f/255.0f, 1.0f);
+	//glClearColor(176.0f/255.0f, 176.0f/255.0f, 176.0f/255.0f, 1.0f);
+	//glClearColor(49.0f/255.0f, 140.0f/255.0f, 231.0f / 255.0f, 1.0f);
+	//glClearColor(255.0f/255.0f, 255.0f/255.0f, 255.0f/255.0f, 1.0f);
+
+	//glClearColor(100.0f/255.0f, 149.0f/255.0f, 237.0f / 255.0f, 1.0f);
+	glClearColor(75.0f/255.0f, 146.0f/255.0f, 219.0f / 255.0f, 1.0f);
+
+	glClearDepth(1.0f);
+	glClear(GL_DEPTH_BUFFER_BIT);
+	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+
+	glMatrixMode(GL_PROJECTION);						// Select The Projection Matrix
+	glLoadIdentity();									// Reset The Projection Matrix
+
+	// Calculate The Aspect Ratio Of The Window
+	gluPerspective(45.0f,(GLfloat)mSize.x/(GLfloat)mSize.y,0.1f,100.0f);
+
+	glMatrixMode(GL_MODELVIEW);							// Select The Modelview Matrix
+	glLoadIdentity();		
+
+	glShadeModel(GL_SMOOTH);							// Enable Smooth Shading
+	glEnable(GL_DEPTH_TEST);							// Enables Depth Testing
+	glDepthFunc(GL_LEQUAL);
+	glHint(GL_PERSPECTIVE_CORRECTION_HINT, GL_NICEST);	// Really Nice Perspective Calculations
+
+	RenderScene(inRenderer);
+	
 	mTexture->EndRender();
 }
