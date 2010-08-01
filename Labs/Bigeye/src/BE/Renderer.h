@@ -23,6 +23,7 @@ namespace BE
 				unsigned enable_depth : 1;
 				unsigned enable_texture : 1;
 				unsigned enable_blend : 1;
+				unsigned blend_func_GL_SRC_ALPHA_GL_ONE_MINUS_SRC_ALPHA : 1;
 			};
 
 			struct
@@ -33,8 +34,8 @@ namespace BE
 
 		CompactRenderState() : All(0) {}
 
-		inline bool operator==(const CompactRenderState& inComp) const { return All == inComp.All; }
-		inline bool operator!=(const CompactRenderState& inComp) const { return All != inComp.All; }
+		inline bool operator==(const CompactRenderState& inComp) const { return (All == inComp.All); }
+		inline bool operator!=(const CompactRenderState& inComp) const { return (All == inComp.All) == false; }
 		inline CompactRenderState& operator=(const CompactRenderState& inRef) { All = inRef.All; return *this; }
 
 		void Apply(Renderer& renderer);
@@ -531,6 +532,7 @@ namespace BE
 
 			for (size_t i=0; i<mOrderedRenderTrees.size(); ++i)
 			{
+				InvalidateCurrentCompactRenderState();
 				mOrderedRenderTrees[i]->Render(*this);
 			}
 
@@ -555,6 +557,7 @@ namespace BE
 		void SetCurrentCompactRenderState(const CompactRenderState& inCompactRenderState)
 		{
 			mCompactRenderState =  inCompactRenderState;
+			mIsValidCompactRenderState = true;
 		}
 
 		void InvalidateCurrentCompactRenderState()

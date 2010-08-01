@@ -70,7 +70,6 @@ void CreateWidgets(BE::MainWindow& inWindow, Test3DScene& inScene)
 #endif
 
 
-
 	{
 		SimpleTextWidget* text_widget = new SimpleTextWidget();
 		text_widget->Create(context, glm::vec2(800.0f, 25.0f), MagicWand::TextInfo("Tools", 0, 14.0f, true, glm::vec2(0.0f, 0.0f)), MagicWand::SizeConstraints());
@@ -78,6 +77,7 @@ void CreateWidgets(BE::MainWindow& inWindow, Test3DScene& inScene)
 		root->GetChildren().mChildWidgets.push_back(text_widget);
 	}
 
+	
 	{
 		SimplePanelWidget* widget = new SimplePanelWidget();
 		widget->Create(context, glm::vec2(800.0f, 55.0f), glm::vec2(200.0f, 250.0f), MagicWand::FRAME_NORMAL, SimplePanelWidget::AutoOverflowSlider, true);

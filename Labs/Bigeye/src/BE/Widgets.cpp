@@ -84,6 +84,7 @@ bool SimpleButtonWidget::Create(const WidgetContext& inContext, const glm::vec2&
 	mRenderState.enable_depth = 1;
 	mRenderState.enable_texture = 1;
 	mRenderState.enable_blend = 1;
+	mRenderState.blend_func_GL_SRC_ALPHA_GL_ONE_MINUS_SRC_ALPHA = 1;
 	CreateTextures(inContext);
 
 	return true;
@@ -188,7 +189,7 @@ void SimpleButtonWidget::Render(Renderer& inRenderer)
 		glTexParameteri(GL_TEXTURE_2D,GL_TEXTURE_MAG_FILTER,GL_NEAREST);	// Linear Filtering
 		
 		glTexEnvi(GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_REPLACE);
-		glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+		//glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 		//glColor4f(1.0f,1.0f,1.0f,1.0f);			
 
 		glBegin(GL_QUADS);
@@ -220,6 +221,7 @@ bool SimpleSliderWidget::Create(const WidgetContext& inContext, const glm::vec2&
 	mRenderState.enable_depth = 1;
 	mRenderState.enable_texture = 1;
 	mRenderState.enable_blend = 1;
+	mRenderState.blend_func_GL_SRC_ALPHA_GL_ONE_MINUS_SRC_ALPHA = 1;
 
 	return true;
 }
@@ -241,6 +243,7 @@ bool SimpleSliderWidget::CreateVertical(const WidgetContext& inContext, const gl
 	mRenderState.enable_depth = 1;
 	mRenderState.enable_texture = 1;
 	mRenderState.enable_blend = 1;
+	mRenderState.blend_func_GL_SRC_ALPHA_GL_ONE_MINUS_SRC_ALPHA = 1;
 
 	return true;
 }
@@ -428,6 +431,7 @@ bool SimpleTextWidget::Create(const WidgetContext& inContext, const glm::vec2& i
 	mRenderState.enable_depth = 1;
 	mRenderState.enable_texture = 1;
 	mRenderState.enable_blend = 1;
+	mRenderState.blend_func_GL_SRC_ALPHA_GL_ONE_MINUS_SRC_ALPHA = 1;
 
 	return true;
 }
@@ -493,6 +497,7 @@ bool SimpleTextureWidget::Create(const WidgetContext& inContext, const glm::vec2
 	mRenderState.enable_depth = 1;
 	mRenderState.enable_texture = 1;
 	mRenderState.enable_blend = 1;
+	mRenderState.blend_func_GL_SRC_ALPHA_GL_ONE_MINUS_SRC_ALPHA = 1;
 
 	return true;
 }
@@ -647,6 +652,7 @@ bool MagicWandTestTextureWidget::Create(const WidgetContext& inContext, const gl
 	mRenderState.enable_depth = 1;
 	mRenderState.enable_texture = 1;
 	mRenderState.enable_blend = 1;
+	mRenderState.blend_func_GL_SRC_ALPHA_GL_ONE_MINUS_SRC_ALPHA = 1;
 
 	return true;
 }
@@ -1438,8 +1444,6 @@ void NativeWindowWidget::Render(Renderer& inRenderer)
 
 		//PushScissor(glm::vec2(0.0f, 0.0f), glm::vec2(window_width, window_height));
 	}
-
-	inRenderer.InvalidateCurrentCompactRenderState();
 
 	glClearColor(0.0f, 0.0f, 0.0f, 1.0f);
 	glClearColor(39.0f/255.0f, 39.0f/255.0f, 39.0f/255.0f, 1.0f);

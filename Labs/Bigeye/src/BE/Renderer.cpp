@@ -5,9 +5,11 @@ namespace BE
 
 void CompactRenderState::Apply(Renderer& renderer)
 {
+	/*
 	if (renderer.HasCurrentCompactRenderState()
 		&& renderer.GetCurrentCompactRenderState() == *this)
 		return;
+		*/
 
 	if (enable_depth)
 		glEnable(GL_DEPTH_TEST);
@@ -20,7 +22,10 @@ void CompactRenderState::Apply(Renderer& renderer)
 		glDisable(GL_TEXTURE_2D);
 
 	if (enable_blend)
+	{
 		glEnable(GL_BLEND);
+		glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+	}
 	else
 		glDisable(GL_BLEND);
 
