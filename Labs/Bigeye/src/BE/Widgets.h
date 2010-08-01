@@ -18,8 +18,8 @@ namespace BE
 
 		mutable RenderTreeBuilder mRenderTreeBuilder;
 
-		WidgetContext(const MainWindow& inApp, float inTimeSecs)
-		:	mMainWindow(inApp)
+		WidgetContext(const MainWindow& inMainWindow, float inTimeSecs)
+		:	mMainWindow(inMainWindow)
 		,	mTimeSecs(inTimeSecs)
 		{
 		}
@@ -347,6 +347,8 @@ namespace BE
 
 		GLint			GetViewportWidth() const { return mViewportWidth; }
 		GLint			GetViewportHeight() const { return mViewportHeight; }
+
+		ChildWidgetContainer& GetChildren() { return mChildren; } 
 
 	protected:
 

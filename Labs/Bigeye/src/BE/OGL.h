@@ -3,6 +3,9 @@
 
 #include "LibInclude.h"
 
+namespace BE
+{
+
 class OGLewInit
 {
 public:
@@ -198,5 +201,7 @@ private:
 	GLuint mRenderBufferObject;
 	GLuint mFrameBufferObject;
 };
+
+}
 
 #endif

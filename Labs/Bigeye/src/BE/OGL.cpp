@@ -1,5 +1,8 @@
 #include "OGL.h"
 
+namespace BE
+{
+
 bool OGLewInit::Init()
 {
 	static bool is_inited = false;
@@ -11,4 +14,6 @@ bool OGLewInit::Init()
 	}
 
 	return is_inited;
+}
+
 }

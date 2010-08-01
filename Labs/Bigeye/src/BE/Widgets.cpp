@@ -1051,7 +1051,7 @@ bool NativeWindowWidget::Create(const WidgetContext& inContext, MainWindow& inAp
 		mMainWindow->GetWand().LoadFont("media/DroidSans.ttf");
 	}
 
-	Test(inContext);
+	// Test(inContext);
 	
 	return true;
 }

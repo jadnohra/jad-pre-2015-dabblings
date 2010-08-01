@@ -50,6 +50,7 @@ namespace BE
 
 		HINSTANCE				GetHINSTANCE() const			{ return mHINSTANCE; }
 		MagicWand&				GetWand() const					{ return mWand; }
+		NativeWindowWidget*		GetRootWidget()					{ return mWindow; }
 
 	protected:
 
