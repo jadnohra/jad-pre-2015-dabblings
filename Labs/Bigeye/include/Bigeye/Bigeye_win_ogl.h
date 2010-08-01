@@ -31,12 +31,12 @@ namespace BE
 		float action;
 	};
 
-	class App
+	class MainWindow
 	{
 	public:
 		
-								App();
-								~App();
+								MainWindow();
+								~MainWindow();
 
 		bool					Create(const char* inWindowName, int inWidth, int inHeight);
 

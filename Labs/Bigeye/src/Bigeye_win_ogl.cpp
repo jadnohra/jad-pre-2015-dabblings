@@ -5,7 +5,7 @@ namespace BE
 {
 
 
-App::App()
+MainWindow::MainWindow()
 :	mWindow(NULL)
 {
 	mMouseMoved = false;
@@ -21,13 +21,13 @@ App::App()
 }
 
 
-App::~App()
+MainWindow::~MainWindow()
 {
 	delete mWindow;
 }
 
 
-bool App::Create(const char* inWindowName, int inWidth, int inHeight)
+bool MainWindow::Create(const char* inWindowName, int inWidth, int inHeight)
 {
 	if (mWindow != NULL)
 		return false;
@@ -45,7 +45,7 @@ bool App::Create(const char* inWindowName, int inWidth, int inHeight)
 	return true;
 }
 
-float App::GetInputState(int inInputID) const
+float MainWindow::GetInputState(int inInputID) const
 {
 	EInputID input_ID = (EInputID) inInputID;
 
@@ -112,17 +112,17 @@ float App::GetInputState(int inInputID) const
 	return 0.0f;
 }
 
-const glm::vec2& App::GetMousePos() const
+const glm::vec2& MainWindow::GetMousePos() const
 {
 	return mMousePos;
 }
 
-int App::GetInputEventCount() const
+int MainWindow::GetInputEventCount() const
 {
 	return 0;
 }
 
-const InputEventInfo& App::GetInputEvent(int inIndex) const
+const InputEventInfo& MainWindow::GetInputEvent(int inIndex) const
 {
 	static InputEventInfo info;
 
@@ -130,11 +130,11 @@ const InputEventInfo& App::GetInputEvent(int inIndex) const
 }
 
 
-void App::ConsumeInputEvents() 
+void MainWindow::ConsumeInputEvents() 
 {
 }
 
-void App::PrepareInputForUpdate()
+void MainWindow::PrepareInputForUpdate()
 {
 	POINT point;
 	GetCursorPos(&point);
@@ -160,7 +160,7 @@ void App::PrepareInputForUpdate()
 }
 
 
-bool App::Update(float inTimeSecs)
+bool MainWindow::Update(float inTimeSecs)
 {
 	if (mWindow)
 	{
@@ -190,21 +190,6 @@ bool App::Update(float inTimeSecs)
 		mWindow->RenderBuild(widget_context, identity, false);
 		mRenderer.Render();
 		SwapBuffers(mWindow->GetHDC());	// MOVE THIS!!
-
-		//else												
-		{
-			/*
-			{
-				// Process Application Loop
-				tickCount = GetTickCount ();				// Get The Tick Count
-				app.Update (tickCount - window.lastTickCount);	// Update The Counter
-				window.lastTickCount = tickCount;			// Set Last Count To Current Count
-				app.Draw();									// Draw Our Scene
-
-				SwapBuffers (window.hDC);					// Swap Buffers (Double Buffering)
-			}
-			*/
-		}
 	}
 
 	return true;
