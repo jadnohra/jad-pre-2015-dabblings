@@ -1,0 +1,47 @@
+HIERARCHY
+ROOT Hips
+{
+	OFFSET	0.00	0.00	0.00
+	CHANNELS 6 Xposition Yposition Zposition Zrotation Xrotation Yrotation
+	JOINT Test1
+	{
+		OFFSET	 2.5	 0.0	 0.00
+		CHANNELS 3 Zrotation Xrotation Yrotation
+		
+		End Site 
+		{
+			OFFSET	 1.0	 0.00	 0.00
+		}
+	}
+	
+	JOINT Test2
+	{
+		OFFSET	 0.0	 2.5	 0.00
+		CHANNELS 3 Zrotation Xrotation Yrotation
+		
+		End Site 
+		{
+			OFFSET	 0.0	 1.0	 0.00
+		}
+	}
+	
+	JOINT Test3
+	{
+		OFFSET	 0.0	 0.0	 2.5
+		CHANNELS 3 Zrotation Xrotation Yrotation
+		
+		End Site 
+		{
+			OFFSET	 0.0	 0.00	 1.0
+		}
+	}
+	
+	End Site 
+	{
+		OFFSET	 0.0	 0.00	 1.00
+	}
+}
+MOTION
+Frames:    1
+Frame Time: 0.033333
+0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0
