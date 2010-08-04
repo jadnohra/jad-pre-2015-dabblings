@@ -171,7 +171,35 @@
 	</References>
 	<Files>
 		<File
+			RelativePath="..\..\src\BF\LoaderBVH.cpp"
+			>
+		</File>
+		<File
+			RelativePath="..\..\src\BF\LoaderBVH.h"
+			>
+		</File>
+		<File
 			RelativePath="..\..\src\Main.cpp"
+			>
+		</File>
+		<File
+			RelativePath="..\..\src\BF\Rendering.h"
+			>
+		</File>
+		<File
+			RelativePath="..\..\src\BF\Skeleton.cpp"
+			>
+		</File>
+		<File
+			RelativePath="..\..\src\BF\Skeleton.h"
+			>
+		</File>
+		<File
+			RelativePath="..\..\src\BF\SkeletonRenderer.cpp"
+			>
+		</File>
+		<File
+			RelativePath="..\..\src\BF\SkeletonRenderer.h"
 			>
 		</File>
 	</Files>
