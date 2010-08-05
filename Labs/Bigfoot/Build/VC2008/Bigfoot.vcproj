@@ -41,7 +41,7 @@
 			<Tool
 				Name="VCCLCompilerTool"
 				Optimization="0"
-				AdditionalIncludeDirectories="../../../Bigeye_working1/src;../../../Dependencies/;../../../Dependencies/ImageMagickWand/include;../../../Dependencies/glew-1.5.4/include"
+				AdditionalIncludeDirectories="../../../Bigeye/src;../../../Dependencies/;../../../Dependencies/ImageMagickWand/include;../../../Dependencies/glew-1.5.4/include"
 				PreprocessorDefinitions="WIN32;_DEBUG;_CONSOLE"
 				MinimalRebuild="true"
 				BasicRuntimeChecks="3"

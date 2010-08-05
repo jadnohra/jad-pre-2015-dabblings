@@ -6,7 +6,7 @@ Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "Bigfoot", "Bigfoot.vcproj",
 		{837AA69E-17EE-42BC-9F49-D52678BFB0CE} = {837AA69E-17EE-42BC-9F49-D52678BFB0CE}
 	EndProjectSection
 EndProject
-Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "Bigeye", "..\..\..\Bigeye_working1\Build\VS2008\Bigeye.vcproj", "{837AA69E-17EE-42BC-9F49-D52678BFB0CE}"
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "Bigeye", "..\..\..\Bigeye\Build\VS2008\Bigeye.vcproj", "{837AA69E-17EE-42BC-9F49-D52678BFB0CE}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
