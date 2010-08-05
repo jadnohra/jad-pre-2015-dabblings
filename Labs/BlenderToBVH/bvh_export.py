@@ -1,7 +1,33 @@
+#!BPY
+
+""" Registration info for Blender menus:
+Name: 'Motion capture (.bvh)...'
+Blender: 249b
+Group: 'Export'
+Tooltip: 'BVH exporter'
+"""
+__author__ = "FooName"
+__url__ = ("blender", "www.j00rURL.com")
+__version__ = "1.0"
+__bpydoc__ = """\
+This is where you document the general workings of the script, keep it short but  informative.
+
+Missing:<br>
+    None.
+
+Known issues:<br>
+    None.
+
+Notes:<br>
+    TODO
+"""
+
 import bpy
 import Blender
 import Blender.Mathutils
 from Blender.Mathutils import *
+
+export_type = 'Xrotation Yrotation Zrotation'
 
 class ArmatureInfo:
 
@@ -56,7 +82,11 @@ class ArmatureInfo:
 		
 	@staticmethod		
 	def ExportRotationChannels(inFile):
-		inFile.write('Xrotation Yrotation Zrotation')	
+	#	inFile.write('Xrotation Yrotation Zrotation')	
+	#	inFile.write('Xrotation Zrotation Yrotation')	
+		global export_type
+		inFile.write(export_type)	
+	
 		
 	@staticmethod		
 	def ExportRootChannels(inFile, inIndent):
@@ -249,7 +279,26 @@ def Export():
 	export_armature = list(bpy.data.armatures)[0]
 	print(export_armature)
 	armature_info = ArmatureInfo(export_armature)
-	armature_info.DoExport("d:\jad\Dev\AiGameDev\BlenderToBVH\proto1_export_test")
+	
+	global export_type
+	
+	export_type = 'Xrotation Yrotation Zrotation'
+	armature_info.DoExport("d:\jad\Dev\AiGameDev\BlenderToBVH\proto1_export_test_xyz")
+	
+	export_type = 'Xrotation Zrotation Yrotation'
+	armature_info.DoExport("d:\jad\Dev\AiGameDev\BlenderToBVH\proto1_export_test_xzy")
+	
+	export_type = 'Yrotation Xrotation Zrotation'
+	armature_info.DoExport("d:\jad\Dev\AiGameDev\BlenderToBVH\proto1_export_test_yxz")
+	
+	export_type = 'Yrotation Zrotation Xrotation'
+	armature_info.DoExport("d:\jad\Dev\AiGameDev\BlenderToBVH\proto1_export_test_yzx")
+	
+	export_type = 'Zrotation Xrotation Yrotation'
+	armature_info.DoExport("d:\jad\Dev\AiGameDev\BlenderToBVH\proto1_export_test_zxy")
+	
+	export_type = 'Zrotation Yrotation Xrotation'
+	armature_info.DoExport("d:\jad\Dev\AiGameDev\BlenderToBVH\proto1_export_test_zyx")
 	
 
 #
