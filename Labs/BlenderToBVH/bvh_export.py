@@ -28,6 +28,7 @@ import Blender.Mathutils
 from Blender.Mathutils import *
 
 export_type = 'Xrotation Yrotation Zrotation'
+export_check_prefix = "__~bvhexport_"
 
 class ArmatureInfo:
 
@@ -61,6 +62,19 @@ class ArmatureInfo:
 
 
 	def DoExport(self, inFilePath):
+		
+		scene_objects = Blender.Scene.GetCurrent().objects
+		unlink_objects = []
+		
+		for object in scene_objects:
+			if object.getName().startswith(export_check_prefix):
+				unlink_objects.append(object)
+				
+		for object in unlink_objects:
+			scene_objects.unlink(object)
+		
+		for key, node in self.mNodeInfoMap.items():
+			node.Process()
 		
 		for root in self.mRoots:
 			self.ExportRoot(inFilePath, root)
@@ -149,6 +163,8 @@ class ArmatureInfo:
 		
 	def ExportRoot(self, ioFilePath, inRoot):	
 		
+		global export_check_prefix
+		
 		if (len(self.mRoots) > 1):
 			ioFilePath += "_" + inRoot.mBone.name
 			
@@ -169,11 +185,24 @@ class ArmatureInfo:
 		motion_strings.append(ArmatureInfo.GetMatrixTranslationString(inRoot.mLocalMatrix))
 		motion_strings.append(ArmatureInfo.GetMatrixRotationString(inRoot.mLocalMatrix))
 
-		ArmatureInfo.ExportEndsite(f, indent, inRoot)
-		f.write('\n')
+		if inRoot.mNeedsExportEndsite:
+			ArmatureInfo.ExportEndsite(f, indent, inRoot)
+			f.write('\n')
 
 		for child in inRoot.mChildren:
 			ArmatureInfo.ExportJoint(f, indent, child, motion_strings)
+			
+		world_matrix = Matrix()
+		world_matrix.identity()
+		
+		root_world_matrix = inRoot.mLocalMatrix * world_matrix
+		print(inRoot.mBone.name + " err: " + str((root_world_matrix.translationPart() - inRoot.mArmatureMatrix.translationPart()).length))
+		empty = Blender.Scene.GetCurrent().objects.new("Empty")
+		empty.setMatrix(root_world_matrix)
+		empty.setName(export_check_prefix + inRoot.mBone.name)
+			
+		for child in inRoot.mChildren:
+			ArmatureInfo.TestJoint(child, root_world_matrix)	
 				
 		f.write('}\n')		
 		
@@ -188,6 +217,19 @@ class ArmatureInfo:
 		f.write('\n')	
 
 				
+	@staticmethod		
+	def TestJoint(inNode, inParentWorldMatrix):			
+		
+		global export_check_prefix
+		
+		joint_world_matrix = inNode.mLocalMatrix * inParentWorldMatrix
+		print(inNode.mBone.name + " err: " + str((joint_world_matrix.translationPart() - inNode.mArmatureMatrix.translationPart()).length))
+		empty = Blender.Scene.GetCurrent().objects.new("Empty")
+		empty.setMatrix(joint_world_matrix)
+		empty.setName(export_check_prefix + inNode.mBone.name)
+		
+		for child in inNode.mChildren:
+			ArmatureInfo.TestJoint(child, joint_world_matrix)	
 				
 	@staticmethod		
 	def ExportJoint(inFile, inIndent, inNode, inMotionStrings):
@@ -200,8 +242,9 @@ class ArmatureInfo:
 		inMotionStrings.append(ArmatureInfo.GetMatrixRotationString(inNode.mLocalMatrix))
 		ArmatureInfo.ExportJointChannels(inFile, inIndent+1)
 		
-		inFile.write('\n')
-		ArmatureInfo.ExportEndsite(inFile, inIndent+1, inNode)
+		if inNode.mNeedsExportEndsite:
+			inFile.write('\n')
+			ArmatureInfo.ExportEndsite(inFile, inIndent+1, inNode)
 		
 		#inFile.write('\n')
 		for child in inNode.mChildren:
@@ -216,7 +259,7 @@ class ArmatureInfo:
 
 class ArmatureNodeInfo:
 
-	__slots__ = ('mBone', 'mIsRoot', 'mArmatureMatrix', 'mLocalMatrix', 'mLocalEndsiteOffset' 'mParent', 'mChildren')
+	__slots__ = ('mBone', 'mIsRoot', 'mArmatureMatrix', 'mLocalMatrix', 'mLocalEndsiteOffset' 'mParent', 'mChildren', 'mNeedsExportEndsite')
 
 
 	def __init__(self, inArmatureInfo, inBone):
@@ -270,7 +313,19 @@ class ArmatureNodeInfo:
 		self.mChildren.append(inChild)
 
 
-
+	def Process(self):
+	
+		if (len(self.mChildren) > 0):
+		
+			self.mNeedsExportEndsite = False
+		
+			all_children_connected = True
+			for child in self.mChildren:
+				if not Blender.Armature.CONNECTED in child.mBone.options:
+					self.mNeedsExportEndsite = True
+					break
+		else:			
+			self.mNeedsExportEndsite = True
 
 
 
@@ -282,23 +337,25 @@ def Export():
 	
 	global export_type
 	
+	export_path = Blender.Get('filename').replace(".blend", "")
+	
 	export_type = 'Xrotation Yrotation Zrotation'
-	armature_info.DoExport("d:\jad\Dev\AiGameDev\BlenderToBVH\proto1_export_test_xyz")
+	armature_info.DoExport(export_path + "xyz")
 	
-	export_type = 'Xrotation Zrotation Yrotation'
-	armature_info.DoExport("d:\jad\Dev\AiGameDev\BlenderToBVH\proto1_export_test_xzy")
+	#export_type = 'Xrotation Zrotation Yrotation'
+	#armature_info.DoExport(export_path + "xzy")
 	
-	export_type = 'Yrotation Xrotation Zrotation'
-	armature_info.DoExport("d:\jad\Dev\AiGameDev\BlenderToBVH\proto1_export_test_yxz")
+	#export_type = 'Yrotation Xrotation Zrotation'
+	#armature_info.DoExport(export_path + "yxz")
 	
-	export_type = 'Yrotation Zrotation Xrotation'
-	armature_info.DoExport("d:\jad\Dev\AiGameDev\BlenderToBVH\proto1_export_test_yzx")
+	#export_type = 'Yrotation Zrotation Xrotation'
+	#armature_info.DoExport(export_path + "yzx")
 	
-	export_type = 'Zrotation Xrotation Yrotation'
-	armature_info.DoExport("d:\jad\Dev\AiGameDev\BlenderToBVH\proto1_export_test_zxy")
+	#export_type = 'Zrotation Xrotation Yrotation'
+	#armature_info.DoExport(export_path + "zxy")
 	
-	export_type = 'Zrotation Yrotation Xrotation'
-	armature_info.DoExport("d:\jad\Dev\AiGameDev\BlenderToBVH\proto1_export_test_zyx")
+	#export_type = 'Zrotation Yrotation Xrotation'
+	#armature_info.DoExport(export_path + "zyx")
 	
 
 #
