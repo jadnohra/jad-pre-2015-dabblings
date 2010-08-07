@@ -1,5 +1,6 @@
 #include "BE/Bigeye.h"
-
+#include "BF/Camera.h"
+#include "BF/BFMath.h"
 
 class BigfootScene : public BE::SimpleRenderToTextureWidget::Scene
 {
@@ -8,6 +9,8 @@ public:
 	float mRenderTime;
 	glm::vec2 mSize;
 	BE::OGLRenderToTexture* mTexture;
+	BF::Camera mCamera;
+	BF::CameraFollowSphereController mCameraController;
 
 	virtual void Update(const BE::WidgetContext& context, BE::SimpleRenderToTextureWidget& inParent, BE::OGLRenderToTexture& inTexture);
 	virtual void Render(BE::Renderer& inRenderer);
@@ -67,13 +70,18 @@ void CreateWidgets(BE::MainWindow& inWindow, BigfootScene& inScene)
 
 void BigfootScene::RenderScene(BE::Renderer& inRenderer)
 {
+	glm::mat4 view_matrix = mCamera.GetViewMatrix();
+
 	float rtri = 16.0f * mRenderTime;
 	float rquad = 128.0f * -mRenderTime;
 
-	glLoadIdentity();									// Reset The Current Modelview Matrix
-	glTranslatef(-1.5f,0.0f,-6.0f);						// Move Left 1.5 Units And Into The Screen 6.0
-	glRotatef(rtri,0.0f,1.0f,0.0f);						// Rotate The Triangle On The Y axis ( NEW )
-	glBegin(GL_TRIANGLES);								// Start Drawing A Triangle
+	//glLoadIdentity();									// Reset The Current Modelview Matrix
+	//glTranslatef(-1.5f,0.0f,-6.0f);						// Move Left 1.5 Units And Into The Screen 6.0
+	//glRotatef(rtri,0.0f,1.0f,0.0f);						// Rotate The Triangle On The Y axis ( NEW )
+	
+	glm::mat4 triangle_world_matrix = glm::rotate(glm::translate(glm::mat4(), glm::vec3(-1.5f,0.0f,-6.0f)), rtri, 0.0f,1.0f,0.0f);
+	glLoadMatrixf(glm::value_ptr(view_matrix * triangle_world_matrix));
+	glBegin(GL_TRIANGLES);							// Start Drawing A Triangle
 	glColor3f(1.0f,0.0f,0.0f);						// Red
 	glVertex3f( 0.0f, 1.0f, 0.0f);					// Top Of Triangle (Front)
 	glColor3f(0.0f,1.0f,0.0f);						// Green
@@ -100,9 +108,12 @@ void BigfootScene::RenderScene(BE::Renderer& inRenderer)
 	glVertex3f(-1.0f,-1.0f, 1.0f);					// Right Of Triangle (Left)
 	glEnd();											// Done Drawing The Pyramid
 
-	glLoadIdentity();									// Reset The Current Modelview Matrix
-	glTranslatef(1.5f,0.0f,-7.0f);						// Move Right 1.5 Units And Into The Screen 7.0
-	glRotatef(rquad,1.0f,1.0f,1.0f);					// Rotate The Quad On The X axis ( NEW )
+	//glLoadIdentity();									// Reset The Current Modelview Matrix
+	//glTranslatef(1.5f,0.0f,-7.0f);						// Move Right 1.5 Units And Into The Screen 7.0
+	//glRotatef(rquad,1.0f,1.0f,1.0f);					// Rotate The Quad On The X axis ( NEW )
+
+	glm::mat4 quad_world_matrix = glm::rotate(glm::translate(glm::mat4(), glm::vec3(1.5f,0.0f,-7.0f)), rquad, 1.0f,1.0f,1.0f);
+	glLoadMatrixf(glm::value_ptr(view_matrix * quad_world_matrix));
 	glBegin(GL_QUADS);									// Draw A Quad
 	glColor3f(0.0f,1.0f,0.0f);						// Set The Color To Green
 	glVertex3f( 1.0f, 1.0f,-1.0f);					// Top Right Of The Quad (Top)
@@ -173,7 +184,17 @@ void BigfootScene::Render(BE::Renderer& inRenderer)
 	glLoadIdentity();									// Reset The Projection Matrix
 
 	// Calculate The Aspect Ratio Of The Window
-	gluPerspective(45.0f,(GLfloat)mSize.x/(GLfloat)mSize.y,0.1f,100.0f);
+	glm::vec2 fov;
+	fov.y = BF::gDegToRad(45.0f);
+	fov.x = fov.y * (float)mSize.x/(float)mSize.y;
+	glm::vec2 depth_planes(0.1f, 100.0f);
+
+	gluPerspective(BF::gRadToDeg(fov.y),(GLfloat)mSize.x/(GLfloat)mSize.y, depth_planes.x, depth_planes.y);
+	mCameraController.SetFollowParams(glm::vec3(1.0f, 1.0f, 1.0f), fov, depth_planes.x);
+	mCameraController.SetCamera(&mCamera);
+	BF::Sphere sphere; sphere.mPosition = glm::vec3(1.5f,0.0f,-7.0f); sphere.mRadius = 5.0f;
+	mCameraController.SetTarget(sphere);
+	mCameraController.Update();
 
 	glMatrixMode(GL_MODELVIEW);							// Select The Modelview Matrix
 	glLoadIdentity();		

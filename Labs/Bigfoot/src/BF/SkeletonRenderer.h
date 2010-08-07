@@ -3,12 +3,18 @@
 
 #include "Skeleton.h"
 #include "Rendering.h"
+#include "BFMath.h"
+
+namespace BF
+{
 
 class SkeletonRenderer
 {
 public:
 
-	void Render(const BF::Skeleton& inSkeleton, int inAnimFrame, const glm::mat4& inViewMatrix, bool inIncludeRootTranslation, bool inIncludeRootAnimTranslation)
+	void Render(const Skeleton& inSkeleton, int inAnimFrame, const glm::mat4& inViewMatrix, 
+				bool inIncludeRootTranslation, bool inIncludeRootAnimTranslation, 
+				AAB& ioBounds)
 	{
 		inSkeleton.ToModelSpace(inSkeleton.mDefaultPose, inIncludeRootTranslation, inIncludeRootAnimTranslation, mModelSpaceJoints);
 
@@ -27,13 +33,14 @@ public:
 		glMatrixMode(GL_MODELVIEW);
 		glColor4f(0.0f, 0.0f, 0.0f, 0.5f);
 
-		DrawSkeletonJoint(inSkeleton, inViewMatrix, 0);
+		DrawSkeletonJoint(inSkeleton, inViewMatrix, 0, ioBounds);
 	
 		glDisable(GL_COLOR_MATERIAL);
 	}
 
-	void DrawSkeletonJoint(const BF::Skeleton& inSkeleton, const glm::mat4& inViewMatrix, int inJointIndex)
+	void DrawSkeletonJoint(const Skeleton& inSkeleton, const glm::mat4& inViewMatrix, int inJointIndex, AAB& ioBounds)
 	{
+		ioBounds.Include(mModelSpaceJoints[inJointIndex].mPosition);
 		glLoadMatrixf(glm::value_ptr(inViewMatrix * glm::translate(glm::mat4(), mModelSpaceJoints[inJointIndex].mPosition)));
 		glutSolidSphere(0.25f, 10, 10);
 		
@@ -53,12 +60,14 @@ public:
 				glVertex3fv(glm::value_ptr(mModelSpaceJoints[child_joint_index].mPosition)); 
 				glEnd();
 
-				DrawSkeletonJoint(inSkeleton, inViewMatrix, child_joint_index);
+				DrawSkeletonJoint(inSkeleton, inViewMatrix, child_joint_index, ioBounds);
 			}
 		}
 	}
 
-	BF::JointTransforms mModelSpaceJoints;
+	JointTransforms mModelSpaceJoints;
 };
+
+}
 
 #endif

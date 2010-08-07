@@ -171,6 +171,18 @@
 	</References>
 	<Files>
 		<File
+			RelativePath="..\..\src\BF\BFMath.h"
+			>
+		</File>
+		<File
+			RelativePath="..\..\src\BF\Camera.cpp"
+			>
+		</File>
+		<File
+			RelativePath="..\..\src\BF\Camera.h"
+			>
+		</File>
+		<File
 			RelativePath="..\..\src\BF\LoaderBVH.cpp"
 			>
 		</File>
