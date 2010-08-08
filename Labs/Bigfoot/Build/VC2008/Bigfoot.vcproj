@@ -117,7 +117,7 @@
 				Name="VCCLCompilerTool"
 				Optimization="2"
 				EnableIntrinsicFunctions="true"
-				AdditionalIncludeDirectories="../../../Bigeye_working1/src;../../../Dependencies/;../../../Dependencies/ImageMagickWand/include;../../../Dependencies/glew-1.5.4/include"
+				AdditionalIncludeDirectories="../../../Bigeye/src;../../../Dependencies/;../../../Dependencies/ImageMagickWand/include;../../../Dependencies/glew-1.5.4/include"
 				PreprocessorDefinitions="WIN32;NDEBUG;_CONSOLE"
 				RuntimeLibrary="2"
 				EnableFunctionLevelLinking="true"

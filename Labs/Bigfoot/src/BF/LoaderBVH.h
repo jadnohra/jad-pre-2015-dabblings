@@ -9,7 +9,7 @@ namespace BF
 	{
 	public:
 
-		static bool Load(const char* inFilePath, Skeleton& outSkeleton, SkeletonAnimationFrames* outAnimFrames);
+		static bool Load(const char* inFilePath, Skeleton& outSkeleton, SkeletonAnimationFrames* outAnimFrames, bool inDebug = false);
 
 		static glm::vec3 ToOpenGLTranslation(const glm::vec3& inPosBVH_xyz)
 		{

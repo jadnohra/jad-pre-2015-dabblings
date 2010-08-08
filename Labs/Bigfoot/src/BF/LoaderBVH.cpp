@@ -8,7 +8,8 @@ namespace BF
 	// http://www.cs.wisc.edu/graphics/Courses/cs-838-1999/Jeff/BVH.html
 	// http://vipbase.net/amc2bvh/
 
-	struct LoaderBVHLineParser
+	
+	class LoaderBVHLineParser
 	{
 	private:
 
@@ -16,7 +17,7 @@ namespace BF
 
 	public:
 
-		LoaderBVHLineParser(Skeleton& outSkeleton, SkeletonAnimationFrames* outAnimFrames)
+		LoaderBVHLineParser(Skeleton& outSkeleton, SkeletonAnimationFrames* outAnimFrames, bool inDebug)
 			:	mSkeleton(outSkeleton)
 			,	mAnimFrames(outAnimFrames)
 			,	mPredicate(" \t\r")
@@ -26,6 +27,8 @@ namespace BF
 			,	mAutoJointNameCount(0)
 			,	mFrameChannelCount(0)
 			,	mFrameIndex(0)
+			,	mIsDebuggingLines(inDebug)
+			,	mDidParseAnything(false)
 		{
 			mSkeleton.Destroy();
 
@@ -57,9 +60,18 @@ namespace BF
 			}
 		}
 
-		void SetError()
+		bool HasError()
+		{
+			return (mErrorLine >= 0) || (mDidParseAnything == false);
+		}
+
+		void SetError(const std::string& s)
 		{
 			mErrorLine = mCurrLine;
+
+			printf("error at line: #d\n", mErrorLine);
+			printf(s.c_str());
+			printf("\n");
 		}
 
 		inline void operator()(const std::string& s)
@@ -70,8 +82,11 @@ namespace BF
 				return;
 			}
 
-			printf(s.c_str());
-			printf("\n");
+			if (mIsDebuggingLines)
+			{
+				printf(s.c_str());
+				printf("\n");
+			}
 
 			mStringList.clear();
 			strtk::split(mPredicate,s, strtk::range_to_type_back_inserter(mStringList), strtk::split_options::default_mode);
@@ -118,7 +133,7 @@ namespace BF
 				}
 				else
 				{
-					SetError();
+					SetError(s);
 				}
 			}
 			else
@@ -133,6 +148,7 @@ namespace BF
 							if (strtk::imatch(mStringList[i], "HIERARCHY"))
 							{
 								mParseState = Parse_ROOT;
+								mDidParseAnything = true;
 							}
 						}
 					}
@@ -177,7 +193,7 @@ namespace BF
 						}
 
 						if (mParseState != Parse_ROOT_Open)
-							SetError();
+							SetError(s);
 					}
 					break;
 
@@ -192,7 +208,7 @@ namespace BF
 						}
 
 						if (mParseState != Parse_OFFSET)
-							SetError();
+							SetError(s);
 					}
 					break;
 
@@ -205,7 +221,7 @@ namespace BF
 							for (size_t i=1, dim=0; i<mStringList.size() && dim<3; ++i, ++dim)
 							{
 								if (!strtk::string_to_type_converter(mStringList[i], offset[dim]))
-									SetError();
+									SetError(s);
 							}
 
 							if (mErrorLine < 0)
@@ -214,7 +230,7 @@ namespace BF
 								{
 									if (mSkeleton.mJoints.size()+1 != mSkeleton.mJointInfos.size())
 									{
-										SetError();
+										SetError(s);
 									}
 									else
 									{
@@ -231,7 +247,7 @@ namespace BF
 						}
 						else
 						{
-							SetError();
+							SetError(s);
 						}
 					}
 					break;
@@ -265,7 +281,7 @@ namespace BF
 								else
 								{
 									// We don't support user channels for now
-									SetError();
+									SetError(s);
 								}
 							}
 
@@ -285,7 +301,7 @@ namespace BF
 						}
 						else
 						{
-							SetError();
+							SetError(s);
 						}
 					}
 					break;
@@ -336,7 +352,7 @@ namespace BF
 							mJointToTreeIndex[joint_index] = (int) (mJointTree.size()-1);
 
 							if (mParseState != Parse_JOINT_Open)
-								SetError();
+								SetError(s);
 						}
 					}
 					break;
@@ -352,7 +368,7 @@ namespace BF
 						}
 
 						if (mParseState != Parse_OFFSET)
-							SetError();
+							SetError(s);
 					}
 					break;
 
@@ -367,7 +383,7 @@ namespace BF
 						}
 
 						if (mParseState != Parse_FRAMES)
-							SetError();
+							SetError(s);
 					}
 					break;
 
@@ -389,12 +405,12 @@ namespace BF
 							else if (mParseState == Parse_FrameTime)
 							{
 								if (!strtk::string_to_type_converter(mStringList[i], mFrameCount))
-									SetError();
+									SetError(s);
 							}
 						}
 
 						if (mParseState != Parse_FrameTime)
-							SetError();
+							SetError(s);
 					}
 					break;
 
@@ -426,12 +442,12 @@ namespace BF
 							else if (mParseState == Parse_FrameDataLine)
 							{
 								if (!strtk::string_to_type_converter(mStringList[i], mFrameTime))
-									SetError();
+									SetError(s);
 							}
 						}
 
 						if (mParseState != Parse_FrameDataLine)
-							SetError();
+							SetError(s);
 					}
 					break;
 
@@ -470,14 +486,14 @@ namespace BF
 										bool rotation_was_set = false;
 										glm::vec3 euler_angles_deg;
 
-										for (int channel_index=0; channel_index<channel_info.mChannelTypes.size(); ++channel_index)
+										for (size_t channel_index=0; channel_index<channel_info.mChannelTypes.size(); ++channel_index)
 										{
 											switch (channel_info.mChannelTypes[channel_index])
 											{
 												case Channel_TranslationX:
 												{
 													if (!strtk::string_to_type_converter(mStringList[data_index++], translation.x))
-														SetError();
+														SetError(s);
 													else
 														translation_was_set = true;
 												}
@@ -486,7 +502,7 @@ namespace BF
 												case Channel_TranslationY:
 												{
 													if (!strtk::string_to_type_converter(mStringList[data_index++], translation.y))
-														SetError();
+														SetError(s);
 													else
 														translation_was_set = true;
 												}
@@ -495,7 +511,7 @@ namespace BF
 												case Channel_TranslationZ:
 												{
 													if (!strtk::string_to_type_converter(mStringList[data_index++], translation.z))
-														SetError();
+														SetError(s);
 													else
 														translation_was_set = true;
 												}
@@ -504,7 +520,7 @@ namespace BF
 												case Channel_RotationEulerX:
 												{
 													if (!strtk::string_to_type_converter(mStringList[data_index++], euler_angles_deg.x))
-														SetError();
+														SetError(s);
 													else
 														rotation_was_set = true;
 												}
@@ -513,7 +529,7 @@ namespace BF
 												case Channel_RotationEulerY:
 												{
 													if (!strtk::string_to_type_converter(mStringList[data_index++], euler_angles_deg.y))
-														SetError();
+														SetError(s);
 													else
 														rotation_was_set = true;
 												}
@@ -522,7 +538,7 @@ namespace BF
 												case Channel_RotationEulerZ:
 												{
 													if (!strtk::string_to_type_converter(mStringList[data_index++], euler_angles_deg.z))
-														SetError();
+														SetError(s);
 													else
 														rotation_was_set = true;
 												}
@@ -565,7 +581,7 @@ namespace BF
 						}
 						else
 						{
-							SetError();
+							SetError(s);
 						}
 					}
 					break;
@@ -596,6 +612,8 @@ namespace BF
 
 		int mCurrLine;
 		int mErrorLine;
+		bool mDidParseAnything;
+		bool mIsDebuggingLines;
 
 		EParseState mParseState;
 		int mAutoJointNameCount;
@@ -622,19 +640,37 @@ namespace BF
 		std::vector<int> mJointToTreeIndex;
 	};
 
-	bool LoaderBVH::Load(const char* inFilePath, Skeleton& outSkeleton, SkeletonAnimationFrames* outAnimFrames)
+	struct LoaderBVHLineParserFunction
+	{
+	public:
+
+		LoaderBVHLineParser& mParser;
+
+		LoaderBVHLineParserFunction(LoaderBVHLineParser& inParser)
+		: mParser(inParser)
+		{}
+
+		inline void operator()(const std::string& s) { mParser(s); }
+	};
+
+
+	bool LoaderBVH::Load(const char* inFilePath, Skeleton& outSkeleton, SkeletonAnimationFrames* outAnimFrames, bool inDebug)
 	{
 		if (inFilePath == NULL)
 			return false;
 
-		LoaderBVHLineParser line_parser(outSkeleton, outAnimFrames);
+		LoaderBVHLineParser line_parser(outSkeleton, outAnimFrames, inDebug);
 
-		printf(inFilePath);
-		printf("\n");
+		printf("Loading: '"); printf(inFilePath); printf("'\n");
 
-		strtk::for_each_line(std::string(inFilePath), line_parser);
+		strtk::for_each_line(std::string(inFilePath), LoaderBVHLineParserFunction(line_parser));
 
-		return !outSkeleton.mJoints.empty();	
+		if (line_parser.HasError())
+			printf("Failed\n");
+		else
+			printf("Loaded\n");
+
+		return !line_parser.HasError();	
 	}
 
 
