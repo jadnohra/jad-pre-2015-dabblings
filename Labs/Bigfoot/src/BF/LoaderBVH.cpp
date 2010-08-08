@@ -69,7 +69,7 @@ namespace BF
 		{
 			mErrorLine = mCurrLine;
 
-			printf("error at line: #d\n", mErrorLine);
+			printf("error at line: %d\n", mErrorLine);
 			printf(s.c_str());
 			printf("\n");
 		}
