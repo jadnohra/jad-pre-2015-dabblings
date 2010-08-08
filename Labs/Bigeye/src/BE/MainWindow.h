@@ -31,11 +31,22 @@ namespace BE
 		float action;
 	};
 
+	class MainWindow;
+
+	class MainWindowClient
+	{
+	public:
+
+		virtual bool SupportsDragAndDrop() { return false; }
+		virtual void OnFilesDropped(MainWindow* inWindow, int inCount) {}
+		virtual void OnFileDropped(MainWindow* inWindow, const char* inFilePath) {}
+	};
+
 	class MainWindow
 	{
 	public:
 		
-								MainWindow();
+								MainWindow(MainWindowClient* inClient = NULL);
 								~MainWindow();
 
 		bool					Create(const char* inWindowName, int inWidth, int inHeight);
@@ -51,17 +62,19 @@ namespace BE
 		HINSTANCE				GetHINSTANCE() const			{ return mHINSTANCE; }
 		MagicWand&				GetWand() const					{ return mWand; }
 		NativeWindowWidget*		GetRootWidget()					{ return mWindow; }
+		MainWindowClient*		GetClient() const				{ return mClient; }
 
 	protected:
 
 		void					PrepareInputForUpdate();
 
+		MainWindowClient*		mClient;
 		HINSTANCE				mHINSTANCE;
 		NativeWindowWidget*		mWindow;
 		mutable MagicWand		mWand;
 
 		Renderer				mRenderer;
-
+		
 
 		bool					mMouseMoved;
 		glm::vec2				mMousePos;

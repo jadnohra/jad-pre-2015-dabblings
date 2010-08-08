@@ -5,8 +5,9 @@ namespace BE
 {
 
 
-MainWindow::MainWindow()
+MainWindow::MainWindow(MainWindowClient* inClient)
 :	mWindow(NULL)
+,	mClient(inClient)
 {
 	mMouseMoved = false;
 	mLastMouseLeft = false;

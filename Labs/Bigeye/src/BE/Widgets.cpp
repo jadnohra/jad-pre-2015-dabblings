@@ -878,8 +878,11 @@ LRESULT CALLBACK NativeWindowWidget::WindowProcProxy(HWND hWnd, UINT uMsg, WPARA
 {
 	// Get The Window Context
 	NativeWindowWidget* pTHIS = (NativeWindowWidget*) (GetWindowLong(hWnd, GWL_USERDATA));
-
-	return pTHIS->WindowProc(hWnd, uMsg, wParam, lParam);
+	
+	if (pTHIS != NULL)
+		return pTHIS->WindowProc(hWnd, uMsg, wParam, lParam);
+	else
+		return DefWindowProc(hWnd, uMsg, wParam, lParam);
 }
 
 
@@ -893,6 +896,40 @@ LRESULT CALLBACK NativeWindowWidget::WindowProc(HWND hWnd, UINT uMsg, WPARAM wPa
 			Destroy();
 		}
 		break;
+
+		case WM_DROPFILES:
+		{
+			if (mMainWindow && mMainWindow->GetClient())
+			{
+				HDROP fDrop = (HDROP) wParam;
+
+				int dropped_file_count = DragQueryFileA(fDrop, 0xFFFFFFFF, NULL, 0);
+				char* fName = NULL;
+				int buffer_size = 0;
+
+				mMainWindow->GetClient()->OnFilesDropped(mMainWindow, dropped_file_count);
+				
+				for (int i=0; i<dropped_file_count; ++i)
+				{
+					UINT nBufSize = 1 + DragQueryFileA(fDrop, i, NULL, 0);
+
+					if (nBufSize > buffer_size)
+					{
+						buffer_size = nBufSize;
+						delete fName;
+						fName = new char[buffer_size];
+					}
+
+					DragQueryFileA(fDrop, i, fName, buffer_size);
+					mMainWindow->GetClient()->OnFileDropped(mMainWindow, fName);
+				}
+
+				delete fName;
+				DragFinish(fDrop);
+			}
+
+			return 0;
+		}
 
 		/*
 		case WM_SIZE:												
@@ -995,6 +1032,10 @@ bool NativeWindowWidget::Create(const WidgetContext& inContext, MainWindow& inAp
 	if (mHWND == 0)
 		return false;
 	
+	SetWindowLongPtr(mHWND, GWL_USERDATA, (LONG) this);
+	if (inApp.GetClient() && inApp.GetClient()->SupportsDragAndDrop())
+		DragAcceptFiles(mHWND, TRUE);
+
 	mHDC = GetDC (mHWND);									
 	if (mHDC == 0)												
 	{

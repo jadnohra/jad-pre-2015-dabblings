@@ -6,7 +6,7 @@
 namespace BE
 {
 
-class OGLewInit
+class OGLLibInit
 {
 public:
 
@@ -127,7 +127,7 @@ public:
 
 	bool Create(GLsizei inWidth, GLsizei inHeight, int inMultisampleSamples = 0)
 	{
-		OGLewInit::Init();
+		OGLLibInit::Init();
 
 		if (mTexture.IsCreated())
 			return false;
