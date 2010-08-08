@@ -12,10 +12,26 @@ class SkeletonRenderer
 {
 public:
 
+	void GetRenderBounds(const Skeleton& inSkeleton, int inAnimFrame, 
+						bool inIncludeRootTranslation, bool inIncludeRootAnimTranslation, 
+						AAB& ioBounds)
+	{
+		inSkeleton.ToModelSpace(inSkeleton.mDefaultPose, inIncludeRootTranslation, inIncludeRootAnimTranslation, mModelSpaceJoints);
+
+		if (mModelSpaceJoints.empty())
+			return;
+
+
+		for (size_t i=0; i<mModelSpaceJoints.size(); ++i)
+			ioBounds.Include(mModelSpaceJoints[i].mPosition);
+	}
+
 	void Render(const Skeleton& inSkeleton, int inAnimFrame, const glm::mat4& inViewMatrix, 
 				bool inIncludeRootTranslation, bool inIncludeRootAnimTranslation, 
 				AAB& ioBounds)
 	{
+		BE::OGLLibInit::Init();
+
 		inSkeleton.ToModelSpace(inSkeleton.mDefaultPose, inIncludeRootTranslation, inIncludeRootAnimTranslation, mModelSpaceJoints);
 
 		if (mModelSpaceJoints.empty())
@@ -38,10 +54,12 @@ public:
 		glDisable(GL_COLOR_MATERIAL);
 	}
 
+
 	void DrawSkeletonJoint(const Skeleton& inSkeleton, const glm::mat4& inViewMatrix, int inJointIndex, AAB& ioBounds)
 	{
 		ioBounds.Include(mModelSpaceJoints[inJointIndex].mPosition);
-		glLoadMatrixf(glm::value_ptr(inViewMatrix * glm::translate(glm::mat4(), mModelSpaceJoints[inJointIndex].mPosition)));
+		glm::mat4 model_view_mat = inViewMatrix * glm::translate(glm::mat4(), mModelSpaceJoints[inJointIndex].mPosition);
+		glLoadMatrixf(glm::value_ptr(model_view_mat));
 		glutSolidSphere(0.25f, 10, 10);
 		
 		int child_count = inSkeleton.mJointHierarchy.mJointChildrenInfos[inJointIndex].mChildCount;

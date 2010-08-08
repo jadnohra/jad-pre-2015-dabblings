@@ -55,7 +55,7 @@ public:
 
 	CameraFollowSphereController()
 	:	mCamera(NULL)
-	,	mNearDepth(1.0f)
+	,	mFollowDist(0.0f)
 	{
 	}
 
@@ -69,11 +69,11 @@ public:
 		mTarget = inTarget;
 	}
 
-	void SetFollowParams(const glm::vec3& inOffsetDirection, const glm::vec2& inFOV, float inNearDepth)
+	void SetFollowParams(const glm::vec3& inOffsetDirection, const glm::vec2& inFOV, glm::vec2 inDepthPlanes)
 	{
 		mOffsetDirection = inOffsetDirection;
 		mFOV = inFOV;
-		mNearDepth = inNearDepth;
+		mDepthPlanes = inDepthPlanes;
 	}
 
 	void Update()
@@ -83,26 +83,30 @@ public:
 			float min_dist_fov_x = GetMinDist(mFOV.x);
 			float min_dist_fov_y = GetMinDist(mFOV.y);
 			float min_dist = std::max(min_dist_fov_x, min_dist_fov_y);
-			min_dist = std::max(min_dist, (1.001f) * mNearDepth);
+			mFollowDist = std::max(min_dist, (1.001f) * mDepthPlanes.x);
+			mFollowDist = std::min(min_dist, (0.9f) * mDepthPlanes.y);
 
-			mCamera->SetLookAtWorldMatrix(mTarget.mPosition + (mOffsetDirection * min_dist), mTarget.mPosition, glm::vec3(0.0f, 1.0f, 0.0f));
+			mCamera->SetLookAtWorldMatrix(mTarget.mPosition + (mOffsetDirection * mFollowDist), mTarget.mPosition, glm::vec3(0.0f, 1.0f, 0.0f));
 		}
 	}
+
+	float GetFollowDist() { return mFollowDist; }
 
 protected:
 
 
 	float GetMinDist(float inFOV)
 	{
-		float rn = mNearDepth * atanf(0.5f * inFOV);
-		return (mTarget.mRadius * mNearDepth) / rn;
+		float rn = mDepthPlanes.x * atanf(0.5f * inFOV);
+		return (mTarget.mRadius * mDepthPlanes.x) / rn;
 	}
 
 	Camera* mCamera;
 	Sphere mTarget;
 	glm::vec3 mOffsetDirection;
 	glm::vec2 mFOV;
-	float mNearDepth;
+	glm::vec2 mDepthPlanes;
+	float mFollowDist;
 };
 
 }

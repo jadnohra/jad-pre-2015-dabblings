@@ -55,7 +55,7 @@ namespace BF
 		AAB()
 		{
 			mMin.x = mMin.y = mMin.z = std::numeric_limits<glm::vec3::value_type>::max();
-			mMax.x = mMax.y = mMax.z = std::numeric_limits<glm::vec3::value_type>::max();
+			mMax.x = mMax.y = mMax.z = std::numeric_limits<glm::vec3::value_type>::min();
 		}
 
 		void Include(const glm::vec3& inPoint)

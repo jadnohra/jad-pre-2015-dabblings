@@ -634,7 +634,7 @@ namespace BF
 
 		strtk::for_each_line(std::string(inFilePath), line_parser);
 
-		return false;	
+		return !outSkeleton.mJoints.empty();	
 	}
 
 

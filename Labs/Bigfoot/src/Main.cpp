@@ -1,21 +1,47 @@
 #include "BE/Bigeye.h"
 #include "BF/Camera.h"
 #include "BF/BFMath.h"
+#include "BF/Skeleton.h"
+#include "BF/SkeletonRenderer.h"
+#include "BF/LoaderBVH.h"
 
-class BigfootScene : public BE::SimpleRenderToTextureWidget::Scene
+class BigfootScene : public BE::SimpleRenderToTextureWidget::Scene, public BE::MainWindowClient
 {
 public:
+
+	enum ETestMode
+	{
+		ETestBasicScene,
+		ETestSkeletonScene,
+	};
 
 	float mRenderTime;
 	glm::vec2 mSize;
 	BE::OGLRenderToTexture* mTexture;
+	ETestMode mTestMode;
 	BF::Camera mCamera;
 	BF::CameraFollowSphereController mCameraController;
+	
+	BF::Skeleton mTestSkeleton;
+	BF::SkeletonAnimationFrames mTestSkeletonAnim;
+	BF::SkeletonRenderer mTestSkeletonRenderer;
+
+
+	BigfootScene::BigfootScene() 
+	:	mTestMode(ETestSkeletonScene)
+	{
+	}
+
+	bool Create();
+
+	virtual bool SupportsDragAndDrop() { return true; }
+	virtual void OnFileDropped(BE::MainWindow* inWindow, const char* inFilePath);
 
 	virtual void Update(const BE::WidgetContext& context, BE::SimpleRenderToTextureWidget& inParent, BE::OGLRenderToTexture& inTexture);
 	virtual void Render(BE::Renderer& inRenderer);
 
-	void RenderScene(BE::Renderer& inRenderer);
+	void RenderTestBasicScene(BE::Renderer& inRenderer);
+	void RenderTestSkeletonScene(BE::Renderer& inRenderer);
 };
 
 
@@ -24,18 +50,21 @@ void CreateWidgets(BE::MainWindow& inWindow, BigfootScene& inScene);
 
 int main()
 {
-	BE::MainWindow main_window;
-
+	BigfootScene scene;
+	BE::MainWindow main_window(&scene);
+	
 	if (main_window.Create("Bigfoot", 1280, 1024))
 	{
-		BigfootScene scene;
 		CreateWidgets(main_window, scene);
 
-		TimerMillis timer;
-
-		while (main_window.Update(timer.GetTimeSecs()))
+		if (scene.Create())
 		{
-			timer.CacheTime();
+			TimerMillis timer;
+
+			while (main_window.Update(timer.GetTimeSecs()))
+			{
+				timer.CacheTime();
+			}
 		}
 	}
 	
@@ -68,19 +97,32 @@ void CreateWidgets(BE::MainWindow& inWindow, BigfootScene& inScene)
 }
 
 
-void BigfootScene::RenderScene(BE::Renderer& inRenderer)
+void BigfootScene::RenderTestBasicScene(BE::Renderer& inRenderer)
 {
+	bool test_controller = true;
+
+	mCameraController.SetCamera(&mCamera);
+	BF::Sphere sphere; sphere.mPosition = glm::vec3(1.5f,0.0f,-7.0f); sphere.mRadius = 5.0f;
+	mCameraController.SetTarget(sphere);
+	mCameraController.Update();
+
 	glm::mat4 view_matrix = mCamera.GetViewMatrix();
 
 	float rtri = 16.0f * mRenderTime;
 	float rquad = 128.0f * -mRenderTime;
 
-	//glLoadIdentity();									// Reset The Current Modelview Matrix
-	//glTranslatef(-1.5f,0.0f,-6.0f);						// Move Left 1.5 Units And Into The Screen 6.0
-	//glRotatef(rtri,0.0f,1.0f,0.0f);						// Rotate The Triangle On The Y axis ( NEW )
+	if (test_controller)
+	{
+		glm::mat4 triangle_world_matrix = glm::rotate(glm::translate(glm::mat4(), glm::vec3(-1.5f,0.0f,-6.0f)), rtri, 0.0f,1.0f,0.0f);
+		glLoadMatrixf(glm::value_ptr(view_matrix * triangle_world_matrix));
+	}
+	else
+	{
+		glLoadIdentity();									// Reset The Current Modelview Matrix
+		glTranslatef(-1.5f,0.0f,-6.0f);						// Move Left 1.5 Units And Into The Screen 6.0
+		glRotatef(rtri,0.0f,1.0f,0.0f);						// Rotate The Triangle On The Y axis ( NEW )
+	}
 	
-	glm::mat4 triangle_world_matrix = glm::rotate(glm::translate(glm::mat4(), glm::vec3(-1.5f,0.0f,-6.0f)), rtri, 0.0f,1.0f,0.0f);
-	glLoadMatrixf(glm::value_ptr(view_matrix * triangle_world_matrix));
 	glBegin(GL_TRIANGLES);							// Start Drawing A Triangle
 	glColor3f(1.0f,0.0f,0.0f);						// Red
 	glVertex3f( 0.0f, 1.0f, 0.0f);					// Top Of Triangle (Front)
@@ -108,12 +150,20 @@ void BigfootScene::RenderScene(BE::Renderer& inRenderer)
 	glVertex3f(-1.0f,-1.0f, 1.0f);					// Right Of Triangle (Left)
 	glEnd();											// Done Drawing The Pyramid
 
-	//glLoadIdentity();									// Reset The Current Modelview Matrix
-	//glTranslatef(1.5f,0.0f,-7.0f);						// Move Right 1.5 Units And Into The Screen 7.0
-	//glRotatef(rquad,1.0f,1.0f,1.0f);					// Rotate The Quad On The X axis ( NEW )
+	
 
-	glm::mat4 quad_world_matrix = glm::rotate(glm::translate(glm::mat4(), glm::vec3(1.5f,0.0f,-7.0f)), rquad, 1.0f,1.0f,1.0f);
-	glLoadMatrixf(glm::value_ptr(view_matrix * quad_world_matrix));
+	if (test_controller)
+	{
+		glm::mat4 quad_world_matrix = glm::rotate(glm::translate(glm::mat4(), glm::vec3(1.5f,0.0f,-7.0f)), rquad, 1.0f,1.0f,1.0f);
+		glLoadMatrixf(glm::value_ptr(view_matrix * quad_world_matrix));
+	}
+	else
+	{
+		glLoadIdentity();									// Reset The Current Modelview Matrix
+		glTranslatef(1.5f,0.0f,-7.0f);						// Move Right 1.5 Units And Into The Screen 7.0
+		glRotatef(rquad,1.0f,1.0f,1.0f);					// Rotate The Quad On The X axis ( NEW )
+	}
+
 	glBegin(GL_QUADS);									// Draw A Quad
 	glColor3f(0.0f,1.0f,0.0f);						// Set The Color To Green
 	glVertex3f( 1.0f, 1.0f,-1.0f);					// Top Right Of The Quad (Top)
@@ -146,8 +196,45 @@ void BigfootScene::RenderScene(BE::Renderer& inRenderer)
 	glVertex3f( 1.0f,-1.0f, 1.0f);					// Bottom Left Of The Quad (Right)
 	glVertex3f( 1.0f,-1.0f,-1.0f);					// Bottom Right Of The Quad (Right)
 	glEnd();											// Done Drawing The Quad
+}
+
+void BigfootScene::RenderTestSkeletonScene(BE::Renderer& inRenderer)
+{
+	BF::AAB skeleton_bounds;
+
+	// We are one frame off with the camera!
+	mTestSkeletonRenderer.Render(mTestSkeleton, 0, mCamera.GetViewMatrix(), 
+									true, true, skeleton_bounds);
+
+	BF::Sphere skeleton_sphere;
+	skeleton_sphere.InitFrom(skeleton_bounds);
+
+	mCameraController.SetCamera(&mCamera);
+	mCameraController.SetTarget(skeleton_sphere);
+	mCameraController.Update();
+}
 
 
+bool BigfootScene::Create()
+{
+	if (BF::LoaderBVH::Load("../media/test.bvh", mTestSkeleton, &mTestSkeletonAnim))
+	{
+		return true;
+	}
+	return false;
+}
+
+
+void BigfootScene::OnFileDropped(BE::MainWindow* inWindow, const char* inFilePath)
+{
+	if (BF::LoaderBVH::Load(inFilePath, mTestSkeleton, &mTestSkeletonAnim))
+	{
+		mTestMode = ETestSkeletonScene;
+	}
+	else
+	{
+		mTestMode = ETestBasicScene;
+	}
 }
 
 
@@ -189,12 +276,27 @@ void BigfootScene::Render(BE::Renderer& inRenderer)
 	fov.x = fov.y * (float)mSize.x/(float)mSize.y;
 	glm::vec2 depth_planes(0.1f, 100.0f);
 
+	if (mTestMode == ETestSkeletonScene)
+	{
+		BF::AAB render_bounds;
+		mTestSkeletonRenderer.GetRenderBounds(mTestSkeleton, 0, true, true, render_bounds);
+
+		BF::Sphere skeleton_sphere;
+		skeleton_sphere.InitFrom(render_bounds);
+
+		mCameraController.SetFollowParams(glm::vec3(0.0f, 0.0f, 1.0f), fov, glm::vec2(0.001f, 10000.0f));
+		mCameraController.SetCamera(&mCamera);
+		mCameraController.SetTarget(skeleton_sphere);
+		mCameraController.Update();
+
+		depth_planes.y = 1.5f * mCameraController.GetFollowDist();
+		depth_planes.x = depth_planes.y / 500.0f;
+	}
+
 	gluPerspective(BF::gRadToDeg(fov.y),(GLfloat)mSize.x/(GLfloat)mSize.y, depth_planes.x, depth_planes.y);
-	mCameraController.SetFollowParams(glm::vec3(1.0f, 1.0f, 1.0f), fov, depth_planes.x);
-	mCameraController.SetCamera(&mCamera);
-	BF::Sphere sphere; sphere.mPosition = glm::vec3(1.5f,0.0f,-7.0f); sphere.mRadius = 5.0f;
-	mCameraController.SetTarget(sphere);
-	mCameraController.Update();
+	//mCameraController.SetFollowParams(glm::vec3(1.0f, 1.0f, 1.0f), fov, depth_planes);
+	mCameraController.SetFollowParams(glm::vec3(0.0f, 0.0f, 1.0f), fov, depth_planes);
+	
 
 	glMatrixMode(GL_MODELVIEW);							// Select The Modelview Matrix
 	glLoadIdentity();		
@@ -204,7 +306,15 @@ void BigfootScene::Render(BE::Renderer& inRenderer)
 	glDepthFunc(GL_LEQUAL);
 	glHint(GL_PERSPECTIVE_CORRECTION_HINT, GL_NICEST);	// Really Nice Perspective Calculations
 
-	RenderScene(inRenderer);
+	switch (mTestMode)
+	{
+		case ETestSkeletonScene: 
+		{
+			RenderTestSkeletonScene(inRenderer); break;
+		}
+
+		default: RenderTestBasicScene(inRenderer); break;
+	}
 	
 	mTexture->EndRender();
 }
