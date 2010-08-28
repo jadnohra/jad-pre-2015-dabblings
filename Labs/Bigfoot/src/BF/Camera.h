@@ -3,6 +3,7 @@
 
 #include "Rendering.h"
 #include "BFMath.h"
+#include "BE/Widgets.h"
 #include "BE/MainWindow.h"
 
 namespace BF
@@ -34,6 +35,8 @@ public:
 		glMatrixMode(GL_PROJECTION);
 		glLoadIdentity();
 		gluPerspective(BF::gRadToDeg(mFOV.y),(GLfloat) mAspectRatio, mDepthPlanes.x, mDepthPlanes.y);
+
+		glGetDoublev( GL_PROJECTION_MATRIX, mProjectionMatrix );
 	}
 
 	void SetupDepthPlanes(const glm::vec2& inDepthPlanes)
@@ -43,12 +46,14 @@ public:
 
 	const glm::vec2& GetDepthPlanes() const { return mDepthPlanes; }
 	const glm::vec2& GetFOV() const { return mFOV; }
+	const GLdouble* GetGlPorjectionMatrix() const { return mProjectionMatrix; }
 
 protected:
 
 	glm::vec2 mFOV;
 	glm::vec2 mDepthPlanes;
 	float mAspectRatio;
+	GLdouble mProjectionMatrix[16];
 };
 
 
@@ -63,9 +68,6 @@ public:
 
 	void SetWorldMatrix(const glm::mat4& inCameraWorldMatrix)
 	{
-		//printf("%f, %f, %f - %f\n", inCameraWorldMatrix[0].x, inCameraWorldMatrix[0].y, inCameraWorldMatrix[0].z, glm::length(inCameraWorldMatrix[0]));
-		//printf("%f, %f, %f - %f\n", inCameraWorldMatrix[1].x, inCameraWorldMatrix[1].y, inCameraWorldMatrix[1].z, glm::length(inCameraWorldMatrix[1]));
-		//printf("%f, %f, %f - %f\n", inCameraWorldMatrix[2].x, inCameraWorldMatrix[2].y, inCameraWorldMatrix[2].z, glm::length(inCameraWorldMatrix[2]));
 		mCameraWorldMatrix = inCameraWorldMatrix;
 		mCameraWorldMatrixIsDirty = true;
 	}
@@ -151,15 +153,64 @@ class CameraTurnTableRotationController
 {
 public:
 
-
-	void Update(const BE::MainWindow& inWindow)
+	void Render(Camera& inCamera)
 	{
-		if (inWindow.GetInputState(BE::INPUT_MOUSE_MIDDLE) != 0.0f)
+		glMatrixMode(GL_MODELVIEW);
+		glm::mat4 model_view_mat = inCamera.GetViewMatrix() * glm::translate(glm::mat4(), mLastPickedPoint);
+		glLoadMatrixf(glm::value_ptr(model_view_mat));
+
+		glColor3f(1.0f, 1.0f, 1.0f);
+		glutSolidSphere(0.0001f, 10, 10);
+	}
+
+
+	void Update(const BE::WidgetContext& inContext, BE::SimpleRenderToTextureWidget& inWidget, const ViewportSetup& inViewportSetup, const CameraSetup& inCameraSetup, Camera& inCamera)
+	{
+		if (inContext.mMainWindow.GetInputState(BE::INPUT_MOUSE_MIDDLE) != 0.0f)
 		{
-			printf("click\n");
+			glm::vec2 pixel_pos;
+			
+			if (inWidget.IsMainWindowPosInViewport(inContext, inContext.mMainWindow.GetMousePos(), pixel_pos))
+			{
+				glm::vec3 pick_pos;
+				inWidget.GetScene()->Unproject(pixel_pos, pick_pos, NULL);
+				mLastPickedPoint = pick_pos;
+
+				printf("click %d, %d\n", (int) pixel_pos[0], (int) pixel_pos[1]);
+			}
 		}
 	}
+
+	/*
+	void gCameraGlUnProject(const ViewportSetup& inViewportSetup, int inViewportX, int inViewportY, const CameraSetup& inCameraSetup, const glm::mat4& inCamWorldMarix, const glm::mat4& inViewMarix, glm::vec3& outPoint, glm::vec3* outRayDir)
+	{
+		GLint viewport[4] = { 0, 0, (int) inViewportSetup.mWindowSize.x, (int) inViewportSetup.mWindowSize.y };
+		GLdouble modelview[16];
+		const GLdouble* projection = inCameraSetup.GetGlPorjectionMatrix();
+		GLdouble posX, posY, posZ;
+
+		for (int i=0; i<16; ++i)
+			modelview[i] = (GLdouble) (glm::value_ptr(inViewMarix))[i];
+		
+		gluUnProject(inViewportX, inViewportY, 0.0f/, modelview, projection, viewport, &posX, &posY, &posZ);
+
+		outPoint = glm::vec3(posX, posY, posZ);
+
+		if (outRayDir)
+		{
+			glm::vec3 dir = outPoint - glm::vec3(inCamWorldMarix[3]);
+			*outRayDir = glm::normalize(dir);
+		}
+	}
+	*/
+
+protected:
+
+	glm::vec3 mLastPickedPoint;
 };
+
+
+
 
 }
 

@@ -45,6 +45,8 @@ public:
 	virtual void Update(const BE::WidgetContext& context, BE::SimpleRenderToTextureWidget& inParent, BE::OGLRenderToTexture& inTexture);
 	virtual void Render(BE::Renderer& inRenderer);
 
+	virtual void Unproject(const glm::vec2& inViewportPoint, glm::vec3& outSceneWorldPoint, glm::vec3* outSceneWorldRayDir);
+
 	void RenderTestBasicScene(BE::Renderer& inRenderer);
 	void RenderTestSkeletonScene(BE::Renderer& inRenderer);
 
@@ -293,7 +295,31 @@ void BigfootScene::Update(const BE::WidgetContext& context, BE::SimpleRenderToTe
 	
 	mRenderTime = context.mTimeSecs;
 	
-	mCameraController.Update(context.mMainWindow);
+	mCameraController.Update(context, inParent, mViewportSetup, mCameraSetup, mCamera);
+}
+
+
+void BigfootScene::Unproject(const glm::vec2& inViewportPoint, glm::vec3& outSceneWorldPoint, glm::vec3* outSceneWorldRayDir)
+{
+	GLint viewport[4] = { 0, 0, (int) mViewportSetup.mWindowSize.x, (int) mViewportSetup.mWindowSize.y };
+	GLdouble modelview[16];
+	const GLdouble* projection = mCameraSetup.GetGlPorjectionMatrix();
+	GLdouble posX, posY, posZ;
+
+	const glm::mat4& view_matrix = mCamera.GetViewMatrix();
+
+	for (int i=0; i<16; ++i)
+		modelview[i] = (GLdouble) (glm::value_ptr(view_matrix))[i];
+	
+	gluUnProject(inViewportPoint.x, mViewportSetup.mWindowSize.y - inViewportPoint.y, 0.0f, modelview, projection, viewport, &posX, &posY, &posZ);
+
+	outSceneWorldPoint = glm::vec3(posX, posY, posZ);
+
+	if (outSceneWorldRayDir)
+	{
+		glm::vec3 dir = outSceneWorldPoint - glm::vec3(mCamera.GetWorldMatrix()[3]);
+		*outSceneWorldRayDir = glm::normalize(dir);
+	}
 }
 
 
@@ -334,9 +360,16 @@ void BigfootScene::Render(BE::Renderer& inRenderer)
 	glDepthFunc(GL_LEQUAL);
 	glHint(GL_PERSPECTIVE_CORRECTION_HINT, GL_NICEST);	// Really Nice Perspective Calculations
 
+#if 0
 	{
 		glLoadMatrixf(glm::value_ptr(mCamera.GetViewMatrix()));
 		mGrid.Render();
+	}
+#endif
+
+
+	{
+		mCameraController.Render(mCamera);
 	}
 
 	switch (mTestMode)

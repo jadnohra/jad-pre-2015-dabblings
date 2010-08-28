@@ -142,7 +142,7 @@ public:
 				{
 					int child_index = inSkeleton.mJointHierarchy.mJointChildrenInfos[inJointIndex].mFirstChildIndex;
 
-					glColor3f(0.0f, 0.0f,0.0f);
+					glColor3f(0.0f, 0.0f, 0.0f);
 					glLoadMatrixf(glm::value_ptr(inViewMatrix));
 					glPushAttrib(GL_ENABLE_BIT);
 					glLineStipple(5, 0xAAAA); 
