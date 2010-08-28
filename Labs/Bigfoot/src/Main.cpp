@@ -25,6 +25,7 @@ public:
 	BF::CameraSetup mCameraSetup;
 	BF::GridRenderer mGrid;
 	BF::CameraTurnTableRotationController mCameraController;
+	bool mAutoSetupBasicScene;
 	
 	BF::Skeleton mTestSkeleton;
 	BF::SkeletonAnimationFrames mTestSkeletonAnim;
@@ -33,6 +34,7 @@ public:
 
 	BigfootScene::BigfootScene() 
 	:	mTestMode(ETestBasicScene)
+	,	mAutoSetupBasicScene(true)
 	,	mRenderTime(-1.0f)
 	{
 	}
@@ -116,12 +118,19 @@ void BigfootScene::RenderTestBasicScene(BE::Renderer& inRenderer)
 
 	if (test_controller)
 	{
-		BF::CameraFollowSphereAutoSetup camera_auto_setup;
-		BF::Sphere sphere; sphere.mPosition = glm::vec3(-1.5f,0.0f,-6.0f); sphere.mRadius = 5.0f;
-		glm::vec2 auto_depth_planes;
-		camera_auto_setup.SetFollowParams(glm::vec3(1.0f, 1.0f, 0.0f));
-		camera_auto_setup.SetupCamera(sphere, mCameraSetup.GetFOV(), glm::vec2(0.001f, 1000.0f), mCamera, auto_depth_planes);
-		mCameraSetup.SetupDepthPlanes(auto_depth_planes);
+		if (mAutoSetupBasicScene)
+		{
+			BF::CameraFollowSphereAutoSetup camera_auto_setup;
+			BF::Sphere sphere; sphere.mPosition = glm::vec3(-1.5f,0.0f,-6.0f); sphere.mRadius = 5.0f;
+			glm::vec2 auto_depth_planes;
+			camera_auto_setup.SetFollowParams(glm::vec3(1.0f, 1.0f, 0.0f));
+			camera_auto_setup.SetupCamera(sphere, mCameraSetup.GetFOV(), glm::vec2(0.001f, 1000.0f), mCamera, auto_depth_planes);
+			auto_depth_planes.y *= 100.0f;
+			mCameraSetup.SetupDepthPlanes(auto_depth_planes);
+
+			mAutoSetupBasicScene = false;
+		}
+
 		view_matrix = mCamera.GetViewMatrix();
 
 		glm::mat4 triangle_world_matrix = glm::rotate(glm::translate(glm::mat4(), glm::vec3(-1.5f,0.0f,-6.0f)), rtri, 0.0f,1.0f,0.0f);
@@ -223,6 +232,7 @@ bool BigfootScene::Create()
 {
 	mCameraSetup.SetupDepthPlanes(glm::vec2(0.1f, 100.0f));
 	mGrid.Setup(50, 50, 1.0f);
+	mCameraController.AttachCamera(mCamera);
 	
 	return true;
 }
@@ -274,6 +284,7 @@ void BigfootScene::OnFileDropped(BE::MainWindow* inWindow, const char* inFilePat
 	else
 	{
 		mTestMode = ETestBasicScene;
+		mAutoSetupBasicScene = true;
 
 		mCameraSetup.SetupDepthPlanes(glm::vec2(0.1f, 100.0f));
 		mGrid.Setup(50, 50, 1.0f);
@@ -295,7 +306,7 @@ void BigfootScene::Update(const BE::WidgetContext& context, BE::SimpleRenderToTe
 	
 	mRenderTime = context.mTimeSecs;
 	
-	mCameraController.Update(context, inParent, mViewportSetup, mCameraSetup, mCamera);
+	mCameraController.Update(context, inParent, mViewportSetup, mCameraSetup);
 }
 
 
@@ -360,17 +371,17 @@ void BigfootScene::Render(BE::Renderer& inRenderer)
 	glDepthFunc(GL_LEQUAL);
 	glHint(GL_PERSPECTIVE_CORRECTION_HINT, GL_NICEST);	// Really Nice Perspective Calculations
 
-#if 0
+
 	{
 		glLoadMatrixf(glm::value_ptr(mCamera.GetViewMatrix()));
 		mGrid.Render();
 	}
-#endif
 
-
+#if 0
 	{
 		mCameraController.Render(mCamera);
 	}
+#endif
 
 	switch (mTestMode)
 	{

@@ -45,6 +45,7 @@ public:
 	}
 
 	const glm::vec2& GetDepthPlanes() const { return mDepthPlanes; }
+	const float GetSceneScale() const { return mDepthPlanes.y; }
 	const glm::vec2& GetFOV() const { return mFOV; }
 	const GLdouble* GetGlPorjectionMatrix() const { return mProjectionMatrix; }
 
@@ -153,10 +154,27 @@ class CameraTurnTableRotationController
 {
 public:
 
+	CameraTurnTableRotationController()
+	:	mCamera(NULL)
+	,	mIsDragging(false)
+	{
+	}
+
+	void AttachCamera(Camera& inCamera)
+	{
+		mCamera = &inCamera;
+		mIsDragging = false;
+	}
+
+	void DetachCamera()
+	{
+		mCamera = NULL;
+	}
+
 	void Render(Camera& inCamera)
 	{
 		glMatrixMode(GL_MODELVIEW);
-		glm::mat4 model_view_mat = inCamera.GetViewMatrix() * glm::translate(glm::mat4(), mLastPickedPoint);
+		glm::mat4 model_view_mat = inCamera.GetViewMatrix() * glm::translate(glm::mat4(), mLastPickedPoint3D);
 		glLoadMatrixf(glm::value_ptr(model_view_mat));
 
 		glColor3f(1.0f, 1.0f, 1.0f);
@@ -164,49 +182,71 @@ public:
 	}
 
 
-	void Update(const BE::WidgetContext& inContext, BE::SimpleRenderToTextureWidget& inWidget, const ViewportSetup& inViewportSetup, const CameraSetup& inCameraSetup, Camera& inCamera)
+	void Update(const BE::WidgetContext& inContext, BE::SimpleRenderToTextureWidget& inWidget, const ViewportSetup& inViewportSetup, const CameraSetup& inCameraSetup)
 	{
+		if (mCamera == NULL)
+		{
+			mIsDragging = false;
+			return;
+		}
+
+		bool is_dragging = false;
+
 		if (inContext.mMainWindow.GetInputState(BE::INPUT_MOUSE_MIDDLE) != 0.0f)
 		{
-			glm::vec2 pixel_pos;
-			
-			if (inWidget.IsMainWindowPosInViewport(inContext, inContext.mMainWindow.GetMousePos(), pixel_pos))
+			if (inWidget.IsMainWindowPosInViewport(inContext, inContext.mMainWindow.GetMousePos(), mLastPickedPoint))
 			{
-				glm::vec3 pick_pos;
-				inWidget.GetScene()->Unproject(pixel_pos, pick_pos, NULL);
-				mLastPickedPoint = pick_pos;
-
-				printf("click %d, %d\n", (int) pixel_pos[0], (int) pixel_pos[1]);
+				is_dragging = true;
+				inWidget.GetScene()->Unproject(mLastPickedPoint, mLastPickedPoint3D, NULL);
 			}
 		}
-	}
 
-	/*
-	void gCameraGlUnProject(const ViewportSetup& inViewportSetup, int inViewportX, int inViewportY, const CameraSetup& inCameraSetup, const glm::mat4& inCamWorldMarix, const glm::mat4& inViewMarix, glm::vec3& outPoint, glm::vec3* outRayDir)
-	{
-		GLint viewport[4] = { 0, 0, (int) inViewportSetup.mWindowSize.x, (int) inViewportSetup.mWindowSize.y };
-		GLdouble modelview[16];
-		const GLdouble* projection = inCameraSetup.GetGlPorjectionMatrix();
-		GLdouble posX, posY, posZ;
-
-		for (int i=0; i<16; ++i)
-			modelview[i] = (GLdouble) (glm::value_ptr(inViewMarix))[i];
-		
-		gluUnProject(inViewportX, inViewportY, 0.0f/, modelview, projection, viewport, &posX, &posY, &posZ);
-
-		outPoint = glm::vec3(posX, posY, posZ);
-
-		if (outRayDir)
+		if (is_dragging)
 		{
-			glm::vec3 dir = outPoint - glm::vec3(inCamWorldMarix[3]);
-			*outRayDir = glm::normalize(dir);
+			if (!mIsDragging)
+			{
+				mFirstDragPoint = mLastPickedPoint;
+				mFirstDragPoint3D = mLastPickedPoint3D;
+				mCameraStartDragWorldMatrix = mCamera->GetWorldMatrix();
+			}
+
+			mIsDragging = true;
+
+			float rot_around_vert = -0.4f * (mLastPickedPoint.x - mFirstDragPoint.x);
+			float rot_around_horiz = 0.4f * (mLastPickedPoint.y - mFirstDragPoint.y);
+			glm::mat4 cam_world_matrix_rot_vert = glm::rotate(glm::mat4(), rot_around_vert, glm::vec3(0.0f, 1.0f, 0.0f)) * mCameraStartDragWorldMatrix;
+			glm::vec3 cam_pos(cam_world_matrix_rot_vert[3].x, cam_world_matrix_rot_vert[3].y, cam_world_matrix_rot_vert[3].z);
+			glm::vec3 horiz_axis = glm::cross(glm::normalize(cam_pos - glm::vec3()), glm::vec3(0.0f, 1.0f, 0.0f));
+			glm::mat4 cam_world_matrix_rot_vert_horiz = glm::rotate(glm::mat4(), rot_around_horiz, horiz_axis) * cam_world_matrix_rot_vert;
+			mCamera->SetWorldMatrix(cam_world_matrix_rot_vert_horiz);
+		}
+		else
+		{
+			mIsDragging = false;
+		}
+
+		if (inContext.mMainWindow.GetInputState(BE::INPUT_MOUSE_SCROLL_CHANGED))
+		{
+			float zoom_amount = -0.0001f * inCameraSetup.GetSceneScale() * inContext.mMainWindow.GetMouseScrollChange();
+
+			const glm::mat4& cam_world_mat = mCamera->GetWorldMatrix();
+			glm::mat4 cam_world_matrix_moved = mCamera->GetWorldMatrix() * glm::translate(glm::mat4(), glm::vec3(0.0f, 0.0f, zoom_amount));
+			mCamera->SetWorldMatrix(cam_world_matrix_moved);
 		}
 	}
-	*/
 
 protected:
 
-	glm::vec3 mLastPickedPoint;
+	glm::vec2 mFirstDragPoint;
+	glm::vec3 mFirstDragPoint3D;
+	
+	glm::vec2 mLastPickedPoint;
+	glm::vec3 mLastPickedPoint3D;
+
+	Camera* mCamera;
+	glm::mat4 mCameraStartDragWorldMatrix;
+	
+	bool mIsDragging;
 };
 
 
