@@ -220,6 +220,7 @@ void BigfootScene::RenderTestSkeletonScene(BE::Renderer& inRenderer)
 bool BigfootScene::Create()
 {
 	mCameraSetup.SetupDepthPlanes(glm::vec2(0.1f, 100.0f));
+	mGrid.Setup(50, 50, 1.0f);
 	
 	return true;
 }
@@ -243,11 +244,37 @@ void BigfootScene::OnFileDropped(BE::MainWindow* inWindow, const char* inFilePat
 			glm::vec2 auto_depth_planes;
 			cam_setup.SetupCamera(skeleton_sphere, mCameraSetup.GetFOV(), glm::vec2(0.001f, 10000.0f), mCamera, auto_depth_planes);
 			mCameraSetup.SetupDepthPlanes(auto_depth_planes);
+
+			{
+				float scale = 1.0f;
+				float scale_test = skeleton_sphere.mRadius;
+				if (scale_test > 1.0f)
+				{
+					while (scale_test > 0.6f)
+					{
+						scale_test /= 10.0f;
+						scale *= 10.0f;
+					}
+				}
+				else
+				{
+					while (scale_test < 4.0f)
+					{
+						scale_test *= 10.0f;
+						scale /= 10.0f;
+					}
+				}
+
+				mGrid.Setup(50, 50, scale / 100.0f);
+			}
 		}
 	}
 	else
 	{
 		mTestMode = ETestBasicScene;
+
+		mCameraSetup.SetupDepthPlanes(glm::vec2(0.1f, 100.0f));
+		mGrid.Setup(50, 50, 1.0f);
 	}
 }
 
@@ -306,7 +333,6 @@ void BigfootScene::Render(BE::Renderer& inRenderer)
 
 	{
 		glLoadMatrixf(glm::value_ptr(mCamera.GetViewMatrix()));
-		mGrid.Setup(50, 50, 1.0f);
 		mGrid.Render();
 	}
 
