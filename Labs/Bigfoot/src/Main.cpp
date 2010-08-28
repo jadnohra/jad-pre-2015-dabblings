@@ -20,7 +20,9 @@ public:
 	BE::OGLRenderToTexture* mTexture;
 	ETestMode mTestMode;
 	BF::Camera mCamera;
-	BF::CameraFollowSphereController mCameraController;
+	BF::ViewportSetup mViewportSetup;
+	BF::CameraSetup mCameraSetup;
+	//BF::CameraFollowSphereController mCameraController;
 	
 	BF::Skeleton mTestSkeleton;
 	BF::SkeletonAnimationFrames mTestSkeletonAnim;
@@ -28,7 +30,8 @@ public:
 
 
 	BigfootScene::BigfootScene() 
-	:	mTestMode(ETestSkeletonScene)
+	:	mTestMode(ETestBasicScene)
+	,	mRenderTime(-1.0f)
 	{
 	}
 
@@ -42,6 +45,8 @@ public:
 
 	void RenderTestBasicScene(BE::Renderer& inRenderer);
 	void RenderTestSkeletonScene(BE::Renderer& inRenderer);
+
+	void OnFirstUpdate();
 };
 
 
@@ -100,19 +105,21 @@ void CreateWidgets(BE::MainWindow& inWindow, BigfootScene& inScene)
 void BigfootScene::RenderTestBasicScene(BE::Renderer& inRenderer)
 {
 	bool test_controller = true;
-
-	mCameraController.SetCamera(&mCamera);
-	BF::Sphere sphere; sphere.mPosition = glm::vec3(1.5f,0.0f,-7.0f); sphere.mRadius = 5.0f;
-	mCameraController.SetTarget(sphere);
-	mCameraController.Update();
-
-	glm::mat4 view_matrix = mCamera.GetViewMatrix();
+	glm::mat4 view_matrix;
 
 	float rtri = 16.0f * mRenderTime;
 	float rquad = 128.0f * -mRenderTime;
 
 	if (test_controller)
 	{
+		BF::CameraFollowSphereAutoSetup camera_auto_setup;
+		BF::Sphere sphere; sphere.mPosition = glm::vec3(-1.5f,0.0f,-6.0f); sphere.mRadius = 5.0f;
+		glm::vec2 auto_depth_planes;
+		camera_auto_setup.SetFollowParams(glm::vec3(1.0f, 1.0f, 1.0f));
+		camera_auto_setup.SetupCamera(sphere, mCameraSetup.GetFOV(), glm::vec2(0.001f, 1000.0f), mCamera, auto_depth_planes);
+		mCameraSetup.SetupDepthPlanes(auto_depth_planes);
+		view_matrix = mCamera.GetViewMatrix();
+
 		glm::mat4 triangle_world_matrix = glm::rotate(glm::translate(glm::mat4(), glm::vec3(-1.5f,0.0f,-6.0f)), rtri, 0.0f,1.0f,0.0f);
 		glLoadMatrixf(glm::value_ptr(view_matrix * triangle_world_matrix));
 	}
@@ -205,23 +212,14 @@ void BigfootScene::RenderTestSkeletonScene(BE::Renderer& inRenderer)
 	// We are one frame off with the camera!
 	mTestSkeletonRenderer.Render(mTestSkeleton, 0, mCamera.GetViewMatrix(), 
 									true, true, skeleton_bounds);
-
-	BF::Sphere skeleton_sphere;
-	skeleton_sphere.InitFrom(skeleton_bounds);
-
-	mCameraController.SetCamera(&mCamera);
-	mCameraController.SetTarget(skeleton_sphere);
-	mCameraController.Update();
 }
 
 
 bool BigfootScene::Create()
 {
-	if (BF::LoaderBVH::Load("../media/test.bvh", mTestSkeleton, &mTestSkeletonAnim))
-	{
-		return true;
-	}
-	return false;
+	mCameraSetup.SetupDepthPlanes(glm::vec2(0.1f, 100.0f));
+	
+	return true;
 }
 
 
@@ -230,6 +228,20 @@ void BigfootScene::OnFileDropped(BE::MainWindow* inWindow, const char* inFilePat
 	if (BF::LoaderBVH::Load(inFilePath, mTestSkeleton, &mTestSkeletonAnim))
 	{
 		mTestMode = ETestSkeletonScene;
+		{
+			BF::AAB render_bounds;
+			mTestSkeletonRenderer.GetRenderBounds(mTestSkeleton, 0, true, true, render_bounds);
+
+			BF::Sphere skeleton_sphere;
+			skeleton_sphere.InitFrom(render_bounds);
+
+			BF::CameraFollowSphereAutoSetup cam_setup;
+
+			cam_setup.SetFollowParams(glm::vec3(0.0f, 0.0f, 1.0f));
+			glm::vec2 auto_depth_planes;
+			cam_setup.SetupCamera(skeleton_sphere, mCameraSetup.GetFOV(), glm::vec2(0.001f, 10000.0f), mCamera, auto_depth_planes);
+			mCameraSetup.SetupDepthPlanes(auto_depth_planes);
+		}
 	}
 	else
 	{
@@ -242,8 +254,20 @@ void BigfootScene::Update(const BE::WidgetContext& context, BE::SimpleRenderToTe
 {
 	mSize.x = inParent.GetSize().x;
 	mSize.y = inParent.GetSize().y;
+	mViewportSetup.mWindowSize = mSize;
+	mCameraSetup.SetupFOVY(mViewportSetup);
+
+	if (mRenderTime < 0.0f)
+		OnFirstUpdate();
+		
 	mRenderTime = context.mTimeSecs;
 	mTexture = &inTexture;
+}
+
+
+void BigfootScene::OnFirstUpdate()
+{
+	OnFileDropped(NULL, "../media/test.bvh");
 }
 
 
@@ -267,36 +291,7 @@ void BigfootScene::Render(BE::Renderer& inRenderer)
 	glClear(GL_DEPTH_BUFFER_BIT);
 	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
-	glMatrixMode(GL_PROJECTION);						// Select The Projection Matrix
-	glLoadIdentity();									// Reset The Projection Matrix
-
-	// Calculate The Aspect Ratio Of The Window
-	glm::vec2 fov;
-	fov.y = BF::gDegToRad(45.0f);
-	fov.x = fov.y * (float)mSize.x/(float)mSize.y;
-	glm::vec2 depth_planes(0.1f, 100.0f);
-
-	if (mTestMode == ETestSkeletonScene)
-	{
-		BF::AAB render_bounds;
-		mTestSkeletonRenderer.GetRenderBounds(mTestSkeleton, 0, true, true, render_bounds);
-
-		BF::Sphere skeleton_sphere;
-		skeleton_sphere.InitFrom(render_bounds);
-
-		mCameraController.SetFollowParams(glm::vec3(0.0f, 0.0f, 1.0f), fov, glm::vec2(0.001f, 10000.0f));
-		mCameraController.SetCamera(&mCamera);
-		mCameraController.SetTarget(skeleton_sphere);
-		mCameraController.Update();
-
-		depth_planes.y = 1.5f * mCameraController.GetFollowDist();
-		depth_planes.x = depth_planes.y / 500.0f;
-	}
-
-	gluPerspective(BF::gRadToDeg(fov.y),(GLfloat)mSize.x/(GLfloat)mSize.y, depth_planes.x, depth_planes.y);
-	//mCameraController.SetFollowParams(glm::vec3(1.0f, 1.0f, 1.0f), fov, depth_planes);
-	mCameraController.SetFollowParams(glm::vec3(0.0f, 0.0f, 1.0f), fov, depth_planes);
-	
+	mCameraSetup.SetGlProjectionMatrix();
 
 	glMatrixMode(GL_MODELVIEW);							// Select The Modelview Matrix
 	glLoadIdentity();		

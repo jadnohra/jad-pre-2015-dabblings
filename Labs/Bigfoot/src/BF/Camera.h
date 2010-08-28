@@ -7,6 +7,50 @@
 namespace BF
 {
 
+struct ViewportSetup
+{
+	glm::vec2 mWindowSize;
+};
+
+class CameraSetup
+{
+public:
+
+	CameraSetup()
+	:	mDepthPlanes(0.001f, 10000.0f)
+	{
+	}
+
+	void SetupFOVY(const ViewportSetup& inViewport)
+	{
+		mAspectRatio = (inViewport.mWindowSize.x/inViewport.mWindowSize.y);
+		mFOV.y = BF::gDegToRad(45.0f);
+		mFOV.x = mFOV.y * mAspectRatio;
+	}
+
+	void SetGlProjectionMatrix()
+	{
+		glMatrixMode(GL_PROJECTION);
+		glLoadIdentity();
+		gluPerspective(BF::gRadToDeg(mFOV.y),(GLfloat) mAspectRatio, mDepthPlanes.x, mDepthPlanes.y);
+	}
+
+	void SetupDepthPlanes(const glm::vec2& inDepthPlanes)
+	{
+		mDepthPlanes = inDepthPlanes;
+	}
+
+	const glm::vec2& GetDepthPlanes() const { return mDepthPlanes; }
+	const glm::vec2& GetFOV() const { return mFOV; }
+
+protected:
+
+	glm::vec2 mFOV;
+	glm::vec2 mDepthPlanes;
+	float mAspectRatio;
+};
+
+
 class Camera
 {
 public:
@@ -18,6 +62,9 @@ public:
 
 	void SetWorldMatrix(const glm::mat4& inCameraWorldMatrix)
 	{
+		//printf("%f, %f, %f - %f\n", inCameraWorldMatrix[0].x, inCameraWorldMatrix[0].y, inCameraWorldMatrix[0].z, glm::length(inCameraWorldMatrix[0]));
+		//printf("%f, %f, %f - %f\n", inCameraWorldMatrix[1].x, inCameraWorldMatrix[1].y, inCameraWorldMatrix[1].z, glm::length(inCameraWorldMatrix[1]));
+		//printf("%f, %f, %f - %f\n", inCameraWorldMatrix[2].x, inCameraWorldMatrix[2].y, inCameraWorldMatrix[2].z, glm::length(inCameraWorldMatrix[2]));
 		mCameraWorldMatrix = inCameraWorldMatrix;
 		mCameraWorldMatrixIsDirty = true;
 	}
@@ -49,44 +96,34 @@ protected:
 
 
 
-class CameraFollowSphereController
+class CameraFollowSphereAutoSetup
 {
 public:
 
-	CameraFollowSphereController()
-	:	mCamera(NULL)
-	,	mFollowDist(0.0f)
+	CameraFollowSphereAutoSetup()
+	:	mFollowDist(0.0f)
 	{
 	}
 
-	void SetCamera(Camera* inCamera)
+
+	void SetFollowParams(const glm::vec3& inOffsetDirection)
 	{
-		mCamera = inCamera;
+		mOffsetDirection = glm::normalize(inOffsetDirection);
 	}
 
-	void SetTarget(const Sphere& inTarget)
+	void SetupCamera(const Sphere& inTarget, const glm::vec2& inFOV, glm::vec2& inDepthPlanes, Camera& inCamera, glm::vec2& outDepthPlanes)
 	{
-		mTarget = inTarget;
-	}
+		float min_dist_fov_x = GetMinDist(inTarget, inDepthPlanes, inFOV.x);
+		float min_dist_fov_y = GetMinDist(inTarget, inDepthPlanes, inFOV.y);
+		float min_dist = std::max(min_dist_fov_x, min_dist_fov_y);
+		mFollowDist = std::max(min_dist, (1.001f) * inDepthPlanes.x);
+		mFollowDist = std::min(min_dist, (0.9f) * inDepthPlanes.y);
 
-	void SetFollowParams(const glm::vec3& inOffsetDirection, const glm::vec2& inFOV, glm::vec2 inDepthPlanes)
-	{
-		mOffsetDirection = inOffsetDirection;
-		mFOV = inFOV;
-		mDepthPlanes = inDepthPlanes;
-	}
+		inCamera.SetLookAtWorldMatrix(inTarget.mPosition + (mOffsetDirection * mFollowDist), inTarget.mPosition, glm::vec3(0.0f, 1.0f, 0.0f));
 
-	void Update()
-	{
-		if (mCamera != NULL)
 		{
-			float min_dist_fov_x = GetMinDist(mFOV.x);
-			float min_dist_fov_y = GetMinDist(mFOV.y);
-			float min_dist = std::max(min_dist_fov_x, min_dist_fov_y);
-			mFollowDist = std::max(min_dist, (1.001f) * mDepthPlanes.x);
-			mFollowDist = std::min(min_dist, (0.9f) * mDepthPlanes.y);
-
-			mCamera->SetLookAtWorldMatrix(mTarget.mPosition + (mOffsetDirection * mFollowDist), mTarget.mPosition, glm::vec3(0.0f, 1.0f, 0.0f));
+			outDepthPlanes.y = 1.5f * GetFollowDist();
+			outDepthPlanes.x = outDepthPlanes.y / 500.0f;
 		}
 	}
 
@@ -95,17 +132,13 @@ public:
 protected:
 
 
-	float GetMinDist(float inFOV)
+	float GetMinDist(const Sphere& inTarget, glm::vec2& inDepthPlanes, float inFOV)
 	{
-		float rn = mDepthPlanes.x * atanf(0.5f * inFOV);
-		return (mTarget.mRadius * mDepthPlanes.x) / rn;
+		float rn = inDepthPlanes.x * atanf(0.5f * inFOV);
+		return (inTarget.mRadius * inDepthPlanes.x) / rn;
 	}
 
-	Camera* mCamera;
-	Sphere mTarget;
 	glm::vec3 mOffsetDirection;
-	glm::vec2 mFOV;
-	glm::vec2 mDepthPlanes;
 	float mFollowDist;
 };
 
