@@ -222,9 +222,18 @@ void BigfootScene::RenderTestSkeletonScene(BE::Renderer& inRenderer)
 {
 	BF::AAB skeleton_bounds;
 
+	static int frame_index = -1;
+
+	frame_index = (int) (10.0f * mRenderTime) % mTestSkeletonAnim.mSkeletonAnimationFrames.size();
+	frame_index = frame_index % 30;
+	//if (frame_index > mTestSkeletonAnim.mSkeletonAnimationFrames.size())
+	//{
+	//	frame_index = -1;
+	//}
+
 	// We are one frame off with the camera!
-	mTestSkeletonRenderer.Render(mTestSkeleton, 0, mCamera.GetViewMatrix(), 
-									true, true, skeleton_bounds);
+	mTestSkeletonRenderer.Render(mTestSkeleton, frame_index, &mTestSkeletonAnim, 
+								mCamera.GetViewMatrix(), true, true, skeleton_bounds);
 }
 
 

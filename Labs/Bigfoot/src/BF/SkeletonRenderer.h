@@ -26,13 +26,18 @@ public:
 			ioBounds.Include(mModelSpaceJoints[i].mPosition);
 	}
 
-	void Render(const Skeleton& inSkeleton, int inAnimFrame, const glm::mat4& inViewMatrix, 
+	void Render(const Skeleton& inSkeleton, int inAnimFrame, SkeletonAnimationFrames* inSkeletonAnimFrames,
+				const glm::mat4& inViewMatrix, 
 				bool inIncludeRootTranslation, bool inIncludeRootAnimTranslation, 
 				AAB& ioBounds)
 	{
 		BE::OGLLibInit::Init();
 
-		inSkeleton.ToModelSpace(inSkeleton.mDefaultPose, inIncludeRootTranslation, inIncludeRootAnimTranslation, mModelSpaceJoints);
+		if (inAnimFrame == -1 || inSkeletonAnimFrames == NULL)
+			inSkeleton.ToModelSpace(inSkeleton.mDefaultPose, inIncludeRootTranslation, inIncludeRootAnimTranslation, mModelSpaceJoints);
+		else
+			inSkeleton.ToModelSpace(inSkeletonAnimFrames->mSkeletonAnimationFrames[inAnimFrame], inIncludeRootTranslation, inIncludeRootAnimTranslation, mModelSpaceJoints);
+
 
 		if (mModelSpaceJoints.empty())
 			return;
@@ -82,9 +87,15 @@ public:
 		glm::vec3 center_point = inDir * (inLengthFraction * inLength);
 		glm::vec3 side_points[] = { center_point + draw_normal * inRadius, center_point + normal2 * inRadius, center_point + draw_normal * -inRadius, center_point + normal2 * -inRadius };
 
+		
+
 		glLoadMatrixf(glm::value_ptr(inModelViewMat));
-				
-		glColor3f(0.0f, 1.0f,0.0f);
+		
+		glEnable(GL_POLYGON_OFFSET_FILL); // Avoid Stitching!
+		glPolygonOffset(1.0, 1.0);
+
+		//glColor3f(0.0f, 1.0f,0.0f);
+		glColor3f(89.0f/255.0f, 89.0f/255.0f, 89.0f/255.0f);
 		glBegin(GL_TRIANGLE_FAN);
 		glVertex3fv( glm::value_ptr(base_point) );
 		glVertex3fv( glm::value_ptr(side_points[0]) );
@@ -102,6 +113,48 @@ public:
 		glVertex3fv( glm::value_ptr(side_points[3]) );
 		glVertex3fv( glm::value_ptr(side_points[0]) );
 		glEnd();
+
+		glDisable(GL_POLYGON_OFFSET_FILL); 
+
+		//TODO: http://www.allegro.cc/forums/thread/590317
+		glColor3f(0.0f, 0.0f,0.0f);
+		glBegin(GL_LINES);
+		glVertex3fv( glm::value_ptr(base_point) );
+		glVertex3fv( glm::value_ptr(side_points[0]) );
+		glVertex3fv( glm::value_ptr(base_point) );
+		glVertex3fv( glm::value_ptr(side_points[1]) );
+		glVertex3fv( glm::value_ptr(base_point) );
+		glVertex3fv( glm::value_ptr(side_points[2]) );
+		glVertex3fv( glm::value_ptr(base_point) );
+		glVertex3fv( glm::value_ptr(side_points[3]) );
+		
+		glVertex3fv( glm::value_ptr(side_points[0]) );
+		glVertex3fv( glm::value_ptr(side_points[1]) );
+
+		glVertex3fv( glm::value_ptr(side_points[1]) );
+		glVertex3fv( glm::value_ptr(side_points[2]) );
+
+		glVertex3fv( glm::value_ptr(side_points[2]) );
+		glVertex3fv( glm::value_ptr(side_points[3]) );
+
+		glVertex3fv( glm::value_ptr(side_points[3]) );
+		glVertex3fv( glm::value_ptr(side_points[0]) );
+
+		glEnd();
+
+		glBegin(GL_LINES);
+		glVertex3fv( glm::value_ptr(end_point) );
+		glVertex3fv( glm::value_ptr(side_points[0]) );
+		glVertex3fv( glm::value_ptr(end_point) );
+		glVertex3fv( glm::value_ptr(side_points[1]) );
+		glVertex3fv( glm::value_ptr(end_point) );
+		glVertex3fv( glm::value_ptr(side_points[2]) );
+		glVertex3fv( glm::value_ptr(end_point) );
+		glVertex3fv( glm::value_ptr(side_points[3]) );
+	
+		glEnd();
+
+		
 
 		glutSolidSphere(inLength * 0.025f, 10, 10);
 	}
@@ -168,6 +221,7 @@ public:
 			{
 				int child_joint_index = inSkeleton.mJointHierarchy.mJointChildren[child_index++];
 
+				//TODO enable both modes
 				// normal line to every child
 				//glLoadMatrixf(glm::value_ptr(inViewMatrix));
 				//glBegin(GL_LINES);
@@ -180,6 +234,7 @@ public:
 		}
 		else
 		{
+			// TODO use additional info (e.g: bvh end site)
 			glLoadMatrixf(glm::value_ptr(model_view_mat));
 			glutSolidSphere(bone_length * 0.025f, 10, 10);
 		}
