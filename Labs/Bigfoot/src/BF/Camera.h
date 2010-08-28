@@ -3,6 +3,7 @@
 
 #include "Rendering.h"
 #include "BFMath.h"
+#include "BE/MainWindow.h"
 
 namespace BF
 {
@@ -151,6 +152,13 @@ class CameraTurnTableRotationController
 public:
 
 
+	void Update(const BE::MainWindow& inWindow)
+	{
+		if (inWindow.GetInputState(BE::INPUT_MOUSE_MIDDLE) != 0.0f)
+		{
+			printf("click\n");
+		}
+	}
 };
 
 }

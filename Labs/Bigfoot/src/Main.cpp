@@ -24,7 +24,7 @@ public:
 	BF::ViewportSetup mViewportSetup;
 	BF::CameraSetup mCameraSetup;
 	BF::GridRenderer mGrid;
-	//BF::CameraFollowSphereController mCameraController;
+	BF::CameraTurnTableRotationController mCameraController;
 	
 	BF::Skeleton mTestSkeleton;
 	BF::SkeletonAnimationFrames mTestSkeletonAnim;
@@ -281,6 +281,8 @@ void BigfootScene::OnFileDropped(BE::MainWindow* inWindow, const char* inFilePat
 
 void BigfootScene::Update(const BE::WidgetContext& context, BE::SimpleRenderToTextureWidget& inParent, BE::OGLRenderToTexture& inTexture)	
 {
+	mTexture = &inTexture;
+
 	mSize.x = inParent.GetSize().x;
 	mSize.y = inParent.GetSize().y;
 	mViewportSetup.mWindowSize = mSize;
@@ -288,9 +290,10 @@ void BigfootScene::Update(const BE::WidgetContext& context, BE::SimpleRenderToTe
 
 	if (mRenderTime < 0.0f)
 		OnFirstUpdate();
-		
+	
 	mRenderTime = context.mTimeSecs;
-	mTexture = &inTexture;
+	
+	mCameraController.Update(context.mMainWindow);
 }
 
 
