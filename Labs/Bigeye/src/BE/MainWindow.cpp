@@ -152,11 +152,11 @@ void MainWindow::PrepareInputForUpdate()
 	mMouseLeftChanged = mMouseLeft != mLastMouseLeft;
 
 	mLastMouseMiddle = mMouseMiddle;
-	mMouseMiddle = GetKeyState(VK_LBUTTON) < 0;
+	mMouseMiddle = GetKeyState(VK_MBUTTON) < 0;
 	mMouseMiddleChanged = mMouseMiddle != mLastMouseMiddle;
 
 	mLastMouseRight = mMouseRight;
-	mMouseRight = GetKeyState(VK_LBUTTON) < 0;
+	mMouseRight = GetKeyState(VK_RBUTTON) < 0;
 	mMouseRightChanged = mMouseRight != mLastMouseRight;
 }
 
