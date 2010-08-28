@@ -19,6 +19,7 @@ MainWindow::MainWindow(MainWindowClient* inClient)
 	mLastMouseRight = false;
 	mMouseRight = false;
 	mMouseRightChanged = false;
+	mMouseScrollChanged = false;
 }
 
 
@@ -107,6 +108,18 @@ float MainWindow::GetInputState(int inInputID) const
 				return mMouseMoved ? 1.0f : 0.0f;
 			}
 			break;
+
+			case INPUT_MOUSE_SCROLL:
+			{
+				return mMouseScroll;
+			}
+			break;
+
+			case INPUT_MOUSE_SCROLL_CHANGED:
+			{
+				return mMouseScrollChanged;
+			}
+			break;
 		}
 	}
 
@@ -116,6 +129,16 @@ float MainWindow::GetInputState(int inInputID) const
 const glm::vec2& MainWindow::GetMousePos() const
 {
 	return mMousePos;
+}
+
+float MainWindow::GetMouseScroll() const
+{
+	return mMouseScroll;
+}
+
+float MainWindow::GetMouseScrollChange() const
+{
+	return mMouseScroll - mLastMouseScroll;
 }
 
 int MainWindow::GetInputEventCount() const
@@ -158,8 +181,38 @@ void MainWindow::PrepareInputForUpdate()
 	mLastMouseRight = mMouseRight;
 	mMouseRight = GetKeyState(VK_RBUTTON) < 0;
 	mMouseRightChanged = mMouseRight != mLastMouseRight;
+
+	/*
+	fwKeys = GET_KEYSTATE_WPARAM(wParam);
+zDelta = GET_WHEEL_DELTA_WPARAM(wParam);
+
+xPos = GET_X_LPARAM(lParam); 
+yPos = GET_Y_LPARAM(lParam); 
+*/
 }
 
+
+void MainWindow::ResetMsgInputs()
+{
+	mMouseScrollChanged = false;
+}
+
+
+void MainWindow::PrepareInputForUpdate(const MSG& msg)
+{
+	if (msg.message == WM_MOUSEWHEEL)
+	{
+		WORD fwKeys = GET_KEYSTATE_WPARAM(msg.wParam);
+		short zDelta = GET_WHEEL_DELTA_WPARAM(msg.wParam);
+
+		mLastMouseScroll = mMouseScroll;
+		mMouseScroll += zDelta;
+		mMouseScrollChanged = mLastMouseScroll != mMouseScroll;
+
+		//short xPos = GET_X_LPARAM(lParam); 
+		//short yPos = GET_Y_LPARAM(lParam); 
+	}
+}
 
 bool MainWindow::Update(float inTimeSecs)
 {
@@ -168,12 +221,16 @@ bool MainWindow::Update(float inTimeSecs)
 		if (mWindow->GetHWND() == NULL)
 			return false;
 
+		ResetMsgInputs();
+		
+
 		MSG msg;
 
 		while (PeekMessage(&msg, mWindow->GetHWND(), 0, 0, PM_REMOVE))
 		{
 			if (msg.message != WM_QUIT)						
 			{
+				PrepareInputForUpdate(msg);
 				DispatchMessage (&msg);					
 			}
 			else										

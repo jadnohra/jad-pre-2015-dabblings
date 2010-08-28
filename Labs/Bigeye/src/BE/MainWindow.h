@@ -21,6 +21,8 @@ namespace BE
 		INPUT_MOUSE_X,
 		INPUT_MOUSE_Y,
 		INPUT_MOUSE_MOVED,
+		INPUT_MOUSE_SCROLL,
+		INPUT_MOUSE_SCROLL_CHANGED,
 		INPUT_MOUSE_END,
 	};
 
@@ -56,6 +58,8 @@ namespace BE
 		const InputEventInfo&	GetInputEvent(int inIndex) const;
 		void					ConsumeInputEvents();
 		const glm::vec2&		GetMousePos() const;
+		float					GetMouseScroll() const;
+		float					GetMouseScrollChange() const;
 
 		bool					Update(float inTimeSecs);
 
@@ -67,6 +71,8 @@ namespace BE
 	protected:
 
 		void					PrepareInputForUpdate();
+		void					PrepareInputForUpdate(const MSG& msg);
+		void					ResetMsgInputs();
 
 		MainWindowClient*		mClient;
 		HINSTANCE				mHINSTANCE;
@@ -79,6 +85,9 @@ namespace BE
 		bool					mMouseMoved;
 		glm::vec2				mMousePos;
 		glm::vec2				mLastMousePos;
+		float					mMouseScroll;
+		float					mLastMouseScroll;
+		bool					mMouseScrollChanged;
 		bool					mLastMouseLeft;
 		bool					mMouseLeft;
 		bool					mMouseLeftChanged;
