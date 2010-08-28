@@ -225,7 +225,7 @@ void BigfootScene::RenderTestSkeletonScene(BE::Renderer& inRenderer)
 	static int frame_index = -1;
 
 	frame_index = (int) (10.0f * mRenderTime) % mTestSkeletonAnim.mSkeletonAnimationFrames.size();
-	frame_index = frame_index % 30;
+	//frame_index = frame_index % 30;
 	//if (frame_index > mTestSkeletonAnim.mSkeletonAnimationFrames.size())
 	//{
 	//	frame_index = -1;
@@ -264,6 +264,7 @@ void BigfootScene::OnFileDropped(BE::MainWindow* inWindow, const char* inFilePat
 			cam_setup.SetFollowParams(glm::vec3(0.0f, 0.0f, 1.0f));
 			glm::vec2 auto_depth_planes;
 			cam_setup.SetupCamera(skeleton_sphere, mCameraSetup.GetFOV(), glm::vec2(0.001f, 10000.0f), mCamera, auto_depth_planes);
+			auto_depth_planes.y *= 50.0f;
 			mCameraSetup.SetupDepthPlanes(auto_depth_planes);
 
 			{
@@ -286,7 +287,7 @@ void BigfootScene::OnFileDropped(BE::MainWindow* inWindow, const char* inFilePat
 					}
 				}
 
-				mGrid.Setup(50, 50, scale / 100.0f);
+				mGrid.Setup(50, 50, scale / 25.0f);
 			}
 		}
 	}
