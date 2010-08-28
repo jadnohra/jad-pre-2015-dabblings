@@ -183,6 +183,14 @@
 			>
 		</File>
 		<File
+			RelativePath="..\..\src\BF\GridRenderer.cpp"
+			>
+		</File>
+		<File
+			RelativePath="..\..\src\BF\GridRenderer.h"
+			>
+		</File>
+		<File
 			RelativePath="..\..\src\BF\LoaderBVH.cpp"
 			>
 		</File>

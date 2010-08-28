@@ -119,7 +119,10 @@ public:
 		mFollowDist = std::max(min_dist, (1.001f) * inDepthPlanes.x);
 		mFollowDist = std::min(min_dist, (0.9f) * inDepthPlanes.y);
 
-		inCamera.SetLookAtWorldMatrix(inTarget.mPosition + (mOffsetDirection * mFollowDist), inTarget.mPosition, glm::vec3(0.0f, 1.0f, 0.0f));
+		glm::vec3 default_up(0.0f, 1.0f, 0.0f);
+		glm::vec3 up = glm::dot(default_up, mOffsetDirection) <= 0.99f ? default_up : glm::vec3(1.0f, 0.0f, 0.0f);
+
+		inCamera.SetLookAtWorldMatrix(inTarget.mPosition + (mOffsetDirection * mFollowDist), inTarget.mPosition, up);
 
 		{
 			outDepthPlanes.y = 1.5f * GetFollowDist();
@@ -142,6 +145,16 @@ protected:
 	float mFollowDist;
 };
 
+
+class CameraTurnTableRotationController
+{
+public:
+
+
+};
+
 }
+
+
 
 #endif

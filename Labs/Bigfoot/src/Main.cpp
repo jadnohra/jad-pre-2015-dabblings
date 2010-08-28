@@ -3,6 +3,7 @@
 #include "BF/BFMath.h"
 #include "BF/Skeleton.h"
 #include "BF/SkeletonRenderer.h"
+#include "BF/GridRenderer.h"
 #include "BF/LoaderBVH.h"
 
 class BigfootScene : public BE::SimpleRenderToTextureWidget::Scene, public BE::MainWindowClient
@@ -22,6 +23,7 @@ public:
 	BF::Camera mCamera;
 	BF::ViewportSetup mViewportSetup;
 	BF::CameraSetup mCameraSetup;
+	BF::GridRenderer mGrid;
 	//BF::CameraFollowSphereController mCameraController;
 	
 	BF::Skeleton mTestSkeleton;
@@ -115,7 +117,7 @@ void BigfootScene::RenderTestBasicScene(BE::Renderer& inRenderer)
 		BF::CameraFollowSphereAutoSetup camera_auto_setup;
 		BF::Sphere sphere; sphere.mPosition = glm::vec3(-1.5f,0.0f,-6.0f); sphere.mRadius = 5.0f;
 		glm::vec2 auto_depth_planes;
-		camera_auto_setup.SetFollowParams(glm::vec3(1.0f, 1.0f, 1.0f));
+		camera_auto_setup.SetFollowParams(glm::vec3(1.0f, 1.0f, 0.0f));
 		camera_auto_setup.SetupCamera(sphere, mCameraSetup.GetFOV(), glm::vec2(0.001f, 1000.0f), mCamera, auto_depth_planes);
 		mCameraSetup.SetupDepthPlanes(auto_depth_planes);
 		view_matrix = mCamera.GetViewMatrix();
@@ -267,7 +269,7 @@ void BigfootScene::Update(const BE::WidgetContext& context, BE::SimpleRenderToTe
 
 void BigfootScene::OnFirstUpdate()
 {
-	OnFileDropped(NULL, "../media/test.bvh");
+	//OnFileDropped(NULL, "../media/test.bvh");
 }
 
 
@@ -286,6 +288,7 @@ void BigfootScene::Render(BE::Renderer& inRenderer)
 
 	//glClearColor(100.0f/255.0f, 149.0f/255.0f, 237.0f / 255.0f, 1.0f);
 	glClearColor(75.0f/255.0f, 146.0f/255.0f, 219.0f / 255.0f, 1.0f);
+	glClearColor(115.0f/255.0f, 115.0f/255.0f, 115.0f/255.0f, 1.0f); // Blender
 
 	glClearDepth(1.0f);
 	glClear(GL_DEPTH_BUFFER_BIT);
@@ -300,6 +303,12 @@ void BigfootScene::Render(BE::Renderer& inRenderer)
 	glEnable(GL_DEPTH_TEST);							// Enables Depth Testing
 	glDepthFunc(GL_LEQUAL);
 	glHint(GL_PERSPECTIVE_CORRECTION_HINT, GL_NICEST);	// Really Nice Perspective Calculations
+
+	{
+		glLoadMatrixf(glm::value_ptr(mCamera.GetViewMatrix()));
+		mGrid.Setup(50, 50, 1.0f);
+		mGrid.Render();
+	}
 
 	switch (mTestMode)
 	{
