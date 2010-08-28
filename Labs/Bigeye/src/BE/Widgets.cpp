@@ -566,7 +566,10 @@ bool SimpleRenderToTextureWidget::Create(const WidgetContext& inContext, const g
 void SimpleRenderToTextureWidget::Update(const WidgetContext& inContext, const SceneTransform& inParentTransform, bool inParentTransformDirty)
 {
 	if (mScene)
+	{
+		mRenderWorldPos = gWidgetTransform(inParentTransform, mPos);
 		mScene->Update(inContext, *this, mTexture);
+	}
 }
 
 
@@ -608,6 +611,13 @@ void SimpleRenderToTextureWidget::Render(Renderer& inRenderer)
 			 glTexCoord2f(0.0f,0.0f); glVertex3f(world_pos.x,world_pos.y+mSize.y,world_pos.z);
 		glEnd();
 	}
+}
+
+
+bool SimpleRenderToTextureWidget::IsMainWindowPosInViewport(const WidgetContext& inContext, const glm::vec2& inMainWindowPos, glm::vec2& outViewportPos)
+{
+	outViewportPos = to2d_point(to3d_point(inMainWindowPos) - mRenderWorldPos);
+	return WidgetUtil::IsMouseInRectangle(inContext, mRenderWorldPos, mSize);
 }
 
 
@@ -913,7 +923,7 @@ LRESULT CALLBACK NativeWindowWidget::WindowProc(HWND hWnd, UINT uMsg, WPARAM wPa
 				{
 					UINT nBufSize = 1 + DragQueryFileA(fDrop, i, NULL, 0);
 
-					if (nBufSize > buffer_size)
+					if (nBufSize > (UINT) buffer_size)
 					{
 						buffer_size = nBufSize;
 						delete fName;

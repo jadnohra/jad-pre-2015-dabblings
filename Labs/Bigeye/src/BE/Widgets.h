@@ -128,6 +128,8 @@ namespace BE
 
 			virtual void Update(const WidgetContext& inContext, SimpleRenderToTextureWidget& inParent, OGLRenderToTexture& inTexture)	{}
 			virtual void Render(Renderer& inRenderer)	{}
+
+			virtual void Unproject(const glm::vec2& inViewportPoint, glm::vec3& outSceneWorldPoint, glm::vec3* outSceneWorldRayDir) { gAssert(false); }
 		};
 
 		SimpleRenderToTextureWidget();
@@ -135,6 +137,7 @@ namespace BE
 
 		bool		Create(const WidgetContext& inContext, const glm::vec2& inPos, const glm::vec2& inSize);
 		void		SetScene(Scene* inScene)		{ mScene = inScene; }
+		Scene*		GetScene()						{ return mScene; }
 
 		virtual void Update(const WidgetContext& inContext, const SceneTransform& inParentTransform, bool inParentTransformDirty);
 
@@ -145,6 +148,8 @@ namespace BE
 		virtual void Render(Renderer& inRenderer);
 
 		virtual RenderNodeDependency*	GetDependency()					{ return &mRenderNodeDependency; }
+
+		bool IsMainWindowPosInViewport(const WidgetContext& inContext, const glm::vec2& inMainWindowPos, glm::vec2& outViewportPos);
 
 	protected:
 
