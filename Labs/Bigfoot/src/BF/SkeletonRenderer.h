@@ -12,11 +12,14 @@ class SkeletonRenderer
 {
 public:
 
-	void GetRenderBounds(const Skeleton& inSkeleton, int inAnimFrame, 
+	void GetRenderBounds(const Skeleton& inSkeleton, int inAnimFrame, SkeletonAnimationFrames* inSkeletonAnimFrames, 
 						bool inIncludeRootTranslation, bool inIncludeRootAnimTranslation, 
 						AAB& ioBounds)
 	{
-		inSkeleton.ToModelSpace(inSkeleton.mDefaultPose, inIncludeRootTranslation, inIncludeRootAnimTranslation, mModelSpaceJoints);
+		if (inAnimFrame == -1 || inSkeletonAnimFrames == NULL)
+			inSkeleton.ToModelSpace(inSkeleton.mDefaultPose, inIncludeRootTranslation, inIncludeRootAnimTranslation, mModelSpaceJoints);
+		else
+			inSkeleton.ToModelSpace(inSkeletonAnimFrames->mSkeletonAnimationFrames[inAnimFrame], inIncludeRootTranslation, inIncludeRootAnimTranslation, mModelSpaceJoints);
 
 		if (mModelSpaceJoints.empty())
 			return;

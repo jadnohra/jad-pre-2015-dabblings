@@ -250,10 +250,31 @@ void BigfootScene::OnFileDropped(BE::MainWindow* inWindow, const char* inFilePat
 		mTestMode = ETestSkeletonScene;
 		{
 			BF::AAB render_bounds;
-			mTestSkeletonRenderer.GetRenderBounds(mTestSkeleton, 0, true, true, render_bounds);
+
+			BF::AAB frame_render_bounds;
+			mTestSkeletonRenderer.GetRenderBounds(mTestSkeleton, -1, &mTestSkeletonAnim, true, true, frame_render_bounds);
+			render_bounds.Include(frame_render_bounds);
+
+			// TODO use grid AAB and extract from animation
+			/*
+			if (!mTestSkeletonAnim.mSkeletonAnimationFrames.empty())
+			{
+				BF::AAB frame_render_bounds;
+
+				for (size_t i=0; i<mTestSkeletonAnim.mSkeletonAnimationFrames.size(); ++i)
+				{
+					mTestSkeletonRenderer.GetRenderBounds(mTestSkeleton, i, &mTestSkeletonAnim, true, true, frame_render_bounds);
+					render_bounds.Include(frame_render_bounds);
+				}
+			}
+			*/
+
+			// include origin
+			//render_bounds.Include(glm::vec3(0.0f));
 
 			BF::Sphere skeleton_sphere;
 			skeleton_sphere.InitFrom(render_bounds);
+			printf("Model scale: %f units\n", skeleton_sphere.mRadius);
 
 			BF::CameraFollowSphereAutoSetup cam_setup;
 
@@ -283,7 +304,8 @@ void BigfootScene::OnFileDropped(BE::MainWindow* inWindow, const char* inFilePat
 					}
 				}
 
-				mGrid.Setup(50, 50, scale / 25.0f);
+				mGrid.Setup(20, 20, scale / 10.0f);
+				//mGrid.Setup(scale, scale, scale / 25.0f);
 			}
 		}
 	}

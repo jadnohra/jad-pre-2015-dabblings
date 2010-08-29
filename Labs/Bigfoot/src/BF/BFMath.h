@@ -58,6 +58,12 @@ namespace BF
 			mMax.x = mMax.y = mMax.z = std::numeric_limits<glm::vec3::value_type>::min();
 		}
 
+		void Include(const AAB& inAAB)
+		{
+			Include(inAAB.mMin);
+			Include(inAAB.mMax);
+		}
+
 		void Include(const glm::vec3& inPoint)
 		{
 			if (inPoint.x < mMin.x)
