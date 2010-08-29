@@ -35,6 +35,7 @@ namespace BF
 	{
 		int mFirstChildIndex;
 		int mChildCount;
+		int mNormalChildCount;
 	};
 	typedef std::vector<JointHierarchyChildInfo> JointHierarchyChildInfos;
 
@@ -50,6 +51,12 @@ namespace BF
 		JointHierarchyChildInfos mJointChildrenInfos;
 	};
 
+	enum EJointType
+	{
+		Joint_Invalid,
+		Joint_Normal,
+		Joint_SkeletonRender
+	};
 
 
 	class JointInfo
@@ -58,9 +65,11 @@ namespace BF
 
 		JointInfo()
 		:	mChannelInfoIndex(-1)
+		,	mType(Joint_Normal)
 		{
 		}
 
+		EJointType mType;
 		std::string mName;
 		int mChannelInfoIndex;
 	};

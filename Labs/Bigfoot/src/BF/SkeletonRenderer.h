@@ -168,6 +168,7 @@ public:
 		//glutSolidSphere(0.25f, 10, 10);
 		
 		int child_count = inSkeleton.mJointHierarchy.mJointChildrenInfos[inJointIndex].mChildCount;
+		int normal_child_count = inSkeleton.mJointHierarchy.mJointChildrenInfos[inJointIndex].mNormalChildCount;
 		float bone_length = inLastJointLength;
 
 		if (child_count > 0)
@@ -176,12 +177,15 @@ public:
 				int first_child_index = inSkeleton.mJointHierarchy.mJointChildrenInfos[inJointIndex].mFirstChildIndex;
 				int child_index = first_child_index;
 				glm::vec3 bone_tail_pos;
-				float weight = 1.0f / (float) child_count;
+				bool include_normal_children_only = normal_child_count > 0;
+				float weight = 1.0f / (float) (include_normal_children_only ? normal_child_count : child_count);
+				// TODO special color when normal_child_count is 0
 
 				for (int i=0; i<child_count; ++i)
 				{
 					int child_joint_index = inSkeleton.mJointHierarchy.mJointChildren[child_index++];
-					bone_tail_pos += weight * mModelSpaceJoints[child_joint_index].mPosition;
+					if (!include_normal_children_only || inSkeleton.mJointInfos[child_joint_index].mType == Joint_Normal)
+						bone_tail_pos += weight * mModelSpaceJoints[child_joint_index].mPosition;
 				}
 
 				bone_length = glm::distance(bone_tail_pos, mModelSpaceJoints[inJointIndex].mPosition);
@@ -234,7 +238,6 @@ public:
 		}
 		else
 		{
-			// TODO use additional info (e.g: bvh end site)
 			glLoadMatrixf(glm::value_ptr(model_view_mat));
 			glutSolidSphere(bone_length * 0.025f, 10, 10);
 		}

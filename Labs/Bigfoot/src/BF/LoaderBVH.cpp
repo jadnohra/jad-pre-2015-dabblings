@@ -25,6 +25,7 @@ namespace BF
 			,	mErrorLine(-1)
 			,	mCurrLine(0)
 			,	mAutoJointNameCount(0)
+			,	mAutoEndSiteNameCount(0)
 			,	mFrameChannelCount(0)
 			,	mFrameIndex(0)
 			,	mIsDebuggingLines(inDebug)
@@ -42,10 +43,14 @@ namespace BF
 			{
 				mSkeleton.mJointHierarchy.mJointChildrenInfos[node.mJointIndex].mFirstChildIndex = ioChildIndex;
 				mSkeleton.mJointHierarchy.mJointChildrenInfos[node.mJointIndex].mChildCount = (int) (node.mChildren.size());
+				mSkeleton.mJointHierarchy.mJointChildrenInfos[node.mJointIndex].mNormalChildCount = 0;
 
 				for (size_t i=0; i<node.mChildren.size(); ++i)
 				{
 					mSkeleton.mJointHierarchy.mJointChildren[ioChildIndex++] = node.mChildren[i];
+
+					if (mSkeleton.mJointInfos[node.mChildren[i]].mType == Joint_Normal)
+						++mSkeleton.mJointHierarchy.mJointChildrenInfos[node.mJointIndex].mNormalChildCount;
 				}
 
 				for (size_t i=0; i<node.mChildren.size(); ++i)
@@ -308,6 +313,7 @@ namespace BF
 
 					case Parse_JOINT:
 					{
+						/*
 						if (mStringList.size() == 2
 							&& (strtk::imatch(mStringList[0], "End"))
 							&& (strtk::imatch(mStringList[1], "Site"))
@@ -317,9 +323,11 @@ namespace BF
 							mJointStack.push_back(JOINT_END_SITE);
 						}
 						else
+						*/
 						{
 							int joint_index = mSkeleton.mJointInfos.size();
 							bool name_was_set = false;
+							bool is_end_site = false;
 
 							for (size_t i=0; i<mStringList.size(); ++i)
 							{
@@ -327,18 +335,33 @@ namespace BF
 								{
 									mParseState = Parse_JOINT_Open;
 								}
+								else if (i == 0 && strtk::imatch(mStringList[i], "End"))
+								{
+									mParseState = Parse_JOINT_Open;
+									is_end_site = true;
+								}
 								else if (mParseState == Parse_JOINT_Open)
 								{
 									mSkeleton.mJointInfos.resize(mSkeleton.mJointInfos.size()+1);
-									mSkeleton.mJointInfos.back().mName = mStringList[i];
-									name_was_set = true;
+									if (is_end_site)
+									{
+										mSkeleton.mJointInfos.back().mType = Joint_SkeletonRender;
+									}
+									else
+									{
+										mSkeleton.mJointInfos.back().mName = mStringList[i];
+										name_was_set = true;
+									}
 								}
 							}
 
 							if (!name_was_set)
 							{
 								mSkeleton.mJointInfos.resize(joint_index+1);
-								mSkeleton.mJointInfos.back().mName = "auto_joint_" + strtk::type_to_string(mAutoJointNameCount++);
+								if (is_end_site)
+									mSkeleton.mJointInfos.back().mName = "auto_end_site_" + strtk::type_to_string(mAutoEndSiteNameCount++);
+								else
+									mSkeleton.mJointInfos.back().mName = "auto_joint_" + strtk::type_to_string(mAutoJointNameCount++);
 							}
 
 							mJointTree[mJointStack.back()].mChildren.push_back(joint_index);
@@ -477,72 +500,76 @@ namespace BF
 									const JointTreeNode& node = mJointTree[joint_index];
 
 									const JointInfo& joint_info = mSkeleton.mJointInfos[node.mJointIndex];
-									const ChannelInfo& channel_info = mSkeleton.mChannelInfos[joint_info.mChannelInfoIndex];
 
-									if (!channel_info.mChannelTypes.empty())
+									bool translation_was_set = false;
+									glm::vec3 translation;
+									bool rotation_was_set = false;
+									glm::vec3 euler_angles_deg;
+
+									if (joint_info.mChannelInfoIndex >= 0)
 									{
-										bool translation_was_set = false;
-										glm::vec3 translation;
-										bool rotation_was_set = false;
-										glm::vec3 euler_angles_deg;
+										const ChannelInfo& channel_info = mSkeleton.mChannelInfos[joint_info.mChannelInfoIndex];
 
-										for (size_t channel_index=0; channel_index<channel_info.mChannelTypes.size(); ++channel_index)
+										if (!channel_info.mChannelTypes.empty())
 										{
-											switch (channel_info.mChannelTypes[channel_index])
+											for (size_t channel_index=0; channel_index<channel_info.mChannelTypes.size(); ++channel_index)
 											{
-												case Channel_TranslationX:
+												switch (channel_info.mChannelTypes[channel_index])
 												{
-													if (!strtk::string_to_type_converter(mStringList[data_index++], translation.x))
-														SetError(s);
-													else
-														translation_was_set = true;
-												}
-												break;
+													case Channel_TranslationX:
+													{
+														if (!strtk::string_to_type_converter(mStringList[data_index++], translation.x))
+															SetError(s);
+														else
+															translation_was_set = true;
+													}
+													break;
 
-												case Channel_TranslationY:
-												{
-													if (!strtk::string_to_type_converter(mStringList[data_index++], translation.y))
-														SetError(s);
-													else
-														translation_was_set = true;
-												}
-												break;
+													case Channel_TranslationY:
+													{
+														if (!strtk::string_to_type_converter(mStringList[data_index++], translation.y))
+															SetError(s);
+														else
+															translation_was_set = true;
+													}
+													break;
 
-												case Channel_TranslationZ:
-												{
-													if (!strtk::string_to_type_converter(mStringList[data_index++], translation.z))
-														SetError(s);
-													else
-														translation_was_set = true;
-												}
-												break;
+													case Channel_TranslationZ:
+													{
+														if (!strtk::string_to_type_converter(mStringList[data_index++], translation.z))
+															SetError(s);
+														else
+															translation_was_set = true;
+													}
+													break;
 
-												case Channel_RotationEulerX:
-												{
-													if (!strtk::string_to_type_converter(mStringList[data_index++], euler_angles_deg.x))
-														SetError(s);
-													else
-														rotation_was_set = true;
-												}
-												break;
+													case Channel_RotationEulerX:
+													{
+														if (!strtk::string_to_type_converter(mStringList[data_index++], euler_angles_deg.x))
+															SetError(s);
+														else
+															rotation_was_set = true;
+													}
+													break;
 
-												case Channel_RotationEulerY:
-												{
-													if (!strtk::string_to_type_converter(mStringList[data_index++], euler_angles_deg.y))
-														SetError(s);
-													else
-														rotation_was_set = true;
-												}
-												break;
+													case Channel_RotationEulerY:
+													{
+														if (!strtk::string_to_type_converter(mStringList[data_index++], euler_angles_deg.y))
+															SetError(s);
+														else
+															rotation_was_set = true;
+													}
+													break;
 
-												case Channel_RotationEulerZ:
-												{
-													if (!strtk::string_to_type_converter(mStringList[data_index++], euler_angles_deg.z))
-														SetError(s);
-													else
-														rotation_was_set = true;
+													case Channel_RotationEulerZ:
+													{
+														if (!strtk::string_to_type_converter(mStringList[data_index++], euler_angles_deg.z))
+															SetError(s);
+														else
+															rotation_was_set = true;
+													}
+													break;
 												}
-												break;
 											}
 										}
 
@@ -629,6 +656,7 @@ namespace BF
 
 		EParseState mParseState;
 		int mAutoJointNameCount;
+		int mAutoEndSiteNameCount;
 		int mFrameChannelCount;
 		int mFrameCount;
 		int mFrameIndex;
