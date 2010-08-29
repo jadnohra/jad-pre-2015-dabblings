@@ -227,7 +227,7 @@ namespace BF
 				outModelSpace[inJointIndex].mPosition = inParentModelTransform.mPosition + (inParentModelTransform.mOrientation * (local_transform.mPosition));
 
 			outModelSpace[inJointIndex].mOrientation = glm::cross(inParentModelTransform.mOrientation, pose_orientation);
-			
+						
 			int child_count = mJointHierarchy.mJointChildrenInfos[inJointIndex].mChildCount;
 
 			if (child_count > 0)

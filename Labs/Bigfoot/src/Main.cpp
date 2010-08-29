@@ -224,7 +224,7 @@ void BigfootScene::RenderTestSkeletonScene(BE::Renderer& inRenderer)
 
 	static int frame_index = -1;
 
-	frame_index = (int) (10.0f * mRenderTime) % mTestSkeletonAnim.mSkeletonAnimationFrames.size();
+	frame_index = (int) (30.0f * mRenderTime) % mTestSkeletonAnim.mSkeletonAnimationFrames.size();
 	//frame_index = frame_index % 30;
 	//if (frame_index > mTestSkeletonAnim.mSkeletonAnimationFrames.size())
 	//{

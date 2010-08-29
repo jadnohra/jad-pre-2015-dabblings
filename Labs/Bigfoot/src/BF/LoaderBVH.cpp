@@ -561,7 +561,19 @@ namespace BF
 											
 											if (rotation_was_set)
 											{
-												glm::quat orientation = LoaderBVH::ToOpenGLOrientation(euler_angles_deg);
+												int euler_XYZ_channel_order[] = { 0, 0, 0 };
+												int rot_channel_index = 0;
+												for (size_t channel_index=0; channel_index<channel_info.mChannelTypes.size(); ++channel_index)
+												{
+													switch (channel_info.mChannelTypes[channel_index])
+													{
+														case Channel_RotationEulerX: euler_XYZ_channel_order[0] = rot_channel_index++; break;
+														case Channel_RotationEulerY: euler_XYZ_channel_order[1] = rot_channel_index++; break;
+														case Channel_RotationEulerZ: euler_XYZ_channel_order[2] = rot_channel_index++; break;
+													}
+												}
+
+												glm::quat orientation = LoaderBVH::ToOpenGLOrientation(euler_angles_deg, euler_XYZ_channel_order);
 
 												if (mFrameIndex == 0)
 												{
