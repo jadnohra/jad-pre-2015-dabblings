@@ -65,7 +65,7 @@ public:
 	
 
 	void DrawBone(const glm::mat4& inModelViewMat, const glm::vec3& inDir, const glm::vec3& inLocalTranslation, float inLength, float inLengthFraction, float inRadius, float inSphereRadius, 
-					const glm::quat& inOrientation)
+					const glm::quat& inOrientation, bool inInRenderOnlyBone)
 	{
 		glm::mat3 orientation = glm::toMat3(inOrientation);
 
@@ -98,7 +98,11 @@ public:
 		glPolygonOffset(1.0, 1.0);
 
 		//glColor3f(0.0f, 1.0f,0.0f);
-		glColor3f(89.0f/255.0f, 89.0f/255.0f, 89.0f/255.0f);
+		if (inInRenderOnlyBone)
+			glColor3f(120.0f/255.0f, 0.0f/255.0f, 220.0f/255.0f);
+		else
+			glColor3f(89.0f/255.0f, 89.0f/255.0f, 89.0f/255.0f);
+
 		glBegin(GL_TRIANGLE_FAN);
 		glVertex3fv( glm::value_ptr(base_point) );
 		glVertex3fv( glm::value_ptr(side_points[0]) );
@@ -182,7 +186,6 @@ public:
 				glm::vec3 bone_tail_pos;
 				bool include_normal_children_only = normal_child_count > 0;
 				float weight = 1.0f / (float) (include_normal_children_only ? normal_child_count : child_count);
-				// TODO special color when normal_child_count is 0
 
 				for (int i=0; i<child_count; ++i)
 				{
@@ -195,8 +198,8 @@ public:
 				glm::vec3 bone_dir = glm::normalize(bone_tail_pos - mModelSpaceJoints[inJointIndex].mPosition);
 
 				int first_child_joint_index = inSkeleton.mJointHierarchy.mJointChildren[first_child_index];
-				DrawBone(model_view_mat, bone_dir, inSkeleton.mJoints[first_child_joint_index].mLocalTransform.mPosition, bone_length, 0.15f, bone_length*0.1f, bone_length*0.05f, 
-							mModelSpaceJoints[inJointIndex].mOrientation);
+				DrawBone(model_view_mat, bone_dir, inSkeleton.mJoints[first_child_joint_index].mLocalTransform.mPosition, bone_length, 0.2f, bone_length*0.15f, bone_length*0.05f, 
+							mModelSpaceJoints[inJointIndex].mOrientation, normal_child_count == 0 && child_count > 0);
 
 				if (child_count > 1)
 				{
