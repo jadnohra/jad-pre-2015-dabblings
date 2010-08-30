@@ -58,10 +58,12 @@ public:
 	BF::SkeletonRenderer mTestSkeletonRenderer;
 
 	AnimPlayback mAnimPlayback;
+	bool mIncludeDefaultPoseInPlayback;
 
 	BE::SimpleButtonWidget* mPlayButton;
 	BE::SimpleButtonWidget* mLoopButton;
 	BE::SimpleButtonWidget* mRewindButton;
+	BE::SimpleButtonWidget* mIncludeDefaultPoseButton;
 	BE::SimpleSliderWidget* mFrameSlider;
 
 	BigfootScene::BigfootScene() 
@@ -71,7 +73,9 @@ public:
 	,	mPlayButton(NULL)
 	,	mLoopButton(NULL)
 	,	mRewindButton(NULL)
+	,	mIncludeDefaultPoseButton(NULL)
 	,	mFrameSlider(NULL)
+	,	mIncludeDefaultPoseInPlayback(true)
 	{
 	}
 
@@ -90,6 +94,9 @@ public:
 	void RenderTestSkeletonScene(BE::Renderer& inRenderer);
 
 	void OnFirstUpdate();
+
+	int SliderToFrameIndex(float inSliderPos) const;
+	float FrameIndexToSlider(int inFrameIndex) const;
 };
 
 
@@ -186,6 +193,17 @@ void CreateWidgets(BE::MainWindow& inWindow, BigfootScene& inScene)
 
 			children.mChildWidgets.push_back(button_widget);
 			inScene.mLoopButton = button_widget;
+		}
+
+		{
+			SimpleButtonWidget* button_widget = new SimpleButtonWidget();
+			button_widget->Create(context, glm::vec2(pos_horiz, pos_vert), true, MagicWand::TextInfo(" T ", 0, 14.0f, true, glm::vec2(2.0f, 2.0f)), sizeConstraints);
+			button_widget->SetIsToggled(true);
+
+			pos_horiz += 30.0f;
+
+			children.mChildWidgets.push_back(button_widget);
+			inScene.mIncludeDefaultPoseButton = button_widget;
 		}
 
 		{
@@ -319,47 +337,90 @@ void BigfootScene::RenderTestBasicScene(BE::Renderer& inRenderer)
 	glEnd();											// Done Drawing The Quad
 }
 
+
+int BigfootScene::SliderToFrameIndex(float inSliderPos) const
+{
+	int frame_index = -1;
+
+	if (mFrameSlider != NULL && !mTestSkeletonAnim.mSkeletonAnimationFrames.empty())
+	{
+		if (mIncludeDefaultPoseInPlayback || mTestSkeletonAnim.mSkeletonAnimationFrames.size() == 1)
+			frame_index = (int) (inSliderPos * (float) (mTestSkeletonAnim.mSkeletonAnimationFrames.size()-1));
+		else
+			frame_index = ((int) (inSliderPos * (float) (mTestSkeletonAnim.mSkeletonAnimationFrames.size()-2)))+1;
+	}
+
+	frame_index = std::min(frame_index, (int) mTestSkeletonAnim.mSkeletonAnimationFrames.size()-1);
+	frame_index = std::max(frame_index, -1);
+	
+	return frame_index;
+}
+
+
+float BigfootScene::FrameIndexToSlider(int inFrameIndex) const
+{
+	float slider_pos = 0.0f;
+
+	if (mFrameSlider != NULL && !mTestSkeletonAnim.mSkeletonAnimationFrames.empty())
+	{
+		if (mIncludeDefaultPoseInPlayback || mTestSkeletonAnim.mSkeletonAnimationFrames.size() == 1)
+			slider_pos = (float) inFrameIndex / ((float) mTestSkeletonAnim.mSkeletonAnimationFrames.size()-1);
+		else
+			slider_pos = (float) (inFrameIndex-1) / ((float) mTestSkeletonAnim.mSkeletonAnimationFrames.size()-2);
+	}
+
+	return slider_pos;
+}
+
+
 void BigfootScene::RenderTestSkeletonScene(BE::Renderer& inRenderer)
 {
 	BF::AAB skeleton_bounds;
 
-	static int frame_index = -1;
+	mIncludeDefaultPoseInPlayback = (mIncludeDefaultPoseButton == NULL || mIncludeDefaultPoseButton->GetIsToggled());
+	int frame_index = -1;
 
-	if (mPlayButton == NULL || mPlayButton->GetIsToggled())
+	if (mFrameSlider != NULL && mFrameSlider->IsBeingDraggedByMouse())
 	{
-		mAnimPlayback.UpdatePlay(mRenderTime);
+		frame_index = SliderToFrameIndex(mFrameSlider != NULL ? mFrameSlider->GetSliderPos() : 0.0f);
 
-		if (!mTestSkeletonAnim.mSkeletonAnimationFrames.empty())
-		{
-			frame_index = (int) (mAnimPlayback.mPlaybackTime / mTestSkeletonAnim.mFrameTime);
-
-			if (frame_index >= mTestSkeletonAnim.mSkeletonAnimationFrames.size())
-			{
-				if (mLoopButton->GetIsToggled())
-				{
-					mAnimPlayback.Reset();
-					frame_index = 0;
-				}
-				else
-					frame_index = mTestSkeletonAnim.mSkeletonAnimationFrames.size() - 1;
-			}
-		}
+		mAnimPlayback.UpdatePause(mRenderTime);
+		mAnimPlayback.mPlaybackTime = (float) frame_index * mTestSkeletonAnim.mFrameTime;
 	}
 	else
 	{
-		mAnimPlayback.UpdatePause(mRenderTime);
-	}
-
-	if (mFrameSlider != NULL)
-	{
-		float slider_pos = 0.0f;
-
-		if (frame_index >= 0 && !mTestSkeletonAnim.mSkeletonAnimationFrames.empty())
+		if (mPlayButton == NULL || mPlayButton->GetIsToggled())
 		{
-			slider_pos = (float) frame_index / (float) mTestSkeletonAnim.mSkeletonAnimationFrames.size();
+			mAnimPlayback.UpdatePlay(mRenderTime);
+
+			if (!mTestSkeletonAnim.mSkeletonAnimationFrames.empty())
+			{
+				frame_index = (int) (mAnimPlayback.mPlaybackTime / mTestSkeletonAnim.mFrameTime);
+
+				if (frame_index >= (int) mTestSkeletonAnim.mSkeletonAnimationFrames.size())
+				{
+					if (mLoopButton->GetIsToggled())
+					{
+						mAnimPlayback.Reset();
+						frame_index = (!mIncludeDefaultPoseInPlayback && mTestSkeletonAnim.mSkeletonAnimationFrames.size() >= 2) ? 1 : 0;
+						mAnimPlayback.mPlaybackTime = (float) frame_index * mTestSkeletonAnim.mFrameTime;
+					}
+					else
+						frame_index = mTestSkeletonAnim.mSkeletonAnimationFrames.size() - 1;
+				}
+			}
+		}
+		else
+		{
+			frame_index = SliderToFrameIndex(mFrameSlider != NULL ? mFrameSlider->GetSliderPos() : 0.0f);
+			mAnimPlayback.UpdatePause(mRenderTime);
 		}
 
-		mFrameSlider->SetSliderPos(slider_pos);
+		if (mFrameSlider != NULL)
+		{
+			float slider_pos = FrameIndexToSlider(frame_index);
+			mFrameSlider->SetSliderPos(slider_pos);
+		}
 	}
 	
 	// We are one frame off with the camera!
@@ -455,6 +516,8 @@ void BigfootScene::OnFileDropped(BE::MainWindow* inWindow, const char* inFilePat
 			mGrid.Setup(render_bounds, grid_division_count);
 
 			mAnimPlayback.Reset();
+			if (mFrameSlider != NULL)
+				mFrameSlider->SetSliderPos(0.0f);
 		}
 	}
 	else
@@ -476,7 +539,16 @@ void BigfootScene::ProcessWidgetEvents(BE::MainWindow* inWindow, BE::WidgetEvent
 	{
 		const BE::WidgetEvent& widget_event = inManager.GetEvent(i);
 		if (widget_event.mWidget == mRewindButton)
+		{
+			int frame_index = (!mIncludeDefaultPoseInPlayback && mTestSkeletonAnim.mSkeletonAnimationFrames.size() >= 2) ? 1 : 0;
+			
 			mAnimPlayback.Reset();
+			mAnimPlayback.mPlaybackTime = (float) frame_index * mTestSkeletonAnim.mFrameTime;
+			
+
+			if (mFrameSlider != NULL)
+				mFrameSlider->SetSliderPos(FrameIndexToSlider(frame_index));
+		}
 	}
 }
 

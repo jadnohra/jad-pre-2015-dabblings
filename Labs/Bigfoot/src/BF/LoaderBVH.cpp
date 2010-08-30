@@ -582,6 +582,11 @@ namespace BF
 
 												if (mFrameIndex == 0)
 												{
+													mSkeleton.mDefaultPose.mRootTranslation = LoaderBVH::ToOpenGLTranslation(translation);
+												}
+
+												if (mFrameIndex == 0)
+												{
 													//mSkeleton.mJoints[node.mJointIndex].mLocalTransform.mPosition += LoaderBVH::ToOpenGLTranslation(translation);
 												}
 											}
