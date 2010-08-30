@@ -2,6 +2,7 @@
 #define _INCLUDED_BIGEYE_BIGEYEWIDGETS_H
 
 #include <stack>
+#include <algorithm>
 #include "BEMath.h"
 #include "OGL.h"
 #include "MagickWand.h"
@@ -241,8 +242,9 @@ namespace BE
 		bool		Create(const WidgetContext& inContext, const glm::vec2& inPos, const glm::vec2& inSize, const MagicWand::TextInfo& inTextInfo, const MagicWand::SizeConstraints& inSizeConstraints);
 		bool		CreateVertical(const WidgetContext& inContext, const glm::vec2& inPos, const glm::vec2& inSize);
 
-		void		SetSliderPos(float inPos)	{ mSliderPos = inPos; }
+		void		SetSliderPos(float inPos)	{ mSliderPos = std::min(1.0f, std::max(0.0f, inPos)); }
 		float		GetSliderPos() const		{ return mSliderPos; }
+		bool		IsBeingDraggedByMouse() const	{ return mHasMouseSliderFocus; }
 
 		virtual void Update(const WidgetContext& inContext, const SceneTransform& inParentTransform, bool inParentTransformDirty);
 		
