@@ -80,6 +80,7 @@ public:
 	virtual bool SupportsDragAndDrop() { return true; }
 	virtual void OnFileDropped(BE::MainWindow* inWindow, const char* inFilePath);
 
+	virtual void ProcessWidgetEvents(BE::MainWindow* inWindow, BE::WidgetEventManager& inManager);
 	virtual void Update(const BE::WidgetContext& context, BE::SimpleRenderToTextureWidget& inParent, BE::OGLRenderToTexture& inTexture);
 	virtual void Render(BE::Renderer& inRenderer);
 
@@ -465,6 +466,17 @@ void BigfootScene::OnFileDropped(BE::MainWindow* inWindow, const char* inFilePat
 		BF::AAB default_gid_aab;
 		default_gid_aab.Include(glm::vec3(-50.0f, -50.0f, -50.0f));
 		mGrid.Setup(default_gid_aab, glm::vec2(100.0f, 100.0f));
+	}
+}
+
+
+void BigfootScene::ProcessWidgetEvents(BE::MainWindow* inWindow, BE::WidgetEventManager& inManager)
+{
+	for (size_t i=0; i<inManager.GetEventCount(); ++i)
+	{
+		const BE::WidgetEvent& widget_event = inManager.GetEvent(i);
+		if (widget_event.mWidget == mRewindButton)
+			mAnimPlayback.Reset();
 	}
 }
 
