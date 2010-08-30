@@ -20,6 +20,7 @@ MainWindow::MainWindow(MainWindowClient* inClient)
 	mMouseRight = false;
 	mMouseRightChanged = false;
 	mMouseScrollChanged = false;
+	mMouseScroll = 0;
 }
 
 
