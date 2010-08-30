@@ -4,7 +4,6 @@
 namespace BE
 {
 
-
 MainWindow::MainWindow(MainWindowClient* inClient)
 :	mWindow(NULL)
 ,	mClient(inClient)

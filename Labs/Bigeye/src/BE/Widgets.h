@@ -195,6 +195,7 @@ namespace BE
 		bool		Create(const WidgetContext& inContext, const glm::vec2& inPos, bool inIsToggleButton, const MagicWand::TextInfo& inTextInfo, const MagicWand::SizeConstraints& inSizeConstraints);
 
 		void		SetIsToggled(bool inIsToggled);
+		bool		GetIsToggled() const { return mIsToggled; }
 
 		virtual void Update(const WidgetContext& inContext, const SceneTransform& inParentTransform, bool inParentTransformDirty);
 		
