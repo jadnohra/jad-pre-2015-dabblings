@@ -221,6 +221,10 @@ bool MainWindow::Update(float inTimeSecs)
 		if (mWindow->GetHWND() == NULL)
 			return false;
 
+		if (mClient != NULL)
+			mClient->ProcessWidgetEvents(this, mWidgetEventManager);
+
+		mWidgetEventManager.ClearEvents();
 		ResetMsgInputs();
 		
 

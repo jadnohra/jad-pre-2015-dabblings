@@ -42,6 +42,7 @@ namespace BE
 		virtual bool SupportsDragAndDrop() { return false; }
 		virtual void OnFilesDropped(MainWindow* inWindow, int inCount) {}
 		virtual void OnFileDropped(MainWindow* inWindow, const char* inFilePath) {}
+		virtual void ProcessWidgetEvents(MainWindow* inWindow, WidgetEventManager& inManager) {}
 	};
 
 	class MainWindow
@@ -67,6 +68,8 @@ namespace BE
 		MagicWand&				GetWand() const					{ return mWand; }
 		NativeWindowWidget*		GetRootWidget()					{ return mWindow; }
 		MainWindowClient*		GetClient() const				{ return mClient; }
+		WidgetEventManager&		GetWidgetEventManager() const	{ return mWidgetEventManager; }
+
 
 	protected:
 
@@ -81,6 +84,7 @@ namespace BE
 
 		Renderer				mRenderer;
 		
+		mutable WidgetEventManager		mWidgetEventManager;
 
 		bool					mMouseMoved;
 		glm::vec2				mMousePos;

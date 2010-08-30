@@ -154,6 +154,9 @@ void SimpleButtonWidget::Update(const WidgetContext& inContext, const SceneTrans
 		mIsHighlighted = false;
 	}
 
+	if (was_mouse_pressed && !mIsMousePressed)
+		inContext.mMainWindow.GetWidgetEventManager().AddEvent(WidgetEvent(this, NULL));
+
 	if (mIsToggleButton)
 	{
 		if (was_mouse_pressed && !mIsMousePressed)

@@ -6,6 +6,7 @@
 #include "OGL.h"
 #include "MagickWand.h"
 #include "RenderTreeBuilder.h"
+#include "WidgetEvent.h"
 
 namespace BE 
 {
