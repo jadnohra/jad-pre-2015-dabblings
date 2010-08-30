@@ -16,6 +16,32 @@ public:
 		ETestSkeletonScene,
 	};
 
+	struct AnimPlayback
+	{
+		float mLastRenderTime;
+		float mPlaybackTime;
+
+		void Reset()
+		{
+			mLastRenderTime = -1.0f;
+			mPlaybackTime = 0.0f;
+		}
+
+		void UpdatePlay(float inRenderTime)
+		{
+			if (mLastRenderTime == -1.0f)
+				mLastRenderTime = inRenderTime;
+
+			mPlaybackTime += inRenderTime - mLastRenderTime;
+			mLastRenderTime = inRenderTime;
+		}
+
+		void UpdatePause(float inRenderTime)
+		{
+			mLastRenderTime = inRenderTime;
+		}
+	};
+
 	float mRenderTime;
 	glm::vec2 mSize;
 	BE::OGLRenderToTexture* mTexture;
@@ -31,11 +57,21 @@ public:
 	BF::SkeletonAnimationFrames mTestSkeletonAnim;
 	BF::SkeletonRenderer mTestSkeletonRenderer;
 
+	AnimPlayback mAnimPlayback;
+
+	BE::SimpleButtonWidget* mPlayButton;
+	BE::SimpleButtonWidget* mLoopButton;
+	BE::SimpleButtonWidget* mRewindButton;
+	BE::SimpleSliderWidget* mFrameSlider;
 
 	BigfootScene::BigfootScene() 
 	:	mTestMode(ETestBasicScene)
 	,	mAutoSetupBasicScene(true)
 	,	mRenderTime(-1.0f)
+	,	mPlayButton(NULL)
+	,	mLoopButton(NULL)
+	,	mRewindButton(NULL)
+	,	mFrameSlider(NULL)
 	{
 	}
 
@@ -64,7 +100,7 @@ int main()
 	BigfootScene scene;
 	BE::MainWindow main_window(&scene);
 	
-	if (main_window.Create("Bigfoot", 1280, 1024))
+	if (main_window.Create("Bigfoot", 1024, 768))
 	{
 		CreateWidgets(main_window, scene);
 
@@ -92,7 +128,7 @@ void CreateWidgets(BE::MainWindow& inWindow, BigfootScene& inScene)
 
 	{
 		SimplePanelWidget* widget = new SimplePanelWidget();
-		widget->Create(context, glm::vec2(10.0f, 30.0f), glm::vec2(1200.0f, 960.0f), MagicWand::FRAME_NORMAL_CUT_UPPER, SimplePanelWidget::NoOverflowSlider, false);
+		widget->Create(context, glm::vec2(10.0f, 30.0f), glm::vec2(900.0f, 695.0f), MagicWand::FRAME_NORMAL_CUT_UPPER, SimplePanelWidget::NoOverflowSlider, false);
 		root->GetChildren().mChildWidgets.push_back(widget);
 
 		SimplePanelWidget* parent_widget = widget;
@@ -104,6 +140,70 @@ void CreateWidgets(BE::MainWindow& inWindow, BigfootScene& inScene)
 			widget->SetScene(&inScene);
 			children.mChildWidgets.push_back(widget);
 		}
+	}
+
+	{
+		SimplePanelWidget* widget = new SimplePanelWidget();
+		widget->Create(context, glm::vec2(10.0f, 730.0f), glm::vec2(900.0f, 30.0f), MagicWand::FRAME_NORMAL, SimplePanelWidget::NoOverflowSlider, true);
+		root->GetChildren().mChildWidgets.push_back(widget);
+
+		SimplePanelWidget* parent_widget = widget;
+		ChildWidgetContainer& children = widget->GetChildren();
+
+		MagicWand::SizeConstraints sizeConstraints;
+		horiz2d(sizeConstraints.mMinSize) = 25.0f;
+		horiz2d(sizeConstraints.mMaxSize) = 25.0f;
+
+		float pos_vert = 5.0f;
+		float pos_horiz = 10.0f;
+
+		{
+			SimpleButtonWidget* button_widget = new SimpleButtonWidget();
+			button_widget->Create(context, glm::vec2(pos_horiz, pos_vert), true, MagicWand::TextInfo(" > ", 0, 14.0f, true, glm::vec2(2.0f, 2.0f)), sizeConstraints);
+
+			pos_horiz += 30.0f;
+
+			children.mChildWidgets.push_back(button_widget);
+			inScene.mPlayButton = button_widget;
+		}
+
+		{
+			SimpleButtonWidget* button_widget = new SimpleButtonWidget();
+			button_widget->Create(context, glm::vec2(pos_horiz, pos_vert), false, MagicWand::TextInfo(" << ", 0, 14.0f, true, glm::vec2(2.0f, 2.0f)), sizeConstraints);
+
+			pos_horiz += 30.0f;
+
+			children.mChildWidgets.push_back(button_widget);
+			inScene.mRewindButton = button_widget;
+		}
+
+		{
+			SimpleButtonWidget* button_widget = new SimpleButtonWidget();
+			button_widget->Create(context, glm::vec2(pos_horiz, pos_vert), true, MagicWand::TextInfo("oo", 0, 14.0f, true, glm::vec2(2.0f, 2.0f)), sizeConstraints);
+
+			pos_horiz += 30.0f;
+
+			children.mChildWidgets.push_back(button_widget);
+			inScene.mLoopButton = button_widget;
+		}
+
+		{
+			MagicWand::SizeConstraints sizeConstraints;
+			vert2d(sizeConstraints.mMinSize) = 18.0f;
+			vert2d(sizeConstraints.mMaxSize) = 18.0f;
+
+			pos_horiz += 25.0f;
+
+			SimpleSliderWidget* slider_widget = new SimpleSliderWidget();
+			slider_widget->Create(context, glm::vec2(pos_horiz, pos_vert+1.0f), glm::vec2(600.0f, 0.0f), MagicWand::TextInfo("Frame", 0, 12.0f, true, glm::vec2(4.0f, 2.0f)), sizeConstraints);
+			slider_widget->SetSliderPos(0.0f);
+			
+			pos_horiz += vert2d(slider_widget->GetSize()) + 5.0f;
+
+			children.mChildWidgets.push_back(slider_widget);
+			inScene.mFrameSlider = slider_widget;
+		}
+
 	}
 }
 
@@ -224,12 +324,46 @@ void BigfootScene::RenderTestSkeletonScene(BE::Renderer& inRenderer)
 
 	static int frame_index = -1;
 
-	if (!mTestSkeletonAnim.mSkeletonAnimationFrames.empty())
-		frame_index = (int) (mRenderTime / mTestSkeletonAnim.mFrameTime) % mTestSkeletonAnim.mSkeletonAnimationFrames.size();
+	if (mPlayButton == NULL || mPlayButton->GetIsToggled())
+	{
+		mAnimPlayback.UpdatePlay(mRenderTime);
 
+		if (!mTestSkeletonAnim.mSkeletonAnimationFrames.empty())
+		{
+			frame_index = (int) (mAnimPlayback.mPlaybackTime / mTestSkeletonAnim.mFrameTime);
+
+			if (frame_index >= mTestSkeletonAnim.mSkeletonAnimationFrames.size())
+			{
+				if (mLoopButton->GetIsToggled())
+				{
+					mAnimPlayback.Reset();
+					frame_index = 0;
+				}
+				else
+					frame_index = mTestSkeletonAnim.mSkeletonAnimationFrames.size() - 1;
+			}
+		}
+	}
+	else
+	{
+		mAnimPlayback.UpdatePause(mRenderTime);
+	}
+
+	if (mFrameSlider != NULL)
+	{
+		float slider_pos = 0.0f;
+
+		if (frame_index >= 0 && !mTestSkeletonAnim.mSkeletonAnimationFrames.empty())
+		{
+			slider_pos = (float) frame_index / (float) mTestSkeletonAnim.mSkeletonAnimationFrames.size();
+		}
+
+		mFrameSlider->SetSliderPos(slider_pos);
+	}
+	
 	// We are one frame off with the camera!
 	mTestSkeletonRenderer.Render(mTestSkeleton, frame_index, &mTestSkeletonAnim, 
-								mCamera.GetViewMatrix(), true, true, skeleton_bounds);
+									mCamera.GetViewMatrix(), true, true, skeleton_bounds);
 }
 
 
@@ -318,6 +452,8 @@ void BigfootScene::OnFileDropped(BE::MainWindow* inWindow, const char* inFilePat
 			grid_division_count.x = render_bounds.GetExtents().x / nice_grid_unit_scale;
 			grid_division_count.y = render_bounds.GetExtents().z / nice_grid_unit_scale;
 			mGrid.Setup(render_bounds, grid_division_count);
+
+			mAnimPlayback.Reset();
 		}
 	}
 	else
