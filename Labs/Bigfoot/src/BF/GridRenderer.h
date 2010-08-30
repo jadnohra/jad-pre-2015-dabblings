@@ -12,17 +12,19 @@ class GridRenderer
 public:
 
 	GridRenderer()
-	:	mGridWidth(1)
-	,	mGridLength(1)
-	,	mScale(1.0f)
+	:	mDivisionCount(1.0f)
 	{
 	}
 
-	void Setup(int inWidth, int inLength, float inScale)
+	void Setup(const AAB& inBox, glm::vec2& inDivisionCount)
 	{
-		mGridWidth = inWidth;
-		mGridLength = inLength;
-		mScale = inScale;
+		mBox = inBox;
+		mDivisionCount = inDivisionCount;
+	}
+
+	static float RoundByInc(float inNum, float inInc)
+	{
+		return (float) ((int) (inNum / inInc)) * inInc;
 	}
 
 	void Render()
@@ -36,39 +38,49 @@ public:
 				
 		glColor3fv(glm::value_ptr(thin_color));
 
+		glm::vec2 unit_inc;
+		unit_inc.x = mBox.GetExtents().x / mDivisionCount.x;
+		unit_inc.y = mBox.GetExtents().z / mDivisionCount.y;
+
+		AAB unit_nice_box;
+		unit_nice_box.mMin.x = RoundByInc(mBox.mMin.x, unit_inc.x) - unit_inc.x;
+		unit_nice_box.mMin.y = RoundByInc(mBox.mMin.z, unit_inc.y) - unit_inc.y;
+		unit_nice_box.mMax.x = RoundByInc(mBox.mMax.x, unit_inc.x) + unit_inc.x;
+		unit_nice_box.mMax.y = RoundByInc(mBox.mMax.z, unit_inc.y) + unit_inc.y;
+
 		glBegin(GL_LINES);
-		for (int x=-mGridWidth; x<=mGridWidth; ++x)
+		for (float x=unit_nice_box.mMin.x; x<=unit_nice_box.mMax.x; x += unit_inc.x)
 		{
-			if (x % 10 == 0)
+			if ((int) x % 10 == 0)
 			{
-				if (x == 0)
+				if ((int) x == 0)
 					glColor3fv(glm::value_ptr(x_color));
 				else
 					glColor3fv(glm::value_ptr(thick_color));
 			}
 
-			glVertex3fv(glm::value_ptr(ToWorldVertex(x, -mGridLength))); 
-			glVertex3fv(glm::value_ptr(ToWorldVertex(x, mGridLength))); 
+			glVertex3fv(glm::value_ptr(ToWorldVertex(x, unit_nice_box.mMin.y))); 
+			glVertex3fv(glm::value_ptr(ToWorldVertex(x, unit_nice_box.mMax.y))); 
 
-			if (x % 10 == 0)
+			if ((int) x % 10 == 0)
 			{
 				glColor3fv(glm::value_ptr(thin_color));
 			}
 		}
-		for (int y=-mGridLength; y<=mGridLength; ++y)
+		for (float y=unit_nice_box.mMin.y; y<=unit_nice_box.mMax.y; y += unit_inc.y)
 		{
-			if (y % 10 == 0)
+			if ((int) y % 10 == 0)
 			{
-				if (y == 0)
+				if ((int) y == 0)
 					glColor3fv(glm::value_ptr(y_color));
 				else
 					glColor3fv(glm::value_ptr(thick_color));
 			}
 
-			glVertex3fv(glm::value_ptr(ToWorldVertex(-mGridWidth, y))); 
-			glVertex3fv(glm::value_ptr(ToWorldVertex(mGridWidth, y))); 
+			glVertex3fv(glm::value_ptr(ToWorldVertex(unit_nice_box.mMin.x, y))); 
+			glVertex3fv(glm::value_ptr(ToWorldVertex(unit_nice_box.mMax.x, y))); 
 
-			if (y % 10 == 0)
+			if ((int) y % 10 == 0)
 			{
 				glColor3fv(glm::value_ptr(thin_color));
 			}
@@ -78,14 +90,13 @@ public:
 		glDisable(GL_COLOR_MATERIAL);
 	}
 
-	glm::vec3 ToWorldVertex(int inX, int inY)
+	glm::vec3 ToWorldVertex(float inX, float inY)
 	{
-		return glm::vec3(mScale * (float) inX, 0.0f, mScale * (float) inY);
+		return glm::vec3(inX, 0.0f, inY);
 	}
 
-	int mGridWidth;
-	int mGridLength;
-	float mScale;
+	AAB mBox;
+	glm::vec2 mDivisionCount;
 };
 
 }

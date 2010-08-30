@@ -236,7 +236,10 @@ void BigfootScene::RenderTestSkeletonScene(BE::Renderer& inRenderer)
 bool BigfootScene::Create()
 {
 	mCameraSetup.SetupDepthPlanes(glm::vec2(0.1f, 100.0f));
-	mGrid.Setup(50, 50, 1.0f);
+	BF::AAB default_gid_aab;
+	default_gid_aab.Include(glm::vec3(-50.0f, -50.0f, -50.0f));
+	default_gid_aab.Include(glm::vec3(50.0f, 50.0f, 50.0f));
+	mGrid.Setup(default_gid_aab, glm::vec2(100.0f, 100.0f));
 	mCameraController.AttachCamera(mCamera);
 	
 	return true;
@@ -252,11 +255,12 @@ void BigfootScene::OnFileDropped(BE::MainWindow* inWindow, const char* inFilePat
 			BF::AAB render_bounds;
 
 			BF::AAB frame_render_bounds;
+			BF::AAB default_pose_frame_render_bounds;
 			mTestSkeletonRenderer.GetRenderBounds(mTestSkeleton, -1, &mTestSkeletonAnim, true, true, frame_render_bounds);
+			default_pose_frame_render_bounds = frame_render_bounds;
 			render_bounds.Include(frame_render_bounds);
 
 			// TODO use grid AAB and extract from animation
-			/*
 			if (!mTestSkeletonAnim.mSkeletonAnimationFrames.empty())
 			{
 				BF::AAB frame_render_bounds;
@@ -267,46 +271,53 @@ void BigfootScene::OnFileDropped(BE::MainWindow* inWindow, const char* inFilePat
 					render_bounds.Include(frame_render_bounds);
 				}
 			}
-			*/
-
+			
 			// include origin
-			//render_bounds.Include(glm::vec3(0.0f));
+			render_bounds.Include(glm::vec3(0.0f));
+
+			BF::Sphere anim_sphere;
+			anim_sphere.InitFrom(render_bounds);
 
 			BF::Sphere skeleton_sphere;
-			skeleton_sphere.InitFrom(render_bounds);
+			skeleton_sphere.InitFrom(default_pose_frame_render_bounds);
 			printf("Model scale: %f units\n", skeleton_sphere.mRadius);
 
 			BF::CameraFollowSphereAutoSetup cam_setup;
 
-			cam_setup.SetFollowParams(glm::vec3(0.0f, 0.0f, 1.0f));
+			cam_setup.SetFollowParams(glm::vec3(1.0f, 1.0f, -1.0f));
 			glm::vec2 auto_depth_planes;
-			cam_setup.SetupCamera(skeleton_sphere, mCameraSetup.GetFOV(), glm::vec2(0.001f, 10000.0f), mCamera, auto_depth_planes);
+			cam_setup.SetupCamera(anim_sphere, mCameraSetup.GetFOV(), glm::vec2(0.001f, 10000.0f), mCamera, auto_depth_planes);
 			auto_depth_planes.y *= 50.0f;
 			mCameraSetup.SetupDepthPlanes(auto_depth_planes);
 
+			float grid_unit_scale = skeleton_sphere.mRadius / 4.0f;
+			float nice_grid_unit_scale = 1.0f;
 			{
-				float scale = 1.0f;
-				float scale_test = skeleton_sphere.mRadius;
+				float scale_test = grid_unit_scale;
 				if (scale_test > 1.0f)
 				{
-					while (scale_test > 0.6f)
+					while (scale_test > 1.0f)
 					{
 						scale_test /= 10.0f;
-						scale *= 10.0f;
+						nice_grid_unit_scale *= 10.0f;
 					}
 				}
 				else
 				{
-					while (scale_test < 4.0f)
+					while (scale_test < 0.1f)
 					{
 						scale_test *= 10.0f;
-						scale /= 10.0f;
+						nice_grid_unit_scale /= 10.0f;
 					}
 				}
 
-				mGrid.Setup(20, 20, scale / 10.0f);
-				//mGrid.Setup(scale, scale, scale / 25.0f);
+				nice_grid_unit_scale /= 10.0f;
 			}
+			
+			glm::vec2 grid_division_count;
+			grid_division_count.x = render_bounds.GetExtents().x / nice_grid_unit_scale;
+			grid_division_count.y = render_bounds.GetExtents().z / nice_grid_unit_scale;
+			mGrid.Setup(render_bounds, grid_division_count);
 		}
 	}
 	else
@@ -315,7 +326,9 @@ void BigfootScene::OnFileDropped(BE::MainWindow* inWindow, const char* inFilePat
 		mAutoSetupBasicScene = true;
 
 		mCameraSetup.SetupDepthPlanes(glm::vec2(0.1f, 100.0f));
-		mGrid.Setup(50, 50, 1.0f);
+		BF::AAB default_gid_aab;
+		default_gid_aab.Include(glm::vec3(-50.0f, -50.0f, -50.0f));
+		mGrid.Setup(default_gid_aab, glm::vec2(100.0f, 100.0f));
 	}
 }
 
