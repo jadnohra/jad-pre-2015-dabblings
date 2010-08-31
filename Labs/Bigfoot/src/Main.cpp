@@ -6,6 +6,8 @@
 #include "BF/GridRenderer.h"
 #include "BF/LoaderBVH.h"
 
+#define BUILD_SUBMISSION
+
 class BigfootScene : public BE::SimpleRenderToTextureWidget::Scene, public BE::MainWindowClient
 {
 public:
@@ -116,7 +118,7 @@ int main()
 	BigfootScene scene;
 	BE::MainWindow main_window(&scene);
 	
-	if (main_window.Create("Bigfoot", 1024, 768))
+	if (main_window.Create("Bigfoot [viewer]", 1024, 768))
 	{
 		CreateWidgets(main_window, scene);
 
@@ -143,7 +145,6 @@ void CreateWidgets(BE::MainWindow& inWindow, BigfootScene& inScene)
 	using namespace BE;
 
 	
-
 	{
 		SimplePanelWidget* widget = new SimplePanelWidget();
 		widget->Create(context, glm::vec2(10.0f, 10.0f), glm::vec2(1004.0f, 715.0f), MagicWand::FRAME_NORMAL_CUT_UPPER, SimplePanelWidget::NoOverflowSlider, false);
@@ -276,7 +277,7 @@ void CreateWidgets(BE::MainWindow& inWindow, BigfootScene& inScene)
 				
 			{
 				SimpleTextWidget* text_widget = new SimpleTextWidget();
-				text_widget->Create(context, glm::vec2(pos_horiz, pos_vert), MagicWand::TextInfo("BigFoot ver. 0.1b", 0, 12.0f, true, glm::vec2(0.0f, 0.0f)), MagicWand::SizeConstraints());
+				text_widget->Create(context, glm::vec2(pos_horiz, pos_vert), MagicWand::TextInfo("BigFoot [viewer] ver. 0.1b", 0, 12.0f, true, glm::vec2(0.0f, 0.0f)), MagicWand::SizeConstraints());
 					
 				pos_vert += vert2d(text_widget->GetSize()) + height_offset;
 
@@ -348,6 +349,11 @@ void CreateWidgets(BE::MainWindow& inWindow, BigfootScene& inScene)
 void BigfootScene::RenderTestBasicScene(BE::Renderer& inRenderer)
 {
 	bool test_controller = true;
+
+#ifdef BUILD_SUBMISSION
+	test_controller = true;
+#endif
+
 	glm::mat4 view_matrix;
 
 	float rtri = 16.0f * mRenderTime;
@@ -359,8 +365,11 @@ void BigfootScene::RenderTestBasicScene(BE::Renderer& inRenderer)
 		{
 			BF::CameraFollowSphereAutoSetup camera_auto_setup;
 			BF::Sphere sphere; sphere.mPosition = glm::vec3(-1.5f,0.0f,-6.0f); sphere.mRadius = 5.0f;
+#ifdef BUILD_SUBMISSION
+			sphere.mPosition = glm::vec3(0.0f,0.0f,0.0f);
+#endif
 			glm::vec2 auto_depth_planes;
-			camera_auto_setup.SetFollowParams(glm::vec3(1.0f, 1.0f, 0.0f));
+			camera_auto_setup.SetFollowParams(glm::vec3(1.0f, 1.0f, 1.0f));
 			camera_auto_setup.SetupCamera(sphere, mCameraSetup.GetFOV(), glm::vec2(0.001f, 1000.0f), mCamera, auto_depth_planes);
 			auto_depth_planes.y *= 100.0f;
 			mCameraSetup.SetupDepthPlanes(auto_depth_planes);
@@ -380,6 +389,10 @@ void BigfootScene::RenderTestBasicScene(BE::Renderer& inRenderer)
 		glRotatef(rtri,0.0f,1.0f,0.0f);						// Rotate The Triangle On The Y axis ( NEW )
 	}
 	
+#ifdef BUILD_SUBMISSION
+			return;
+#endif
+
 	glBegin(GL_TRIANGLES);							// Start Drawing A Triangle
 	glColor3f(1.0f,0.0f,0.0f);						// Red
 	glVertex3f( 0.0f, 1.0f, 0.0f);					// Top Of Triangle (Front)
@@ -794,10 +807,15 @@ void BigfootScene::Render(BE::Renderer& inRenderer)
 	{
 		case ETestSkeletonScene: 
 		{
-			RenderTestSkeletonScene(inRenderer); break;
+			RenderTestSkeletonScene(inRenderer); 
 		}
+		break;
 
-		default: RenderTestBasicScene(inRenderer); break;
+		default: 
+		{
+			RenderTestBasicScene(inRenderer); 
+		}
+		break;
 	}
 	
 	mTexture->EndRender();
