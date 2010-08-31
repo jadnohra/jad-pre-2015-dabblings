@@ -1,0 +1,29 @@
+﻿
+Microsoft Visual Studio Solution File, Format Version 10.00
+# Visual C++ Express 2008
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "Bigfoot", "Bigfoot.vcproj", "{D0A2FC7F-E6E8-4F18-BFD8-53BB3388EAFD}"
+	ProjectSection(ProjectDependencies) = postProject
+		{837AA69E-17EE-42BC-9F49-D52678BFB0CE} = {837AA69E-17EE-42BC-9F49-D52678BFB0CE}
+	EndProjectSection
+EndProject
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "Bigeye", "..\..\..\Bigeye\Build\VS2008\Bigeye.vcproj", "{837AA69E-17EE-42BC-9F49-D52678BFB0CE}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Win32 = Debug|Win32
+		Release|Win32 = Release|Win32
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{D0A2FC7F-E6E8-4F18-BFD8-53BB3388EAFD}.Debug|Win32.ActiveCfg = Debug|Win32
+		{D0A2FC7F-E6E8-4F18-BFD8-53BB3388EAFD}.Debug|Win32.Build.0 = Debug|Win32
+		{D0A2FC7F-E6E8-4F18-BFD8-53BB3388EAFD}.Release|Win32.ActiveCfg = Release|Win32
+		{D0A2FC7F-E6E8-4F18-BFD8-53BB3388EAFD}.Release|Win32.Build.0 = Release|Win32
+		{837AA69E-17EE-42BC-9F49-D52678BFB0CE}.Debug|Win32.ActiveCfg = Debug|Win32
+		{837AA69E-17EE-42BC-9F49-D52678BFB0CE}.Debug|Win32.Build.0 = Debug|Win32
+		{837AA69E-17EE-42BC-9F49-D52678BFB0CE}.Release|Win32.ActiveCfg = Release|Win32
+		{837AA69E-17EE-42BC-9F49-D52678BFB0CE}.Release|Win32.Build.0 = Release|Win32
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+EndGlobal

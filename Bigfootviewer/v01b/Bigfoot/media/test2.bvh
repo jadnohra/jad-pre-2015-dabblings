@@ -1,0 +1,51 @@
+HIERARCHY
+ROOT joint_1
+{
+	OFFSET	0.00	0.00	0.00
+	CHANNELS 0
+	JOINT joint_2
+	{
+		OFFSET	 0.00	 1.00	 0.00
+		CHANNELS 3 Zrotation Xrotation Yrotation
+		JOINT joint_3
+		{
+			OFFSET	 0.00	 0.5	 0.00
+			CHANNELS 3 Zrotation Xrotation Yrotation
+			
+			JOINT joint_4
+			{
+				OFFSET	 0.00	 0.5	 0.00
+				CHANNELS 3 Zrotation Xrotation Yrotation 
+				
+				JOINT joint_5
+				{
+					OFFSET	 0.00	 0.5	 0.00
+					CHANNELS 3 Zrotation Xrotation Yrotation 
+					
+					JOINT joint_6
+					{
+						OFFSET	 0.00	 0.5	 0.00
+						CHANNELS 3 Zrotation Xrotation Yrotation 
+						
+						JOINT joint_7
+						{
+							OFFSET	 0.00	 0.5	 0.00
+							CHANNELS 3 Zrotation Xrotation Yrotation 
+							
+							JOINT joint_8
+							{
+								OFFSET	 0.00	 0.5	 0.00
+								CHANNELS 3 Zrotation Xrotation Yrotation 
+							}
+						}
+					}
+				}
+			}
+		}
+	}
+}
+MOTION
+Frames:    1
+Frame Time: 0.033333
+45 0 0 -90 0 0 0 45 0 0 -90 0 0 0 45 0 0 -90 0 0 0
+ 
