@@ -6,7 +6,6 @@
 #include "BF/GridRenderer.h"
 #include "BF/LoaderBVH.h"
 
-#define BUILD_SUBMISSION
 
 class BigfootScene : public BE::SimpleRenderToTextureWidget::Scene, public BE::MainWindowClient
 {

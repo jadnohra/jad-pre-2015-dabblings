@@ -12,16 +12,21 @@ Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Win32 = Debug|Win32
 		Release|Win32 = Release|Win32
+		Submission|Win32 = Submission|Win32
 	EndGlobalSection
 	GlobalSection(ProjectConfigurationPlatforms) = postSolution
 		{D0A2FC7F-E6E8-4F18-BFD8-53BB3388EAFD}.Debug|Win32.ActiveCfg = Debug|Win32
 		{D0A2FC7F-E6E8-4F18-BFD8-53BB3388EAFD}.Debug|Win32.Build.0 = Debug|Win32
 		{D0A2FC7F-E6E8-4F18-BFD8-53BB3388EAFD}.Release|Win32.ActiveCfg = Release|Win32
 		{D0A2FC7F-E6E8-4F18-BFD8-53BB3388EAFD}.Release|Win32.Build.0 = Release|Win32
+		{D0A2FC7F-E6E8-4F18-BFD8-53BB3388EAFD}.Submission|Win32.ActiveCfg = Submission|Win32
+		{D0A2FC7F-E6E8-4F18-BFD8-53BB3388EAFD}.Submission|Win32.Build.0 = Submission|Win32
 		{837AA69E-17EE-42BC-9F49-D52678BFB0CE}.Debug|Win32.ActiveCfg = Debug|Win32
 		{837AA69E-17EE-42BC-9F49-D52678BFB0CE}.Debug|Win32.Build.0 = Debug|Win32
 		{837AA69E-17EE-42BC-9F49-D52678BFB0CE}.Release|Win32.ActiveCfg = Release|Win32
 		{837AA69E-17EE-42BC-9F49-D52678BFB0CE}.Release|Win32.Build.0 = Release|Win32
+		{837AA69E-17EE-42BC-9F49-D52678BFB0CE}.Submission|Win32.ActiveCfg = Submission|Win32
+		{837AA69E-17EE-42BC-9F49-D52678BFB0CE}.Submission|Win32.Build.0 = Submission|Win32
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
