@@ -63,8 +63,11 @@ public:
 	BE::SimpleButtonWidget* mPlayButton;
 	BE::SimpleButtonWidget* mLoopButton;
 	BE::SimpleButtonWidget* mRewindButton;
+	BE::SimpleButtonWidget* mHelpButton;
+	BE::SimplePanelWidget* mHelpPanel;
 	BE::SimpleButtonWidget* mIncludeDefaultPoseButton;
 	BE::SimpleSliderWidget* mFrameSlider;
+	BE::SimpleSliderWidget* mSpeedSlider;
 
 	BigfootScene::BigfootScene() 
 	:	mTestMode(ETestBasicScene)
@@ -73,8 +76,11 @@ public:
 	,	mPlayButton(NULL)
 	,	mLoopButton(NULL)
 	,	mRewindButton(NULL)
+	,	mHelpButton(NULL)
+	,	mHelpPanel(NULL)
 	,	mIncludeDefaultPoseButton(NULL)
 	,	mFrameSlider(NULL)
+	,	mSpeedSlider(NULL)
 	,	mIncludeDefaultPoseInPlayback(true)
 	{
 	}
@@ -97,6 +103,8 @@ public:
 
 	int SliderToFrameIndex(float inSliderPos) const;
 	float FrameIndexToSlider(int inFrameIndex) const;
+
+	float GetPlaySpeed();
 };
 
 
@@ -134,9 +142,11 @@ void CreateWidgets(BE::MainWindow& inWindow, BigfootScene& inScene)
 
 	using namespace BE;
 
+	
+
 	{
 		SimplePanelWidget* widget = new SimplePanelWidget();
-		widget->Create(context, glm::vec2(10.0f, 30.0f), glm::vec2(900.0f, 695.0f), MagicWand::FRAME_NORMAL_CUT_UPPER, SimplePanelWidget::NoOverflowSlider, false);
+		widget->Create(context, glm::vec2(10.0f, 10.0f), glm::vec2(1004.0f, 715.0f), MagicWand::FRAME_NORMAL_CUT_UPPER, SimplePanelWidget::NoOverflowSlider, false);
 		root->GetChildren().mChildWidgets.push_back(widget);
 
 		SimplePanelWidget* parent_widget = widget;
@@ -152,7 +162,7 @@ void CreateWidgets(BE::MainWindow& inWindow, BigfootScene& inScene)
 
 	{
 		SimplePanelWidget* widget = new SimplePanelWidget();
-		widget->Create(context, glm::vec2(10.0f, 730.0f), glm::vec2(900.0f, 30.0f), MagicWand::FRAME_NORMAL, SimplePanelWidget::NoOverflowSlider, true);
+		widget->Create(context, glm::vec2(10.0f, 730.0f), glm::vec2(1004.0f, 30.0f), MagicWand::FRAME_NORMAL, SimplePanelWidget::NoOverflowSlider, true);
 		root->GetChildren().mChildWidgets.push_back(widget);
 
 		SimplePanelWidget* parent_widget = widget;
@@ -211,18 +221,126 @@ void CreateWidgets(BE::MainWindow& inWindow, BigfootScene& inScene)
 			vert2d(sizeConstraints.mMinSize) = 18.0f;
 			vert2d(sizeConstraints.mMaxSize) = 18.0f;
 
+			pos_horiz += 5.0f;
+
+			SimpleSliderWidget* slider_widget = new SimpleSliderWidget();
+			slider_widget->Create(context, glm::vec2(pos_horiz, pos_vert+1.0f), glm::vec2(100.0f, 0.0f), MagicWand::TextInfo("Speed", 0, 12.0f, true, glm::vec2(4.0f, 2.0f)), sizeConstraints);
+			slider_widget->SetSliderPos(0.5f);
+			
+			pos_horiz += horiz2d(slider_widget->GetSize()) + 5.0f;
+
+			children.mChildWidgets.push_back(slider_widget);
+			inScene.mSpeedSlider = slider_widget;
+		}
+
+
+		{
+			MagicWand::SizeConstraints sizeConstraints;
+			vert2d(sizeConstraints.mMinSize) = 18.0f;
+			vert2d(sizeConstraints.mMaxSize) = 18.0f;
+
 			pos_horiz += 25.0f;
 
 			SimpleSliderWidget* slider_widget = new SimpleSliderWidget();
-			slider_widget->Create(context, glm::vec2(pos_horiz, pos_vert+1.0f), glm::vec2(600.0f, 0.0f), MagicWand::TextInfo("Frame", 0, 12.0f, true, glm::vec2(4.0f, 2.0f)), sizeConstraints);
+			slider_widget->Create(context, glm::vec2(pos_horiz, pos_vert+1.0f), glm::vec2(680.0f, 0.0f), MagicWand::TextInfo("Frame", 0, 12.0f, true, glm::vec2(4.0f, 2.0f)), sizeConstraints);
 			slider_widget->SetSliderPos(0.0f);
 			
-			pos_horiz += vert2d(slider_widget->GetSize()) + 5.0f;
+			pos_horiz += horiz2d(slider_widget->GetSize()) + 5.0f;
 
 			children.mChildWidgets.push_back(slider_widget);
 			inScene.mFrameSlider = slider_widget;
 		}
 
+		{
+			SimpleButtonWidget* button_widget = new SimpleButtonWidget();
+			button_widget->Create(context, glm::vec2(975.0f, pos_vert), false, MagicWand::TextInfo(" ? ", 0, 14.0f, true, glm::vec2(2.0f, 2.0f)), sizeConstraints);
+
+			children.mChildWidgets.push_back(button_widget);
+			inScene.mHelpButton = button_widget;
+		}
+
+		{
+			SimplePanelWidget* widget = new SimplePanelWidget();
+			widget->Create(context, glm::vec2(680.0f, 575.0f), glm::vec2(300.0f, 165.0f), MagicWand::FRAME_NORMAL, SimplePanelWidget::NoOverflowSlider, true);
+			root->GetChildren().mChildWidgets.push_back(widget);
+
+			widget->RaiseLocalPosition(0.02f);
+
+			inScene.mHelpPanel = widget;
+			SimplePanelWidget* parent_widget = widget;
+			ChildWidgetContainer& children = widget->GetChildren();
+
+			float pos_horiz = 5.0f;
+			float pos_vert = 5.0f;
+			float height_offset = 2.0f;
+				
+			{
+				SimpleTextWidget* text_widget = new SimpleTextWidget();
+				text_widget->Create(context, glm::vec2(pos_horiz, pos_vert), MagicWand::TextInfo("BigFoot ver. 0.1b", 0, 12.0f, true, glm::vec2(0.0f, 0.0f)), MagicWand::SizeConstraints());
+					
+				pos_vert += vert2d(text_widget->GetSize()) + height_offset;
+
+				children.mChildWidgets.push_back(text_widget);
+			}
+
+			{
+				SimpleTextWidget* text_widget = new SimpleTextWidget();
+				text_widget->Create(context, glm::vec2(pos_horiz, pos_vert), MagicWand::TextInfo("© 2010 Jad Nohra", 0, 10.0f, false, glm::vec2(0.0f, 0.0f)), MagicWand::SizeConstraints());
+					
+				pos_vert += vert2d(text_widget->GetSize()) + 3.0f * height_offset;
+
+				children.mChildWidgets.push_back(text_widget);
+			}
+
+			{
+				SimpleTextWidget* text_widget = new SimpleTextWidget();
+				text_widget->Create(context, glm::vec2(pos_horiz, pos_vert), MagicWand::TextInfo(" * Load .BVH mocap file : Drag and drop into window", 0, 10.0f, false, glm::vec2(0.0f, 0.0f)), MagicWand::SizeConstraints());
+				pos_vert += vert2d(text_widget->GetSize()) + height_offset;
+				children.mChildWidgets.push_back(text_widget);
+			}
+
+			{
+				SimpleTextWidget* text_widget = new SimpleTextWidget();
+				text_widget->Create(context, glm::vec2(pos_horiz, pos_vert), MagicWand::TextInfo(" * Rotate camera : Drag middle mouse button", 0, 10.0f, false, glm::vec2(0.0f, 0.0f)), MagicWand::SizeConstraints());
+				pos_vert += vert2d(text_widget->GetSize()) + height_offset;
+				children.mChildWidgets.push_back(text_widget);
+			}
+
+			{
+				SimpleTextWidget* text_widget = new SimpleTextWidget();
+				text_widget->Create(context, glm::vec2(pos_horiz, pos_vert), MagicWand::TextInfo(" * Zoom camera : Mouse scroll", 0, 10.0f, false, glm::vec2(0.0f, 0.0f)), MagicWand::SizeConstraints());
+				pos_vert += vert2d(text_widget->GetSize()) + height_offset;
+				children.mChildWidgets.push_back(text_widget);
+			}
+
+			{
+				SimpleTextWidget* text_widget = new SimpleTextWidget();
+				text_widget->Create(context, glm::vec2(pos_horiz, pos_vert), MagicWand::TextInfo(" * > : Play / Pause", 0, 10.0f, false, glm::vec2(0.0f, 0.0f)), MagicWand::SizeConstraints());
+				pos_vert += vert2d(text_widget->GetSize()) + height_offset;
+				children.mChildWidgets.push_back(text_widget);
+			}
+
+			{
+				SimpleTextWidget* text_widget = new SimpleTextWidget();
+				text_widget->Create(context, glm::vec2(pos_horiz, pos_vert), MagicWand::TextInfo(" * << : Rewind to start", 0, 10.0f, false, glm::vec2(0.0f, 0.0f)), MagicWand::SizeConstraints());
+				pos_vert += vert2d(text_widget->GetSize()) + height_offset;
+				children.mChildWidgets.push_back(text_widget);
+			}
+
+			{
+				SimpleTextWidget* text_widget = new SimpleTextWidget();
+				text_widget->Create(context, glm::vec2(pos_horiz, pos_vert), MagicWand::TextInfo(" * oo : Loop toggle", 0, 10.0f, false, glm::vec2(0.0f, 0.0f)), MagicWand::SizeConstraints());
+				pos_vert += vert2d(text_widget->GetSize()) + height_offset;
+				children.mChildWidgets.push_back(text_widget);
+			}
+
+			{
+				SimpleTextWidget* text_widget = new SimpleTextWidget();
+				text_widget->Create(context, glm::vec2(pos_horiz, pos_vert), MagicWand::TextInfo(" * T : Show / Hide first frame toggle", 0, 10.0f, false, glm::vec2(0.0f, 0.0f)), MagicWand::SizeConstraints());
+				pos_vert += vert2d(text_widget->GetSize()) + height_offset;
+				children.mChildWidgets.push_back(text_widget);
+			}
+		}
 	}
 }
 
@@ -377,33 +495,40 @@ void BigfootScene::RenderTestSkeletonScene(BE::Renderer& inRenderer)
 {
 	BF::AAB skeleton_bounds;
 
-	mIncludeDefaultPoseInPlayback = (mIncludeDefaultPoseButton == NULL || mIncludeDefaultPoseButton->GetIsToggled());
+	mIncludeDefaultPoseInPlayback = (mIncludeDefaultPoseButton == NULL || mIncludeDefaultPoseButton->IsToggled());
 	int frame_index = -1;
 
-	if (mFrameSlider != NULL && mFrameSlider->IsBeingDraggedByMouse())
+	if (mSpeedSlider != NULL && mSpeedSlider->IsBeingDraggedByMouse())
 	{
 		frame_index = SliderToFrameIndex(mFrameSlider != NULL ? mFrameSlider->GetSliderPos() : 0.0f);
 
 		mAnimPlayback.UpdatePause(mRenderTime);
-		mAnimPlayback.mPlaybackTime = (float) frame_index * mTestSkeletonAnim.mFrameTime;
+		mAnimPlayback.mPlaybackTime = ((float) frame_index * mTestSkeletonAnim.mFrameTime) / GetPlaySpeed();
+	}
+	else if (mFrameSlider != NULL && mFrameSlider->IsBeingDraggedByMouse())
+	{
+		frame_index = SliderToFrameIndex(mFrameSlider != NULL ? mFrameSlider->GetSliderPos() : 0.0f);
+
+		mAnimPlayback.UpdatePause(mRenderTime);
+		mAnimPlayback.mPlaybackTime = ((float) frame_index * mTestSkeletonAnim.mFrameTime) / GetPlaySpeed();
 	}
 	else
 	{
-		if (mPlayButton == NULL || mPlayButton->GetIsToggled())
+		if (mPlayButton == NULL || mPlayButton->IsToggled())
 		{
 			mAnimPlayback.UpdatePlay(mRenderTime);
 
 			if (!mTestSkeletonAnim.mSkeletonAnimationFrames.empty())
 			{
-				frame_index = (int) (mAnimPlayback.mPlaybackTime / mTestSkeletonAnim.mFrameTime);
+				frame_index = (int) (mAnimPlayback.mPlaybackTime * GetPlaySpeed() / mTestSkeletonAnim.mFrameTime);
 
 				if (frame_index >= (int) mTestSkeletonAnim.mSkeletonAnimationFrames.size())
 				{
-					if (mLoopButton->GetIsToggled())
+					if (mLoopButton->IsToggled())
 					{
 						mAnimPlayback.Reset();
 						frame_index = (!mIncludeDefaultPoseInPlayback && mTestSkeletonAnim.mSkeletonAnimationFrames.size() >= 2) ? 1 : 0;
-						mAnimPlayback.mPlaybackTime = (float) frame_index * mTestSkeletonAnim.mFrameTime;
+						mAnimPlayback.mPlaybackTime = ((float) frame_index * mTestSkeletonAnim.mFrameTime) / GetPlaySpeed();
 					}
 					else
 						frame_index = mTestSkeletonAnim.mSkeletonAnimationFrames.size() - 1;
@@ -532,6 +657,24 @@ void BigfootScene::OnFileDropped(BE::MainWindow* inWindow, const char* inFilePat
 	}
 }
 
+float BigfootScene::GetPlaySpeed() 
+{
+	if (mSpeedSlider == NULL)
+		return 1.0f;
+
+	if (mSpeedSlider->GetSliderPos() < 0.5f)
+	{
+		float factor = (mSpeedSlider->GetSliderPos() / 0.5f);
+
+		return 0.01f + factor * (1.0f - 0.01f);
+	}
+	else
+	{
+		float factor = (mSpeedSlider->GetSliderPos() - 0.5f) / 0.5f;
+
+		return 1.0f + factor * (10.0f - 1.0f);
+	}
+}
 
 void BigfootScene::ProcessWidgetEvents(BE::MainWindow* inWindow, BE::WidgetEventManager& inManager)
 {
@@ -543,7 +686,7 @@ void BigfootScene::ProcessWidgetEvents(BE::MainWindow* inWindow, BE::WidgetEvent
 			int frame_index = (!mIncludeDefaultPoseInPlayback && mTestSkeletonAnim.mSkeletonAnimationFrames.size() >= 2) ? 1 : 0;
 			
 			mAnimPlayback.Reset();
-			mAnimPlayback.mPlaybackTime = (float) frame_index * mTestSkeletonAnim.mFrameTime;
+			mAnimPlayback.mPlaybackTime = ((float) frame_index * mTestSkeletonAnim.mFrameTime) / GetPlaySpeed();
 			
 
 			if (mFrameSlider != NULL)
@@ -567,6 +710,9 @@ void BigfootScene::Update(const BE::WidgetContext& context, BE::SimpleRenderToTe
 	
 	mRenderTime = context.mTimeSecs;
 	
+	if (mHelpButton != NULL && mHelpPanel != NULL)
+		mHelpPanel->SetIsVisible(mHelpButton->IsPressed());
+
 	mCameraController.Update(context, inParent, mViewportSetup, mCameraSetup);
 }
 
