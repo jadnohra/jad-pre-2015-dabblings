@@ -1,0 +1,1 @@
+convert -size 40x20 xc:red  xc:blue -append   -rotate 90    basic_test.png

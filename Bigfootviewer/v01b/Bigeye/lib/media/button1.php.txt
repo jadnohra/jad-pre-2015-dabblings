@@ -1,0 +1,189 @@
+ <?php
+/* Create a new Imagick object */
+$im = new Imagick();
+
+/* Create empty canvas */
+$im->newImage( 200, 200, "white", "png" );
+
+/* Create the object used to draw */
+$draw = new ImagickDraw();
+
+/* Set the button color.
+   Changing this value changes the color of the button */
+$draw->setFillColor( "#4096EE" );
+
+/* Create a rectangle */
+$draw->rectangle( 0, 0, 170, 40 );
+
+/* Fill color */
+$draw->setFillColor( "white" );
+
+/* Semi-opaque fill */
+$draw->setFillAlpha( 0.5 );
+
+/* The font used for text */
+$draw->setFont( "./Vera.ttf" );
+
+/* This is the alpha value used to annotate */
+$draw->setFillAlpha( 0.17 );
+
+/* Draw a curve on the button with 17% opaque fill */
+$draw->bezier( array(
+                array( "x" => 0 , "y" => 0 ),
+                array( "x" => 85, "y" => 24 ),
+                array( "x" => 170, "y" => 0 ),
+               ) );
+
+/* Render all pending operations on the image */
+$im->drawImage( $draw );
+
+/* Set fill to fully opaque */
+$draw->setFillAlpha( 1 );
+
+/* Set the font size to 30 */
+$draw->setFontSize( 25 );
+
+/* The text on the */
+$draw->setFillColor( "white" );
+
+/* Annotate the text */
+$im->annotateImage( $draw, 38, 28, 0, "Submit" );
+
+/* Trim extra area out of the image */
+$im->trimImage( 0 );
+
+/* Add round corners */
+$im->roundCorners( 4, 4 );
+
+/* Clone the current object */
+$shadow = $im->clone();
+
+/* Set the image background color to black (shadow color) */
+$shadow->setImageBackgroundColor( new ImagickPixel('black') );
+
+/* Create the shadow */
+$shadow->shadowImage( 40, 1, 1, 1 );
+
+/* Add the original image above */
+$shadow->compositeImage( $im, Imagick::COMPOSITE_OVER, 0, 0 );
+
+/* Output the image */
+header( "Content-Type: image/png" );
+
+echo $shadow;
+?>
+
+
+
+
+function MagickRoundcorners($hwnd, $xRounding, $yRounding,$strokeWidth  = 10, $displace = 5, $correction = -6)
+{
+    $imageWidth = MagickGetImageWidth($hwnd);
+    $imageHeight = MagickGetImageHeight($hwnd);
+
+    if ($imageWidth === false || $imageHeight === false){
+        return false;
+    }
+
+    $status = MagickSetImageType($hwnd, MW_TrueColorMatteType);
+
+    
+    $color = NewPixelWand();
+    $draw = NewDrawingWand();
+    $maskImage = NewMagickWand();
+
+    $status = PixelSetColor($color, "transparent");
+
+    if ($status === false) {
+        MyMagickDestoryWand($maskImage, $color, $draw);
+        return false;
+    }
+
+    $status = MagickNewImage( $maskImage, $imageWidth, $imageHeight, $color );
+    
+    if ($status === false) {
+        MyMagickDestoryWand($maskImage, $color, $draw);
+        return false;
+    }
+
+    MagickSetImageBackgroundColor($maskImage, $color);
+    $status = PixelSetColor($color, "white");
+    
+    if ($status === false) {
+        MyMagickDestoryWand($maskImage, $color, $draw);
+        return false;
+    }
+
+    DrawSetFillColor($draw, $color);
+    $status = PixelSetColor($color, "black");
+            
+    if ($status === false) {
+        MyMagickDestoryWand($maskImage, $color, $draw);
+        return false;
+    }
+    
+    DrawSetStrokeColor($draw, $color);
+    DrawSetStrokeWidth($draw, $strokeWidth);
+
+    DrawRoundRectangle($draw, $displace, $displace, $imageWidth + $correction, $imageHeight + $correction, $xRounding, $yRounding );
+    $status = MagickDrawImage($maskImage, $draw);
+
+    if ($status === false) {
+        MyMagickDestoryWand($maskImage, $color, $draw);
+        return false;
+    }
+
+
+    $status = MagickCompositeImage($hwnd, $maskImage, MW_DstInCompositeOp, 0, 0);
+    if ($status === false) {
+        MyMagickDestoryWand($maskImage, $color, $draw);
+        return false;
+    }
+    MyMagickDestoryWand($maskImage, $color, $draw);
+    $draw = NewDrawingWand();
+    $maskImage = NewMagickWand();
+    $color = NewPixelWand();
+
+    $status = PixelSetColor($color, "transparent");
+
+    if ($status === false) {
+        MyMagickDestoryWand($maskImage, $color, $draw);
+        return false;
+    }
+
+    MagickNewImage($maskImage, $imageWidth, $imageHeight, $color );
+
+
+    DrawSetFillColor($draw, $color);
+    DrawSetStrokeColor($draw, $color);
+    DrawSetStrokeWidth($draw, 2);
+
+
+    DrawRoundRectangle($draw, 0, 0, $imageWidth, $imageHeight, $xRounding, $yRounding);
+    MagickSetImageBackgroundColor($maskImage,$color);
+    $status = MagickDrawImage($maskImage,$draw);
+
+    if ($status === false) {
+        MyMagickDestoryWand($maskImage, $color, $draw);
+        return false;
+    }
+
+    
+    $status = MagickCompositeImage($hwnd, $maskImage, MW_OverCompositeOp, 0, 0);
+    
+    if ($status === false) {
+        MyMagickDestoryWand($maskImage, $color, $draw);
+        return false;
+    }
+
+    MyMagickDestoryWand($maskImage, $color, $draw);
+    
+    return true;
+}
+
+
+convert -size 637x140 xc:none -fill white -draw "roundRectangle 0,0 637,140 15,15" albir.jpg -compose SrcIn -composite rounded_corners.png
+exec("convert $samp7 \( +clone -threshold -1 -negate -fill white -draw \"circle 64,64 64,0\" \) -alpha off -compose copy_opacity -composite $samp101");
+
+convert -size 500x25 xc:none -fill yellow -draw "roundRectangle 0,0 484,10 3,3" mask.png
+composite -blend 60 -gravity center mask.png http://cyberwar.netfirms.com/test.gif -matte output.jpg
