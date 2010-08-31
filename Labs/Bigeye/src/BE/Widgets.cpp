@@ -705,6 +705,7 @@ void MagicWandTestTextureWidget::Render(Renderer& inRenderer)
 SimplePanelWidget::SimplePanelWidget()
 :	mChildren(true)
 ,	mAutoChildren(false)
+,	mIsVisible(true)
 {
 }
 
@@ -745,6 +746,9 @@ void SimplePanelWidget::CreateTextures(const WidgetContext& inContext, bool inUs
 
 void SimplePanelWidget::Update(const WidgetContext& inContext, const SceneTransform& inParentTransform, bool inParentTransformDirty)
 {
+	if (!mIsVisible)
+		return;
+
 	{
 		SceneTransform local_transform = gWidgetTranslation(mPos + to3d_point(mOverflowPosOffset));
 		mChildren.Update(inContext, inParentTransform, local_transform, inParentTransformDirty || false);
@@ -795,6 +799,9 @@ void SimplePanelWidget::Update(const WidgetContext& inContext, const SceneTransf
 
 void SimplePanelWidget::RenderBuild(const WidgetContext& inContext, const SceneTransform& inParentTransform, bool inParentTransformDirty)
 {
+	if (!mIsVisible)
+		return;
+
 	mRenderWorldPos = gWidgetTransform(inParentTransform, mPos);
 
 	inContext.mRenderTreeBuilder.BranchUp(0, *this);

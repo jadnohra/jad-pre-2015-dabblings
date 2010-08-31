@@ -197,7 +197,9 @@ namespace BE
 		bool		Create(const WidgetContext& inContext, const glm::vec2& inPos, bool inIsToggleButton, const MagicWand::TextInfo& inTextInfo, const MagicWand::SizeConstraints& inSizeConstraints);
 
 		void		SetIsToggled(bool inIsToggled);
-		bool		GetIsToggled() const { return mIsToggled; }
+		bool		IsToggled() const { return mIsToggled; }
+
+		bool		IsPressed() const { return mIsPressed; }
 
 		virtual void Update(const WidgetContext& inContext, const SceneTransform& inParentTransform, bool inParentTransformDirty);
 		
@@ -248,7 +250,7 @@ namespace BE
 
 		virtual void Update(const WidgetContext& inContext, const SceneTransform& inParentTransform, bool inParentTransformDirty);
 		
-		virtual glm::vec2 GetSize() {  return mMarkerTexSize; }
+		virtual glm::vec2 GetSize() {  return mFrameTexSize; }
 		virtual glm::vec3 GetLocalPosition() { return mPos; }
 
 		virtual void RenderBuild(const WidgetContext& inContext, const SceneTransform& inParentTransform, bool inParentTransformDirty);
@@ -302,8 +304,12 @@ namespace BE
 		
 		virtual glm::vec2 GetSize() {  return mSize; }
 		virtual glm::vec3 GetLocalPosition() { return mPos; }
+		virtual void RaiseLocalPosition(float inOffset) { mPos.z += inOffset; }
 
 		glm::vec2 GetInternalSize() {  return mScissorSize; }
+
+		void SetIsVisible(bool inVisible) { mIsVisible = inVisible; } 
+		bool IsVisible() { return mIsVisible; } 
 
 		virtual void RenderBuild(const WidgetContext& inContext, const SceneTransform& inParentTransform, bool inParentTransformDirty);
 		virtual void Render(Renderer& inRenderer);
@@ -315,6 +321,7 @@ namespace BE
 		MagicWand::FrameType mType;
 		EOverflowSliderType mOverflowSliderType;
 		
+		bool mIsVisible;
 		glm::vec3 mPos;
 		glm::vec2 mSize;
 		glm::vec2 mScissorPos;
