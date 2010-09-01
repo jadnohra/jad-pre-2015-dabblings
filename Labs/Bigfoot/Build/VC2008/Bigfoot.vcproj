@@ -281,7 +281,15 @@
 			>
 		</File>
 		<File
+			RelativePath="..\..\src\Main.h"
+			>
+		</File>
+		<File
 			RelativePath="..\..\src\BF\Rendering.h"
+			>
+		</File>
+		<File
+			RelativePath="..\..\src\Retarget.cpp"
 			>
 		</File>
 		<File
@@ -298,6 +306,10 @@
 		</File>
 		<File
 			RelativePath="..\..\src\BF\SkeletonRenderer.h"
+			>
+		</File>
+		<File
+			RelativePath="..\..\src\Viewer.cpp"
 			>
 		</File>
 	</Files>
