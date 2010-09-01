@@ -1115,7 +1115,10 @@ bool NativeWindowWidget::Create(const WidgetContext& inContext, MainWindow& inAp
 	//ReshapeGL (window->init.width, window->init.height);				// Reshape Our GL Window
 
 	{
-		mMainWindow->GetWand().LoadFont("media/DroidSans.ttf");
+		//mMainWindow->GetWand().LoadFont("D:/jad/Dev/AiGameDev/Bigfoot/bin/media/test.ttf");
+		//mMainWindow->GetWand().LoadFont("media/test.ttf");
+		mMainWindow->GetWand().LoadFont("media/DroidSans.ttf", "media/DroidSans-Bold.ttf");
+		//mMainWindow->GetWand().LoadFont("media/DroidSans-Bold.ttf");
 	}
 
 	// Test(inContext);

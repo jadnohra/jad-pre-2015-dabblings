@@ -135,7 +135,41 @@ public:
 	auto_scoped_ptr<PixelWand> yellow1;
 	auto_scoped_ptr<PixelWand> transparent;
 
-	typedef std::vector<DrawingWand*> FontWands;
+	struct FontInfo
+	{
+		DrawingWand* mFontWand;
+		DrawingWand* mBoldFontWand;
+
+		FontInfo(DrawingWand* inFontWand = NULL, DrawingWand* inBoldFontWand = NULL)
+		:	mFontWand(inFontWand), mBoldFontWand(inBoldFontWand)
+		{
+		}
+
+		void Delete()
+		{
+			if (mFontWand != NULL)
+				ClearDrawingWand(mFontWand);
+
+			if (mBoldFontWand != NULL)
+				ClearDrawingWand(mBoldFontWand);
+
+			mFontWand = NULL;
+			mBoldFontWand = NULL;
+		}
+
+		DrawingWand* GetFont(int inWeight)
+		{
+			if (inWeight <= 400 + 150 && mFontWand != NULL)
+				return mFontWand;
+
+			if (inWeight >= 400 + 150 && mBoldFontWand != NULL)
+				return mBoldFontWand;
+
+			return mFontWand;
+		}
+	};
+
+	typedef std::vector<FontInfo> FontWands;
 	FontWands mFontWands;
 
 	MagickWandImpl()
@@ -169,7 +203,9 @@ public:
 	~MagickWandImpl()
 	{
 		for (size_t i=0; i<mFontWands.size(); ++i)
-			ClearDrawingWand(mFontWands[i]);
+		{
+			mFontWands[i].Delete();
+		}
 
 		MagickWandTerminus();
 		free(temp_pixels);
@@ -466,11 +502,24 @@ public:
 		return color;
 	}
 
-	MagicWand::FontID LoadFont(const char* inPath)
+	MagicWand::FontID LoadFont(const char* inPath, const char* inBoldPath = NULL)
 	{
-		DrawingWand* new_font = NewDrawingWand();
-		DrawSetFont(new_font, "inPath");
-		mFontWands.push_back(new_font);
+		DrawingWand* new_font = NULL;
+
+		if (inPath)
+		{
+			new_font = NewDrawingWand();
+			DrawSetFont(new_font, inPath);
+		}
+
+		DrawingWand* new_font_bold = NULL;
+		if (inBoldPath)
+		{
+			new_font_bold = NewDrawingWand();
+			DrawSetFont(new_font_bold, inBoldPath);
+		}
+
+		mFontWands.push_back(FontInfo(new_font, new_font_bold));
 
 		return ((int) mFontWands.size() - 1);
 	}
@@ -722,15 +771,15 @@ bool MagicWand::ReadImageToGLTexture(const char* inPath, GLuint inTexture, GLsiz
 }
 
 
-MagicWand::FontID MagicWand::LoadFont(const char* inPath)
+MagicWand::FontID MagicWand::LoadFont(const char* inPath, const char* inBoldPath)
 {
-	return mImpl->LoadFont(inPath);
+	return mImpl->LoadFont(inPath, inBoldPath);
 }
 
 
 bool MagicWand::MakeSliderFrameTexture(GLuint inTexture, GLsizei inLength, const TextInfo& inTextInfo, const SizeConstraints& inSizeConstraints, GLsizei& outWidth, GLsizei& outHeight)
 {
-	DrawingWand* font = mImpl->mFontWands[inTextInfo.mFontID];
+	DrawingWand* font = mImpl->mFontWands[inTextInfo.mFontID].GetFont(inTextInfo.mBold ? 700 : 400);
 	DrawSetFillAlpha(font, 1.0);
 	DrawSetFontSize(font, inTextInfo.mPointSize);
 	DrawSetFillColor(font, mImpl->white);
@@ -872,7 +921,7 @@ bool MagicWand::MakeVerticalSliderMarkerTexture(GLuint inTexture, WidgetState in
 
 bool MagicWand::MakeButtonTexture(GLuint inTexture, WidgetState inWidgetState, const TextInfo& inTextInfo, const SizeConstraints& inSizeConstraints, GLsizei& outWidth, GLsizei& outHeight)
 {
-	DrawingWand* font = mImpl->mFontWands[inTextInfo.mFontID];
+	DrawingWand* font = mImpl->mFontWands[inTextInfo.mFontID].GetFont(inTextInfo.mBold ? 700 : 400);
 	DrawSetFillAlpha(font, 1.0);
 	DrawSetFontSize(font, inTextInfo.mPointSize);
 	if (inWidgetState == WIDGET_PRESSED) DrawSetFillColor(font, mImpl->black);
@@ -940,7 +989,7 @@ bool MagicWand::MakeButtonTexture(GLuint inTexture, WidgetState inWidgetState, c
 
 bool MagicWand::MakeTextTexture(GLuint inTexture, const TextInfo& inTextInfo, const SizeConstraints& inSizeConstraints, GLsizei& outWidth, GLsizei& outHeight)
 {
-	DrawingWand* font = mImpl->mFontWands[inTextInfo.mFontID];
+	DrawingWand* font = mImpl->mFontWands[inTextInfo.mFontID].GetFont(inTextInfo.mBold ? 700 : 400);
 	DrawSetFillAlpha(font, 1.0);
 	DrawSetFontSize(font, inTextInfo.mPointSize);
 	DrawSetFillColor(font, mImpl->white);

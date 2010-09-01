@@ -64,7 +64,7 @@ namespace BE
 		bool MakeTextTexture(GLuint inTexture, const TextInfo& inTextInfo, const SizeConstraints& inSizeConstraints, GLsizei& outWidth, GLsizei& outHeight);
 		bool MakeTestTexture(GLuint inTexture, int inWidth, int inHeight, GLsizei& outWidth, GLsizei& outHeight);
 
-		FontID LoadFont(const char* inPath);
+		FontID LoadFont(const char* inPath, const char* inBoldPath = NULL); // bold font path is optional, it is also not needed if the font file supports font weights
 
 	protected:
 
