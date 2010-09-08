@@ -3,6 +3,7 @@
 #include "BF/BFMath.h"
 #include "BF/Skeleton.h"
 #include "BF/SkeletonRenderer.h"
+#include "BF/SkeletonAnalyzer.h"
 #include "BF/GridRenderer.h"
 #include "BF/LoaderBVH.h"
 
@@ -582,6 +583,9 @@ void BigfootRetargetScene::OnFileDropped(BE::MainWindow* inWindow, const char* i
 {
 	if (BF::LoaderBVH::Load(inFilePath, mTestSkeleton, &mTestSkeletonAnim))
 	{
+		BF::SkeletonTreeInfo tree_info;
+		tree_info.Build(mTestSkeleton);
+
 		mTestMode = ETestSkeletonScene;
 		{
 			BF::AAB render_bounds;
