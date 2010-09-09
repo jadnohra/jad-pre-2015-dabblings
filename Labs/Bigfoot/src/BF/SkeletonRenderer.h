@@ -2,6 +2,7 @@
 #define _INCLUDED_BIGFOOT_SKELETON_RENDERER_H
 
 #include "Skeleton.h"
+#include "SkeletonAnalyzer.h"
 #include "Rendering.h"
 #include "BFMath.h"
 
@@ -32,6 +33,7 @@ public:
 	void Render(const Skeleton& inSkeleton, int inAnimFrame, SkeletonAnimationFrames* inSkeletonAnimFrames,
 				const glm::mat4& inViewMatrix, 
 				bool inIncludeRootTranslation, bool inIncludeRootAnimTranslation, 
+				const SkeletonTreeInfo* pTreeInfo,
 				AAB& ioBounds)
 	{
 		BE::OGLLibInit::Init();
@@ -57,7 +59,7 @@ public:
 		glMatrixMode(GL_MODELVIEW);
 		glColor4f(0.0f, 0.0f, 0.0f, 0.5f);
 
-		DrawSkeletonJoint(inSkeleton, inViewMatrix, 0, ioBounds, 1.0f);
+		DrawSkeletonJoint(inSkeleton, inViewMatrix, 0, ioBounds, 1.0f, pTreeInfo);
 	
 		glDisable(GL_COLOR_MATERIAL);
 	}
@@ -65,7 +67,7 @@ public:
 	
 
 	void DrawBone(const glm::mat4& inModelViewMat, const glm::vec3& inDir, const glm::vec3& inLocalTranslation, float inLength, float inLengthFraction, float inRadius, float inSphereRadius, 
-					const glm::quat& inOrientation, bool inInRenderOnlyBone)
+					const glm::quat& inOrientation, bool inInRenderOnlyBone, const SkeletonTreeInfo* pTreeInfo)
 	{
 		glm::mat3 orientation = glm::toMat3(inOrientation);
 
@@ -167,7 +169,7 @@ public:
 	}
 
 
-	void DrawSkeletonJoint(const Skeleton& inSkeleton, const glm::mat4& inViewMatrix, int inJointIndex, AAB& ioBounds, float inLastJointLength)
+	void DrawSkeletonJoint(const Skeleton& inSkeleton, const glm::mat4& inViewMatrix, int inJointIndex, AAB& ioBounds, float inLastJointLength, const SkeletonTreeInfo* pTreeInfo)
 	{
 		ioBounds.Include(mModelSpaceJoints[inJointIndex].mPosition);
 		glm::mat4 model_view_mat = inViewMatrix * glm::translate(glm::mat4(), mModelSpaceJoints[inJointIndex].mPosition);
@@ -199,7 +201,7 @@ public:
 
 				int first_child_joint_index = inSkeleton.mJointHierarchy.mJointChildren[first_child_index];
 				DrawBone(model_view_mat, bone_dir, inSkeleton.mJoints[first_child_joint_index].mLocalTransform.mPosition, bone_length, 0.2f, bone_length*0.15f, bone_length*0.05f, 
-							mModelSpaceJoints[inJointIndex].mOrientation, normal_child_count == 0 && child_count > 0);
+							mModelSpaceJoints[inJointIndex].mOrientation, normal_child_count == 0 && child_count > 0, pTreeInfo);
 
 				if (child_count > 1)
 				{
@@ -239,7 +241,7 @@ public:
 				//glVertex3fv(glm::value_ptr(mModelSpaceJoints[child_joint_index].mPosition)); 
 				//glEnd();
 
-				DrawSkeletonJoint(inSkeleton, inViewMatrix, child_joint_index, ioBounds, bone_length);
+				DrawSkeletonJoint(inSkeleton, inViewMatrix, child_joint_index, ioBounds, bone_length, pTreeInfo);
 			}
 		}
 		else

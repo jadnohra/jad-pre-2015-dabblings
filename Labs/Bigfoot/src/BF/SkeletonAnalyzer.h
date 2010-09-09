@@ -2,6 +2,7 @@
 #define _INCLUDED_BIGFOOT_SKELETON_ANALYZER_H
 
 #include <vector>
+#include <map>
 #include "Skeleton.h"
 
 namespace BF
@@ -59,41 +60,57 @@ namespace BF
 			int mParentBranch;
 		};
 
+		struct Link
+		{
+			union
+			{
+				struct 
+				{
+					__int16 mFromJointIndex;
+					__int16 mToJointIndex;
+				};
+
+				struct 
+				{
+					__int32 mJointIndexHash;
+				};
+			};
+
+			Link(int inFromJointIndex = -1, int inToJointIndex = -1)
+			:	mFromJointIndex(inFromJointIndex)
+			,	mToJointIndex(inToJointIndex)
+			{
+			}
+			inline bool operator<(const Link& inComp) const { return mJointIndexHash < inComp.mJointIndexHash; }
+		};
+
+
 		typedef std::vector<Branch> Branches;
+		typedef std::map<Link, int> LinkToBranchMap;
 
 		Branches mBranches;
-		SemanticSkeletonInfo::JointBodyParts mJointToBranchMap;
+		LinkToBranchMap mLinkToBranchMap;
 
 
-		void MapJointToBranch(int inJointIndex, int inBranchIndex)
+		void MapJointToBranch(int inFromJointIndex, int inToJointIndex, int inBranchIndex)
 		{
-			mJointToBranchMap[inJointIndex] = inBranchIndex;
+			mLinkToBranchMap[Link(inFromJointIndex, inToJointIndex)] = inBranchIndex;
 		}
 
 		void Build(const Skeleton& inSkeleton)
 		{
 			mBranches.clear();
-			mJointToBranchMap.resize(inSkeleton.mJoints.size());
+			mLinkToBranchMap.clear();
 			mBranches.resize(inSkeleton.mJoints.size());
 
-			int child_count = inSkeleton.mJointHierarchy.mJointChildrenInfos[0].mChildCount;
-			int first_child_index = inSkeleton.mJointHierarchy.mJointChildrenInfos[0].mFirstChildIndex;
-			int child_index = first_child_index;
-
-			int first_segment_index = (int) mBranches.size();
-
-			for (int i=0; i<child_count; ++i)
+			int branch_count = 0;
+			if (!inSkeleton.mJoints.empty())
 			{
-				inSkeleton.mJointHierarchy.mJointChildren[child_index++];
-
-				mBranches.push_back(Branch());
-				mBranches.back().mJointIndices.push_back(0);
-				int child_joint = inSkeleton.mJointHierarchy.mJointChildren[child_index++];
-				RecurseAnalyzeBranch(inSkeleton, child_joint, first_segment_index+1);
+				Branch& branch = mBranches[branch_count++];
+				RecurseAnalyzeBranch(inSkeleton, -1, 0, 0, branch_count);
 			}
 
-
-			for (size_t i=0; i<mBranches.size(); ++i)
+			for (int i=0; i<branch_count; ++i)
 			{
 				if (mBranches[i].mIsValid)
 				{
@@ -110,38 +127,44 @@ namespace BF
 
 	protected:
 
-		void RecurseAnalyzeBranch(const Skeleton& inSkeleton, int inJointIndex, int inBranchIndex)
+		void RecurseAnalyzeBranch(const Skeleton& inSkeleton, int inParentJointIndex, int inJointIndex, int inBranchIndex, int& ioBranchCount)
 		{
-			int child_count = inSkeleton.mJointHierarchy.mJointChildrenInfos[0].mChildCount;
-			MapJointToBranch(inJointIndex, inBranchIndex); 
-			mBranches[inBranchIndex].mJointIndices.push_back(inJointIndex);
-			mBranches[inBranchIndex].mIsValid = true;
-
+			int child_count = inSkeleton.mJointHierarchy.mJointChildrenInfos[inJointIndex].mChildCount;
+		
 			if (child_count == 0)
 			{
-				return;
+				MapJointToBranch(inParentJointIndex, inJointIndex, inBranchIndex); 
+				mBranches[inBranchIndex].mJointIndices.push_back(inJointIndex);
+				mBranches[inBranchIndex].mIsValid = true;
 
 			} else if (child_count == 1)
 			{
+				MapJointToBranch(inParentJointIndex, inJointIndex, inBranchIndex); 
+				mBranches[inBranchIndex].mJointIndices.push_back(inJointIndex);
+				mBranches[inBranchIndex].mIsValid = true;
+				
 				int first_child_index = inSkeleton.mJointHierarchy.mJointChildrenInfos[inJointIndex].mFirstChildIndex;
 				int child_joint = inSkeleton.mJointHierarchy.mJointChildren[first_child_index];
-				RecurseAnalyzeBranch(inSkeleton, child_joint, inBranchIndex);
+				RecurseAnalyzeBranch(inSkeleton, inJointIndex, child_joint, inBranchIndex, ioBranchCount);
 			}
 			else
 			{
 				int first_child_index = inSkeleton.mJointHierarchy.mJointChildrenInfos[inJointIndex].mFirstChildIndex;
 				int child_index = first_child_index;
 
-				int first_segment_index = (int) mBranches.size();
+				int first_branch_index = ioBranchCount;
 
 				for (int i=0; i<child_count; ++i)
 				{
-					inSkeleton.mJointHierarchy.mJointChildren[child_index++];
+					Branch& branch = mBranches[ioBranchCount++];
+					branch.mIsValid = true;
+					branch.mJointIndices.push_back(inJointIndex);
+				}
 
-					mBranches.push_back(Branch());
-					mBranches.back().mJointIndices.push_back(0);
-					int child_joint =inSkeleton. mJointHierarchy.mJointChildren[child_index++];
-					RecurseAnalyzeBranch(inSkeleton, child_joint, first_segment_index+1);
+				for (int i=0; i<child_count; ++i)
+				{
+					int child_joint = inSkeleton. mJointHierarchy.mJointChildren[child_index++];
+					RecurseAnalyzeBranch(inSkeleton, inJointIndex, child_joint, first_branch_index+i, ioBranchCount);
 				}
 			}
 		}

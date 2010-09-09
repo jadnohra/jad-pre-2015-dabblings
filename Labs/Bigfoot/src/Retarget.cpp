@@ -57,6 +57,7 @@ public:
 	BF::Skeleton mTestSkeleton;
 	BF::SkeletonAnimationFrames mTestSkeletonAnim;
 	BF::SkeletonRenderer mTestSkeletonRenderer;
+	BF::SkeletonTreeInfo mTestSkeletonTreeInfo;
 
 	AnimPlayback mAnimPlayback;
 	bool mIncludeDefaultPoseInPlayback;
@@ -69,6 +70,7 @@ public:
 	BE::SimpleButtonWidget* mIncludeDefaultPoseButton;
 	BE::SimpleSliderWidget* mFrameSlider;
 	BE::SimpleSliderWidget* mSpeedSlider;
+	BE::SimpleButtonWidget* mShowBranchesButton;
 
 	BigfootRetargetScene::BigfootRetargetScene() 
 	:	mTestMode(ETestBasicScene)
@@ -82,6 +84,7 @@ public:
 	,	mIncludeDefaultPoseButton(NULL)
 	,	mFrameSlider(NULL)
 	,	mSpeedSlider(NULL)
+	,	mShowBranchesButton(NULL)
 	,	mIncludeDefaultPoseInPlayback(true)
 	{
 	}
@@ -146,7 +149,7 @@ void CreateWidgets(BE::MainWindow& inWindow, BigfootRetargetScene& inScene)
 	
 	{
 		SimplePanelWidget* widget = new SimplePanelWidget();
-		widget->Create(context, glm::vec2(10.0f, 10.0f), glm::vec2(1004.0f, 715.0f), MagicWand::FRAME_NORMAL_CUT_UPPER, SimplePanelWidget::NoOverflowSlider, false);
+		widget->Create(context, glm::vec2(10.0f, 10.0f), glm::vec2(850.0f, 715.0f), MagicWand::FRAME_NORMAL_CUT_UPPER, SimplePanelWidget::NoOverflowSlider, false);
 		root->GetChildren().mChildWidgets.push_back(widget);
 
 		SimplePanelWidget* parent_widget = widget;
@@ -157,6 +160,32 @@ void CreateWidgets(BE::MainWindow& inWindow, BigfootRetargetScene& inScene)
 			widget->Create(context, glm::vec2(0.0f, 0.0f), parent_widget->GetInternalSize());
 			widget->SetScene(&inScene);
 			children.mChildWidgets.push_back(widget);
+		}
+	}
+
+	{
+		SimplePanelWidget* widget = new SimplePanelWidget();
+		widget->Create(context, glm::vec2(870.0f, 10.0f), glm::vec2(140.0f, 715.0f), MagicWand::FRAME_NORMAL, SimplePanelWidget::NoOverflowSlider, true);
+		root->GetChildren().mChildWidgets.push_back(widget);
+
+		SimplePanelWidget* parent_widget = widget;
+		ChildWidgetContainer& children = widget->GetChildren();
+
+		MagicWand::SizeConstraints sizeConstraints;
+		horiz2d(sizeConstraints.mMinSize) = 100.0f;
+		horiz2d(sizeConstraints.mMaxSize) = 100.0f;
+
+		float pos_vert = 10.0f;
+		float pos_horiz = 20.0f;
+
+		{
+			SimpleButtonWidget* button_widget = new SimpleButtonWidget();
+			button_widget->Create(context, glm::vec2(pos_horiz, pos_vert), true, MagicWand::TextInfo(" Branches ", 0, 12.0f, false, glm::vec2(2.0f, 2.0f)), sizeConstraints);
+
+			pos_vert += vert2d(button_widget->GetSize()) + 5.0f;
+
+			children.mChildWidgets.push_back(button_widget);
+			inScene.mShowBranchesButton = button_widget;
 		}
 	}
 
@@ -276,7 +305,7 @@ void CreateWidgets(BE::MainWindow& inWindow, BigfootRetargetScene& inScene)
 				
 			{
 				SimpleTextWidget* text_widget = new SimpleTextWidget();
-				text_widget->Create(context, glm::vec2(pos_horiz, pos_vert), MagicWand::TextInfo("BigFoot [viewer] ver. 0.1b", 0, 12.0f, true, glm::vec2(0.0f, 0.0f)), MagicWand::SizeConstraints());
+				text_widget->Create(context, glm::vec2(pos_horiz, pos_vert), MagicWand::TextInfo("BigFoot [retarget] ver. 0.1b", 0, 12.0f, true, glm::vec2(0.0f, 0.0f)), MagicWand::SizeConstraints());
 					
 				pos_vert += vert2d(text_widget->GetSize()) + height_offset;
 
@@ -561,8 +590,9 @@ void BigfootRetargetScene::RenderTestSkeletonScene(BE::Renderer& inRenderer)
 	}
 	
 	// We are one frame off with the camera!
+	bool use_branches = (mShowBranchesButton != NULL && mShowBranchesButton->IsToggled());
 	mTestSkeletonRenderer.Render(mTestSkeleton, frame_index, &mTestSkeletonAnim, 
-									mCamera.GetViewMatrix(), true, true, skeleton_bounds);
+									mCamera.GetViewMatrix(), true, true, use_branches ? &mTestSkeletonTreeInfo : NULL, skeleton_bounds);
 }
 
 
@@ -583,8 +613,7 @@ void BigfootRetargetScene::OnFileDropped(BE::MainWindow* inWindow, const char* i
 {
 	if (BF::LoaderBVH::Load(inFilePath, mTestSkeleton, &mTestSkeletonAnim))
 	{
-		BF::SkeletonTreeInfo tree_info;
-		tree_info.Build(mTestSkeleton);
+		mTestSkeletonTreeInfo.Build(mTestSkeleton);
 
 		mTestMode = ETestSkeletonScene;
 		{
