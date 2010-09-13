@@ -183,6 +183,26 @@
 			>
 		</File>
 		<File
+			RelativePath="..\..\src\BF\ColorUtil.cpp"
+			>
+		</File>
+		<File
+			RelativePath="..\..\src\BF\ColorUtil.h"
+			>
+		</File>
+		<File
+			RelativePath="..\..\src\BF\3rdparty\dSFMT\dSFMT-params.h"
+			>
+		</File>
+		<File
+			RelativePath="..\..\src\BF\3rdparty\dSFMT\dSFMT.c"
+			>
+		</File>
+		<File
+			RelativePath="..\..\src\BF\3rdparty\dSFMT\dSFMT.h"
+			>
+		</File>
+		<File
 			RelativePath="..\..\src\BF\GridRenderer.cpp"
 			>
 		</File>
@@ -204,6 +224,18 @@
 		</File>
 		<File
 			RelativePath="..\..\src\Main.h"
+			>
+		</File>
+		<File
+			RelativePath="..\..\src\BF\Random.cpp"
+			>
+		</File>
+		<File
+			RelativePath="..\..\src\BF\Random.h"
+			>
+		</File>
+		<File
+			RelativePath="..\..\src\BF\Random.inl"
 			>
 		</File>
 		<File

@@ -91,6 +91,14 @@ namespace BF
 		Branches mBranches;
 		LinkToBranchMap mLinkToBranchMap;
 
+		int GetLinkBranch(int inFromJointIndex, int inToJointIndex) const
+		{
+			LinkToBranchMap::const_iterator it = mLinkToBranchMap.find(Link(inFromJointIndex, inToJointIndex));
+			if (it != mLinkToBranchMap.end())
+				return it->second;
+
+			return -1;
+		}
 
 		void MapJointToBranch(int inFromJointIndex, int inToJointIndex, int inBranchIndex)
 		{
@@ -129,20 +137,17 @@ namespace BF
 
 		void RecurseAnalyzeBranch(const Skeleton& inSkeleton, int inParentJointIndex, int inJointIndex, int inBranchIndex, int& ioBranchCount)
 		{
+			MapJointToBranch(inParentJointIndex, inJointIndex, inBranchIndex); 
+			mBranches[inBranchIndex].mJointIndices.push_back(inJointIndex);
+			mBranches[inBranchIndex].mIsValid = true;
+
 			int child_count = inSkeleton.mJointHierarchy.mJointChildrenInfos[inJointIndex].mChildCount;
 		
 			if (child_count == 0)
 			{
-				MapJointToBranch(inParentJointIndex, inJointIndex, inBranchIndex); 
-				mBranches[inBranchIndex].mJointIndices.push_back(inJointIndex);
-				mBranches[inBranchIndex].mIsValid = true;
-
+			
 			} else if (child_count == 1)
 			{
-				MapJointToBranch(inParentJointIndex, inJointIndex, inBranchIndex); 
-				mBranches[inBranchIndex].mJointIndices.push_back(inJointIndex);
-				mBranches[inBranchIndex].mIsValid = true;
-				
 				int first_child_index = inSkeleton.mJointHierarchy.mJointChildrenInfos[inJointIndex].mFirstChildIndex;
 				int child_joint = inSkeleton.mJointHierarchy.mJointChildren[first_child_index];
 				RecurseAnalyzeBranch(inSkeleton, inJointIndex, child_joint, inBranchIndex, ioBranchCount);

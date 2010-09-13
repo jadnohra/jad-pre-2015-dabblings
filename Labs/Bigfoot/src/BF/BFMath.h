@@ -3,6 +3,7 @@
 
 #include <algorithm>
 #include "glm/glm.hpp"
+#include "Random.h"
 //#include "glm/gtx/vector_query.hpp"
 
 namespace BF
