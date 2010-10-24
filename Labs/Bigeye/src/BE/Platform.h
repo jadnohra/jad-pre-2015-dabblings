@@ -2,6 +2,10 @@
 #define _BIGEYE_PLATFORM_H
 
 #ifdef WIN32
+	
+	//#define _BIND_TO_CURRENT_VCLIBS_VERSION 1
+
+
 	#define WIN32_LEAN_AND_MEAN 1
 	#define NOMINMAX
 	#include "windows.h"

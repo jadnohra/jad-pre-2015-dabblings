@@ -1,6 +1,7 @@
 #ifndef _INCLUDED_BIGEYE_BIGEYEWIDGETS_H
 #define _INCLUDED_BIGEYE_BIGEYEWIDGETS_H
 
+#include "Platform.h"
 #include <stack>
 #include <algorithm>
 #include "BEMath.h"

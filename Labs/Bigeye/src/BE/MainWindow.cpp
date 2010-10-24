@@ -44,6 +44,14 @@ bool MainWindow::Create(const char* inWindowName, int inWidth, int inHeight)
 		return false;
 	}
 
+	// Not very flexible, but enough for now
+	if (!OGLLibInit::Init())
+	{
+		delete mWindow;
+		mWindow = NULL;
+		return false;
+	}
+
 	return true;
 }
 
