@@ -48,6 +48,7 @@ namespace BF
 			mSkeleton = &inSkeleton;
 			mJointPhysicsInfos.resize(mSkeleton->mJoints.size());
 			mMassJointCount = 0;
+			mTotalMass = 0.0f;
 			
 			for (size_t i = 0; i < mJointPhysicsInfos.size(); ++i)
 			{
@@ -109,7 +110,7 @@ namespace BF
 				return;
 			}
 
-			if (mFrameIndex != inAnimFrame)
+			//if (mFrameIndex != inAnimFrame)
 			{
 				mFrameTime = (inSkeletonAnimFrames != NULL ? inSkeletonAnimFrames->mFrameTime : 1.0f);
 
