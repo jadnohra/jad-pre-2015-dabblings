@@ -263,6 +263,14 @@
 			>
 		</File>
 		<File
+			RelativePath="..\..\src\BF\SkeletonPhysicsModel.cpp"
+			>
+		</File>
+		<File
+			RelativePath="..\..\src\BF\SkeletonPhysicsModel.h"
+			>
+		</File>
+		<File
 			RelativePath="..\..\src\BF\SkeletonRenderer.cpp"
 			>
 		</File>

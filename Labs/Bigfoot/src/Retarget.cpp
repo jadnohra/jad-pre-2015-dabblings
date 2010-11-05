@@ -4,6 +4,7 @@
 #include "BF/Skeleton.h"
 #include "BF/SkeletonRenderer.h"
 #include "BF/SkeletonAnalyzer.h"
+#include "BF/SkeletonPhysicsModel.h"
 #include "BF/GridRenderer.h"
 #include "BF/LoaderBVH.h"
 
@@ -59,6 +60,9 @@ public:
 	BF::SkeletonRenderer mTestSkeletonRenderer;
 	BF::SkeletonTreeInfo mTestSkeletonTreeInfo;
 
+	BF::SkeletonPhysicsModel mTestSkeletonPhysicsModel;
+	BF::SkeletonPhysicsModelRenderer mTestSkeletonPhysicsModelRenderer;
+
 	AnimPlayback mAnimPlayback;
 	bool mIncludeDefaultPoseInPlayback;
 
@@ -71,6 +75,7 @@ public:
 	BE::SimpleSliderWidget* mFrameSlider;
 	BE::SimpleSliderWidget* mSpeedSlider;
 	BE::SimpleButtonWidget* mShowBranchesButton;
+	BE::SimpleButtonWidget* mShowPhysicsButton;
 
 	BigfootRetargetScene::BigfootRetargetScene() 
 	:	mTestMode(ETestBasicScene)
@@ -85,6 +90,7 @@ public:
 	,	mFrameSlider(NULL)
 	,	mSpeedSlider(NULL)
 	,	mShowBranchesButton(NULL)
+	,	mShowPhysicsButton(NULL)
 	,	mIncludeDefaultPoseInPlayback(true)
 	{
 	}
@@ -186,6 +192,18 @@ void CreateWidgets(BE::MainWindow& inWindow, BigfootRetargetScene& inScene)
 
 			children.mChildWidgets.push_back(button_widget);
 			inScene.mShowBranchesButton = button_widget;
+			inScene.mShowBranchesButton->SetIsToggled(true);
+		}
+
+		{
+			SimpleButtonWidget* button_widget = new SimpleButtonWidget();
+			button_widget->Create(context, glm::vec2(pos_horiz, pos_vert), true, MagicWand::TextInfo(" Physics ", 0, 12.0f, false, glm::vec2(2.0f, 2.0f)), sizeConstraints);
+
+			pos_vert += vert2d(button_widget->GetSize()) + 5.0f;
+
+			children.mChildWidgets.push_back(button_widget);
+			inScene.mShowPhysicsButton = button_widget;
+			inScene.mShowPhysicsButton->SetIsToggled(true);
 		}
 	}
 
@@ -237,7 +255,7 @@ void CreateWidgets(BE::MainWindow& inWindow, BigfootRetargetScene& inScene)
 		{
 			SimpleButtonWidget* button_widget = new SimpleButtonWidget();
 			button_widget->Create(context, glm::vec2(pos_horiz, pos_vert), true, MagicWand::TextInfo(" T ", 0, 14.0f, true, glm::vec2(2.0f, 2.0f)), sizeConstraints);
-			button_widget->SetIsToggled(true);
+			button_widget->SetIsToggled(false);
 
 			pos_horiz += 30.0f;
 
@@ -593,6 +611,17 @@ void BigfootRetargetScene::RenderTestSkeletonScene(BE::Renderer& inRenderer)
 	bool use_branches = (mShowBranchesButton != NULL && mShowBranchesButton->IsToggled());
 	mTestSkeletonRenderer.Render(mTestSkeleton, frame_index, &mTestSkeletonAnim, 
 									mCamera.GetViewMatrix(), true, true, use_branches ? &mTestSkeletonTreeInfo : NULL, skeleton_bounds);
+
+	bool use_physics = (mShowPhysicsButton != NULL && mShowPhysicsButton->IsToggled());
+	if (use_physics)
+	{
+		mTestSkeletonPhysicsModel.Step(frame_index, &mTestSkeletonAnim);
+
+		BF::SkeletonPhysicsParticle com;
+		mTestSkeletonPhysicsModel.AnalyzeCenterOfMass(com);
+
+		mTestSkeletonPhysicsModelRenderer.Render(mTestSkeleton, mTestSkeletonPhysicsModel, com, mCamera.GetViewMatrix(), &mTestSkeletonTreeInfo);
+	}
 }
 
 
@@ -614,6 +643,7 @@ void BigfootRetargetScene::OnFileDropped(BE::MainWindow* inWindow, const char* i
 	if (BF::LoaderBVH::Load(inFilePath, mTestSkeleton, &mTestSkeletonAnim))
 	{
 		mTestSkeletonTreeInfo.Build(mTestSkeleton);
+		mTestSkeletonPhysicsModel.Build(mTestSkeleton, 1.0f);
 
 		mTestMode = ETestSkeletonScene;
 		{
