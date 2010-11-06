@@ -21,6 +21,52 @@ namespace BF
 		glm::vec3 mVelocity;
 		bool mIsValidAcceleration;
 		glm::vec3 mAcceleration;
+
+		class Trail
+		{
+		public:
+
+			typedef std::vector<glm::vec3> Vecs;
+			Vecs mPositions;
+			int mStartPosition;
+			int mPositionCount;
+
+			Trail() : mPositionCount(0) {}
+
+			void Reset(int inSize)
+			{
+				mPositions.resize(inSize);
+				mPositionCount = 0;
+			}
+
+			void Reset()
+			{
+				mPositionCount = 0;
+			}
+			
+			void Add(const glm::vec3& inPos)
+			{
+				if (mPositions.empty())
+					return;
+
+				if (mPositionCount == 0)
+					mStartPosition = 0;
+				else
+				{
+					if (glm::areSimilar(mPositions[(mStartPosition+(mPositionCount-1))  % (int) mPositions.size()], inPos, 0.0f))
+						return;
+				}
+				
+				mPositions[(mStartPosition+mPositionCount) % (int) mPositions.size()] = inPos;
+				++mPositionCount;
+
+				if (mPositionCount > (int) mPositions.size())
+				{
+					mPositionCount = mPositions.size();
+					mStartPosition = (mStartPosition + 1) % (int) mPositions.size();
+				}
+			}
+		};
 	};
 
 	typedef std::vector<JointPhysicsInfo> JointPhysicsInfos;
@@ -110,7 +156,7 @@ namespace BF
 				return;
 			}
 
-			//if (mFrameIndex != inAnimFrame)
+			if (mFrameIndex != inAnimFrame)
 			{
 				mFrameTime = (inSkeletonAnimFrames != NULL ? inSkeletonAnimFrames->mFrameTime : 1.0f);
 
@@ -248,7 +294,8 @@ namespace BF
 		void Render(const Skeleton& inSkeleton, 
 					const SkeletonPhysicsModel& inModel, const SkeletonPhysicsParticle& inCOM,
 					const glm::mat4& inViewMatrix, 
-					const SkeletonTreeInfo* pTreeInfo)
+					const SkeletonTreeInfo* pTreeInfo,
+					SkeletonPhysicsParticle::Trail* ioTrail = NULL)
 		{
 			if (inCOM.mIsValid)
 			{
@@ -259,7 +306,7 @@ namespace BF
 				glm::mat4 model_view_mat = inViewMatrix * glm::translate(glm::mat4(), inCOM.mPosition);
 				glLoadMatrixf(glm::value_ptr(model_view_mat));
 
-				glutSolidSphere((inModel.GetRenderMassToLengthScale() * inCOM.mMass) / (float) (inModel.GetMassJointCount()), 10, 10);
+				//glutSolidSphere((inModel.GetRenderMassToLengthScale() * inCOM.mMass) / (float) (inModel.GetMassJointCount()), 10, 10);
 
 				if (inCOM.mIsValidVelocity)
 				{
@@ -285,6 +332,34 @@ namespace BF
 					glLineWidth(1.0f); 
 				}
 
+
+				if (ioTrail)
+				{
+					ioTrail->Add(inCOM.mPosition);
+
+					if (ioTrail->mPositionCount > 1)
+					{
+						glLoadMatrixf(glm::value_ptr(inViewMatrix));
+						glColor4f(1.0f, 0.0f, 1.0f, 0.5f);
+
+						glLineWidth(0.5f); 
+						glBegin(GL_LINES);
+
+						for (int i = ioTrail->mStartPosition, c = 0; c+1< ioTrail->mPositionCount; ++c, ++i)
+						{
+							if (i >= (int)ioTrail->mPositions.size())
+								i = 0;
+							int j = i+1;
+							if (j >= (int)ioTrail->mPositions.size())
+								j = 0;
+							glVertex3fv(glm::value_ptr(ioTrail->mPositions[i])); 
+							glVertex3fv(glm::value_ptr(ioTrail->mPositions[j])); 
+						}
+						
+						glEnd();
+						glLineWidth(1.0f); 
+					}
+				}
 
 				glDisable(GL_COLOR_MATERIAL);
 			}

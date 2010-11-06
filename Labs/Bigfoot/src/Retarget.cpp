@@ -62,6 +62,7 @@ public:
 
 	BF::SkeletonPhysicsModel mTestSkeletonPhysicsModel;
 	BF::SkeletonPhysicsModelRenderer mTestSkeletonPhysicsModelRenderer;
+	BF::SkeletonPhysicsParticle::Trail mTestSkeletonPhysicsModelRendererTrail;
 
 	AnimPlayback mAnimPlayback;
 	bool mIncludeDefaultPoseInPlayback;
@@ -585,6 +586,7 @@ void BigfootRetargetScene::RenderTestSkeletonScene(BE::Renderer& inRenderer)
 				{
 					if (mLoopButton->IsToggled())
 					{
+						mTestSkeletonPhysicsModelRendererTrail.Reset();
 						mAnimPlayback.Reset();
 						frame_index = (!mIncludeDefaultPoseInPlayback && mTestSkeletonAnim.mSkeletonAnimationFrames.size() >= 2) ? 1 : 0;
 						mAnimPlayback.mPlaybackTime = ((float) frame_index * mTestSkeletonAnim.mFrameTime) / GetPlaySpeed();
@@ -620,7 +622,7 @@ void BigfootRetargetScene::RenderTestSkeletonScene(BE::Renderer& inRenderer)
 		BF::SkeletonPhysicsParticle com;
 		mTestSkeletonPhysicsModel.AnalyzeCenterOfMass(com);
 
-		mTestSkeletonPhysicsModelRenderer.Render(mTestSkeleton, mTestSkeletonPhysicsModel, com, mCamera.GetViewMatrix(), &mTestSkeletonTreeInfo);
+		mTestSkeletonPhysicsModelRenderer.Render(mTestSkeleton, mTestSkeletonPhysicsModel, com, mCamera.GetViewMatrix(), &mTestSkeletonTreeInfo, &mTestSkeletonPhysicsModelRendererTrail);
 	}
 }
 
@@ -644,6 +646,7 @@ void BigfootRetargetScene::OnFileDropped(BE::MainWindow* inWindow, const char* i
 	{
 		mTestSkeletonTreeInfo.Build(mTestSkeleton);
 		mTestSkeletonPhysicsModel.Build(mTestSkeleton, 1.0f);
+		mTestSkeletonPhysicsModelRendererTrail.Reset(256);
 
 		mTestMode = ETestSkeletonScene;
 		{
@@ -714,6 +717,7 @@ void BigfootRetargetScene::OnFileDropped(BE::MainWindow* inWindow, const char* i
 			grid_division_count.y = render_bounds.GetExtents().z / nice_grid_unit_scale;
 			mGrid.Setup(render_bounds, grid_division_count);
 
+			mTestSkeletonPhysicsModelRendererTrail.Reset();
 			mAnimPlayback.Reset();
 			if (mFrameSlider != NULL)
 				mFrameSlider->SetSliderPos(0.0f);
@@ -759,6 +763,7 @@ void BigfootRetargetScene::ProcessWidgetEvents(BE::MainWindow* inWindow, BE::Wid
 		{
 			int frame_index = (!mIncludeDefaultPoseInPlayback && mTestSkeletonAnim.mSkeletonAnimationFrames.size() >= 2) ? 1 : 0;
 			
+			mTestSkeletonPhysicsModelRendererTrail.Reset();
 			mAnimPlayback.Reset();
 			mAnimPlayback.mPlaybackTime = ((float) frame_index * mTestSkeletonAnim.mFrameTime) / GetPlaySpeed();
 			
