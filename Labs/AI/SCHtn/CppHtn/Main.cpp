@@ -6,6 +6,26 @@
 Plans should really not extend to the future and shoudl be monitored very little.
 A plan to go somewhere and attack somebody is a bit stupid, many things can change.
 A better plan is to go somehwere while monitoring the threat (for death) and keeping it in memory, monitoring it differently for importance
+**
+goal monitor:
+
+UTILITY
+|
+|    -
+|     -
+|             -
+| -  
+|-
+|       --
+|  -      -
+|          -
+|
+------------------------------------------ GOAL
+
+the current plan has an effect on a group of the current goals
+a plan switch has a cost and affects a potentially different group of goals.
+we only switch a plan if it improves the total score of all covered goals weighted by how much plan affects goal.
+
 */
 
 class ArmedHumanoid;
