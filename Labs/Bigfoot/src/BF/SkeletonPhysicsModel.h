@@ -114,7 +114,7 @@ namespace BF
 						int child_joint_index = mSkeleton->mJointHierarchy.mJointChildren[child_index++];
 						if (inSkeleton.mJointInfos[child_joint_index].mType == Joint_Normal)
 						{
-							const Joint& child_joint = mSkeleton->mJoints[child_index];
+							const Joint& child_joint = mSkeleton->mJoints[child_joint_index];
 							total_length += glm::length(child_joint.mLocalTransform.mPosition);
 						}
 					}
@@ -201,6 +201,38 @@ namespace BF
 			}
 		}
 
+		void AnalyzeJoint(int inJointIndex, SkeletonPhysicsParticle& outJoint)
+		{
+			outJoint.mIsValid = false;
+			outJoint.mMass = mJointPhysicsInfos[inJointIndex].mMass;
+			outJoint.mIsValidVelocity = false;
+			outJoint.mIsValidAcceleration = false;
+
+			glm::vec3 alt_pos[2];
+
+			if (mIsValidModelSpaceJoints[Frame_0])
+			{
+				outJoint.mIsValid = true;
+				outJoint.mPosition = CalcJointPosition(inJointIndex, mModelSpaceJoints[Frame_0]);
+			}
+
+			if (mIsValidModelSpaceJoints[Frame_0] && mIsValidModelSpaceJoints[Frame_1])
+			{
+				outJoint.mIsValidVelocity = true;
+				alt_pos[0] = CalcJointPosition(inJointIndex, mModelSpaceJoints[Frame_1]);
+				outJoint.mVelocity = (alt_pos[0] - outJoint.mPosition) / mFrameTime;
+			}
+
+			if (mFrameIndex > 1 // T pose
+				&& mIsValidModelSpaceJoints[Frame_0] && mIsValidModelSpaceJoints[Frame_1] && mIsValidModelSpaceJoints[Frame_m1])
+			{
+				outJoint.mIsValidAcceleration = true;
+				alt_pos[1] = CalcJointPosition(inJointIndex, mModelSpaceJoints[Frame_m1]);
+				glm::vec3 prev_velocity = (outJoint.mPosition - alt_pos[1]) / mFrameTime;
+				outJoint.mAcceleration = (outJoint.mVelocity - prev_velocity) / mFrameTime;
+			}
+		}
+
 		float GetRenderMassToLengthScale() const
 		{
 			return mRenderMassToLengthScale;
@@ -218,6 +250,7 @@ namespace BF
 			Frame_m2, Frame_m1, Frame_0, Frame_1, Frame_2, FrameTypeCount 
 		};
 
+	
 		glm::vec3 CalcCOMPosition(const JointTransforms& inTransforms)
 		{
 			glm::vec3 pos;
@@ -228,6 +261,11 @@ namespace BF
 			}
 
 			return pos;
+		}
+
+		glm::vec3 CalcJointPosition(int inJointIndex, const JointTransforms& inTransforms)
+		{
+			return inTransforms[inJointIndex].mPosition;
 		}
 
 		glm::vec3 CalcCOMVelocity(const JointTransforms& inTransforms1, const JointTransforms& inTransform2, glm::vec3& inPos1)
@@ -273,6 +311,8 @@ namespace BF
 			return false;
 		}
 
+	public:
+
 		Skeleton* mSkeleton;
 		JointPhysicsInfos mJointPhysicsInfos;
 		int mMassJointCount;
@@ -286,61 +326,107 @@ namespace BF
 		bool mIsValidModelSpaceJoints[FrameTypeCount];
 	};
 
-
 	class SkeletonPhysicsModelRenderer
 	{
 	public:
 
-		void Render(const Skeleton& inSkeleton, 
-					const SkeletonPhysicsModel& inModel, const SkeletonPhysicsParticle& inCOM,
+		bool mRenderMas;
+		bool mRenderVelocity;
+		bool mRenderAcceleration;
+		bool mRenderTrails;
+
+		SkeletonPhysicsModelRenderer()
+		{
+			mRenderMas = false;
+			mRenderVelocity = true;
+			mRenderAcceleration = false;
+			mRenderTrails = true;
+		}
+
+		void Setup(bool inRenderMass, bool inRenderVelocity, bool inRenderAcceleration, bool inRenderTrails)
+		{
+			mRenderMas = inRenderMass;
+			mRenderVelocity = inRenderVelocity;
+			mRenderAcceleration = inRenderAcceleration;
+			mRenderTrails = inRenderTrails;
+		}
+
+		void BeginRender(const Skeleton& inSkeleton, 
+						const SkeletonPhysicsModel& inModel,
+						const glm::mat4& inViewMatrix)
+		{
+			glEnable(GL_COLOR_MATERIAL);
+		}
+
+		void EndRender(const Skeleton& inSkeleton, 
+						const SkeletonPhysicsModel& inModel,
+						const glm::mat4& inViewMatrix)
+		{
+			glDisable(GL_COLOR_MATERIAL);
+		}
+
+		void RenderParticle(const Skeleton& inSkeleton, 
+					const SkeletonPhysicsModel& inModel, const SkeletonPhysicsParticle& inParticle,
 					const glm::mat4& inViewMatrix, 
 					const SkeletonTreeInfo* pTreeInfo,
-					SkeletonPhysicsParticle::Trail* ioTrail = NULL)
+					SkeletonPhysicsParticle::Trail* ioTrail = NULL,
+					glm::vec3* pColor = NULL)
 		{
-			if (inCOM.mIsValid)
+			if (inParticle.mIsValid)
 			{
-				glEnable(GL_COLOR_MATERIAL);
 				glMatrixMode(GL_MODELVIEW);
-				glColor4f(0.0f, 0.0f, 1.0f, 0.5f);
 
-				glm::mat4 model_view_mat = inViewMatrix * glm::translate(glm::mat4(), inCOM.mPosition);
+				if (pColor != NULL)
+					glColor4f(pColor->r, pColor->g, pColor->b, 0.5f);
+				else
+					glColor4f(0.0f, 0.0f, 1.0f, 0.5f);
+
+
+				glm::mat4 model_view_mat = inViewMatrix * glm::translate(glm::mat4(), inParticle.mPosition);
 				glLoadMatrixf(glm::value_ptr(model_view_mat));
 
-				//glutSolidSphere((inModel.GetRenderMassToLengthScale() * inCOM.mMass) / (float) (inModel.GetMassJointCount()), 10, 10);
+				if (mRenderMas)
+					glutSolidSphere((inModel.GetRenderMassToLengthScale() * inParticle.mMass) / (float) (inModel.GetMassJointCount()), 10, 10);
 
-				if (inCOM.mIsValidVelocity)
+				if (mRenderVelocity && inParticle.mIsValidVelocity)
 				{
-					glColor4f(0.0f, 0.0f, 1.0f, 0.5f);
+					if (pColor != NULL)
+						glColor4f(pColor->r, pColor->g, pColor->b, 0.5f);
+					else
+						glColor4f(0.0f, 0.0f, 1.0f, 0.5f);
 
 					glLineWidth(2.0f); 
 					glBegin(GL_LINES);
 					glVertex3fv(glm::value_ptr(glm::vec3())); 
-					glVertex3fv(glm::value_ptr(inCOM.mVelocity)); 
+					glVertex3fv(glm::value_ptr(inParticle.mVelocity * 0.2f)); 
 					glEnd();
 					glLineWidth(1.0f); 
 				}
 
-				if (inCOM.mIsValidAcceleration)
+				if (mRenderAcceleration && inParticle.mIsValidAcceleration)
 				{
 					glColor4f(0.0f, 1.0f, 1.0f, 0.5f);
 
 					glLineWidth(1.5f); 
 					glBegin(GL_LINES);
 					glVertex3fv(glm::value_ptr(glm::vec3())); 
-					glVertex3fv(glm::value_ptr(inCOM.mAcceleration)); 
+					glVertex3fv(glm::value_ptr(inParticle.mAcceleration)); 
 					glEnd();
 					glLineWidth(1.0f); 
 				}
 
 
-				if (ioTrail)
+				if (mRenderTrails && ioTrail)
 				{
-					ioTrail->Add(inCOM.mPosition);
+					ioTrail->Add(inParticle.mPosition);
 
 					if (ioTrail->mPositionCount > 1)
 					{
 						glLoadMatrixf(glm::value_ptr(inViewMatrix));
-						glColor4f(1.0f, 0.0f, 1.0f, 0.5f);
+						if (pColor != NULL)
+							glColor4f(pColor->r, pColor->g, pColor->b, 0.5f);
+						else
+							glColor4f(0.0f, 0.0f, 1.0f, 0.5f);
 
 						glLineWidth(0.5f); 
 						glBegin(GL_LINES);
@@ -360,10 +446,175 @@ namespace BF
 						glLineWidth(1.0f); 
 					}
 				}
-
-				glDisable(GL_COLOR_MATERIAL);
 			}
 		}
+	};
+
+
+	class SkeletonPhysicsParticles
+	{
+	public:
+		
+		typedef std::vector<SkeletonPhysicsParticle> Particles;
+		typedef std::vector<SkeletonPhysicsParticle::Trail> ParticleTrails;
+		Particles mParticles;
+		ParticleTrails mParticleTrails;
+		SkeletonPhysicsParticle mCOM;
+		SkeletonPhysicsParticle::Trail mCOMTrail;
+		
+		typedef std::vector<glm::vec3> Colors;
+		
+		Colors mBranchColors;
+		Colors mJointColors;
+
+		int mTrailSize;
+
+		SkeletonPhysicsParticles()
+		{
+			mTrailSize = 10;
+		}
+
+		void ResetTrails(int inSize)
+		{
+			mTrailSize = inSize;
+		}
+
+		void ResetTrails()
+		{
+			for (size_t i = 0; i < mParticleTrails.size(); ++i)
+			{
+				mParticleTrails[i].Reset();
+			}
+
+			mCOMTrail.Reset();
+		}
+
+		void Reset()
+		{
+			mCOM.mIsValid = false;
+			mParticles.clear();
+			mParticleTrails.clear();
+		}
+
+		void AnalyzeParticles(SkeletonPhysicsModel& inModel, const SkeletonTreeInfo* pTreeInfo)
+		{
+			if (inModel.mSkeleton != NULL)
+			{
+				if (inModel.mSkeleton->mJoints.size() != mParticles.size())
+				{
+					mParticles.resize(inModel.mSkeleton->mJoints.size());
+					mParticleTrails.resize(mParticles.size());
+
+					for (size_t i = 0; i < mParticles.size(); ++i)
+					{
+						mParticles[i].mIsValid = false;
+						mParticleTrails[i].Reset();
+					}
+
+					mCOM.mIsValid = false;
+					mCOMTrail.Reset();
+
+					if (pTreeInfo != NULL)
+					{
+						ColorGen color_gen;
+						mBranchColors.resize(pTreeInfo->mBranches.size());
+
+						for (size_t i=0; i<mBranchColors.size(); ++i)
+						{
+							mBranchColors[i] = color_gen.Next();
+						}
+					}
+					else
+					{
+						mBranchColors.clear();
+					}
+
+					{
+						ColorGen color_gen(10);
+						mJointColors.resize(mParticles.size());
+
+						for (size_t i=0; i<mJointColors.size(); ++i)
+						{
+							mJointColors[i] = color_gen.Next();
+						}
+					}
+
+
+					for (size_t i = 0; i < mParticleTrails.size(); ++i)
+					{
+						mParticleTrails[i].Reset(mTrailSize);
+					}
+
+					mCOMTrail.Reset(mTrailSize);
+				}
+				
+				inModel.AnalyzeCenterOfMass(mCOM);
+				
+				for (size_t i = 0; i < mParticles.size(); ++i)
+				{
+					inModel.AnalyzeJoint(i, mParticles[i]);
+				}
+			}
+			else
+			{
+				mCOM.mIsValid = false;
+				mParticles.clear();
+				mParticleTrails.clear();
+			}
+		}
+
+		void RenderParticles(bool inRenderCOM, bool inRenderNodes, bool inRenderLeafNodesOnly,
+								SkeletonPhysicsModelRenderer& inRenderer,
+								const Skeleton& inSkeleton, 
+								const SkeletonPhysicsModel& inModel, 
+								const glm::mat4& inViewMatrix, 
+								const SkeletonTreeInfo* pTreeInfo)
+		{
+			if (mParticles.empty())
+				return;
+
+			inRenderer.BeginRender(inSkeleton, inModel, inViewMatrix);
+
+			if (inRenderCOM)
+			{
+				inRenderer.RenderParticle(inSkeleton, inModel, mCOM,
+											inViewMatrix, pTreeInfo, &mCOMTrail);
+			}
+
+			if (inRenderNodes)
+			{
+
+				for (size_t i = 0; i < mParticles.size(); ++i)
+				{
+					if (mParticles[i].mMass > 0.0f)
+					{
+						if (!inRenderLeafNodesOnly
+							|| inSkeleton.mJointHierarchy.mJointChildrenInfos[i].mNormalChildCount == 0)
+						{
+
+							glm::vec3 color = mJointColors[i];
+							
+							if (pTreeInfo != NULL)
+							{
+								int branch_index = pTreeInfo->GetChildBranch(i);
+
+								if (branch_index >= 0)
+									color = mBranchColors[branch_index];
+							}
+
+							
+							
+							inRenderer.RenderParticle(inSkeleton, inModel, mParticles[i],
+														inViewMatrix, pTreeInfo, &(mParticleTrails[i]),
+														&color);
+						}
+					}
+				}
+			}
+
+			inRenderer.EndRender(inSkeleton, inModel, inViewMatrix);
+		}
+
 	};
 }
 

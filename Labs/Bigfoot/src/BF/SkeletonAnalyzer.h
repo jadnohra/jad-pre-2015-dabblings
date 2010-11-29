@@ -87,9 +87,11 @@ namespace BF
 
 		typedef std::vector<Branch> Branches;
 		typedef std::map<Link, int> LinkToBranchMap;
+		typedef std::map<int, int> JointToBranchMap;
 
 		Branches mBranches;
 		LinkToBranchMap mLinkToBranchMap;
+		JointToBranchMap mJointChildToBranchMap;
 
 		int GetLinkBranch(int inFromJointIndex, int inToJointIndex) const
 		{
@@ -100,15 +102,26 @@ namespace BF
 			return -1;
 		}
 
+		int GetChildBranch(int inToJointIndex) const
+		{
+			JointToBranchMap::const_iterator it = mJointChildToBranchMap.find(inToJointIndex);
+			if (it != mJointChildToBranchMap.end())
+				return it->second;
+
+			return -1;
+		}
+
 		void MapJointToBranch(int inFromJointIndex, int inToJointIndex, int inBranchIndex)
 		{
 			mLinkToBranchMap[Link(inFromJointIndex, inToJointIndex)] = inBranchIndex;
+			mJointChildToBranchMap[inToJointIndex] = inBranchIndex;
 		}
 
 		void Build(const Skeleton& inSkeleton)
 		{
 			mBranches.clear();
 			mLinkToBranchMap.clear();
+			mJointChildToBranchMap.clear();
 			mBranches.resize(inSkeleton.mJoints.size());
 
 			int branch_count = 0;

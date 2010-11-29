@@ -62,7 +62,8 @@ public:
 
 	BF::SkeletonPhysicsModel mTestSkeletonPhysicsModel;
 	BF::SkeletonPhysicsModelRenderer mTestSkeletonPhysicsModelRenderer;
-	BF::SkeletonPhysicsParticle::Trail mTestSkeletonPhysicsModelRendererTrail;
+	//BF::SkeletonPhysicsParticle::Trail mTestSkeletonPhysicsModelRendererTrail;
+	BF::SkeletonPhysicsParticles mTestSkeletonPhysicsParticles;
 
 	AnimPlayback mAnimPlayback;
 	bool mIncludeDefaultPoseInPlayback;
@@ -77,6 +78,12 @@ public:
 	BE::SimpleSliderWidget* mSpeedSlider;
 	BE::SimpleButtonWidget* mShowBranchesButton;
 	BE::SimpleButtonWidget* mShowPhysicsButton;
+	BE::SimpleButtonWidget* mShowVelocitiesButton;
+	BE::SimpleButtonWidget* mShowTrailsButton;
+	BE::SimpleButtonWidget* mShowCOMButton;
+	BE::SimpleButtonWidget* mShowJointsButton;
+	BE::SimpleButtonWidget* mShowLeafsButton;
+	BE::SimpleButtonWidget* mResetTrailsButton;
 
 	BigfootRetargetScene::BigfootRetargetScene() 
 	:	mTestMode(ETestBasicScene)
@@ -92,6 +99,12 @@ public:
 	,	mSpeedSlider(NULL)
 	,	mShowBranchesButton(NULL)
 	,	mShowPhysicsButton(NULL)
+	,	mShowVelocitiesButton(NULL)
+	,	mShowTrailsButton(NULL)
+	,	mShowCOMButton(NULL)
+	,	mShowJointsButton(NULL)
+	,	mShowLeafsButton(NULL)
+	,	mResetTrailsButton(NULL)
 	,	mIncludeDefaultPoseInPlayback(true)
 	{
 	}
@@ -205,6 +218,73 @@ void CreateWidgets(BE::MainWindow& inWindow, BigfootRetargetScene& inScene)
 			children.mChildWidgets.push_back(button_widget);
 			inScene.mShowPhysicsButton = button_widget;
 			inScene.mShowPhysicsButton->SetIsToggled(true);
+		}
+
+		{
+			SimpleButtonWidget* button_widget = new SimpleButtonWidget();
+			button_widget->Create(context, glm::vec2(pos_horiz, pos_vert), true, MagicWand::TextInfo(" Velocities ", 0, 12.0f, false, glm::vec2(2.0f, 2.0f)), sizeConstraints);
+
+			pos_vert += vert2d(button_widget->GetSize()) + 5.0f;
+
+			children.mChildWidgets.push_back(button_widget);
+			inScene.mShowVelocitiesButton = button_widget;
+			inScene.mShowVelocitiesButton->SetIsToggled(false);
+		}
+
+		{
+			SimpleButtonWidget* button_widget = new SimpleButtonWidget();
+			button_widget->Create(context, glm::vec2(pos_horiz, pos_vert), true, MagicWand::TextInfo(" Trails ", 0, 12.0f, false, glm::vec2(2.0f, 2.0f)), sizeConstraints);
+
+			pos_vert += vert2d(button_widget->GetSize()) + 5.0f;
+
+			children.mChildWidgets.push_back(button_widget);
+			inScene.mShowTrailsButton = button_widget;
+			inScene.mShowTrailsButton->SetIsToggled(true);
+		}
+
+		{
+			SimpleButtonWidget* button_widget = new SimpleButtonWidget();
+			button_widget->Create(context, glm::vec2(pos_horiz, pos_vert), true, MagicWand::TextInfo(" C.O.M ", 0, 12.0f, false, glm::vec2(2.0f, 2.0f)), sizeConstraints);
+
+			pos_vert += vert2d(button_widget->GetSize()) + 5.0f;
+
+			children.mChildWidgets.push_back(button_widget);
+			inScene.mShowCOMButton = button_widget;
+			inScene.mShowCOMButton->SetIsToggled(true);
+		}
+
+		{
+			SimpleButtonWidget* button_widget = new SimpleButtonWidget();
+			button_widget->Create(context, glm::vec2(pos_horiz, pos_vert), true, MagicWand::TextInfo(" Joints ", 0, 12.0f, false, glm::vec2(2.0f, 2.0f)), sizeConstraints);
+
+			pos_vert += vert2d(button_widget->GetSize()) + 5.0f;
+
+			children.mChildWidgets.push_back(button_widget);
+			inScene.mShowJointsButton = button_widget;
+			inScene.mShowJointsButton->SetIsToggled(true);
+		}
+
+		{
+			SimpleButtonWidget* button_widget = new SimpleButtonWidget();
+			button_widget->Create(context, glm::vec2(pos_horiz, pos_vert), true, MagicWand::TextInfo(" Leafs Only ", 0, 12.0f, false, glm::vec2(2.0f, 2.0f)), sizeConstraints);
+
+			pos_vert += vert2d(button_widget->GetSize()) + 5.0f;
+
+			children.mChildWidgets.push_back(button_widget);
+			inScene.mShowLeafsButton = button_widget;
+			inScene.mShowLeafsButton->SetIsToggled(true);
+		}
+
+		{
+			pos_vert += 5.0f;
+
+			SimpleButtonWidget* button_widget = new SimpleButtonWidget();
+			button_widget->Create(context, glm::vec2(pos_horiz, pos_vert), false, MagicWand::TextInfo(" Reset ", 0, 12.0f, false, glm::vec2(2.0f, 2.0f)), sizeConstraints);
+
+			pos_vert += vert2d(button_widget->GetSize()) + 5.0f;
+
+			children.mChildWidgets.push_back(button_widget);
+			inScene.mResetTrailsButton = button_widget;
 		}
 	}
 
@@ -586,7 +666,7 @@ void BigfootRetargetScene::RenderTestSkeletonScene(BE::Renderer& inRenderer)
 				{
 					if (mLoopButton->IsToggled())
 					{
-						mTestSkeletonPhysicsModelRendererTrail.Reset();
+						mTestSkeletonPhysicsParticles.ResetTrails();
 						mAnimPlayback.Reset();
 						frame_index = (!mIncludeDefaultPoseInPlayback && mTestSkeletonAnim.mSkeletonAnimationFrames.size() >= 2) ? 1 : 0;
 						mAnimPlayback.mPlaybackTime = ((float) frame_index * mTestSkeletonAnim.mFrameTime) / GetPlaySpeed();
@@ -619,10 +699,20 @@ void BigfootRetargetScene::RenderTestSkeletonScene(BE::Renderer& inRenderer)
 	{
 		mTestSkeletonPhysicsModel.Step(frame_index, &mTestSkeletonAnim);
 
-		BF::SkeletonPhysicsParticle com;
-		mTestSkeletonPhysicsModel.AnalyzeCenterOfMass(com);
+		//BF::SkeletonPhysicsParticle com;
+		//mTestSkeletonPhysicsModel.AnalyzeCenterOfMass(com);
 
-		mTestSkeletonPhysicsModelRenderer.Render(mTestSkeleton, mTestSkeletonPhysicsModel, com, mCamera.GetViewMatrix(), &mTestSkeletonTreeInfo, &mTestSkeletonPhysicsModelRendererTrail);
+		bool show_velocities = mShowVelocitiesButton->IsToggled();
+		bool show_trails = mShowTrailsButton->IsToggled();
+		
+		mTestSkeletonPhysicsModelRenderer.Setup(false, show_velocities, false, show_trails);
+		
+		bool show_COM = mShowCOMButton->IsToggled();
+		bool show_joints = mShowJointsButton->IsToggled();
+		bool show_leafs = mShowLeafsButton->IsToggled();
+
+		mTestSkeletonPhysicsParticles.AnalyzeParticles(mTestSkeletonPhysicsModel, &mTestSkeletonTreeInfo);
+		mTestSkeletonPhysicsParticles.RenderParticles(show_COM, show_joints, show_leafs, mTestSkeletonPhysicsModelRenderer, mTestSkeleton, mTestSkeletonPhysicsModel, mCamera.GetViewMatrix(), &mTestSkeletonTreeInfo);
 	}
 }
 
@@ -646,7 +736,9 @@ void BigfootRetargetScene::OnFileDropped(BE::MainWindow* inWindow, const char* i
 	{
 		mTestSkeletonTreeInfo.Build(mTestSkeleton);
 		mTestSkeletonPhysicsModel.Build(mTestSkeleton, 1.0f);
-		mTestSkeletonPhysicsModelRendererTrail.Reset(256);
+		mTestSkeletonPhysicsParticles.Reset();
+		mTestSkeletonPhysicsParticles.ResetTrails(48);
+		mTestSkeletonPhysicsModelRenderer.Setup(false, true, false, true);
 
 		mTestMode = ETestSkeletonScene;
 		{
@@ -717,7 +809,7 @@ void BigfootRetargetScene::OnFileDropped(BE::MainWindow* inWindow, const char* i
 			grid_division_count.y = render_bounds.GetExtents().z / nice_grid_unit_scale;
 			mGrid.Setup(render_bounds, grid_division_count);
 
-			mTestSkeletonPhysicsModelRendererTrail.Reset();
+			mTestSkeletonPhysicsParticles.ResetTrails();
 			mAnimPlayback.Reset();
 			if (mFrameSlider != NULL)
 				mFrameSlider->SetSliderPos(0.0f);
@@ -763,7 +855,7 @@ void BigfootRetargetScene::ProcessWidgetEvents(BE::MainWindow* inWindow, BE::Wid
 		{
 			int frame_index = (!mIncludeDefaultPoseInPlayback && mTestSkeletonAnim.mSkeletonAnimationFrames.size() >= 2) ? 1 : 0;
 			
-			mTestSkeletonPhysicsModelRendererTrail.Reset();
+			mTestSkeletonPhysicsParticles.ResetTrails();
 			mAnimPlayback.Reset();
 			mAnimPlayback.mPlaybackTime = ((float) frame_index * mTestSkeletonAnim.mFrameTime) / GetPlaySpeed();
 			
@@ -791,6 +883,9 @@ void BigfootRetargetScene::Update(const BE::WidgetContext& context, BE::SimpleRe
 	
 	if (mHelpButton != NULL && mHelpPanel != NULL)
 		mHelpPanel->SetIsVisible(mHelpButton->IsPressed());
+
+	if (mResetTrailsButton != NULL && mResetTrailsButton->IsPressed())
+		mTestSkeletonPhysicsParticles.ResetTrails();
 
 	mCameraController.Update(context, inParent, mViewportSetup, mCameraSetup);
 }
