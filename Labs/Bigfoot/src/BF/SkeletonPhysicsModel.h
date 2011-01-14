@@ -93,6 +93,13 @@ namespace BF
 		{
 			mSkeleton = &inSkeleton;
 			mJointPhysicsInfos.resize(mSkeleton->mJoints.size());
+			
+			for (int i=0; i<FrameTypeCount; ++i)
+			{
+				mIsValidModelSpaceJoints[i] = false;
+				mModelSpaceJoints[i].clear();
+			}
+
 			mMassJointCount = 0;
 			mTotalMass = 0.0f;
 			

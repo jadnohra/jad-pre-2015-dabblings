@@ -560,8 +560,11 @@ void BigfootViewerScene::RenderTestSkeletonScene(BE::Renderer& inRenderer)
 	}
 	
 	// We are one frame off with the camera!
+	BF::SkeletonRenderer::RenderSettings render_settings;
+	render_settings.pTreeInfo = NULL;
+	render_settings.showSemantics = false;
 	mTestSkeletonRenderer.Render(mTestSkeleton, frame_index, &mTestSkeletonAnim, 
-									mCamera.GetViewMatrix(), true, true, NULL, skeleton_bounds);
+									mCamera.GetViewMatrix(), true, true, render_settings, skeleton_bounds);
 }
 
 

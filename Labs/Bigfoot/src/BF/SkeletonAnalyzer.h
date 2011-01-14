@@ -4,48 +4,17 @@
 #include <vector>
 #include <map>
 #include "Skeleton.h"
+#include "BFMath.h"
 
 namespace BF
 {
 
-	class SemanticSkeletonInfo
-	{
-	public:
-
-		enum EBodyPartType
-		{
-			BodyPart_Unknown, BodyPart_Spine, BodyPart_Head, BodyPart_Tail, BodyPart_Limb, /*BodyPart_Hips*/
-		};
-
-		enum ELimbType
-		{
-			Limb_Unknown, Limb_Arm, Limb_Leg
-		};
-
-		typedef std::vector<int> Indices;
-		typedef Indices JointIndices;
-
-		class BodyPart
-		{
-		public:
-
-			EBodyPartType mType;
-			ELimbType mLimbType;
-			int mMirrorBodyPart;
-			JointIndices mJoints;
-		};
-
-		typedef std::vector<BodyPart> BodyParts;
-		typedef std::vector<int> JointBodyParts;
-
-		BodyParts mBodyParts;
-		JointBodyParts mJointBodyParts;
-	};
-
-
 	class SkeletonTreeInfo
 	{
 	public:
+
+		typedef std::vector<int> Indices;
+		typedef Indices JointIndices;
 
 		class Branch
 		{
@@ -54,8 +23,8 @@ namespace BF
 			Branch() : mIsValid(false) {}
 
 			bool mIsValid;
-			SemanticSkeletonInfo::Indices mJointIndices;
-			SemanticSkeletonInfo::Indices mChildBranches;
+			Indices mJointIndices;
+			Indices mChildBranches;
 			int mMirrorBranch;
 			int mParentBranch;
 		};
@@ -189,20 +158,152 @@ namespace BF
 	};
 
 
-	class SkeletonSemanticAnalyzer
+	class SkeletonSemanticInfo
 	{
 	public:
 
-		//spine vs head: spine has multiple branching symmetries (head probably only one), spine is longer
-		void Analyze(const Skeleton& inSkeleton, SemanticSkeletonInfo& outInfo)
+		enum EBodyPartType
 		{
-			SkeletonTreeInfo tree_info;
-			tree_info.Build(inSkeleton);
+			BodyPart_Unknown, BodyPart_Spine, BodyPart_Head, BodyPart_Tail, BodyPart_Limb, /*BodyPart_Hips*/
+		};
+
+		enum ELimbType
+		{
+			Limb_Unknown, Limb_Arm, Limb_Leg
+		};
+
+		typedef SkeletonTreeInfo::JointIndices JointIndices;
+		
+		class BodyPart
+		{
+		public:
+
+			EBodyPartType mType;
+			ELimbType mLimbType;
+			int mMirrorBodyPart;
+			JointIndices mJoints;
+		};
+
+		typedef std::vector<BodyPart> BodyParts;
+		typedef std::vector<int> BranchBodyParts;
+
+		BodyParts mBodyParts;
+		BranchBodyParts mBranchBodyParts;
+
+
+		//spine vs head: spine has multiple branching symmetries (head probably only one), spine is longer
+		void Build(const Skeleton& inSkeleton, SkeletonTreeInfo& ioTreeInfo)
+		{
+			JointTransforms model;
+			AAB bounds;
+
+			inSkeleton.ToModelSpace(inSkeleton.mDefaultPose, false, false, model);
+			
+			for (size_t i=0; i<model.size(); ++i)
+				bounds.Include(model[i].mPosition);
+
+			float tolerance = (bounds.GetExtents()[0] + bounds.GetExtents()[1] + bounds.GetExtents()[2]) * 0.05f;
+
+			for (size_t i=0; i<ioTreeInfo.mBranches.size(); ++i)
+			{
+				ioTreeInfo.mBranches[i].mMirrorBranch = -1;
+			}
+
+			for (size_t i=0; i<ioTreeInfo.mBranches.size(); ++i)
+			{
+				for (size_t j=i+1; j<ioTreeInfo.mBranches.size(); ++j)
+				{
+					if (ioTreeInfo.mBranches[j].mMirrorBranch == -1)
+					{
+						if (IsMirrorOf(model, ioTreeInfo.mBranches[i], ioTreeInfo.mBranches[j], tolerance))
+						{
+							ioTreeInfo.mBranches[i].mMirrorBranch = j;
+							ioTreeInfo.mBranches[j].mMirrorBranch = i;
+							break;
+						}
+					}
+				}
+			}
+
+			mBodyParts.resize(1);
+			mBranchBodyParts.resize(ioTreeInfo.mBranches.size());
+
+			mBodyParts[0].mType = BodyPart_Spine;
+
+			for (size_t i=0; i<ioTreeInfo.mBranches.size(); ++i)
+			{
+				if (ioTreeInfo.mBranches[i].mMirrorBranch == -1)
+				{
+					mBranchBodyParts[i] = 0;
+				}
+				else
+				{
+					mBranchBodyParts[i] = -1;
+				}
+			}
 		}
 
-	protected:
+		bool IsMirrorOf(const JointTransforms& model, 
+						const SkeletonTreeInfo::Branch& branch1, const SkeletonTreeInfo::Branch& branch2, float tolerance)
+		{
+			if ((!branch1.mIsValid) 
+				|| (!branch2.mIsValid)
+				|| (branch1.mJointIndices.empty())
+				|| (branch2.mJointIndices.empty())
+				|| (branch1.mJointIndices.size() != branch2.mJointIndices.size()))
+				return false;
 
+			size_t index = 0;
+			for (; index<branch1.mJointIndices.size(); ++index)
+			{
+				if (glm::distance(model[branch1.mJointIndices[index]].mPosition, model[branch2.mJointIndices[index]].mPosition) != 0.0f)
+					break;
+			}
+
+			int mirror_dim = FindMirrorDim(model[branch1.mJointIndices[index]], model[branch2.mJointIndices[index]], tolerance);
+
+			if (mirror_dim < 0)
+				return false;
+
+			float test_tolerance = 2.0f * (std::abs(model[branch1.mJointIndices[index]].mPosition[mirror_dim] - model[branch2.mJointIndices[index]].mPosition[mirror_dim]));
+			
+			for (size_t i=index+1; i<branch1.mJointIndices.size(); ++i)
+			{
+				float dist = std::abs(model[branch1.mJointIndices[i]].mPosition[mirror_dim] - model[branch2.mJointIndices[i]].mPosition[mirror_dim]);
+
+				if (dist >= test_tolerance)
+				{
+					int test_mirror_dim = FindMirrorDim(model[branch1.mJointIndices[index]], model[branch2.mJointIndices[index]], tolerance);
+
+					if (test_mirror_dim != mirror_dim)
+						return false;
+				}
+			}
+
+			return true;
+		}
 		
+		int FindMirrorDim(const JointTransform& xfm1, const JointTransform& xfm2, float tolerance)
+		{
+			float min_dist = glm::distance(xfm1.mPosition[0], xfm2.mPosition[0]);
+			int best_dim = 0;
+
+			for (int i=1; i<3; ++i)
+			{
+				float dist = glm::distance(xfm1.mPosition[i], xfm2.mPosition[i]);
+
+				if (dist < min_dist)
+				{
+					min_dist = dist;
+					best_dim = i;
+				}
+			}
+
+			if (min_dist >= tolerance)
+				return -1;
+
+			return best_dim;
+		}
 	};
 }
 

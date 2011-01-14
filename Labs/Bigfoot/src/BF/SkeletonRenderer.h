@@ -14,6 +14,12 @@ class SkeletonRenderer
 {
 public:
 
+	struct RenderSettings
+	{
+		SkeletonTreeInfo* pTreeInfo;
+		bool showSemantics;
+	};
+
 	SkeletonRenderer()
 	{
 	}
@@ -38,16 +44,16 @@ public:
 	void Render(const Skeleton& inSkeleton, int inAnimFrame, SkeletonAnimationFrames* inSkeletonAnimFrames,
 				const glm::mat4& inViewMatrix, 
 				bool inIncludeRootTranslation, bool inIncludeRootAnimTranslation, 
-				const SkeletonTreeInfo* pTreeInfo,
+				const RenderSettings& settings,
 				AAB& ioBounds)
 	{
 		BE::OGLLibInit::Init();
 
-		if (pTreeInfo != NULL
-			&& mBranchColors.size() < pTreeInfo->mBranches.size())
+		if (settings.pTreeInfo != NULL
+			&& mBranchColors.size() < settings.pTreeInfo->mBranches.size())
 		{
 			ColorGen color_gen;
-			mBranchColors.resize(pTreeInfo->mBranches.size());
+			mBranchColors.resize(settings.pTreeInfo->mBranches.size());
 
 			for (size_t i=0; i<mBranchColors.size(); ++i)
 			{
@@ -76,7 +82,7 @@ public:
 		glMatrixMode(GL_MODELVIEW);
 		glColor4f(0.0f, 0.0f, 0.0f, 0.5f);
 
-		DrawSkeletonJoint(inSkeleton, inViewMatrix, -1, 0, ioBounds, 1.0f, pTreeInfo);
+		DrawSkeletonJoint(inSkeleton, inViewMatrix, -1, 0, ioBounds, 1.0f, settings);
 	
 		glDisable(GL_COLOR_MATERIAL);
 	}
@@ -86,7 +92,7 @@ public:
 	void DrawBone(const glm::mat4& inModelViewMat, const glm::vec3& inDir, const glm::vec3& inLocalTranslation, 
 					int inParentJointIndex, int inJointIndex, 
 					float inLength, float inLengthFraction, float inRadius, float inSphereRadius, 
-					const glm::quat& inOrientation, bool inInRenderOnlyBone, const SkeletonTreeInfo* pTreeInfo)
+					const glm::quat& inOrientation, bool inInRenderOnlyBone, const RenderSettings& settings)
 	{
 		//if (inJointIndex != 15)
 		//	return;
@@ -124,12 +130,21 @@ public:
 		{
 			glm::vec3 color(89.0f/255.0f, 89.0f/255.0f, 89.0f/255.0f);
 
-			if (pTreeInfo != NULL)
+			if (settings.pTreeInfo != NULL)
 			{
-				int branch_index = pTreeInfo->GetLinkBranch(inParentJointIndex, inJointIndex);
+				int branch_index = settings.pTreeInfo->GetLinkBranch(inParentJointIndex, inJointIndex);
 
 				if (branch_index >= 0)
+				{
 					color = mBranchColors[branch_index];
+
+					if (settings.showSemantics)
+					{
+						if (settings.pTreeInfo->mBranches[branch_index].mMirrorBranch >= 0
+							&& branch_index > settings.pTreeInfo->mBranches[branch_index].mMirrorBranch)
+							color = mBranchColors[settings.pTreeInfo->mBranches[branch_index].mMirrorBranch];
+					}
+				}
 			}
 			else
 			{
@@ -204,7 +219,7 @@ public:
 	}
 
 
-	void DrawSkeletonJoint(const Skeleton& inSkeleton, const glm::mat4& inViewMatrix, int inParentJointIndex, int inJointIndex, AAB& ioBounds, float inLastJointLength, const SkeletonTreeInfo* pTreeInfo)
+	void DrawSkeletonJoint(const Skeleton& inSkeleton, const glm::mat4& inViewMatrix, int inParentJointIndex, int inJointIndex, AAB& ioBounds, float inLastJointLength, const RenderSettings& settings)
 	{
 		ioBounds.Include(mModelSpaceJoints[inJointIndex].mPosition);
 		glm::mat4 model_view_mat = inViewMatrix * glm::translate(glm::mat4(), mModelSpaceJoints[inJointIndex].mPosition);
@@ -238,7 +253,7 @@ public:
 				DrawBone(model_view_mat, bone_dir, inSkeleton.mJoints[first_child_joint_index].mLocalTransform.mPosition, 
 							inJointIndex, first_child_joint_index, 
 							bone_length, 0.2f, bone_length*0.15f, bone_length*0.05f, 
-							mModelSpaceJoints[inJointIndex].mOrientation, normal_child_count == 0 && child_count > 0, pTreeInfo);
+							mModelSpaceJoints[inJointIndex].mOrientation, normal_child_count == 0 && child_count > 0, settings);
 
 				if (child_count > 1)
 				{
@@ -278,7 +293,7 @@ public:
 				//glVertex3fv(glm::value_ptr(mModelSpaceJoints[child_joint_index].mPosition)); 
 				//glEnd();
 
-				DrawSkeletonJoint(inSkeleton, inViewMatrix, inJointIndex, child_joint_index, ioBounds, bone_length, pTreeInfo);
+				DrawSkeletonJoint(inSkeleton, inViewMatrix, inJointIndex, child_joint_index, ioBounds, bone_length, settings);
 			}
 		}
 		else
