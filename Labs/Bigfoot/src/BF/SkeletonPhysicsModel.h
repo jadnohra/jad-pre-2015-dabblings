@@ -8,6 +8,7 @@ namespace BF
 	struct JointPhysicsInfo
 	{
 		float mMass;
+		bool mIsStatic;
 	};
 
 	struct SkeletonPhysicsParticle
@@ -69,6 +70,7 @@ namespace BF
 		};
 	};
 
+	
 	typedef std::vector<JointPhysicsInfo> JointPhysicsInfos;
 
 	class SkeletonPhysicsModel
@@ -81,12 +83,42 @@ namespace BF
 			{
 				mIsValidModelSpaceJoints[i] = false;
 			}
+
+			mIsLearning = false;
+			mMinLearnedSpeed = -1.0f;
+			mMinLearnedAccel = -1.0f;
+			mMaxLearnedSpeed = -1.0f;
+			mMaxLearnedAccel = -1.0f;
+			mIsDetectingStaticJoints = false;
+			mStaticJointSpeed = 0.0f;
+			mStaticJointAccel = 0.0f;
 		}
 
 		void Init(bool inIncludeRootTranslation, bool inIncludeRootAnimTranslation)
 		{
 			mIncludeRootTranslation = inIncludeRootTranslation;
 			mIncludeRootAnimTranslation = inIncludeRootAnimTranslation;
+		}
+
+		void SetIsLearning(bool isLearning)
+		{
+			if (mIsLearning && !isLearning)
+			{
+				mStaticJointSpeed = mMinLearnedSpeed + 0.002f * (mMaxLearnedSpeed - mMinLearnedSpeed);
+				mStaticJointAccel = mMinLearnedAccel + 0.005f * (mMaxLearnedAccel - mMinLearnedAccel);
+			}
+			
+			mIsLearning = isLearning;
+		}
+
+		void SetIsDetectingStaticJoints(bool isDetectingStaticJoints)
+		{
+			mIsDetectingStaticJoints = isDetectingStaticJoints;
+		}
+
+		bool IsJointStatic(int inIndex) const
+		{
+			return mJointPhysicsInfos[inIndex].mIsStatic;
 		}
 
 		void Build(Skeleton& inSkeleton, float inMassPerMeter = 1.0f)
@@ -107,6 +139,7 @@ namespace BF
 			{
 				int normal_child_count =  mSkeleton->mJointHierarchy.mJointChildrenInfos[i].mNormalChildCount;
 				mJointPhysicsInfos[i].mMass = 0.0f;
+				mJointPhysicsInfos[i].mIsStatic = false;
 				
 				if (normal_child_count > 0)
 				{
@@ -238,6 +271,45 @@ namespace BF
 				glm::vec3 prev_velocity = (outJoint.mPosition - alt_pos[1]) / mFrameTime;
 				outJoint.mAcceleration = (outJoint.mVelocity - prev_velocity) / mFrameTime;
 			}
+
+			if (mIsLearning)
+			{
+				if (outJoint.mIsValidVelocity)
+				{
+					float speed = glm::length(outJoint.mVelocity);
+
+					if (speed != 0.0f && (mMinLearnedSpeed == -1.0f || speed < mMinLearnedSpeed))
+						mMinLearnedSpeed = speed;
+
+					if (speed > mMaxLearnedSpeed)
+						mMaxLearnedSpeed = speed;
+				}
+
+				if (outJoint.mIsValidAcceleration)
+				{
+					float acc = glm::length(outJoint.mAcceleration);
+
+					if (acc != 0.0f && (mMinLearnedAccel == -1.0f || acc < mMinLearnedAccel))
+						mMinLearnedAccel = acc;
+
+					if (acc > mMaxLearnedAccel)
+						mMaxLearnedAccel = acc;
+				}
+			}
+
+			if (!mIsLearning && mIsDetectingStaticJoints/* && mJointPhysicsInfosAnalysisFrameIndex != mFrameIndex*/)
+			{
+				if (outJoint.mIsValidVelocity && outJoint.mIsValidAcceleration)
+				{
+					float speed = glm::length(outJoint.mVelocity);
+					float acc = glm::length(outJoint.mAcceleration);
+					
+					if (acc < mStaticJointAccel && speed < mStaticJointSpeed)
+						mJointPhysicsInfos[inJointIndex].mIsStatic = true;
+					else
+						mJointPhysicsInfos[inJointIndex].mIsStatic = false;
+				}
+			}
 		}
 
 		float GetRenderMassToLengthScale() const
@@ -324,6 +396,14 @@ namespace BF
 		JointPhysicsInfos mJointPhysicsInfos;
 		int mMassJointCount;
 		float mTotalMass;
+		bool mIsLearning;
+		float mMinLearnedSpeed;
+		float mMinLearnedAccel;
+		float mMaxLearnedSpeed;
+		float mMaxLearnedAccel;
+		float mStaticJointSpeed;
+		float mStaticJointAccel;
+		bool mIsDetectingStaticJoints;
 		float mRenderMassToLengthScale;
 		bool mIncludeRootTranslation;
 		bool mIncludeRootAnimTranslation;
@@ -373,7 +453,9 @@ namespace BF
 		}
 
 		void RenderParticle(const Skeleton& inSkeleton, 
-					const SkeletonPhysicsModel& inModel, const SkeletonPhysicsParticle& inParticle,
+					const SkeletonPhysicsModel& inModel, 
+					int inJointIndex,
+					const SkeletonPhysicsParticle& inParticle,
 					const glm::mat4& inViewMatrix, 
 					const SkeletonTreeInfo* pTreeInfo,
 					SkeletonPhysicsParticle::Trail* ioTrail = NULL,
@@ -394,6 +476,16 @@ namespace BF
 
 				if (mRenderMas)
 					glutSolidSphere((inModel.GetRenderMassToLengthScale() * inParticle.mMass) / (float) (inModel.GetMassJointCount()), 10, 10);
+
+				if (inJointIndex >= 0 && inModel.IsJointStatic(inJointIndex))
+				{
+					glColor4f(1.0f, 1.0f, 1.0f, 0.5f);
+
+					glEnable(GL_BLEND);
+					glutSolidSphere((inModel.GetRenderMassToLengthScale() * inParticle.mMass * 5.0f) / (float) (inModel.GetMassJointCount()), 10, 10);
+					glDisable(GL_BLEND);
+				}
+
 
 				if (mRenderVelocity && inParticle.mIsValidVelocity)
 				{
@@ -584,13 +676,12 @@ namespace BF
 
 			if (inRenderCOM)
 			{
-				inRenderer.RenderParticle(inSkeleton, inModel, mCOM,
+				inRenderer.RenderParticle(inSkeleton, inModel, -1, mCOM,
 											inViewMatrix, pTreeInfo, &mCOMTrail);
 			}
 
 			if (inRenderNodes)
 			{
-
 				for (size_t i = 0; i < mParticles.size(); ++i)
 				{
 					if (mParticles[i].mMass > 0.0f)
@@ -608,10 +699,8 @@ namespace BF
 								if (branch_index >= 0)
 									color = mBranchColors[branch_index];
 							}
-
 							
-							
-							inRenderer.RenderParticle(inSkeleton, inModel, mParticles[i],
+							inRenderer.RenderParticle(inSkeleton, inModel, i, mParticles[i],
 														inViewMatrix, pTreeInfo, &(mParticleTrails[i]),
 														&color);
 						}

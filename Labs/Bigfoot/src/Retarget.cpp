@@ -714,21 +714,27 @@ void BigfootRetargetScene::RenderTestSkeletonScene(BE::Renderer& inRenderer)
 	bool use_physics = (mShowPhysicsButton != NULL && mShowPhysicsButton->IsToggled());
 	if (use_physics)
 	{
-		mTestSkeletonPhysicsModel.Step(frame_index, &mTestSkeletonAnim);
+		
 
-		//BF::SkeletonPhysicsParticle com;
-		//mTestSkeletonPhysicsModel.AnalyzeCenterOfMass(com);
+		if (frame_index != mTestSkeletonPhysicsModel.mFrameIndex)
+		{
+			mTestSkeletonPhysicsModel.Step(frame_index, &mTestSkeletonAnim);
+
+			//BF::SkeletonPhysicsParticle com;
+			//mTestSkeletonPhysicsModel.AnalyzeCenterOfMass(com);
+
+			
+			mTestSkeletonPhysicsParticles.AnalyzeParticles(mTestSkeletonPhysicsModel, &mTestSkeletonTreeInfo);
+		}
 
 		bool show_velocities = mShowVelocitiesButton->IsToggled();
 		bool show_trails = mShowTrailsButton->IsToggled();
-		
-		mTestSkeletonPhysicsModelRenderer.Setup(false, show_velocities, false, show_trails);
-		
+
 		bool show_COM = mShowCOMButton->IsToggled();
 		bool show_joints = mShowJointsButton->IsToggled();
 		bool show_leafs = mShowLeafsButton->IsToggled();
 
-		mTestSkeletonPhysicsParticles.AnalyzeParticles(mTestSkeletonPhysicsModel, &mTestSkeletonTreeInfo);
+		mTestSkeletonPhysicsModelRenderer.Setup(false, show_velocities, false, show_trails);
 		mTestSkeletonPhysicsParticles.RenderParticles(show_COM, show_joints, show_leafs, mTestSkeletonPhysicsModelRenderer, mTestSkeleton, mTestSkeletonPhysicsModel, mCamera.GetViewMatrix(), &mTestSkeletonTreeInfo);
 	}
 }
@@ -773,11 +779,24 @@ void BigfootRetargetScene::OnFileDropped(BE::MainWindow* inWindow, const char* i
 			{
 				BF::AAB frame_render_bounds;
 
+				mTestSkeletonPhysicsModel.SetIsLearning(true);
+				mTestSkeletonPhysicsModel.ResetStep();
+
 				for (size_t i=0; i<mTestSkeletonAnim.mSkeletonAnimationFrames.size(); ++i)
 				{
 					mTestSkeletonRenderer.GetRenderBounds(mTestSkeleton, i, &mTestSkeletonAnim, true, true, frame_render_bounds);
 					render_bounds.Include(frame_render_bounds);
+
+					mTestSkeletonPhysicsModel.Step(i, &mTestSkeletonAnim);
+
+					BF::SkeletonPhysicsParticle temp_particle;
+					for (size_t j=0; j<mTestSkeleton.mJoints.size(); ++j)
+						mTestSkeletonPhysicsModel.AnalyzeJoint(j, temp_particle);
 				}
+
+				mTestSkeletonPhysicsModel.ResetStep();
+				mTestSkeletonPhysicsModel.SetIsLearning(false);
+				mTestSkeletonPhysicsModel.SetIsDetectingStaticJoints(true);
 			}
 			
 			// include origin
