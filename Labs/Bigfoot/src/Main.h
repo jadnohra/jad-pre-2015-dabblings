@@ -3,8 +3,10 @@
 
 //#define MAIN_VIEWER
 #define MAIN_RETARGET
+//#define MAIN_FOOTER
 
 int ViewerMain();
 int RetargetMain();
+int FooterMain();
 
 #endif

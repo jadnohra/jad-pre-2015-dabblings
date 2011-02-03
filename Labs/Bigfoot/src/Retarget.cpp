@@ -180,7 +180,7 @@ void CreateWidgets(BE::MainWindow& inWindow, BigfootRetargetScene& inScene)
 
 		{
 			SimpleRenderToTextureWidget* widget = new SimpleRenderToTextureWidget();
-			widget->Create(context, glm::vec2(0.0f, 0.0f), parent_widget->GetInternalSize());
+			widget->Create(context, glm::vec2(0.0f, 0.0f), parent_widget->GetInternalSize(), 4);
 			widget->SetScene(&inScene);
 			children.mChildWidgets.push_back(widget);
 		}

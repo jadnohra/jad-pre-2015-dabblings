@@ -203,6 +203,10 @@
 			>
 		</File>
 		<File
+			RelativePath="..\..\src\Footer.cpp"
+			>
+		</File>
+		<File
 			RelativePath="..\..\src\BF\GridRenderer.cpp"
 			>
 		</File>
