@@ -548,12 +548,12 @@ SimpleRenderToTextureWidget::~SimpleRenderToTextureWidget()
 {
 }
 
-bool SimpleRenderToTextureWidget::Create(const WidgetContext& inContext, const glm::vec2& inPos, const glm::vec2& inSize)
+bool SimpleRenderToTextureWidget::Create(const WidgetContext& inContext, const glm::vec2& inPos, const glm::vec2& inSize, int inMultiSampleCount)
 {
 	mPos = to3d_point(inPos);
 	mPos.z = 0.01f;
 
-	if (!mTexture.Create((GLsizei) inSize.x, (GLsizei) inSize.y))
+	if (!mTexture.Create((GLsizei) inSize.x, (GLsizei) inSize.y, inMultiSampleCount))
 		return false;
 
 	mSize = inSize;

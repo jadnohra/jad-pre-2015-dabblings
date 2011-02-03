@@ -138,7 +138,7 @@ namespace BE
 		SimpleRenderToTextureWidget();
 		virtual ~SimpleRenderToTextureWidget();
 
-		bool		Create(const WidgetContext& inContext, const glm::vec2& inPos, const glm::vec2& inSize);
+		bool		Create(const WidgetContext& inContext, const glm::vec2& inPos, const glm::vec2& inSize, int inMultiSampleCount = 0);
 		void		SetScene(Scene* inScene)		{ mScene = inScene; }
 		Scene*		GetScene()						{ return mScene; }
 
