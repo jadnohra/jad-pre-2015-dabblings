@@ -3,7 +3,7 @@
 #include "BF/BFMath.h"
 #include "BF/GridRenderer.h"
 
-class BigfootFooterScene : public BE::SimpleRenderToTextureWidget::Scene, public BE::MainWindowClient
+class BigfootPlannerScene : public BE::SimpleRenderToTextureWidget::Scene, public BE::MainWindowClient
 {
 public:
 
@@ -20,7 +20,7 @@ public:
 	BE::SimpleButtonWidget* mHelpButton;
 	BE::SimplePanelWidget* mHelpPanel;
 
-	BigfootFooterScene::BigfootFooterScene() 
+	BigfootPlannerScene::BigfootPlannerScene() 
 	:	mAutoSetupBasicScene(true)
 	,	mRenderTime(-1.0f)
 	,	mHelpButton(NULL)
@@ -45,15 +45,15 @@ public:
 };
 
 
-void CreateWidgets(BE::MainWindow& inWindow, BigfootFooterScene& inScene);
+void CreateWidgets(BE::MainWindow& inWindow, BigfootPlannerScene& inScene);
 
 
-int FooterMain()
+int PlannerMain()
 {
-	BigfootFooterScene scene;
+	BigfootPlannerScene scene;
 	BE::MainWindow main_window(&scene);
 	
-	if (main_window.Create("Bigfoot [footer]", 1024, 768))
+	if (main_window.Create("Bigfoot [Planner]", 1024, 768))
 	{
 		CreateWidgets(main_window, scene);
 
@@ -72,7 +72,7 @@ int FooterMain()
 }
 
 
-void CreateWidgets(BE::MainWindow& inWindow, BigfootFooterScene& inScene)
+void CreateWidgets(BE::MainWindow& inWindow, BigfootPlannerScene& inScene)
 {
 	BE::NativeWindowWidget* root =  inWindow.GetRootWidget();
 	BE::WidgetContext context(inWindow, 0.0f);
@@ -136,7 +136,7 @@ void CreateWidgets(BE::MainWindow& inWindow, BigfootFooterScene& inScene)
 				
 			{
 				SimpleTextWidget* text_widget = new SimpleTextWidget();
-				text_widget->Create(context, glm::vec2(pos_horiz, pos_vert), MagicWand::TextInfo("BigFoot [footer] ver. 0.1a", 0, 12.0f, true, glm::vec2(0.0f, 0.0f)), MagicWand::SizeConstraints());
+				text_widget->Create(context, glm::vec2(pos_horiz, pos_vert), MagicWand::TextInfo("BigFoot [Planner] ver. 0.1a", 0, 12.0f, true, glm::vec2(0.0f, 0.0f)), MagicWand::SizeConstraints());
 					
 				pos_vert += vert2d(text_widget->GetSize()) + height_offset;
 
@@ -156,7 +156,7 @@ void CreateWidgets(BE::MainWindow& inWindow, BigfootFooterScene& inScene)
 }
 
 
-void BigfootFooterScene::RenderTestBasicScene(BE::Renderer& inRenderer)
+void BigfootPlannerScene::RenderTestBasicScene(BE::Renderer& inRenderer)
 {
 	bool test_controller = true;
 
@@ -279,7 +279,7 @@ void BigfootFooterScene::RenderTestBasicScene(BE::Renderer& inRenderer)
 }
 
 
-bool BigfootFooterScene::Create()
+bool BigfootPlannerScene::Create()
 {
 	mCameraSetup.SetupDepthPlanes(glm::vec2(0.1f, 100.0f));
 	BF::AAB default_gid_aab;
@@ -292,7 +292,7 @@ bool BigfootFooterScene::Create()
 }
 
 
-void BigfootFooterScene::OnFileDropped(BE::MainWindow* inWindow, const char* inFilePath)
+void BigfootPlannerScene::OnFileDropped(BE::MainWindow* inWindow, const char* inFilePath)
 {
 	{
 		mAutoSetupBasicScene = true;
@@ -305,7 +305,7 @@ void BigfootFooterScene::OnFileDropped(BE::MainWindow* inWindow, const char* inF
 }
 
 
-void BigfootFooterScene::Update(const BE::WidgetContext& context, BE::SimpleRenderToTextureWidget& inParent, BE::OGLRenderToTexture& inTexture)	
+void BigfootPlannerScene::Update(const BE::WidgetContext& context, BE::SimpleRenderToTextureWidget& inParent, BE::OGLRenderToTexture& inTexture)	
 {
 	mTexture = &inTexture;
 
@@ -326,7 +326,7 @@ void BigfootFooterScene::Update(const BE::WidgetContext& context, BE::SimpleRend
 }
 
 
-void BigfootFooterScene::Unproject(const glm::vec2& inViewportPoint, glm::vec3& outSceneWorldPoint, glm::vec3* outSceneWorldRayDir)
+void BigfootPlannerScene::Unproject(const glm::vec2& inViewportPoint, glm::vec3& outSceneWorldPoint, glm::vec3* outSceneWorldRayDir)
 {
 	GLint viewport[4] = { 0, 0, (int) mViewportSetup.mWindowSize.x, (int) mViewportSetup.mWindowSize.y };
 	GLdouble modelview[16];
@@ -350,13 +350,13 @@ void BigfootFooterScene::Unproject(const glm::vec2& inViewportPoint, glm::vec3& 
 }
 
 
-void BigfootFooterScene::OnFirstUpdate()
+void BigfootPlannerScene::OnFirstUpdate()
 {
 	//OnFileDropped(NULL, "../media/test.bvh");
 }
 
 
-void BigfootFooterScene::Render(BE::Renderer& inRenderer)	
+void BigfootPlannerScene::Render(BE::Renderer& inRenderer)	
 {
 	mTexture->BeginRender();
 

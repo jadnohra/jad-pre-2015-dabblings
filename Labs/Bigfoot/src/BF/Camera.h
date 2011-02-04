@@ -157,6 +157,8 @@ public:
 	CameraTurnTableRotationController()
 	:	mCamera(NULL)
 	,	mIsDragging(false)
+	,	mIsRotating(false)
+	,	mIsTranslating(false)
 	{
 	}
 
@@ -164,6 +166,8 @@ public:
 	{
 		mCamera = &inCamera;
 		mIsDragging = false;
+		mIsRotating = false;
+		mIsTranslating = false;
 	}
 
 	void DetachCamera()
@@ -187,16 +191,21 @@ public:
 		if (mCamera == NULL)
 		{
 			mIsDragging = false;
+			mIsRotating = false;
+			mIsTranslating = false;
 			return;
 		}
 
 		bool is_dragging = false;
 
-		if (inContext.mMainWindow.GetInputState(BE::INPUT_MOUSE_MIDDLE) != 0.0f)
+		if (inContext.mMainWindow.GetInputState(BE::INPUT_MOUSE_MIDDLE) != 0.0f
+			|| inContext.mMainWindow.GetInputState(BE::INPUT_MOUSE_RIGHT) != 0.0f)
 		{
 			if (inWidget.IsMainWindowPosInViewport(inContext, inContext.mMainWindow.GetMousePos(), mLastPickedPoint))
 			{
 				is_dragging = true;
+				mIsRotating = (inContext.mMainWindow.GetInputState(BE::INPUT_MOUSE_MIDDLE) != 0.0f);
+				mIsTranslating = (inContext.mMainWindow.GetInputState(BE::INPUT_MOUSE_RIGHT) != 0.0f);
 				inWidget.GetScene()->Unproject(mLastPickedPoint, mLastPickedPoint3D, NULL);
 			}
 		}
@@ -212,22 +221,36 @@ public:
 
 			mIsDragging = true;
 
-			float rot_around_vert = -0.4f * (mLastPickedPoint.x - mFirstDragPoint.x);
-			float rot_around_horiz = 0.4f * (mLastPickedPoint.y - mFirstDragPoint.y);
-			glm::mat4 cam_world_matrix_rot_vert = glm::rotate(glm::mat4(), rot_around_vert, glm::vec3(0.0f, 1.0f, 0.0f)) * mCameraStartDragWorldMatrix;
-			glm::vec3 cam_pos(cam_world_matrix_rot_vert[3].x, cam_world_matrix_rot_vert[3].y, cam_world_matrix_rot_vert[3].z);
-			glm::vec3 horiz_axis = glm::cross(glm::normalize(cam_pos - glm::vec3()), glm::vec3(0.0f, 1.0f, 0.0f));
-			glm::mat4 cam_world_matrix_rot_vert_horiz = glm::rotate(glm::mat4(), rot_around_horiz, horiz_axis) * cam_world_matrix_rot_vert;
-			mCamera->SetWorldMatrix(cam_world_matrix_rot_vert_horiz);
+			if (mIsRotating)
+			{
+				float rot_around_vert = -0.4f * (mLastPickedPoint.x - mFirstDragPoint.x);
+				float rot_around_horiz = -0.4f * (mLastPickedPoint.y - mFirstDragPoint.y);
+				glm::mat4 cam_world_matrix_no_trans = mCameraStartDragWorldMatrix;
+				cam_world_matrix_no_trans[3][0] = 0.0f; cam_world_matrix_no_trans[3][2] = 0.0f; cam_world_matrix_no_trans[3][2] = 0.0f;
+				glm::mat4 cam_world_matrix_rot_vert = glm::rotate(glm::mat4(), rot_around_horiz, glm::vec3(cam_world_matrix_no_trans[0][0], cam_world_matrix_no_trans[0][1], cam_world_matrix_no_trans[0][2]));
+				glm::mat4 cam_world_matrix_rot_horiz = glm::rotate(glm::mat4(), rot_around_vert, glm::vec3(0.0f, 1.0f, 0.0f));
+				glm::mat4 cam_world_matrix_rot_vert_horiz = cam_world_matrix_rot_horiz * cam_world_matrix_rot_vert * cam_world_matrix_no_trans; 
+				cam_world_matrix_rot_vert_horiz[3] = mCameraStartDragWorldMatrix[3];
+				mCamera->SetWorldMatrix(cam_world_matrix_rot_vert_horiz);
+			}
+			if (mIsTranslating)
+			{
+				float trans_vert = -0.075f * (mLastPickedPoint.x - mFirstDragPoint.x);
+				float trans_horiz = 0.075f * (mLastPickedPoint.y - mFirstDragPoint.y);
+				glm::mat4 cam_world_matrix_trans = mCameraStartDragWorldMatrix * glm::translate(glm::mat4(), trans_vert, trans_horiz, 0.0f);
+				mCamera->SetWorldMatrix(cam_world_matrix_trans);
+			}
 		}
 		else
 		{
 			mIsDragging = false;
+			mIsRotating = false;
+			mIsTranslating = false;
 		}
 
 		if (inContext.mMainWindow.GetInputState(BE::INPUT_MOUSE_SCROLL_CHANGED))
 		{
-			float zoom_amount = -0.00001f * inCameraSetup.GetSceneScale() * inContext.mMainWindow.GetMouseScrollChange();
+			float zoom_amount = -0.00002f * inCameraSetup.GetSceneScale() * inContext.mMainWindow.GetMouseScrollChange();
 
 			const glm::mat4& cam_world_mat = mCamera->GetWorldMatrix();
 			glm::mat4 cam_world_matrix_moved = mCamera->GetWorldMatrix() * glm::translate(glm::mat4(), glm::vec3(0.0f, 0.0f, zoom_amount));
@@ -247,6 +270,8 @@ protected:
 	glm::mat4 mCameraStartDragWorldMatrix;
 	
 	bool mIsDragging;
+	bool mIsRotating;
+	bool mIsTranslating;
 };
 
 

@@ -11,8 +11,8 @@ int main()
 	return ViewerMain();
 #endif
 
-#ifdef MAIN_FOOTER
-	return FooterMain();
+#ifdef MAIN_PLANNER
+	return PlannerMain();
 #endif
 
 }

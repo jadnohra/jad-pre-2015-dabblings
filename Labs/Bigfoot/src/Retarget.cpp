@@ -169,6 +169,10 @@ void CreateWidgets(BE::MainWindow& inWindow, BigfootRetargetScene& inScene)
 
 	using namespace BE;
 
+	bool use_gradient = true;
+#ifdef _DEBUG
+	//use_gradient = false;
+#endif
 	
 	{
 		SimplePanelWidget* widget = new SimplePanelWidget();
@@ -188,7 +192,7 @@ void CreateWidgets(BE::MainWindow& inWindow, BigfootRetargetScene& inScene)
 
 	{
 		SimplePanelWidget* widget = new SimplePanelWidget();
-		widget->Create(context, glm::vec2(870.0f, 10.0f), glm::vec2(140.0f, 715.0f), MagicWand::FRAME_NORMAL, SimplePanelWidget::NoOverflowSlider, true);
+		widget->Create(context, glm::vec2(870.0f, 10.0f), glm::vec2(140.0f, 715.0f), MagicWand::FRAME_NORMAL, SimplePanelWidget::NoOverflowSlider, use_gradient);
 		root->GetChildren().mChildWidgets.push_back(widget);
 
 		SimplePanelWidget* parent_widget = widget;
@@ -724,7 +728,7 @@ void BigfootRetargetScene::RenderTestSkeletonScene(BE::Renderer& inRenderer)
 			//mTestSkeletonPhysicsModel.AnalyzeCenterOfMass(com);
 
 			
-			mTestSkeletonPhysicsParticles.AnalyzeParticles(mTestSkeletonPhysicsModel, &mTestSkeletonTreeInfo);
+			mTestSkeletonPhysicsParticles.AnalyzeParticles(frame_index, mTestSkeletonPhysicsModel, &mTestSkeletonTreeInfo);
 		}
 
 		bool show_velocities = mShowVelocitiesButton->IsToggled();
@@ -791,7 +795,7 @@ void BigfootRetargetScene::OnFileDropped(BE::MainWindow* inWindow, const char* i
 
 					BF::SkeletonPhysicsParticle temp_particle;
 					for (size_t j=0; j<mTestSkeleton.mJoints.size(); ++j)
-						mTestSkeletonPhysicsModel.AnalyzeJoint(j, temp_particle);
+						mTestSkeletonPhysicsModel.AnalyzeJoint(i, j, temp_particle);
 				}
 
 				mTestSkeletonPhysicsModel.ResetStep();

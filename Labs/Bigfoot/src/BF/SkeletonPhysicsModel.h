@@ -11,6 +11,12 @@ namespace BF
 		bool mIsStatic;
 	};
 
+	struct JointScalarKinematicInfo
+	{
+		float mSpeed;
+		float mAcceleration;
+	};
+
 	struct SkeletonPhysicsParticle
 	{
 		bool mIsValid;
@@ -72,6 +78,8 @@ namespace BF
 
 	
 	typedef std::vector<JointPhysicsInfo> JointPhysicsInfos;
+	typedef std::vector<JointScalarKinematicInfo> JointScalarKinematicInfos;
+	
 
 	class SkeletonPhysicsModel
 	{
@@ -100,12 +108,91 @@ namespace BF
 			mIncludeRootAnimTranslation = inIncludeRootAnimTranslation;
 		}
 
+		void getLPCoefficientsButterworth2Pole(const int samplerate, const float cutoff, float* const ax, float* const by)
+		{
+			float PI      = 3.1415926535897932385f;
+			float sqrt2 = 1.4142135623730950488f;
+
+			float QcRaw  = (2 * PI * cutoff) / samplerate; // Find cutoff frequency in [0..PI]
+			float QcWarp = tan(QcRaw); // Warp cutoff frequency
+
+			double gain = 1 / (1+sqrt2/QcWarp + 2/(QcWarp*QcWarp));
+			by[2] = (1 - sqrt2/QcWarp + 2/(QcWarp*QcWarp)) * gain;
+			by[1] = (2 - 2 * 2/(QcWarp*QcWarp)) * gain;
+			by[0] = 1;
+			ax[0] = 1 * gain;
+			ax[1] = 2 * gain;
+			ax[2] = 1 * gain;
+		}
+
+		void filter(float* samples, int count, float ax[3], float by[3])
+		{
+			float xv[3] = {0,0,0};
+			float yv[3] = {0,0,0};
+
+		   for (int i=0;i<count;i++)
+		   {
+			   xv[2] = xv[1]; xv[1] = xv[0];
+			   xv[0] = samples[i];
+			   yv[2] = yv[1]; yv[1] = yv[0];
+
+			   yv[0] =   (ax[0] * xv[0] + ax[1] * xv[1] + ax[2] * xv[2]
+							- by[1] * yv[0]
+							- by[2] * yv[1]);
+
+			   samples[i] = yv[0];
+		   }
+		}
+
 		void SetIsLearning(bool isLearning)
 		{
 			if (mIsLearning && !isLearning)
 			{
 				mStaticJointSpeed = mMinLearnedSpeed + 0.002f * (mMaxLearnedSpeed - mMinLearnedSpeed);
 				mStaticJointAccel = mMinLearnedAccel + 0.005f * (mMaxLearnedAccel - mMinLearnedAccel);
+
+				size_t joint_count = mSkeleton->mJoints.size();
+				size_t frame_count = mJointScalarKinematicInfos.size() / mSkeleton->mJoints.size();
+
+				float ax[3];
+				float by[3];
+				getLPCoefficientsButterworth2Pole(44100, 1000, ax, by);
+
+				std::vector<float> samples;
+				samples.resize(frame_count);
+
+				for (size_t ji=0; ji<joint_count; ++ji)
+				{
+					int si = ji;
+					for (size_t fi=0; fi<frame_count; ++fi)
+					{
+						JointScalarKinematicInfo& info = mJointScalarKinematicInfos[si];
+						samples[fi] = info.mSpeed;
+						si += joint_count;
+					}
+
+					filter(&(samples[0]), frame_count, ax, by);
+
+					si = ji;
+					for (size_t fi=0; fi<frame_count; ++fi)
+					{
+						JointScalarKinematicInfo& info = mJointScalarKinematicInfos[si];
+						info.mSpeed = samples[fi];
+						si += joint_count;
+					}
+				}
+
+				/*
+				int si = 0;
+				for (size_t fi=0; fi<frame_count; ++fi)
+				{
+					for (size_t ji=0; ji<joint_count; ++ji)
+					{
+						JointScalarKinematicInfo& info = mJointScalarKinematicInfos[si++];
+						//http://baumdevblog.blogspot.com/2010/11/butterworth-lowpass-filter-coefficients.html
+					}
+				}
+				*/
 			}
 			
 			mIsLearning = isLearning;
@@ -241,7 +328,7 @@ namespace BF
 			}
 		}
 
-		void AnalyzeJoint(int inJointIndex, SkeletonPhysicsParticle& outJoint)
+		void AnalyzeJoint(int inFrameIndex, int inJointIndex, SkeletonPhysicsParticle& outJoint)
 		{
 			outJoint.mIsValid = false;
 			outJoint.mMass = mJointPhysicsInfos[inJointIndex].mMass;
@@ -274,9 +361,13 @@ namespace BF
 
 			if (mIsLearning)
 			{
+				mJointScalarKinematicInfos.push_back(JointScalarKinematicInfo());
+				JointScalarKinematicInfo& info = mJointScalarKinematicInfos.back();
+
 				if (outJoint.mIsValidVelocity)
 				{
 					float speed = glm::length(outJoint.mVelocity);
+					info.mSpeed = speed;
 
 					if (speed != 0.0f && (mMinLearnedSpeed == -1.0f || speed < mMinLearnedSpeed))
 						mMinLearnedSpeed = speed;
@@ -284,10 +375,13 @@ namespace BF
 					if (speed > mMaxLearnedSpeed)
 						mMaxLearnedSpeed = speed;
 				}
+				else
+					info.mSpeed = -1.0f;
 
 				if (outJoint.mIsValidAcceleration)
 				{
 					float acc = glm::length(outJoint.mAcceleration);
+					info.mAcceleration = acc;
 
 					if (acc != 0.0f && (mMinLearnedAccel == -1.0f || acc < mMinLearnedAccel))
 						mMinLearnedAccel = acc;
@@ -295,6 +389,8 @@ namespace BF
 					if (acc > mMaxLearnedAccel)
 						mMaxLearnedAccel = acc;
 				}
+				else
+					info.mAcceleration = -1.0f;
 			}
 
 			if (!mIsLearning && mIsDetectingStaticJoints/* && mJointPhysicsInfosAnalysisFrameIndex != mFrameIndex*/)
@@ -306,6 +402,29 @@ namespace BF
 					
 					if (acc < mStaticJointAccel && speed < mStaticJointSpeed)
 						mJointPhysicsInfos[inJointIndex].mIsStatic = true;
+					else
+						mJointPhysicsInfos[inJointIndex].mIsStatic = false;
+				}
+
+				size_t joint_count = mSkeleton->mJoints.size();
+				size_t frame_count = mJointScalarKinematicInfos.size() / mSkeleton->mJoints.size();
+
+				int si = (inFrameIndex * joint_count) + inJointIndex;
+				int psi = si - joint_count;
+				int nsi = si + joint_count;
+
+				if (psi >= 0 && psi < mJointScalarKinematicInfos.size()
+					&& nsi < mJointScalarKinematicInfos.size())
+				{
+					float ssi = mJointScalarKinematicInfos[si].mSpeed;
+					float spsi = mJointScalarKinematicInfos[psi].mSpeed;
+					float snsi = mJointScalarKinematicInfos[nsi].mSpeed;
+
+					if (mJointScalarKinematicInfos[si].mSpeed <= mJointScalarKinematicInfos[psi].mSpeed
+						&& mJointScalarKinematicInfos[si].mSpeed <= mJointScalarKinematicInfos[nsi].mSpeed)
+					{
+						mJointPhysicsInfos[inJointIndex].mIsStatic = true;
+					}
 					else
 						mJointPhysicsInfos[inJointIndex].mIsStatic = false;
 				}
@@ -411,6 +530,7 @@ namespace BF
 		float mFrameTime;
 		JointTransforms mModelSpaceJoints[FrameTypeCount];
 		bool mIsValidModelSpaceJoints[FrameTypeCount];
+		JointScalarKinematicInfos mJointScalarKinematicInfos;
 	};
 
 	class SkeletonPhysicsModelRenderer
@@ -595,7 +715,7 @@ namespace BF
 			mParticleTrails.clear();
 		}
 
-		void AnalyzeParticles(SkeletonPhysicsModel& inModel, const SkeletonTreeInfo* pTreeInfo)
+		void AnalyzeParticles(int inFrameIndex, SkeletonPhysicsModel& inModel, const SkeletonTreeInfo* pTreeInfo)
 		{
 			if (inModel.mSkeleton != NULL)
 			{
@@ -651,7 +771,7 @@ namespace BF
 				
 				for (size_t i = 0; i < mParticles.size(); ++i)
 				{
-					inModel.AnalyzeJoint(i, mParticles[i]);
+					inModel.AnalyzeJoint(inFrameIndex, i, mParticles[i]);
 				}
 			}
 			else
