@@ -16,6 +16,8 @@ public:
 	BF::GridRenderer mGrid;
 	BF::CameraTurnTableRotationController mCameraController;
 	bool mAutoSetupBasicScene;
+	bool mIsValidPick;
+	glm::vec3 mPick;
 	
 	BE::SimpleButtonWidget* mHelpButton;
 	BE::SimplePanelWidget* mHelpPanel;
@@ -25,6 +27,7 @@ public:
 	,	mRenderTime(-1.0f)
 	,	mHelpButton(NULL)
 	,	mHelpPanel(NULL)
+	,	mIsValidPick(false)
 	{
 	}
 
@@ -199,6 +202,8 @@ void BigfootPlannerScene::RenderTestBasicScene(BE::Renderer& inRenderer)
 		glRotatef(rtri,0.0f,1.0f,0.0f);						// Rotate The Triangle On The Y axis ( NEW )
 	}
 	
+	return;
+
 #ifdef BUILD_SUBMISSION
 			return;
 #endif
@@ -281,7 +286,7 @@ void BigfootPlannerScene::RenderTestBasicScene(BE::Renderer& inRenderer)
 
 bool BigfootPlannerScene::Create()
 {
-	mCameraSetup.SetupDepthPlanes(glm::vec2(0.1f, 100.0f));
+	mCameraSetup.SetupDepthPlanes(glm::vec2(0.1f, 1000.0f));
 	BF::AAB default_gid_aab;
 	default_gid_aab.Include(glm::vec3(-50.0f, -50.0f, -50.0f));
 	default_gid_aab.Include(glm::vec3(50.0f, 50.0f, 50.0f));
@@ -323,6 +328,21 @@ void BigfootPlannerScene::Update(const BE::WidgetContext& context, BE::SimpleRen
 		mHelpPanel->SetIsVisible(mHelpButton->IsPressed());
 
 	mCameraController.Update(context, inParent, mViewportSetup, mCameraSetup);
+
+	if (context.mMainWindow.GetInputState(BE::INPUT_MOUSE_LEFT) != 0.0f)
+	{
+		glm::vec2 picked_2d;
+		if (inParent.IsMainWindowPosInViewport(context, context.mMainWindow.GetMousePos(), picked_2d))
+		{
+			glm::vec3 origin;
+			glm::vec3 dir;
+			inParent.GetScene()->Unproject(picked_2d, origin, &dir);
+
+			float t = -origin.y / dir.y;
+			mIsValidPick = true;
+			mPick = origin + dir * t;
+		}
+	}
 }
 
 
@@ -358,6 +378,22 @@ void BigfootPlannerScene::OnFirstUpdate()
 
 void BigfootPlannerScene::Render(BE::Renderer& inRenderer)	
 {
+	if (mAutoSetupBasicScene)
+	{
+		BF::CameraFollowSphereAutoSetup camera_auto_setup;
+		BF::Sphere sphere; sphere.mPosition = glm::vec3(-1.5f,0.0f,-6.0f); sphere.mRadius = 5.0f;
+#ifdef BUILD_SUBMISSION
+		sphere.mPosition = glm::vec3(0.0f,0.0f,0.0f);
+#endif
+		glm::vec2 auto_depth_planes;
+		camera_auto_setup.SetFollowParams(glm::vec3(1.0f, 1.0f, 1.0f));
+		camera_auto_setup.SetupCamera(sphere, mCameraSetup.GetFOV(), glm::vec2(0.001f, 1000.0f), mCamera, auto_depth_planes);
+		auto_depth_planes.y *= 100.0f;
+		mCameraSetup.SetupDepthPlanes(auto_depth_planes);
+
+		mAutoSetupBasicScene = false;
+	}
+
 	mTexture->BeginRender();
 
 	glDisable(GL_BLEND);
@@ -384,13 +420,79 @@ void BigfootPlannerScene::Render(BE::Renderer& inRenderer)
 
 	glShadeModel(GL_SMOOTH);							// Enable Smooth Shading
 	glEnable(GL_DEPTH_TEST);							// Enables Depth Testing
+	glEnable( GL_LINE_SMOOTH );
+    glHint(GL_LINE_SMOOTH_HINT, GL_NICEST);
+
+	glEnable( GL_POINT_SMOOTH );
+    glHint(GL_POINT_SMOOTH, GL_NICEST);
+
+	glEnable(GL_BLEND);
+    glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+
 	glDepthFunc(GL_LEQUAL);
 	glHint(GL_PERSPECTIVE_CORRECTION_HINT, GL_NICEST);	// Really Nice Perspective Calculations
 
+	float fogCol[4] = { 0.32f,0.25f,0.25f,1 };
+	glEnable(GL_FOG);
+	glFogi(GL_FOG_MODE, GL_LINEAR);
+	glFogf(GL_FOG_START, 450.f*0.2f);
+	glFogf(GL_FOG_END, 450.f*1.25f);
+	glFogfv(GL_FOG_COLOR, fogCol);
 
+	/*
 	{
 		glLoadMatrixf(glm::value_ptr(mCamera.GetViewMatrix()));
 		mGrid.Render();
+	}
+	*/
+
+	{
+		float zbias = -1.0f*mCameraSetup.GetDepthPlanes().x;
+		glLoadMatrixf(glm::value_ptr(mCamera.GetViewMatrix()));
+		glBegin(GL_QUADS);								
+		glColor3f(1.0f,1.0f,1.0f);						
+		glVertex3f(mGrid.mBox.mMin.x, zbias, mGrid.mBox.mMin.z);
+		glVertex3f(mGrid.mBox.mMax.x, zbias, mGrid.mBox.mMin.z);
+		glVertex3f(mGrid.mBox.mMax.x, zbias, mGrid.mBox.mMax.z);
+		glVertex3f(mGrid.mBox.mMin.x, zbias, mGrid.mBox.mMax.z);
+		glEnd();			
+
+		glLineWidth(5.0f);
+		glBegin(GL_LINE_LOOP);								
+		glColor4f(0.9f,0.9f/4.0f,0.9f/16.0f, 0.75f);		
+		glVertex3f(mGrid.mBox.mMin.x, zbias, mGrid.mBox.mMin.z);
+		glVertex3f(mGrid.mBox.mMax.x, zbias, mGrid.mBox.mMin.z);
+		glVertex3f(mGrid.mBox.mMax.x, zbias, mGrid.mBox.mMax.z);
+		glVertex3f(mGrid.mBox.mMin.x, zbias, mGrid.mBox.mMax.z);
+		glEnd();
+		glLineWidth(1.0f);
+
+
+		glPointSize(7.0f);
+		glBegin(GL_POINTS);								
+		glColor4f(0.9f,0.9f/4.0f,0.9f/16.0f, 0.85f);		
+		glVertex3f(mGrid.mBox.mMin.x, zbias, mGrid.mBox.mMin.z);
+		glVertex3f(mGrid.mBox.mMax.x, zbias, mGrid.mBox.mMin.z);
+		glVertex3f(mGrid.mBox.mMax.x, zbias, mGrid.mBox.mMax.z);
+		glVertex3f(mGrid.mBox.mMin.x, zbias, mGrid.mBox.mMax.z);
+		glEnd();
+		glPointSize(1.0f);
+	}
+	
+	if (mIsValidPick)
+	{
+		glLoadMatrixf(glm::value_ptr(mCamera.GetViewMatrix()));
+
+		glLineWidth(1.0f);
+		glBegin(GL_LINES);								
+		glColor4f(0.0f,0.0f,0.0f, 1.0f);		
+		glVertex3f(mPick.x, mPick.y - 1.0f, mPick.z);
+		glVertex3f(mPick.x, mPick.y + 1.0f, mPick.z);
+		glVertex3f(mPick.x - 1.0f, mPick.y, mPick.z);
+		glVertex3f(mPick.x + 1.0f, mPick.y, mPick.z);
+		glVertex3f(mPick.x, mPick.y, mPick.z - 1.0f);
+		glVertex3f(mPick.x, mPick.y, mPick.z + 1.0f);
+		glEnd();
 	}
 
 #if 0
@@ -403,7 +505,7 @@ void BigfootPlannerScene::Render(BE::Renderer& inRenderer)
 	{
 		//default: 
 		{
-			RenderTestBasicScene(inRenderer); 
+			//RenderTestBasicScene(inRenderer); 
 		}
 		//break;
 	}
