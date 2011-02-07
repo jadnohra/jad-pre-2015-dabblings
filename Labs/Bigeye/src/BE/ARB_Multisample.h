@@ -23,4 +23,6 @@ extern int arbMultisampleFormat;
 //to check for our sampling
 bool InitMultisample(HINSTANCE hInstance,HWND hWnd,PIXELFORMATDESCRIPTOR pfd);
 
+void EnableVSync(bool enable);
+
 #endif
