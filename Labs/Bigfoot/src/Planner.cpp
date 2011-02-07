@@ -1,7 +1,9 @@
 #include "BE/Bigeye.h"
+#include "BE/ARB_Multisample.h"
 #include "BF/Camera.h"
 #include "BF/BFMath.h"
 #include "BF/GridRenderer.h"
+#include "BF/3rdParty/triangle/triangle.h"
 
 class BigfootPlannerScene : public BE::SimpleRenderToTextureWidget::Scene, public BE::MainWindowClient
 {
@@ -21,13 +23,19 @@ public:
 	
 	BE::SimpleButtonWidget* mHelpButton;
 	BE::SimplePanelWidget* mHelpPanel;
+	BE::SimpleButtonWidget* mCreateNavmeshButton;
+	std::vector<glm::vec3> mNavmeshPoints;
+	std::vector<glm::vec2> mNavmeshLinks;
+	int mPickNavmeshPoint;
 
 	BigfootPlannerScene::BigfootPlannerScene() 
 	:	mAutoSetupBasicScene(true)
 	,	mRenderTime(-1.0f)
 	,	mHelpButton(NULL)
 	,	mHelpPanel(NULL)
+	,	mCreateNavmeshButton(NULL)
 	,	mIsValidPick(false)
+	,	mPickNavmeshPoint(-1)
 	{
 	}
 
@@ -36,7 +44,7 @@ public:
 	virtual bool SupportsDragAndDrop() { return true; }
 	virtual void OnFileDropped(BE::MainWindow* inWindow, const char* inFilePath);
 
-	virtual void ProcessWidgetEvents(BE::MainWindow* inWindow, BE::WidgetEventManager& inManager) {}
+	virtual void ProcessWidgetEvents(BE::MainWindow* inWindow, BE::WidgetEventManager& inManager);
 	virtual void Update(const BE::WidgetContext& context, BE::SimpleRenderToTextureWidget& inParent, BE::OGLRenderToTexture& inTexture);
 	virtual void Render(BE::Renderer& inRenderer);
 
@@ -62,6 +70,7 @@ int PlannerMain()
 
 		if (scene.Create())
 		{
+			EnableVSync(true); // This seems not to be working
 			TimerMillis timer;
 
 			while (main_window.Update(timer.GetTimeSecs()))
@@ -113,6 +122,17 @@ void CreateWidgets(BE::MainWindow& inWindow, BigfootPlannerScene& inScene)
 
 		float pos_vert = 5.0f;
 		float pos_horiz = 10.0f;
+
+		{
+			SimpleButtonWidget* button_widget = new SimpleButtonWidget();
+			button_widget->Create(context, glm::vec2(pos_horiz, pos_vert), true, MagicWand::TextInfo(" T ", 0, 14.0f, true, glm::vec2(2.0f, 2.0f)), sizeConstraints);
+
+			pos_horiz += 30.0f;
+
+			children.mChildWidgets.push_back(button_widget);
+			inScene.mCreateNavmeshButton = button_widget;
+		}
+
 
 		{
 			SimpleButtonWidget* button_widget = new SimpleButtonWidget();
@@ -309,6 +329,49 @@ void BigfootPlannerScene::OnFileDropped(BE::MainWindow* inWindow, const char* in
 	}
 }
 
+void BigfootPlannerScene::ProcessWidgetEvents(BE::MainWindow* inWindow, BE::WidgetEventManager& inManager)
+{
+	for (size_t i=0; i<inManager.GetEventCount(); ++i)
+	{
+		const BE::WidgetEvent& widget_event = inManager.GetEvent(i);
+		if (widget_event.mWidget == mCreateNavmeshButton)
+		{
+			triangulateio in;
+			triangulateio mid;
+			triangulateio out;
+			triangulateio vorout;
+
+			memset(&in, 0, sizeof(triangulateio));
+			memset(&out, 0, sizeof(triangulateio));
+			memset(&mid, 0, sizeof(triangulateio));
+			memset(&vorout, 0, sizeof(triangulateio));
+
+			in.numberofpoints = mNavmeshPoints.size();
+			in.numberofpointattributes = 0;
+			in.pointlist = (REAL *) malloc(in.numberofpoints * 2 * sizeof(REAL));
+
+			for (size_t i = 0; i < mNavmeshPoints.size(); ++i)
+			{
+				in.pointlist[i*2] = mNavmeshPoints[i].x;
+				in.pointlist[i*2+1] = mNavmeshPoints[i].z;
+			}
+
+			in.numberofsegments = mNavmeshLinks.size();
+			in.segmentlist = (int *) malloc(in.numberofsegments * 2 * sizeof(int));
+
+			for (size_t i = 0; i < mNavmeshLinks.size(); ++i)
+			{
+				in.segmentlist[i*2] = 1+mNavmeshLinks[i].x;
+				in.segmentlist[i*2+1] = 1+mNavmeshLinks[i].y;
+			}
+
+			triangulate("p", &in, &out, 0);
+
+			int x = 0;
+			++x;
+		}
+	}
+}
 
 void BigfootPlannerScene::Update(const BE::WidgetContext& context, BE::SimpleRenderToTextureWidget& inParent, BE::OGLRenderToTexture& inTexture)	
 {
@@ -329,8 +392,14 @@ void BigfootPlannerScene::Update(const BE::WidgetContext& context, BE::SimpleRen
 
 	mCameraController.Update(context, inParent, mViewportSetup, mCameraSetup);
 
-	if (context.mMainWindow.GetInputState(BE::INPUT_MOUSE_LEFT) != 0.0f)
+	bool left_on = context.mMainWindow.GetInputState(BE::INPUT_MOUSE_LEFT) != 0.0f;
+	bool right_up = (context.mMainWindow.GetInputState(BE::INPUT_MOUSE_RIGHT_CHANGED) != 0.0f) && (context.mMainWindow.GetInputState(BE::INPUT_MOUSE_RIGHT) == 0.0f);
+
+	if (left_on || right_up)
 	{
+		bool valid_pick = false;
+		glm::vec3 pick;
+
 		glm::vec2 picked_2d;
 		if (inParent.IsMainWindowPosInViewport(context, context.mMainWindow.GetMousePos(), picked_2d))
 		{
@@ -339,8 +408,75 @@ void BigfootPlannerScene::Update(const BE::WidgetContext& context, BE::SimpleRen
 			inParent.GetScene()->Unproject(picked_2d, origin, &dir);
 
 			float t = -origin.y / dir.y;
-			mIsValidPick = true;
-			mPick = origin + dir * t;
+			valid_pick = true;
+			pick = origin + dir * t;
+		}
+
+
+		if (valid_pick)
+		{
+			int pick_index = -1;
+			float pick_dist = -1.0f;
+
+			for (size_t i = 0; i < mNavmeshPoints.size(); ++i)
+			{
+				float dist = glm::distance(pick, mNavmeshPoints[i]);
+				if (pick_dist == -1.0f || dist < pick_dist)
+				{
+					pick_dist = dist;
+					pick_index = i;
+				}
+			}
+
+			if (pick_dist != -1.0f && pick_dist <= 0.5f)
+			{
+				if (right_up)
+				{
+
+					if (mPickNavmeshPoint == -1)
+						mPickNavmeshPoint = pick_index;
+					else
+					{
+						if (mPickNavmeshPoint != pick_index)
+						{
+							bool exists = false;
+
+							for (size_t i = 0; i < mNavmeshLinks.size(); ++i)
+							{
+								if ((mNavmeshLinks[i].x == mPickNavmeshPoint || mNavmeshLinks[i].y == mPickNavmeshPoint)
+									&& (mNavmeshLinks[i].x == pick_index || mNavmeshLinks[i].y == pick_index))
+								{
+									exists = true;
+									break;
+								}
+							}
+
+
+							if (!exists)
+							{
+								mNavmeshLinks.push_back(glm::vec2());
+								mNavmeshLinks.back().x = mPickNavmeshPoint;
+								mNavmeshLinks.back().y = pick_index;
+							}
+						}
+						mPickNavmeshPoint = -1;
+					}
+				}
+			}
+			else
+			{
+				if (left_on)
+				{
+					mNavmeshPoints.push_back(glm::vec3());
+					mNavmeshPoints.back() = pick;
+				}
+			}
+		}
+
+		if (left_on)
+		{
+			mIsValidPick = valid_pick;
+			mPick = pick;
 		}
 	}
 }
@@ -494,6 +630,37 @@ void BigfootPlannerScene::Render(BE::Renderer& inRenderer)
 		glVertex3f(mPick.x, mPick.y, mPick.z + 1.0f);
 		glEnd();
 	}
+
+	{
+		glLoadMatrixf(glm::value_ptr(mCamera.GetViewMatrix()));
+
+		glLineWidth(3.0f);
+		glBegin(GL_LINES);		
+		glColor4f(0.1f,0.8f,0.3f, 0.9f);
+		for (size_t i = 0; i < mNavmeshLinks.size(); ++i)
+		{
+			int pa = (int) mNavmeshLinks[i].x;
+			int pb = (int) mNavmeshLinks[i].y;
+			glVertex3f(mNavmeshPoints[pa].x, mNavmeshPoints[pa].y, mNavmeshPoints[pa].z);
+			glVertex3f(mNavmeshPoints[pb].x, mNavmeshPoints[pb].y, mNavmeshPoints[pb].z);
+		}
+		glEnd();	
+
+
+		glPointSize(10.0f);
+		glBegin(GL_POINTS);	
+		for (size_t i = 0; i < mNavmeshPoints.size(); ++i)
+		{
+			if (mPickNavmeshPoint == i)
+				glColor4f(0.8f,0.0f,0.8f, 0.9f);		
+			else
+				glColor4f(0.1f,0.3f,0.8f, 0.8f);		
+			glVertex3f(mNavmeshPoints[i].x, mNavmeshPoints[i].y, mNavmeshPoints[i].z);
+		}
+		glEnd();	
+		glPointSize(1.0f);
+	}
+	
 
 #if 0
 	{

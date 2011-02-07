@@ -283,6 +283,14 @@
 			>
 		</File>
 		<File
+			RelativePath="..\..\src\BF\3rdparty\triangle\triangle.cpp"
+			>
+		</File>
+		<File
+			RelativePath="..\..\src\BF\3rdparty\triangle\triangle.h"
+			>
+		</File>
+		<File
 			RelativePath="..\..\src\Viewer.cpp"
 			>
 		</File>
