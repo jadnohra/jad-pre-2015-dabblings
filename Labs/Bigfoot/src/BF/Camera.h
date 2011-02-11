@@ -250,7 +250,7 @@ public:
 
 		if (inContext.mMainWindow.GetInputState(BE::INPUT_MOUSE_SCROLL_CHANGED))
 		{
-			float zoom_amount = -0.00002f * inCameraSetup.GetSceneScale() * inContext.mMainWindow.GetMouseScrollChange();
+			float zoom_amount = -0.00001f * inCameraSetup.GetSceneScale() * inContext.mMainWindow.GetMouseScrollChange();
 
 			const glm::mat4& cam_world_mat = mCamera->GetWorldMatrix();
 			glm::mat4 cam_world_matrix_moved = mCamera->GetWorldMatrix() * glm::translate(glm::mat4(), glm::vec3(0.0f, 0.0f, zoom_amount));

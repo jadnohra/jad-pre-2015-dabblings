@@ -191,6 +191,10 @@
 			>
 		</File>
 		<File
+			RelativePath="..\..\src\BF\DrawUtil.h"
+			>
+		</File>
+		<File
 			RelativePath="..\..\src\BF\3rdparty\dSFMT\dSFMT-params.h"
 			>
 		</File>

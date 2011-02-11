@@ -4,6 +4,7 @@
 #include "BF/BFMath.h"
 #include "BF/GridRenderer.h"
 #include "BF/3rdParty/triangle/triangle.h"
+#include "BF/DrawUtil.h"
 
 class BigfootPlannerScene : public BE::SimpleRenderToTextureWidget::Scene, public BE::MainWindowClient
 {
@@ -23,9 +24,14 @@ public:
 	
 	BE::SimpleButtonWidget* mHelpButton;
 	BE::SimplePanelWidget* mHelpPanel;
+	BE::SimpleButtonWidget* mAutoLinkButton;
 	BE::SimpleButtonWidget* mCreateNavmeshButton;
+	BE::SimpleButtonWidget* mClearNavmeshButton;
 	std::vector<glm::vec3> mNavmeshPoints;
 	std::vector<glm::vec2> mNavmeshLinks;
+	std::vector<glm::vec2> mNavmeshTrisVerts;
+	std::vector<int> mNavmeshTris;
+	std::vector<int> mNavmeshBorderSegs;
 	int mPickNavmeshPoint;
 
 	BigfootPlannerScene::BigfootPlannerScene() 
@@ -33,7 +39,9 @@ public:
 	,	mRenderTime(-1.0f)
 	,	mHelpButton(NULL)
 	,	mHelpPanel(NULL)
+	,	mAutoLinkButton(NULL)
 	,	mCreateNavmeshButton(NULL)
+	,	mClearNavmeshButton(NULL)
 	,	mIsValidPick(false)
 	,	mPickNavmeshPoint(-1)
 	{
@@ -53,6 +61,8 @@ public:
 	void RenderTestBasicScene(BE::Renderer& inRenderer);
 	
 	void OnFirstUpdate();
+
+	void Triangulate();
 };
 
 
@@ -102,7 +112,7 @@ void CreateWidgets(BE::MainWindow& inWindow, BigfootPlannerScene& inScene)
 
 		{
 			SimpleRenderToTextureWidget* widget = new SimpleRenderToTextureWidget();
-			widget->Create(context, glm::vec2(0.0f, 0.0f), parent_widget->GetInternalSize(), 4);
+			widget->Create(context, glm::vec2(0.0f, 0.0f), parent_widget->GetInternalSize(), 8);
 			widget->SetScene(&inScene);
 			children.mChildWidgets.push_back(widget);
 		}
@@ -125,12 +135,34 @@ void CreateWidgets(BE::MainWindow& inWindow, BigfootPlannerScene& inScene)
 
 		{
 			SimpleButtonWidget* button_widget = new SimpleButtonWidget();
-			button_widget->Create(context, glm::vec2(pos_horiz, pos_vert), true, MagicWand::TextInfo(" T ", 0, 14.0f, true, glm::vec2(2.0f, 2.0f)), sizeConstraints);
+			button_widget->Create(context, glm::vec2(pos_horiz, pos_vert), true, MagicWand::TextInfo(" L ", 0, 14.0f, true, glm::vec2(2.0f, 2.0f)), sizeConstraints);
+
+			pos_horiz += 30.0f;
+
+			children.mChildWidgets.push_back(button_widget);
+			inScene.mAutoLinkButton = button_widget;
+			inScene.mAutoLinkButton->SetIsToggled(true);
+		}
+
+
+		{
+			SimpleButtonWidget* button_widget = new SimpleButtonWidget();
+			button_widget->Create(context, glm::vec2(pos_horiz, pos_vert), false, MagicWand::TextInfo(" T ", 0, 14.0f, true, glm::vec2(2.0f, 2.0f)), sizeConstraints);
 
 			pos_horiz += 30.0f;
 
 			children.mChildWidgets.push_back(button_widget);
 			inScene.mCreateNavmeshButton = button_widget;
+		}
+
+		{
+			SimpleButtonWidget* button_widget = new SimpleButtonWidget();
+			button_widget->Create(context, glm::vec2(pos_horiz, pos_vert), false, MagicWand::TextInfo(" X ", 0, 14.0f, true, glm::vec2(2.0f, 2.0f)), sizeConstraints);
+
+			pos_horiz += 30.0f;
+
+			children.mChildWidgets.push_back(button_widget);
+			inScene.mClearNavmeshButton = button_widget;
 		}
 
 
@@ -329,46 +361,106 @@ void BigfootPlannerScene::OnFileDropped(BE::MainWindow* inWindow, const char* in
 	}
 }
 
+void BigfootPlannerScene::Triangulate()
+{
+	if (mNavmeshPoints.size() < 3)
+		return;
+
+	int links_to_first_count = 0;
+	for (size_t i = 0; i < mNavmeshLinks.size(); ++i)
+	{
+		if (mNavmeshLinks[i].x == 0 || mNavmeshLinks[i].y == 0)
+		{
+			++links_to_first_count;
+		}
+	}
+	if (links_to_first_count == 1)
+	{
+		mNavmeshLinks.push_back(glm::vec2(0.0f, (float) (mNavmeshPoints.size() - 1)));
+	}
+
+	if (mNavmeshLinks.size() < 3)
+		return;
+
+	triangulateio in;
+	triangulateio mid;
+	triangulateio out;
+	triangulateio vorout;
+
+	memset(&in, 0, sizeof(triangulateio));
+	memset(&out, 0, sizeof(triangulateio));
+	memset(&mid, 0, sizeof(triangulateio));
+	memset(&vorout, 0, sizeof(triangulateio));
+
+	in.numberofpoints = mNavmeshPoints.size();
+	in.numberofpointattributes = 0;
+	in.pointlist = (REAL *) malloc(in.numberofpoints * 2 * sizeof(REAL));
+
+	for (size_t i = 0; i < mNavmeshPoints.size(); ++i)
+	{
+		in.pointlist[i*2] = mNavmeshPoints[i].x;
+		in.pointlist[i*2+1] = mNavmeshPoints[i].z;
+	}
+
+	in.numberofsegments = mNavmeshLinks.size();
+	in.segmentlist = (int *) malloc(in.numberofsegments * 2 * sizeof(int));
+
+	for (size_t i = 0; i < mNavmeshLinks.size(); ++i)
+	{
+		in.segmentlist[i*2] = 1+(int)mNavmeshLinks[i].x;
+		in.segmentlist[i*2+1] = 1+(int)mNavmeshLinks[i].y;
+	}
+
+	triangulate("p", &in, &out, 0);
+
+	mNavmeshTrisVerts.clear();
+	mNavmeshTris.clear();
+	
+
+	if (out.numberoftriangles > 0)
+	{
+		mNavmeshPoints.clear();
+		mNavmeshLinks.clear();
+		mNavmeshBorderSegs.clear();
+
+		mNavmeshTrisVerts.resize(out.numberofpoints);
+		for (int i = 0; i < out.numberofpoints; ++i)
+		{
+			mNavmeshTrisVerts[i].x = out.pointlist[i*2];
+			mNavmeshTrisVerts[i].y = out.pointlist[i*2+1];
+		}
+
+		mNavmeshTris.resize(out.numberoftriangles*3);
+		for (size_t i = 0; i < out.numberoftriangles*3; ++i)
+		{
+			mNavmeshTris[i] = out.trianglelist[i]-1;
+		}
+
+		mNavmeshBorderSegs.resize(out.numberofsegments*2);
+		for (int i = 0; i < out.numberofsegments; ++i)
+		{
+			mNavmeshBorderSegs[i*2] = out.segmentlist[i*2] - 1;
+			mNavmeshBorderSegs[i*2+1] = out.segmentlist[i*2+1] - 1;
+		}
+	}
+}
+
 void BigfootPlannerScene::ProcessWidgetEvents(BE::MainWindow* inWindow, BE::WidgetEventManager& inManager)
 {
 	for (size_t i=0; i<inManager.GetEventCount(); ++i)
 	{
 		const BE::WidgetEvent& widget_event = inManager.GetEvent(i);
-		if (widget_event.mWidget == mCreateNavmeshButton)
+		if (widget_event.mWidget == mCreateNavmeshButton && mNavmeshLinks.size() >= 3)
 		{
-			triangulateio in;
-			triangulateio mid;
-			triangulateio out;
-			triangulateio vorout;
-
-			memset(&in, 0, sizeof(triangulateio));
-			memset(&out, 0, sizeof(triangulateio));
-			memset(&mid, 0, sizeof(triangulateio));
-			memset(&vorout, 0, sizeof(triangulateio));
-
-			in.numberofpoints = mNavmeshPoints.size();
-			in.numberofpointattributes = 0;
-			in.pointlist = (REAL *) malloc(in.numberofpoints * 2 * sizeof(REAL));
-
-			for (size_t i = 0; i < mNavmeshPoints.size(); ++i)
-			{
-				in.pointlist[i*2] = mNavmeshPoints[i].x;
-				in.pointlist[i*2+1] = mNavmeshPoints[i].z;
-			}
-
-			in.numberofsegments = mNavmeshLinks.size();
-			in.segmentlist = (int *) malloc(in.numberofsegments * 2 * sizeof(int));
-
-			for (size_t i = 0; i < mNavmeshLinks.size(); ++i)
-			{
-				in.segmentlist[i*2] = 1+mNavmeshLinks[i].x;
-				in.segmentlist[i*2+1] = 1+mNavmeshLinks[i].y;
-			}
-
-			triangulate("p", &in, &out, 0);
-
-			int x = 0;
-			++x;
+			Triangulate();	
+		}
+		else if (widget_event.mWidget == mClearNavmeshButton)
+		{
+			mNavmeshLinks.clear();
+			mNavmeshPoints.clear();
+			mNavmeshTrisVerts.clear();
+			mNavmeshTris.clear();
+			mNavmeshBorderSegs.clear();
 		}
 	}
 }
@@ -395,7 +487,12 @@ void BigfootPlannerScene::Update(const BE::WidgetContext& context, BE::SimpleRen
 	bool left_on = context.mMainWindow.GetInputState(BE::INPUT_MOUSE_LEFT) != 0.0f;
 	bool right_up = (context.mMainWindow.GetInputState(BE::INPUT_MOUSE_RIGHT_CHANGED) != 0.0f) && (context.mMainWindow.GetInputState(BE::INPUT_MOUSE_RIGHT) == 0.0f);
 
-	if (left_on || right_up)
+	if (mPickNavmeshPoint+1 > mNavmeshPoints.size())
+		mPickNavmeshPoint = -1;
+
+	int link_count = mNavmeshLinks.size();
+
+	if ((left_on || right_up))
 	{
 		bool valid_pick = false;
 		glm::vec3 pick;
@@ -412,71 +509,125 @@ void BigfootPlannerScene::Update(const BE::WidgetContext& context, BE::SimpleRen
 			pick = origin + dir * t;
 		}
 
-
-		if (valid_pick)
+		if (mNavmeshTris.empty())
 		{
 			int pick_index = -1;
 			float pick_dist = -1.0f;
 
-			for (size_t i = 0; i < mNavmeshPoints.size(); ++i)
+			if (valid_pick)
 			{
-				float dist = glm::distance(pick, mNavmeshPoints[i]);
-				if (pick_dist == -1.0f || dist < pick_dist)
+				for (size_t i = 0; i < mNavmeshPoints.size(); ++i)
 				{
-					pick_dist = dist;
-					pick_index = i;
-				}
-			}
-
-			if (pick_dist != -1.0f && pick_dist <= 0.5f)
-			{
-				if (right_up)
-				{
-
-					if (mPickNavmeshPoint == -1)
-						mPickNavmeshPoint = pick_index;
-					else
+					float dist = glm::distance(pick, mNavmeshPoints[i]);
+					if (pick_dist == -1.0f || dist < pick_dist)
 					{
-						if (mPickNavmeshPoint != pick_index)
-						{
-							bool exists = false;
+						pick_dist = dist;
+						pick_index = i;
+					}
+				}
 
-							for (size_t i = 0; i < mNavmeshLinks.size(); ++i)
+				if (pick_dist != -1.0f && pick_dist <= 0.5f)
+				{
+					if (right_up)
+					{
+						if (mPickNavmeshPoint == -1)
+							mPickNavmeshPoint = pick_index;
+						else
+						{
+							if (mPickNavmeshPoint != pick_index)
 							{
-								if ((mNavmeshLinks[i].x == mPickNavmeshPoint || mNavmeshLinks[i].y == mPickNavmeshPoint)
-									&& (mNavmeshLinks[i].x == pick_index || mNavmeshLinks[i].y == pick_index))
+								bool exists = false;
+
+								for (size_t i = 0; i < mNavmeshLinks.size(); ++i)
 								{
-									exists = true;
-									break;
+									if ((mNavmeshLinks[i].x == mPickNavmeshPoint || mNavmeshLinks[i].y == mPickNavmeshPoint)
+										&& (mNavmeshLinks[i].x == pick_index || mNavmeshLinks[i].y == pick_index))
+									{
+										exists = true;
+										break;
+									}
+								}
+
+								if (!exists)
+								{
+									mNavmeshLinks.push_back(glm::vec2());
+									mNavmeshLinks.back().x = (int) mPickNavmeshPoint;
+									mNavmeshLinks.back().y = (int) pick_index;
 								}
 							}
-
-
-							if (!exists)
-							{
-								mNavmeshLinks.push_back(glm::vec2());
-								mNavmeshLinks.back().x = mPickNavmeshPoint;
-								mNavmeshLinks.back().y = pick_index;
-							}
+							mPickNavmeshPoint = -1;
 						}
-						mPickNavmeshPoint = -1;
+					}
+				}
+				else
+				{
+					if (left_on)
+					{
+						mNavmeshPoints.push_back(glm::vec3());
+						mNavmeshPoints.back() = pick;
 					}
 				}
 			}
-			else
+
+			if (left_on)
 			{
-				if (left_on)
+				mIsValidPick = valid_pick;
+				mPick = pick;
+
+				if (valid_pick && mAutoLinkButton->IsToggled())
 				{
-					mNavmeshPoints.push_back(glm::vec3());
-					mNavmeshPoints.back() = pick;
+					int link_pick_index = -1;
+					if (pick_index != -1 && pick_dist <= 0.5f)
+					{
+						link_pick_index = pick_index;
+					}
+					else
+					{
+						link_pick_index = ((int) mNavmeshPoints.size()) - 1;
+					}
+
+					if (mPickNavmeshPoint != -1 && link_pick_index != -1 && mPickNavmeshPoint != link_pick_index)
+					{
+						bool exists = false;
+
+						for (size_t i = 0; i < mNavmeshLinks.size(); ++i)
+						{
+							if ((mNavmeshLinks[i].x == mPickNavmeshPoint || mNavmeshLinks[i].y == mPickNavmeshPoint)
+								&& (mNavmeshLinks[i].x == link_pick_index || mNavmeshLinks[i].y == link_pick_index))
+							{
+								exists = true;
+								break;
+							}
+						}
+
+						if (!exists)
+						{
+							mNavmeshLinks.push_back(glm::vec2());
+							mNavmeshLinks.back().x = (int) mPickNavmeshPoint;
+							mNavmeshLinks.back().y = (int) link_pick_index;
+						}
+					}
+
+					mPickNavmeshPoint = link_pick_index;
 				}
 			}
 		}
-
-		if (left_on)
+		else
 		{
-			mIsValidPick = valid_pick;
-			mPick = pick;
+			if (left_on)
+			{
+				mIsValidPick = valid_pick;
+				mPick = pick;
+			}
+		}
+	}
+
+	if (mNavmeshLinks.size() > link_count)
+	{
+		if ((mNavmeshLinks.back().x == 0 || mNavmeshLinks.back().y == 0)
+			&& (mNavmeshLinks.back().x == mNavmeshPoints.size()-1 || mNavmeshLinks.back().y == mNavmeshPoints.size()-1))
+		{
+			Triangulate();
 		}
 	}
 }
@@ -586,31 +737,33 @@ void BigfootPlannerScene::Render(BE::Renderer& inRenderer)
 		float zbias = -1.0f*mCameraSetup.GetDepthPlanes().x;
 		glLoadMatrixf(glm::value_ptr(mCamera.GetViewMatrix()));
 		glBegin(GL_QUADS);								
-		glColor3f(1.0f,1.0f,1.0f);						
+		glColor3f(0.9f,0.9f,0.9f);						
 		glVertex3f(mGrid.mBox.mMin.x, zbias, mGrid.mBox.mMin.z);
 		glVertex3f(mGrid.mBox.mMax.x, zbias, mGrid.mBox.mMin.z);
 		glVertex3f(mGrid.mBox.mMax.x, zbias, mGrid.mBox.mMax.z);
 		glVertex3f(mGrid.mBox.mMin.x, zbias, mGrid.mBox.mMax.z);
 		glEnd();			
 
-		glLineWidth(5.0f);
-		glBegin(GL_LINE_LOOP);								
-		glColor4f(0.9f,0.9f/4.0f,0.9f/16.0f, 0.75f);		
-		glVertex3f(mGrid.mBox.mMin.x, zbias, mGrid.mBox.mMin.z);
-		glVertex3f(mGrid.mBox.mMax.x, zbias, mGrid.mBox.mMin.z);
-		glVertex3f(mGrid.mBox.mMax.x, zbias, mGrid.mBox.mMax.z);
-		glVertex3f(mGrid.mBox.mMin.x, zbias, mGrid.mBox.mMax.z);
+		glLineWidth(2.0f);
+		glBegin(GL_LINE_LOOP);		
+		glColor4ub(0,0,0,48);		
+		//glColor4ub(0,48,64,32);		
+		glVertex3f(mGrid.mBox.mMin.x-zbias, 0.0f, mGrid.mBox.mMin.z-zbias);
+		glVertex3f(mGrid.mBox.mMax.x-zbias, 0.0f, mGrid.mBox.mMin.z-zbias);
+		glVertex3f(mGrid.mBox.mMax.x-zbias, 0.0f, mGrid.mBox.mMax.z-zbias);
+		glVertex3f(mGrid.mBox.mMin.x-zbias, 0.0f, mGrid.mBox.mMax.z-zbias);
 		glEnd();
 		glLineWidth(1.0f);
 
 
-		glPointSize(7.0f);
-		glBegin(GL_POINTS);								
-		glColor4f(0.9f,0.9f/4.0f,0.9f/16.0f, 0.85f);		
-		glVertex3f(mGrid.mBox.mMin.x, zbias, mGrid.mBox.mMin.z);
-		glVertex3f(mGrid.mBox.mMax.x, zbias, mGrid.mBox.mMin.z);
-		glVertex3f(mGrid.mBox.mMax.x, zbias, mGrid.mBox.mMax.z);
-		glVertex3f(mGrid.mBox.mMin.x, zbias, mGrid.mBox.mMax.z);
+		glPointSize(2.5f);
+		glBegin(GL_POINTS);		
+		glColor4ub(0,0,0,48);	
+		//glColor4f(0.9f,0.9f/4.0f,0.9f/16.0f, 0.85f);		
+		glVertex3f(mGrid.mBox.mMin.x-zbias, 0.0f, mGrid.mBox.mMin.z-zbias);
+		glVertex3f(mGrid.mBox.mMax.x-zbias, 0.0f, mGrid.mBox.mMin.z-zbias);
+		glVertex3f(mGrid.mBox.mMax.x-zbias, 0.0f, mGrid.mBox.mMax.z-zbias);
+		glVertex3f(mGrid.mBox.mMin.x-zbias, 0.0f, mGrid.mBox.mMax.z-zbias);
 		glEnd();
 		glPointSize(1.0f);
 	}
@@ -621,9 +774,9 @@ void BigfootPlannerScene::Render(BE::Renderer& inRenderer)
 
 		glLineWidth(1.0f);
 		glBegin(GL_LINES);								
-		glColor4f(0.0f,0.0f,0.0f, 1.0f);		
+		glColor4f(0.0f,0.0f,0.0f, 0.77f);		
 		glVertex3f(mPick.x, mPick.y - 1.0f, mPick.z);
-		glVertex3f(mPick.x, mPick.y + 1.0f, mPick.z);
+		glVertex3f(mPick.x, mPick.y + 2.0f, mPick.z);
 		glVertex3f(mPick.x - 1.0f, mPick.y, mPick.z);
 		glVertex3f(mPick.x + 1.0f, mPick.y, mPick.z);
 		glVertex3f(mPick.x, mPick.y, mPick.z - 1.0f);
@@ -631,12 +784,13 @@ void BigfootPlannerScene::Render(BE::Renderer& inRenderer)
 		glEnd();
 	}
 
+	if (true)
 	{
 		glLoadMatrixf(glm::value_ptr(mCamera.GetViewMatrix()));
 
-		glLineWidth(3.0f);
+		glLineWidth(2.5f);
 		glBegin(GL_LINES);		
-		glColor4f(0.1f,0.8f,0.3f, 0.9f);
+		glColor4ub(0,48,64,220);
 		for (size_t i = 0; i < mNavmeshLinks.size(); ++i)
 		{
 			int pa = (int) mNavmeshLinks[i].x;
@@ -646,19 +800,110 @@ void BigfootPlannerScene::Render(BE::Renderer& inRenderer)
 		}
 		glEnd();	
 
-
-		glPointSize(10.0f);
+		glPointSize(3.0f);
 		glBegin(GL_POINTS);	
+		glColor4ub(0,0,0,196);
+		for (size_t i = 0; i < mNavmeshLinks.size(); ++i)
+		{
+			int pa = (int) mNavmeshLinks[i].x;
+			int pb = (int) mNavmeshLinks[i].y;
+			glVertex3f(mNavmeshPoints[pa].x, mNavmeshPoints[pa].y, mNavmeshPoints[pa].z);
+			glVertex3f(mNavmeshPoints[pb].x, mNavmeshPoints[pb].y, mNavmeshPoints[pb].z);
+		}
+		glEnd();
+
+		glLineWidth(1.0f);
+		glBegin(GL_LINES);	
 		for (size_t i = 0; i < mNavmeshPoints.size(); ++i)
 		{
-			if (mPickNavmeshPoint == i)
-				glColor4f(0.8f,0.0f,0.8f, 0.9f);		
-			else
-				glColor4f(0.1f,0.3f,0.8f, 0.8f);		
-			glVertex3f(mNavmeshPoints[i].x, mNavmeshPoints[i].y, mNavmeshPoints[i].z);
+			glColor4ub(0,0,0,82);
+			BF::DrawCircle(mNavmeshPoints[i].x, mNavmeshPoints[i].y, mNavmeshPoints[i].z, 0.5f);
 		}
 		glEnd();	
-		glPointSize(1.0f);
+		if (mPickNavmeshPoint >= 0 && mPickNavmeshPoint < mNavmeshPoints.size())
+		{
+			glLineWidth(2.5f);
+			glBegin(GL_LINES);	
+			glColor4ub(0,48,64,220);
+			BF::DrawCircle(mNavmeshPoints[mPickNavmeshPoint].x, mNavmeshPoints[mPickNavmeshPoint].y, mNavmeshPoints[mPickNavmeshPoint].z, 0.3f);
+			glEnd();	
+		}
+		glLineWidth(1.0f);
+
+		glLineWidth(1.5f);
+		glBegin(GL_LINES);		
+		glColor4ub(0,48,64,32);
+		for (size_t i = 0; i < mNavmeshTris.size(); i+=3)
+		{
+			float ax = mNavmeshTrisVerts[mNavmeshTris[i]].x;
+			float az = mNavmeshTrisVerts[mNavmeshTris[i]].y;
+			float bx = mNavmeshTrisVerts[mNavmeshTris[i+1]].x;
+			float bz = mNavmeshTrisVerts[mNavmeshTris[i+1]].y;
+			float cx = mNavmeshTrisVerts[mNavmeshTris[i+2]].x;
+			float cz = mNavmeshTrisVerts[mNavmeshTris[i+2]].y;
+
+			glVertex3f(ax, 0.0f, az);
+			glVertex3f(bx, 0.0f, bz);
+			glVertex3f(ax, 0.0f, az);
+			glVertex3f(cx, 0.0f, cz);
+			glVertex3f(bx, 0.0f, bz);
+			glVertex3f(cx, 0.0f, cz);
+		}
+		glEnd();	
+		glLineWidth(1.0f);
+
+		glLineWidth(2.5f);
+		glBegin(GL_LINES);		
+		glColor4ub(0,48,64,220);
+		for (size_t i = 0; i < mNavmeshBorderSegs.size(); i+=2)
+		{
+			float ax = mNavmeshTrisVerts[mNavmeshBorderSegs[i]].x;
+			float az = mNavmeshTrisVerts[mNavmeshBorderSegs[i]].y;
+			float bx = mNavmeshTrisVerts[mNavmeshBorderSegs[i+1]].x;
+			float bz = mNavmeshTrisVerts[mNavmeshBorderSegs[i+1]].y;
+
+			glVertex3f(ax, 0.0f, az);
+			glVertex3f(bx, 0.0f, bz);
+		}
+		glEnd();	
+		glLineWidth(1.0f);
+
+		glPointSize(4.0f);
+		glBegin(GL_POINTS);		
+		glColor4ub(0,0,0,196);
+		for (size_t i = 0; i < mNavmeshTris.size(); i+=3)
+		{
+			float ax = mNavmeshTrisVerts[mNavmeshTris[i]].x;
+			float az = mNavmeshTrisVerts[mNavmeshTris[i]].y;
+			float bx = mNavmeshTrisVerts[mNavmeshTris[i+1]].x;
+			float bz = mNavmeshTrisVerts[mNavmeshTris[i+1]].y;
+			float cx = mNavmeshTrisVerts[mNavmeshTris[i+2]].x;
+			float cz = mNavmeshTrisVerts[mNavmeshTris[i+2]].y;
+
+			glVertex3f(ax, 0.0f, az);
+			glVertex3f(bx, 0.0f, bz);
+			glVertex3f(cx, 0.0f, cz);
+		}
+		glEnd();	
+
+
+		//glDisable(GL_CULL_FACE); 
+		glBegin(GL_TRIANGLES);		
+		glColor4ub(0,192,255,64);
+		for (size_t i = 0; i < mNavmeshTris.size(); i+=3)
+		{
+			float ax = mNavmeshTrisVerts[mNavmeshTris[i]].x;
+			float az = mNavmeshTrisVerts[mNavmeshTris[i]].y;
+			float bx = mNavmeshTrisVerts[mNavmeshTris[i+1]].x;
+			float bz = mNavmeshTrisVerts[mNavmeshTris[i+1]].y;
+			float cx = mNavmeshTrisVerts[mNavmeshTris[i+2]].x;
+			float cz = mNavmeshTrisVerts[mNavmeshTris[i+2]].y;
+
+			glVertex3f(ax, 0.0f, az);
+			glVertex3f(bx, 0.0f, bz);
+			glVertex3f(cx, 0.0f, cz);
+		}
+		glEnd();	
 	}
 	
 
