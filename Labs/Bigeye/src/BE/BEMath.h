@@ -6,6 +6,7 @@
 
 namespace BE
 {
+	static const float M_PI = 3.14159265f;
 
 	typedef glm::mat4 SceneTransform;
 	static const SceneTransform kIdentitySceneTransform;
