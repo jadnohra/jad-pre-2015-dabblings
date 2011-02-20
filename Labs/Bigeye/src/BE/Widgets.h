@@ -349,7 +349,7 @@ namespace BE
 						NativeWindowWidget();
 						~NativeWindowWidget();
 
-		bool			Create(const WidgetContext& inContext, MainWindow& inApp, const WideString& inWindowName, int inWidth, int inHeight);
+		bool			Create(const WidgetContext& inContext, MainWindow& inApp, const WideString& inWindowName, int inWidth, int inHeight, bool inTitleBar);
 
 		virtual void	Update(const WidgetContext& inContext, const SceneTransform& inParentTransform, bool inParentTransformDirty);
 		

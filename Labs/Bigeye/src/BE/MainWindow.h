@@ -52,7 +52,7 @@ namespace BE
 								MainWindow(MainWindowClient* inClient = NULL);
 								~MainWindow();
 
-		bool					Create(const char* inWindowName, int inWidth, int inHeight);
+		bool					Create(const char* inWindowName, int inWidth, int inHeight, bool inTitleBar = true);
 
 		float					GetInputState(int inInputID) const;
 		int						GetInputEventCount() const;

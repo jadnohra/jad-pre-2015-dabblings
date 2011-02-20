@@ -978,7 +978,7 @@ LRESULT CALLBACK NativeWindowWidget::WindowProc(HWND hWnd, UINT uMsg, WPARAM wPa
 }
 
 
-bool NativeWindowWidget::Create(const WidgetContext& inContext, MainWindow& inApp, const WideString& inWindowName, int inWidth, int inHeight)
+bool NativeWindowWidget::Create(const WidgetContext& inContext, MainWindow& inApp, const WideString& inWindowName, int inWidth, int inHeight, bool inTitleBar)
 {
 	mMainWindow = &inApp;
 	DWORD windowStyle = WS_OVERLAPPEDWINDOW;							
@@ -1013,6 +1013,7 @@ bool NativeWindowWidget::Create(const WidgetContext& inContext, MainWindow& inAp
 	//GLuint PixelFormat;											
 
 	// Adjust Window, Account For Window Borders
+if (inTitleBar)
 	AdjustWindowRectEx (&windowRect, windowStyle, 0, windowExtendedStyle);
 	
 	// Register A Window Class
@@ -1105,12 +1106,20 @@ bool NativeWindowWidget::Create(const WidgetContext& inContext, MainWindow& inAp
 		{
 			
 			Destroy();
-			return Create(inContext, inApp, inWindowName, inWidth, inHeight);
+			return Create(inContext, inApp, inWindowName, inWidth, inHeight, inTitleBar);
 		}
 	}
 		
 
 	ShowWindow (mHWND, SW_NORMAL);	
+
+	if (!inTitleBar)
+	{
+		DWORD dwStyle = GetWindowLong(mHWND, GWL_STYLE);
+		dwStyle &= ~(WS_CAPTION|WS_SIZEBOX);
+		SetWindowLong(mHWND, GWL_STYLE, dwStyle);
+	}
+
 
 	//ReshapeGL (window->init.width, window->init.height);				// Reshape Our GL Window
 

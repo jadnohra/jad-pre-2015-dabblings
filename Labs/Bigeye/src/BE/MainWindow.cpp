@@ -29,7 +29,7 @@ MainWindow::~MainWindow()
 }
 
 
-bool MainWindow::Create(const char* inWindowName, int inWidth, int inHeight)
+bool MainWindow::Create(const char* inWindowName, int inWidth, int inHeight, bool inTitleBar)
 {
 	if (mWindow != NULL)
 		return false;
@@ -37,7 +37,7 @@ bool MainWindow::Create(const char* inWindowName, int inWidth, int inHeight)
 	mHINSTANCE = GetModuleHandle(NULL);	
 	mWindow = new NativeWindowWidget();
 
-	if (!mWindow->Create(WidgetContext(*this, 0.0f), *this, WideString(inWindowName), inWidth, inHeight))
+	if (!mWindow->Create(WidgetContext(*this, 0.0f), *this, WideString(inWindowName), inWidth, inHeight, inTitleBar))
 	{
 		delete mWindow;
 		mWindow = NULL;
