@@ -143,7 +143,7 @@ int RetargetMain()
 	BigfootRetargetScene scene;
 	BE::MainWindow main_window(&scene);
 	
-	if (main_window.Create("Bigfoot [Retarget]", 1024, 768))
+	if (main_window.Create("Bigfoot [Retarget]", 1024, 768, true))
 	{
 		CreateWidgets(main_window, scene);
 
@@ -204,6 +204,20 @@ void CreateWidgets(BE::MainWindow& inWindow, BigfootRetargetScene& inScene)
 
 		float pos_vert = 10.0f;
 		float pos_horiz = 20.0f;
+
+#if 1
+	{
+			pos_vert -= 5.0f;
+			SimpleTextWidget* text_widget = new SimpleTextWidget();
+			text_widget->Create(context, glm::vec2(pos_horiz, pos_vert), MagicWand::TextInfo("Bigfoot [Retarget]", 0, 12.0f, true, glm::vec2(2.0f, 2.0f)), sizeConstraints);
+
+			pos_vert += vert2d(text_widget->GetSize()) + 5.0f;
+
+			children.mChildWidgets.push_back(text_widget);
+	}
+	
+	pos_vert += 5.0f;
+#endif
 
 		{
 			SimpleButtonWidget* button_widget = new SimpleButtonWidget();

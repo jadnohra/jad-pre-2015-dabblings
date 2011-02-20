@@ -2,6 +2,7 @@
 #define _INCLUDED_BIGFOOT_SKELETON_PHYSICS_MODEL_H
 
 #include "Skeleton.h"
+#include "3rdparty/tsavgol.h"
 
 namespace BF
 {
@@ -9,10 +10,13 @@ namespace BF
 	{
 		float mMass;
 		bool mIsStatic;
+		bool mIsStaticPos;
+		bool mIsStaticSpeed;
 	};
 
 	struct JointScalarKinematicInfo
 	{
+		float mHeight;
 		float mSpeed;
 		float mAcceleration;
 	};
@@ -28,6 +32,11 @@ namespace BF
 		glm::vec3 mVelocity;
 		bool mIsValidAcceleration;
 		glm::vec3 mAcceleration;
+
+		SkeletonPhysicsParticle()
+		{
+			mIsValid = false;
+		}
 
 		class Trail
 		{
@@ -100,6 +109,8 @@ namespace BF
 			mIsDetectingStaticJoints = false;
 			mStaticJointSpeed = 0.0f;
 			mStaticJointAccel = 0.0f;
+			mIncludeRootTranslation = true;
+			mIncludeRootAnimTranslation = true;
 		}
 
 		void Init(bool inIncludeRootTranslation, bool inIncludeRootAnimTranslation)
@@ -144,6 +155,16 @@ namespace BF
 		   }
 		}
 
+		void filterMovingAvg(float* samples, int count, int n)
+		{
+			float inv_n = 1.0f/(float) n;
+
+			for (int i=n; i<count; ++i)
+			{
+				samples[i] = samples[i-1] + inv_n * (samples[i] - samples[i-n]);
+			}
+		}
+
 		void SetIsLearning(bool isLearning)
 		{
 			if (mIsLearning && !isLearning)
@@ -159,7 +180,9 @@ namespace BF
 				getLPCoefficientsButterworth2Pole(44100, 1000, ax, by);
 
 				std::vector<float> samples;
+				std::vector<float> height_samples;
 				samples.resize(frame_count);
+				height_samples.resize(frame_count);
 
 				for (size_t ji=0; ji<joint_count; ++ji)
 				{
@@ -168,16 +191,25 @@ namespace BF
 					{
 						JointScalarKinematicInfo& info = mJointScalarKinematicInfos[si];
 						samples[fi] = info.mSpeed;
+						height_samples[fi] = info.mHeight;
 						si += joint_count;
 					}
 
-					filter(&(samples[0]), frame_count, ax, by);
+					
+					//filter(&(samples[0]), frame_count, ax, by);
+					//http://jean-pierre.moreau.pagesperso-orange.fr/Cplus/tsavgol_cpp.txt
+					//http://www.chem.uoa.gr/applets/appletsmooth/appl_smooth2.html  nice demo
+					//http://lorien.ncl.ac.uk/ming/filter/filmav.htm
+					//filter(&(height_samples[0]), frame_count, ax, by);
+					//filterMovingAvg(&(samples[0]), frame_count, 6);
+					//filterMovingAvg(&(height_samples[0]), frame_count, 6);
 
 					si = ji;
 					for (size_t fi=0; fi<frame_count; ++fi)
 					{
 						JointScalarKinematicInfo& info = mJointScalarKinematicInfos[si];
 						info.mSpeed = samples[fi];
+						info.mHeight = height_samples[fi];
 						si += joint_count;
 					}
 				}
@@ -206,6 +238,16 @@ namespace BF
 		bool IsJointStatic(int inIndex) const
 		{
 			return mJointPhysicsInfos[inIndex].mIsStatic;
+		}
+
+		bool IsJointStaticPos(int inIndex) const
+		{
+			return mJointPhysicsInfos[inIndex].mIsStaticPos;
+		}
+
+		bool IsJointStaticSpeed(int inIndex) const
+		{
+			return mJointPhysicsInfos[inIndex].mIsStaticSpeed;
 		}
 
 		void Build(Skeleton& inSkeleton, float inMassPerMeter = 1.0f)
@@ -364,6 +406,14 @@ namespace BF
 				mJointScalarKinematicInfos.push_back(JointScalarKinematicInfo());
 				JointScalarKinematicInfo& info = mJointScalarKinematicInfos.back();
 
+				if (mIsValidModelSpaceJoints[Frame_0])
+				{
+					info.mHeight = outJoint.mPosition.y;
+				}
+				else
+					info.mHeight = 0.0f;
+
+
 				if (outJoint.mIsValidVelocity)
 				{
 					float speed = glm::length(outJoint.mVelocity);
@@ -423,10 +473,26 @@ namespace BF
 					if (mJointScalarKinematicInfos[si].mSpeed <= mJointScalarKinematicInfos[psi].mSpeed
 						&& mJointScalarKinematicInfos[si].mSpeed <= mJointScalarKinematicInfos[nsi].mSpeed)
 					{
-						mJointPhysicsInfos[inJointIndex].mIsStatic = true;
+						mJointPhysicsInfos[inJointIndex].mIsStaticSpeed = true;
 					}
 					else
-						mJointPhysicsInfos[inJointIndex].mIsStatic = false;
+						mJointPhysicsInfos[inJointIndex].mIsStaticSpeed = false;
+				}
+
+				if (psi >= 0 && psi < mJointScalarKinematicInfos.size()
+					&& nsi < mJointScalarKinematicInfos.size())
+				{
+					float ssi = mJointScalarKinematicInfos[si].mHeight;
+					float spsi = mJointScalarKinematicInfos[psi].mHeight;
+					float snsi = mJointScalarKinematicInfos[nsi].mHeight;
+
+					if (mJointScalarKinematicInfos[si].mHeight <= mJointScalarKinematicInfos[psi].mHeight
+						&& mJointScalarKinematicInfos[si].mHeight <= mJointScalarKinematicInfos[nsi].mHeight)
+					{
+						mJointPhysicsInfos[inJointIndex].mIsStaticPos = true;
+					}
+					else
+						mJointPhysicsInfos[inJointIndex].mIsStaticPos = false;
 				}
 			}
 		}
@@ -592,17 +658,25 @@ namespace BF
 
 
 				glm::mat4 model_view_mat = inViewMatrix * glm::translate(glm::mat4(), inParticle.mPosition);
+				//glm::mat4 model_view_mat = glm::translate(glm::mat4(), inParticle.mPosition) * inViewMatrix;
 				glLoadMatrixf(glm::value_ptr(model_view_mat));
 
-				if (mRenderMas)
-					glutSolidSphere((inModel.GetRenderMassToLengthScale() * inParticle.mMass) / (float) (inModel.GetMassJointCount()), 10, 10);
+				float mass = (inParticle.mMass < 1.0f ? 1.0f :  inParticle.mMass);
 
-				if (inJointIndex >= 0 && inModel.IsJointStatic(inJointIndex))
+				if (mRenderMas)
+					glutSolidSphere((inModel.GetRenderMassToLengthScale() * mass) / (float) (inModel.GetMassJointCount()), 10, 10);
+
+				if (inJointIndex >= 0 && (inModel.IsJointStaticPos(inJointIndex) || inModel.IsJointStaticSpeed(inJointIndex)))
 				{
-					glColor4f(1.0f, 1.0f, 1.0f, 0.5f);
+					if (!inModel.IsJointStaticSpeed(inJointIndex))
+						glColor4f(0.0f, 1.0f, 0.0f, 0.5f);
+					else if (!inModel.IsJointStaticPos(inJointIndex))
+						glColor4f(0.0f, 0.0f, 1.0f, 0.5f);
+					else
+						glColor4f(1.0f, 1.0f, 1.0f, 0.5f);
 
 					glEnable(GL_BLEND);
-					glutSolidSphere((inModel.GetRenderMassToLengthScale() * inParticle.mMass * 5.0f) / (float) (inModel.GetMassJointCount()), 10, 10);
+					glutSolidSphere((inModel.GetRenderMassToLengthScale() * mass * 5.0f) / (float) (inModel.GetMassJointCount()), 10, 10);
 					glDisable(GL_BLEND);
 				}
 
@@ -804,7 +878,7 @@ namespace BF
 			{
 				for (size_t i = 0; i < mParticles.size(); ++i)
 				{
-					if (mParticles[i].mMass > 0.0f)
+					//if (mParticles[i].mMass > 0.0f)
 					{
 						if (!inRenderLeafNodesOnly
 							|| inSkeleton.mJointHierarchy.mJointChildrenInfos[i].mNormalChildCount == 0)

@@ -737,7 +737,8 @@ void BigfootPlannerScene::Render(BE::Renderer& inRenderer)
 		float zbias = -1.0f*mCameraSetup.GetDepthPlanes().x;
 		glLoadMatrixf(glm::value_ptr(mCamera.GetViewMatrix()));
 		glBegin(GL_QUADS);								
-		glColor3f(0.9f,0.9f,0.9f);						
+		//glColor3f(0.9f,0.9f,0.9f);						
+		glColor3f(0.95f,0.95f,0.95f);						
 		glVertex3f(mGrid.mBox.mMin.x, zbias, mGrid.mBox.mMin.z);
 		glVertex3f(mGrid.mBox.mMax.x, zbias, mGrid.mBox.mMin.z);
 		glVertex3f(mGrid.mBox.mMax.x, zbias, mGrid.mBox.mMax.z);

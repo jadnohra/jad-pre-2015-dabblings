@@ -295,6 +295,14 @@
 			>
 		</File>
 		<File
+			RelativePath="..\..\src\BF\3rdparty\tsavgol.cpp"
+			>
+		</File>
+		<File
+			RelativePath="..\..\src\BF\3rdparty\tsavgol.h"
+			>
+		</File>
+		<File
 			RelativePath="..\..\src\Viewer.cpp"
 			>
 		</File>
