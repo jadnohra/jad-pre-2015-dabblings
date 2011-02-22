@@ -231,6 +231,10 @@
 			>
 		</File>
 		<File
+			RelativePath="..\..\src\BF\LocomoRender.h"
+			>
+		</File>
+		<File
 			RelativePath="..\..\src\Main.cpp"
 			>
 		</File>

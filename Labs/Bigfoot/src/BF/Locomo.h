@@ -39,6 +39,12 @@ struct LocomoState
 	FootState l;
 	FootState r;
 	EFootFlag support;
+
+	FootState& supportFoot() { return (support & ELFlag) ? l : r; }
+	FootState& otherFoot() { return (support & ELFlag) ? r : l; }
+
+	const FootState& supportFoot() const { return (support & ELFlag) ? l : r; }
+	const FootState& otherFoot() const { return (support & ELFlag) ? r : l; }
 };
 
 struct WalkParams

@@ -7,6 +7,7 @@
 #include "BF/3rdParty/triangle/triangle.h"
 #include "BF/DrawUtil.h"
 #include "BF/Locomo.h"
+#include "BF/LocomoRender.h"
 
 class BigfootPlannerScene : public BE::SimpleRenderToTextureWidget::Scene, public BE::MainWindowClient
 {
@@ -39,6 +40,8 @@ public:
 	BE::OGLTexture	mFootTex;
 	GLsizei mFootTexW;
 	GLsizei mFootTexH;
+
+	BF::LocomoBodyRenderStyle mLocomoStyle;
 
 	BigfootPlannerScene::BigfootPlannerScene() 
 	:	mAutoSetupBasicScene(true)
@@ -220,6 +223,18 @@ void CreateWidgets(BE::MainWindow& inWindow, BigfootPlannerScene& inScene)
 		inScene.mFootTex.Create();
 		if (!inWindow.GetWand().ReadImageToGLTexture("./media/lfoot.jpg", inScene.mFootTex.mTexture, inScene.mFootTexW, inScene.mFootTexH, true))
 			inScene.mFootTex.Destroy();
+	}
+
+	{
+		inScene.mLocomoStyle.lfoot.mTex.Create();
+		if (!inWindow.GetWand().ReadImageToGLTexture("./media/lfoot.jpg", inScene.mLocomoStyle.lfoot.mTex.mTexture, inScene.mLocomoStyle.lfoot.mTexWidth, inScene.mLocomoStyle.lfoot.mTexHeight, true))
+			inScene.mLocomoStyle.lfoot.mTex.Destroy();
+		inScene.mLocomoStyle.lfoot.mFootSizeWorld = 0.3f;
+
+		inScene.mLocomoStyle.rfoot.mTex.Create();
+		if (!inWindow.GetWand().ReadImageToGLTexture("./media/lfoot.jpg", inScene.mLocomoStyle.rfoot.mTex.mTexture, inScene.mLocomoStyle.rfoot.mTexWidth, inScene.mLocomoStyle.rfoot.mTexHeight, true))
+			inScene.mLocomoStyle.rfoot.mTex.Destroy();
+		inScene.mLocomoStyle.rfoot.mFootSizeWorld = 0.3f;
 	}
 }
 
@@ -923,6 +938,7 @@ void BigfootPlannerScene::Render(BE::Renderer& inRenderer)
 
 	static bool did_once = false;
 	std::vector<glm::vec2> steps;
+	std::vector<BF::LocomoState> states;
 
 	if (!did_once)
 	{
@@ -964,6 +980,8 @@ void BigfootPlannerScene::Render(BE::Renderer& inRenderer)
 			steps.push_back(other.pos);
 		}
 
+		states.push_back(state);
+
 		Random random;
 
 		for (int i = 0; i < 60; ++i)
@@ -982,6 +1000,11 @@ void BigfootPlannerScene::Render(BE::Renderer& inRenderer)
 			{
 				const FootState& support = (next_state.support & ELFlag) ? next_state.l : next_state.r;
 				steps.push_back(support.pos);
+				states.push_back(next_state);
+			}
+			else
+			{
+				break;
 			}
 
 			state = next_state;
@@ -1018,6 +1041,9 @@ void BigfootPlannerScene::Render(BE::Renderer& inRenderer)
 		glDisable(GL_TEXTURE_2D);
 	}
 	
+	draw(mCamera.GetViewMatrix(), mLocomoStyle, states);
+	
+
 #if 0
 	{
 		mCameraController.Render(mCamera);
