@@ -1,4 +1,5 @@
 #include "BE/Bigeye.h"
+#include "BE/OGL.h"
 #include "BE/ARB_Multisample.h"
 #include "BF/Camera.h"
 #include "BF/BFMath.h"
@@ -34,6 +35,10 @@ public:
 	std::vector<int> mNavmeshTris;
 	std::vector<int> mNavmeshBorderSegs;
 	int mPickNavmeshPoint;
+
+	BE::OGLTexture	mFootTex;
+	GLsizei mFootTexW;
+	GLsizei mFootTexH;
 
 	BigfootPlannerScene::BigfootPlannerScene() 
 	:	mAutoSetupBasicScene(true)
@@ -208,6 +213,13 @@ void CreateWidgets(BE::MainWindow& inWindow, BigfootPlannerScene& inScene)
 				children.mChildWidgets.push_back(text_widget);
 			}
 		}
+	}
+
+	if (!inScene.mFootTex.IsCreated())
+	{
+		inScene.mFootTex.Create();
+		if (!inWindow.GetWand().ReadImageToGLTexture("./media/lfoot.jpg", inScene.mFootTex.mTexture, inScene.mFootTexW, inScene.mFootTexH, true))
+			inScene.mFootTex.Destroy();
 	}
 }
 
@@ -719,6 +731,7 @@ void BigfootPlannerScene::Render(BE::Renderer& inRenderer)
 
 	glDepthFunc(GL_LEQUAL);
 	glHint(GL_PERSPECTIVE_CORRECTION_HINT, GL_NICEST);	// Really Nice Perspective Calculations
+	glHint(GL_GENERATE_MIPMAP_HINT, GL_NICEST);
 
 	float fogCol[4] = { 0.32f,0.25f,0.25f,1 };
 	glEnable(GL_FOG);
@@ -984,6 +997,27 @@ void BigfootPlannerScene::Render(BE::Renderer& inRenderer)
 	}
 	glEnd();
 
+	if (mFootTex.IsCreated())
+	{
+		glDisable(GL_BLEND);
+		glEnable(GL_TEXTURE_2D);
+		glBindTexture(GL_TEXTURE_2D, mFootTex.mTexture);
+		glTexEnvi(GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_REPLACE);
+		//glTexEnvf(GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_MODULATE);
+		glTexParameteri(GL_TEXTURE_2D,GL_TEXTURE_MIN_FILTER,GL_LINEAR_MIPMAP_LINEAR);	// trilinear
+		//glTexParameteri(GL_TEXTURE_2D,GL_TEXTURE_MIN_FILTER,GL_LINEAR_MIPMAP_NEAREST);	// standard
+		//glTexParameteri(GL_TEXTURE_2D,GL_TEXTURE_MIN_FILTER,GL_LINEAR);	
+		glTexParameteri(GL_TEXTURE_2D,GL_TEXTURE_MAG_FILTER,GL_LINEAR);	
+		glBegin(GL_QUADS);								
+		glColor4f(1.0f,0.0f,0.0f, 0.5f);						
+		glTexCoord2f(0.0f,0.0f); glVertex3f(-1.0f, 0.0f, -1.0f);
+		glTexCoord2f(1.0f,0.0f); glVertex3f(-1.0f, 0.0f, 1.0f);
+		glTexCoord2f(1.0f,1.0f); glVertex3f(1.0f, 0.0f, 1.0f);
+		glTexCoord2f(0.0f,1.0f); glVertex3f(1.0f, 0.0f, -1.0f);
+		glEnd();	
+		glDisable(GL_TEXTURE_2D);
+	}
+	
 #if 0
 	{
 		mCameraController.Render(mCamera);
