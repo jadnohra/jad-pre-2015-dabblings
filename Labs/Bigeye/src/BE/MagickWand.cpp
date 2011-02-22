@@ -227,17 +227,17 @@ public:
 	unsigned char* GetTempPixels() { return temp_pixels; }
 
 
-	bool ToGLTexture(DrawingWand* draw, GLuint inTexture, GLsizei inWidth, GLsizei inHeight)
+	bool ToGLTexture(DrawingWand* draw, GLuint inTexture, GLsizei inWidth, GLsizei inHeight, bool inGenMimmaps = false)
 	{
 		auto_scoped_ptr<MagickWand> wand(NewMagickWand());
 		MagickNewImage(wand, inWidth, inHeight, transparent);
 		MagickDrawImage(wand, draw);
 
-		return ToGLTexture(wand, inTexture, inWidth, inHeight);
+		return ToGLTexture(wand, inTexture, inWidth, inHeight, inGenMimmaps);
 	}
 
 
-	bool ToGLTexture(MagickWand* wand, GLuint inTexture, GLsizei& outWidth, GLsizei& outHeight)
+	bool ToGLTexture(MagickWand* wand, GLuint inTexture, GLsizei& outWidth, GLsizei& outHeight, bool inGenMimmaps = false)
 	{
 		if (wand)
 		{
@@ -248,6 +248,10 @@ public:
 			{
 				glBindTexture(GL_TEXTURE_2D, inTexture);
 				glPixelStorei(GL_UNPACK_ALIGNMENT, 1);
+				if (inGenMimmaps)
+					glTexParameteri(GL_TEXTURE_2D, GL_GENERATE_MIPMAP, GL_TRUE);
+				else
+					glTexParameteri(GL_TEXTURE_2D, GL_GENERATE_MIPMAP, GL_FALSE);
 				glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, outWidth, outHeight, 0, GL_RGBA, GL_UNSIGNED_BYTE, GetTempPixels());
 				return true;
 			}
@@ -755,7 +759,7 @@ bool MagicWand::MakeFrameTexture(FrameType inType, bool inUseGradient, GLuint in
 
 
 
-bool MagicWand::ReadImageToGLTexture(const char* inPath, GLuint inTexture, GLsizei& outWidth, GLsizei& outHeight)
+bool MagicWand::ReadImageToGLTexture(const char* inPath, GLuint inTexture, GLsizei& outWidth, GLsizei& outHeight, bool inGenMimmaps)
 {
 	bool was_read = false;
 
@@ -763,7 +767,7 @@ bool MagicWand::ReadImageToGLTexture(const char* inPath, GLuint inTexture, GLsiz
 	{
 		if (MagickReadImage(wand, inPath))
 		{
-			was_read = mImpl->ToGLTexture(wand, inTexture, outWidth, outHeight);
+			was_read = mImpl->ToGLTexture(wand, inTexture, outWidth, outHeight, inGenMimmaps);
 		}
 	}
 	

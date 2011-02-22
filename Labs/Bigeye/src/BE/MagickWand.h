@@ -53,7 +53,7 @@ namespace BE
 		MagicWand();
 		~MagicWand();
 
-		bool ReadImageToGLTexture(const char* inPath, GLuint inTexture, GLsizei& outWidth, GLsizei& outHeight);
+		bool ReadImageToGLTexture(const char* inPath, GLuint inTexture, GLsizei& outWidth, GLsizei& outHeight, bool inGenMimmaps = false);
 		bool MakeTestButtonTexture(GLuint inTexture, GLsizei& outWidth, GLsizei& outHeight);
 		bool MakeFrameTexture(FrameType inType, bool inUseGradient, GLuint inTexture, GLsizei& outWidth, GLsizei& outHeight, glm::vec2& outInternalPos, glm::vec2& outInternalSize);
 		bool MakeSliderFrameTexture(GLuint inTexture, GLsizei inLength, const TextInfo& inTextInfo, const SizeConstraints& inSizeConstraints, GLsizei& outWidth, GLsizei& outHeight);
