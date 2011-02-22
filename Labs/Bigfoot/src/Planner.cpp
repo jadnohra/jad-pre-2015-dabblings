@@ -975,16 +975,16 @@ void BigfootPlannerScene::Render(BE::Renderer& inRenderer)
 
 		Random random;
 
-		for (int i = 0; i < /*20*/60; ++i)
+		for (int i = 0; i < /*20*/80; ++i)
 		{
 			LocomoState next_state;
 			float duration;
 
-			if (true && random.randf() > 0.8f)
+			if (true && random.randf() > 0.81f)
 			{
 				walk.stride = random.randr(0.4f, 1.5f);
 				walk.side = random.randr(-0.1f, 0.1f);
-				walk.turn = random.randr(-15.0f, 15.0f);
+				walk.turn = random.randr(-20.0f, 20.0f);
 			}
 			
 			if (false && i == 5)

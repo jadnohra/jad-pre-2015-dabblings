@@ -63,10 +63,10 @@ void draw(const glm::mat4& viewMat, const LocomoBodyRenderStyle& style, const st
 
 		glBegin(GL_QUADS);			
 		//glColor4f(1.0f,0.0f,0.0f, 0.5f);						
-		glTexCoord2f(0.0f,1.0f); glVertex3f(sz, 0.0f, -sz);
-		glTexCoord2f(0.0f,0.0f); glVertex3f(sz, 0.0f, sz);
-		glTexCoord2f(1.0f,0.0f); glVertex3f(-sz, 0.0f, sz);
-		glTexCoord2f(1.0f,1.0f); glVertex3f(-sz, 0.0f, -sz);
+		glTexCoord2f(0.0f,1.0f); glVertex3f(sz, 0.5f * sz, -sz);
+		glTexCoord2f(0.0f,0.0f); glVertex3f(sz, 0.5f * sz, sz);
+		glTexCoord2f(1.0f,0.0f); glVertex3f(-sz, 0.5f * sz, sz);
+		glTexCoord2f(1.0f,1.0f); glVertex3f(-sz, 0.5f * sz, -sz);
 		glEnd();	
 	}
 		
