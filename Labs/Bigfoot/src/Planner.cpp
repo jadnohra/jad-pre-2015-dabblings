@@ -37,10 +37,6 @@ public:
 	std::vector<int> mNavmeshBorderSegs;
 	int mPickNavmeshPoint;
 
-	BE::OGLTexture	mFootTex;
-	GLsizei mFootTexW;
-	GLsizei mFootTexH;
-
 	BF::LocomoBodyRenderStyle mLocomoStyle;
 
 	BigfootPlannerScene::BigfootPlannerScene() 
@@ -218,23 +214,18 @@ void CreateWidgets(BE::MainWindow& inWindow, BigfootPlannerScene& inScene)
 		}
 	}
 
-	if (!inScene.mFootTex.IsCreated())
-	{
-		inScene.mFootTex.Create();
-		if (!inWindow.GetWand().ReadImageToGLTexture("./media/lfoot.jpg", inScene.mFootTex.mTexture, inScene.mFootTexW, inScene.mFootTexH, true))
-			inScene.mFootTex.Destroy();
-	}
-
 	{
 		inScene.mLocomoStyle.lfoot.mTex.Create();
 		if (!inWindow.GetWand().ReadImageToGLTexture("./media/lfoot.jpg", inScene.mLocomoStyle.lfoot.mTex.mTexture, inScene.mLocomoStyle.lfoot.mTexWidth, inScene.mLocomoStyle.lfoot.mTexHeight, true))
 			inScene.mLocomoStyle.lfoot.mTex.Destroy();
-		inScene.mLocomoStyle.lfoot.mFootSizeWorld = 0.3f;
+		inScene.mLocomoStyle.lfoot.mFootSizeWorld = 0.35f;
+		inScene.mLocomoStyle.lfoot.mFootAngle = -30.0f;
 
 		inScene.mLocomoStyle.rfoot.mTex.Create();
-		if (!inWindow.GetWand().ReadImageToGLTexture("./media/lfoot.jpg", inScene.mLocomoStyle.rfoot.mTex.mTexture, inScene.mLocomoStyle.rfoot.mTexWidth, inScene.mLocomoStyle.rfoot.mTexHeight, true))
+		if (!inWindow.GetWand().ReadImageToGLTexture("./media/rfoot.jpg", inScene.mLocomoStyle.rfoot.mTex.mTexture, inScene.mLocomoStyle.rfoot.mTexWidth, inScene.mLocomoStyle.rfoot.mTexHeight, true))
 			inScene.mLocomoStyle.rfoot.mTex.Destroy();
-		inScene.mLocomoStyle.rfoot.mFootSizeWorld = 0.3f;
+		inScene.mLocomoStyle.rfoot.mFootSizeWorld = 0.35f;
+		inScene.mLocomoStyle.rfoot.mFootAngle = 30.0f;
 	}
 }
 
@@ -946,7 +937,7 @@ void BigfootPlannerScene::Render(BE::Renderer& inRenderer)
 
 		LocomoWorld world;
 		world.fwd = glm::vec2(0.0f, 1.0f);
-		world.right = glm::vec2(1.0f, 0.0f);
+		world.right = glm::vec2(-1.0f, 0.0f);
 
 		LocomoBody body;
 		body.footDist = 0.4f;
@@ -963,7 +954,7 @@ void BigfootPlannerScene::Render(BE::Renderer& inRenderer)
 
 		WalkParams walk;
 
-		walk.stride = 0.75f;
+		walk.stride = 0.85f;
 		walk.side = 0.0f;
 		walk.speed = 1.5f;
 		walk.turn = 0.0f;
@@ -984,18 +975,23 @@ void BigfootPlannerScene::Render(BE::Renderer& inRenderer)
 
 		Random random;
 
-		for (int i = 0; i < 60; ++i)
+		for (int i = 0; i < /*20*/60; ++i)
 		{
 			LocomoState next_state;
 			float duration;
 
-			if (random.randf() > 0.8f)
+			if (true && random.randf() > 0.8f)
 			{
-				walk.stride = random.randr(0.4f, 0.9f);
-				//walk.side = random.randr(0.0f, 0.2f);
+				walk.stride = random.randr(0.4f, 1.5f);
+				walk.side = random.randr(-0.1f, 0.1f);
 				walk.turn = random.randr(-15.0f, 15.0f);
 			}
 			
+			if (false && i == 5)
+			{
+				walk.turn = 5.0f;
+			}
+
 			if (execute(world, body, state, walk, next_state, duration))
 			{
 				const FootState& support = (next_state.support & ELFlag) ? next_state.l : next_state.r;
@@ -1011,6 +1007,7 @@ void BigfootPlannerScene::Render(BE::Renderer& inRenderer)
 		}
 	}
 
+	/*
 	glPointSize(3.0f);
 	glBegin(GL_POINTS);	
 	glColor4ub(0,0,0,196);
@@ -1019,27 +1016,7 @@ void BigfootPlannerScene::Render(BE::Renderer& inRenderer)
 		glVertex3f(steps[i].x, 0.0f, steps[i].y);
 	}
 	glEnd();
-
-	if (mFootTex.IsCreated())
-	{
-		glDisable(GL_BLEND);
-		glEnable(GL_TEXTURE_2D);
-		glBindTexture(GL_TEXTURE_2D, mFootTex.mTexture);
-		glTexEnvi(GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_REPLACE);
-		//glTexEnvf(GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_MODULATE);
-		glTexParameteri(GL_TEXTURE_2D,GL_TEXTURE_MIN_FILTER,GL_LINEAR_MIPMAP_LINEAR);	// trilinear
-		//glTexParameteri(GL_TEXTURE_2D,GL_TEXTURE_MIN_FILTER,GL_LINEAR_MIPMAP_NEAREST);	// standard
-		//glTexParameteri(GL_TEXTURE_2D,GL_TEXTURE_MIN_FILTER,GL_LINEAR);	
-		glTexParameteri(GL_TEXTURE_2D,GL_TEXTURE_MAG_FILTER,GL_LINEAR);	
-		glBegin(GL_QUADS);								
-		glColor4f(1.0f,0.0f,0.0f, 0.5f);						
-		glTexCoord2f(0.0f,0.0f); glVertex3f(-1.0f, 0.0f, -1.0f);
-		glTexCoord2f(1.0f,0.0f); glVertex3f(-1.0f, 0.0f, 1.0f);
-		glTexCoord2f(1.0f,1.0f); glVertex3f(1.0f, 0.0f, 1.0f);
-		glTexCoord2f(0.0f,1.0f); glVertex3f(1.0f, 0.0f, -1.0f);
-		glEnd();	
-		glDisable(GL_TEXTURE_2D);
-	}
+	*/
 	
 	draw(mCamera.GetViewMatrix(), mLocomoStyle, states);
 	
