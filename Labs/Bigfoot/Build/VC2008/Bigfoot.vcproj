@@ -223,6 +223,14 @@
 			>
 		</File>
 		<File
+			RelativePath="..\..\src\BF\Locomo.cpp"
+			>
+		</File>
+		<File
+			RelativePath="..\..\src\BF\Locomo.h"
+			>
+		</File>
+		<File
 			RelativePath="..\..\src\Main.cpp"
 			>
 		</File>

@@ -5,6 +5,7 @@
 #include "BF/GridRenderer.h"
 #include "BF/3rdParty/triangle/triangle.h"
 #include "BF/DrawUtil.h"
+#include "BF/Locomo.h"
 
 class BigfootPlannerScene : public BE::SimpleRenderToTextureWidget::Scene, public BE::MainWindowClient
 {
@@ -906,7 +907,82 @@ void BigfootPlannerScene::Render(BE::Renderer& inRenderer)
 		}
 		glEnd();	
 	}
-	
+
+	static bool did_once = false;
+	std::vector<glm::vec2> steps;
+
+	if (!did_once)
+	{
+		using namespace BF;
+
+		LocomoWorld world;
+		world.fwd = glm::vec2(0.0f, 1.0f);
+		world.right = glm::vec2(1.0f, 0.0f);
+
+		LocomoBody body;
+		body.footDist = 0.4f;
+
+		LocomoState start_state;
+
+		start_state.l.pos = glm::vec2();
+		start_state.l.dir = 0.0f;
+
+		start_state.r.pos = glm::vec2();
+		start_state.r.dir = 0.0f;
+
+		start_state.support = (EFootFlag) (ELFlag | ERFlag);
+
+		WalkParams walk;
+
+		walk.stride = 0.75f;
+		walk.side = 0.0f;
+		walk.speed = 1.5f;
+		walk.turn = 0.0f;
+
+		LocomoState state = start_state;
+
+		{
+			const FootState& support = (state.support & ELFlag) ? state.l : state.r;
+			steps.push_back(support.pos);
+		}
+
+		{
+			const FootState& other = (state.support & ELFlag) ? state.r : state.l;
+			steps.push_back(other.pos);
+		}
+
+		Random random;
+
+		for (int i = 0; i < 60; ++i)
+		{
+			LocomoState next_state;
+			float duration;
+
+			if (random.randf() > 0.8f)
+			{
+				walk.stride = random.randr(0.4f, 0.9f);
+				//walk.side = random.randr(0.0f, 0.2f);
+				walk.turn = random.randr(-15.0f, 15.0f);
+			}
+			
+			if (execute(world, body, state, walk, next_state, duration))
+			{
+				const FootState& support = (next_state.support & ELFlag) ? next_state.l : next_state.r;
+				steps.push_back(support.pos);
+			}
+
+			state = next_state;
+		}
+	}
+
+	glPointSize(3.0f);
+	glBegin(GL_POINTS);	
+	glColor4ub(0,0,0,196);
+	for (size_t i = 0; i < steps.size(); ++i)
+	{
+		glVertex3f(steps[i].x, 0.0f, steps[i].y);
+	}
+	glEnd();
 
 #if 0
 	{
