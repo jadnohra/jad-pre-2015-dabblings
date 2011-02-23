@@ -168,27 +168,30 @@ void MainWindow::ConsumeInputEvents()
 
 void MainWindow::PrepareInputForUpdate()
 {
-	POINT point;
-	GetCursorPos(&point);
-	ScreenToClient(mWindow->GetHWND(), &point);
+	if (GetFocus() == mWindow->GetHWND())
+	{
+		POINT point;
+		GetCursorPos(&point);
+		ScreenToClient(mWindow->GetHWND(), &point);
 
-	mLastMousePos = mMousePos;
-	mMousePos.x = (float) point.x;
-	mMousePos.y = (float) point.y;
+		mLastMousePos = mMousePos;
+		mMousePos.x = (float) point.x;
+		mMousePos.y = (float) point.y;
 
-	mMouseMoved = !glm::areSimilar(mMousePos, mLastMousePos, 0.0f);
+		mMouseMoved = !glm::areSimilar(mMousePos, mLastMousePos, 0.0f);
 
-	mLastMouseLeft = mMouseLeft;
-	mMouseLeft = GetKeyState(VK_LBUTTON) < 0;
-	mMouseLeftChanged = mMouseLeft != mLastMouseLeft;
+		mLastMouseLeft = mMouseLeft;
+		mMouseLeft = GetKeyState(VK_LBUTTON) < 0;
+		mMouseLeftChanged = mMouseLeft != mLastMouseLeft;
 
-	mLastMouseMiddle = mMouseMiddle;
-	mMouseMiddle = GetKeyState(VK_MBUTTON) < 0;
-	mMouseMiddleChanged = mMouseMiddle != mLastMouseMiddle;
+		mLastMouseMiddle = mMouseMiddle;
+		mMouseMiddle = GetKeyState(VK_MBUTTON) < 0;
+		mMouseMiddleChanged = mMouseMiddle != mLastMouseMiddle;
 
-	mLastMouseRight = mMouseRight;
-	mMouseRight = GetKeyState(VK_RBUTTON) < 0;
-	mMouseRightChanged = mMouseRight != mLastMouseRight;
+		mLastMouseRight = mMouseRight;
+		mMouseRight = GetKeyState(VK_RBUTTON) < 0;
+		mMouseRightChanged = mMouseRight != mLastMouseRight;
+	}
 
 	/*
 	fwKeys = GET_KEYSTATE_WPARAM(wParam);
