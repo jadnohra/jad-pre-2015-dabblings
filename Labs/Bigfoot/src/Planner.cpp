@@ -36,8 +36,14 @@ public:
 	std::vector<int> mNavmeshTris;
 	std::vector<int> mNavmeshBorderSegs;
 	int mPickNavmeshPoint;
-
+	
 	BF::LocomoBodyRenderStyle mLocomoStyle;
+	BE::SimpleButtonWidget* mPathButton;
+	BE::SimpleButtonWidget* mClearPathButton;
+	std::vector<glm::vec3> mPathPoints;
+
+	BE::SimpleButtonWidget* mPlanPathButton;
+	std::vector<BF::LocomoState> mPathStates;
 
 	BigfootPlannerScene::BigfootPlannerScene() 
 	:	mAutoSetupBasicScene(true)
@@ -47,6 +53,9 @@ public:
 	,	mAutoLinkButton(NULL)
 	,	mCreateNavmeshButton(NULL)
 	,	mClearNavmeshButton(NULL)
+	,	mPathButton(NULL)
+	,	mClearPathButton(NULL)
+	,	mPlanPathButton(NULL)
 	,	mIsValidPick(false)
 	,	mPickNavmeshPoint(-1)
 	{
@@ -140,36 +149,71 @@ void CreateWidgets(BE::MainWindow& inWindow, BigfootPlannerScene& inScene)
 
 		{
 			SimpleButtonWidget* button_widget = new SimpleButtonWidget();
-			button_widget->Create(context, glm::vec2(pos_horiz, pos_vert), true, MagicWand::TextInfo(" L ", 0, 14.0f, true, glm::vec2(2.0f, 2.0f)), sizeConstraints);
+			button_widget->Create(context, glm::vec2(pos_horiz, pos_vert), true, MagicWand::TextInfo(" Poly-Vert ", 0, 14.0f, true, glm::vec2(2.0f, 2.0f)), MagicWand::SizeConstraints());
 
-			pos_horiz += 30.0f;
-
-			children.mChildWidgets.push_back(button_widget);
-			inScene.mAutoLinkButton = button_widget;
-			inScene.mAutoLinkButton->SetIsToggled(true);
-		}
-
-
-		{
-			SimpleButtonWidget* button_widget = new SimpleButtonWidget();
-			button_widget->Create(context, glm::vec2(pos_horiz, pos_vert), false, MagicWand::TextInfo(" T ", 0, 14.0f, true, glm::vec2(2.0f, 2.0f)), sizeConstraints);
-
-			pos_horiz += 30.0f;
+			pos_horiz += horiz2d(button_widget->GetSize()) + 5.0f;
 
 			children.mChildWidgets.push_back(button_widget);
 			inScene.mCreateNavmeshButton = button_widget;
+			inScene.mCreateNavmeshButton->SetIsToggled(false);
 		}
 
 		{
 			SimpleButtonWidget* button_widget = new SimpleButtonWidget();
-			button_widget->Create(context, glm::vec2(pos_horiz, pos_vert), false, MagicWand::TextInfo(" X ", 0, 14.0f, true, glm::vec2(2.0f, 2.0f)), sizeConstraints);
+			button_widget->Create(context, glm::vec2(pos_horiz, pos_vert), true, MagicWand::TextInfo(" Poly-Link ", 0, 14.0f, true, glm::vec2(2.0f, 2.0f)), MagicWand::SizeConstraints());
 
-			pos_horiz += 30.0f;
+			pos_horiz += horiz2d(button_widget->GetSize()) + 5.0f;
+
+			children.mChildWidgets.push_back(button_widget);
+			inScene.mAutoLinkButton = button_widget;
+			inScene.mAutoLinkButton->SetIsToggled(false);
+		}
+
+
+		{
+			SimpleButtonWidget* button_widget = new SimpleButtonWidget();
+			button_widget->Create(context, glm::vec2(pos_horiz, pos_vert), false, MagicWand::TextInfo(" Poly-Clear ", 0, 14.0f, true, glm::vec2(2.0f, 2.0f)), MagicWand::SizeConstraints());
+
+			pos_horiz += horiz2d(button_widget->GetSize()) + 5.0f;
 
 			children.mChildWidgets.push_back(button_widget);
 			inScene.mClearNavmeshButton = button_widget;
 		}
 
+		pos_horiz += 30.0f;
+
+		{
+			SimpleButtonWidget* button_widget = new SimpleButtonWidget();
+			button_widget->Create(context, glm::vec2(pos_horiz, pos_vert), true, MagicWand::TextInfo(" Path ", 0, 14.0f, true, glm::vec2(2.0f, 2.0f)), MagicWand::SizeConstraints());
+
+			pos_horiz += horiz2d(button_widget->GetSize()) + 5.0f;
+
+			children.mChildWidgets.push_back(button_widget);
+			inScene.mPathButton = button_widget;
+			inScene.mPathButton->SetIsToggled(true);
+		}
+		
+		{
+			SimpleButtonWidget* button_widget = new SimpleButtonWidget();
+			button_widget->Create(context, glm::vec2(pos_horiz, pos_vert), false, MagicWand::TextInfo(" Path-Clear ", 0, 14.0f, true, glm::vec2(2.0f, 2.0f)), MagicWand::SizeConstraints());
+
+			pos_horiz += horiz2d(button_widget->GetSize()) + 5.0f;
+
+			children.mChildWidgets.push_back(button_widget);
+			inScene.mClearPathButton = button_widget;
+		}
+
+		{
+			SimpleButtonWidget* button_widget = new SimpleButtonWidget();
+			button_widget->Create(context, glm::vec2(pos_horiz, pos_vert), false, MagicWand::TextInfo(" Path-Plan ", 0, 14.0f, true, glm::vec2(2.0f, 2.0f)), MagicWand::SizeConstraints());
+
+			pos_horiz += horiz2d(button_widget->GetSize()) + 5.0f;
+
+			children.mChildWidgets.push_back(button_widget);
+			inScene.mPlanPathButton = button_widget;
+		}
+
+		
 
 		{
 			SimpleButtonWidget* button_widget = new SimpleButtonWidget();
@@ -361,7 +405,7 @@ bool BigfootPlannerScene::Create()
 	BF::AAB default_gid_aab;
 	default_gid_aab.Include(glm::vec3(-50.0f, -50.0f, -50.0f));
 	default_gid_aab.Include(glm::vec3(50.0f, 50.0f, 50.0f));
-	mGrid.Setup(default_gid_aab, glm::vec2(100.0f, 100.0f));
+	mGrid.Setup(default_gid_aab, glm::vec2(10.0f, 10.0f));
 	mCameraController.AttachCamera(mCamera);
 	
 	return true;
@@ -469,9 +513,35 @@ void BigfootPlannerScene::ProcessWidgetEvents(BE::MainWindow* inWindow, BE::Widg
 	for (size_t i=0; i<inManager.GetEventCount(); ++i)
 	{
 		const BE::WidgetEvent& widget_event = inManager.GetEvent(i);
+		/*
 		if (widget_event.mWidget == mCreateNavmeshButton && mNavmeshLinks.size() >= 3)
 		{
 			Triangulate();	
+		}
+		*/
+		if (widget_event.mWidget == mCreateNavmeshButton)
+		{
+			if (mCreateNavmeshButton->IsToggled())
+			{
+				mAutoLinkButton->SetIsToggled(false);
+				mPathButton->SetIsToggled(false);
+			}
+		}
+		else if (widget_event.mWidget == mAutoLinkButton)
+		{
+			if (mAutoLinkButton->IsToggled())
+			{
+				mCreateNavmeshButton->SetIsToggled(false);
+				mPathButton->SetIsToggled(false);
+			}
+		}
+		else if (widget_event.mWidget == mPathButton)
+		{
+			if (mPathButton->IsToggled())
+			{
+				mAutoLinkButton->SetIsToggled(false);
+				mCreateNavmeshButton->SetIsToggled(false);
+			}
 		}
 		else if (widget_event.mWidget == mClearNavmeshButton)
 		{
@@ -480,6 +550,60 @@ void BigfootPlannerScene::ProcessWidgetEvents(BE::MainWindow* inWindow, BE::Widg
 			mNavmeshTrisVerts.clear();
 			mNavmeshTris.clear();
 			mNavmeshBorderSegs.clear();
+		}
+		else if (widget_event.mWidget == mClearPathButton)
+		{
+			mPathPoints.clear();
+		}
+		else if (widget_event.mWidget == mPlanPathButton)
+		{
+			using namespace BF;
+
+			LocomoWorld world;
+			world.fwd = glm::vec2(0.0f, 1.0f);
+			world.right = glm::vec2(-1.0f, 0.0f);
+
+			LocomoBody body;
+			body.footDist = 0.4f;
+
+			LocomoState start_state;
+
+			start_state.l.pos = glm::vec2();
+			start_state.l.dir = 0.0f;
+
+			start_state.r.pos = glm::vec2();
+			start_state.r.dir = 0.0f;
+
+			start_state.support = (EFootFlag) (ELFlag | ERFlag);
+
+			WalkParams walk;
+
+			walk.stride = 0.85f;
+			walk.side = 0.0f;
+			walk.speed = 1.5f;
+			walk.turn = 0.0f;
+
+			LocomoState state = start_state;
+
+			mPathStates.clear();
+			mPathStates.push_back(state);
+
+			PathPlanState plan_state;
+
+			plan_state.cursor = 0;
+			for (int i = 0; i < mPathPoints.size(); ++i)
+			{
+				plan_state.path.push_back(glm::vec2());
+				plan_state.path.back() = glm::vec2(mPathPoints[i].x, mPathPoints[i].z);
+			}
+
+			LocomoState next_state;
+			float duration;
+			while(step(world, body, state, plan_state, walk, next_state, duration))
+			{
+				mPathStates.push_back(state);
+				state = next_state;
+			}
 		}
 	}
 }
@@ -511,7 +635,7 @@ void BigfootPlannerScene::Update(const BE::WidgetContext& context, BE::SimpleRen
 
 	int link_count = mNavmeshLinks.size();
 
-	if ((left_on || right_up))
+	if ((mCreateNavmeshButton->IsToggled() || mAutoLinkButton->IsToggled()) && (left_on || right_up))
 	{
 		bool valid_pick = false;
 		glm::vec3 pick;
@@ -649,6 +773,46 @@ void BigfootPlannerScene::Update(const BE::WidgetContext& context, BE::SimpleRen
 			Triangulate();
 		}
 	}
+
+	if (left_on && mPathButton->IsToggled())
+	{
+		bool valid_pick = false;
+		glm::vec3 pick;
+
+		glm::vec2 picked_2d;
+		if (inParent.IsMainWindowPosInViewport(context, context.mMainWindow.GetMousePos(), picked_2d))
+		{
+			glm::vec3 origin;
+			glm::vec3 dir;
+			inParent.GetScene()->Unproject(picked_2d, origin, &dir);
+
+			float t = -origin.y / dir.y;
+			valid_pick = true;
+			pick = origin + dir * t;
+		}
+
+		if (valid_pick)
+		{
+			int pick_index = -1;
+			float pick_dist = -1.0f;
+
+			for (size_t i = 0; i < mPathPoints.size(); ++i)
+			{
+				float dist = glm::distance(pick, mPathPoints[i]);
+				if (pick_dist == -1.0f || dist < pick_dist)
+				{
+					pick_dist = dist;
+					pick_index = i;
+				}
+			}
+
+			if (pick_index == -1 || pick_dist > 0.10f)
+			{
+				mPathPoints.push_back(glm::vec3());
+				mPathPoints.back() = pick;
+			}
+		}
+	}
 }
 
 
@@ -714,6 +878,7 @@ void BigfootPlannerScene::Render(BE::Renderer& inRenderer)
 	//glClearColor(100.0f/255.0f, 149.0f/255.0f, 237.0f / 255.0f, 1.0f);
 	glClearColor(75.0f/255.0f, 146.0f/255.0f, 219.0f / 255.0f, 1.0f);
 	glClearColor(115.0f/255.0f, 115.0f/255.0f, 115.0f/255.0f, 1.0f); // Blender
+	glClearColor(100.0f/255.0f, 140.0f/255.0f, 230.0f/255.0f, 1.0f); 
 
 	glClearDepth(1.0f);
 	glClear(GL_DEPTH_BUFFER_BIT);
@@ -927,6 +1092,15 @@ void BigfootPlannerScene::Render(BE::Renderer& inRenderer)
 		glEnd();	
 	}
 
+	glLineWidth(1.5f);
+	glBegin(GL_LINE_STRIP);		
+	glColor4ub(0,48,64,220);
+	for (size_t i = 0; i < mPathPoints.size(); ++i)
+	{
+		glVertex3f(mPathPoints[i].x, mPathPoints[i].y, mPathPoints[i].z);
+	}
+	glEnd();	
+
 	static bool did_once = false;
 	std::vector<glm::vec2> steps;
 	std::vector<BF::LocomoState> states;
@@ -1019,6 +1193,7 @@ void BigfootPlannerScene::Render(BE::Renderer& inRenderer)
 	*/
 	
 	draw(mCamera.GetViewMatrix(), mLocomoStyle, states);
+	draw(mCamera.GetViewMatrix(), mLocomoStyle, mPathStates);
 	
 
 #if 0

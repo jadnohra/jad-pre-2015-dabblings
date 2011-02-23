@@ -43,10 +43,23 @@ public:
 		unit_inc.y = mBox.GetExtents().z / mDivisionCount.y;
 
 		AAB unit_nice_box;
-		unit_nice_box.mMin.x = RoundByInc(mBox.mMin.x, unit_inc.x) - unit_inc.x;
-		unit_nice_box.mMin.y = RoundByInc(mBox.mMin.z, unit_inc.y) - unit_inc.y;
-		unit_nice_box.mMax.x = RoundByInc(mBox.mMax.x, unit_inc.x) + unit_inc.x;
-		unit_nice_box.mMax.y = RoundByInc(mBox.mMax.z, unit_inc.y) + unit_inc.y;
+
+		unit_nice_box.mMin.x = RoundByInc(mBox.mMin.x, unit_inc.x);
+		unit_nice_box.mMax.x = RoundByInc(mBox.mMax.x, unit_inc.x);
+		unit_nice_box.mMin.y = RoundByInc(mBox.mMin.z, unit_inc.y);
+		unit_nice_box.mMax.y = RoundByInc(mBox.mMax.z, unit_inc.y);
+
+		if ((float) (int) unit_inc.x != unit_inc.x)
+		{
+			unit_nice_box.mMin.x += -unit_inc.x;
+			unit_nice_box.mMax.x += unit_inc.x;
+		}
+
+		if ((float) (int) unit_inc.y != unit_inc.y)
+		{
+			unit_nice_box.mMin.y += unit_inc.y;
+			unit_nice_box.mMax.y += unit_inc.y;
+		}
 
 		glBegin(GL_LINES);
 		for (float x=unit_nice_box.mMin.x; x<=unit_nice_box.mMax.x; x += unit_inc.x)

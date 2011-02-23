@@ -2,6 +2,7 @@
 #define _INCLUDED_BIGFOOT_LOCOMO_H
 
 #include "BFMath.h"
+#include <vector>
 
 namespace BF 
 {
@@ -55,6 +56,16 @@ struct WalkParams
 	float side;
 };
 
+struct PathPlanState
+{
+	std::vector<glm::vec2> path;
+	int cursor;
+
+	WalkParams defaultWalk;
+};
+
+bool step(const LocomoWorld& inWorld, const LocomoBody& inBody, const LocomoState& inState, 
+			 PathPlanState& inPlanState, const WalkParams& inDefaultParams, LocomoState& outState, float& outDuration);
 
 bool execute(const LocomoWorld& inWorld, const LocomoBody& inBody, const LocomoState& inState, 
 			 const WalkParams& inParams, LocomoState& outState, float& outDuration);
