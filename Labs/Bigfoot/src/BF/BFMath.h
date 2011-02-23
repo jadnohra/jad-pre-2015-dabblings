@@ -17,6 +17,9 @@ namespace BF
 	template<typename T>
 	inline float gRadToDeg(T inValue) { return inValue * ((T)180 / gMathPi<T>()); }
 
+	template<typename T>
+	inline float gDegConstrain360(T inValue) { T mul = (inValue / 360.0f); T ret = inValue + ((float) (int) mul * 360.0f); return ret >= 0.0f ? ret : ret + 360.0f; }
+
 	 template <typename T> 
 	 inline glm::detail::tmat4x4<T> lookAt2(
 			const glm::detail::tvec3<T>& eye, 

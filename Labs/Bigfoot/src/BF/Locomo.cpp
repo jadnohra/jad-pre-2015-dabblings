@@ -46,6 +46,26 @@ bool execute(const LocomoWorld& inWorld, const LocomoBody& inBody, const LocomoS
 bool step(const LocomoWorld& inWorld, const LocomoBody& inBody, const LocomoState& inState, 
 			 PathPlanState& inPlanState, const WalkParams& inWalk, LocomoState& outState, float& outDuration)
 {
+	if (inPlanState.cursor == 0)
+	{
+		if (inPlanState.cursor + 1 >= inPlanState.path.size())
+			return false;
+
+		glm::vec2 path_dir = glm::normalize(inPlanState.path[inPlanState.cursor+1] - inPlanState.path[inPlanState.cursor]);
+
+		outState = inState;
+		outState.l.pos = inPlanState.path[inPlanState.cursor];
+		outState.l.dir = gDegConstrain360(gRadToDeg(atan2f(-path_dir.x, path_dir.y)));
+
+		outState.r.pos = inPlanState.path[inPlanState.cursor];
+		outState.r.dir = gDegConstrain360(gRadToDeg(atan2f(-path_dir.x, path_dir.y)));
+	
+		outState.support = (EFootFlag) (ELFlag | ERFlag);
+		inPlanState.cursor = 1;
+
+		return true;
+	}
+
 	using namespace BE;
 	LocomoState next_state;
 
@@ -78,7 +98,7 @@ bool step(const LocomoWorld& inWorld, const LocomoBody& inBody, const LocomoStat
 		dist_cursor += glm::distance(inPlanState.path[i], inPlanState.path[i+1]);
 	}
 
-	if (new_cursor == -1)
+	if (new_cursor == -1 || new_cursor == inPlanState.cursor)
 		return false;
 
 	const FootState& support = (inState.support & ELFlag) ? inState.l : inState.r;
@@ -99,7 +119,7 @@ bool step(const LocomoWorld& inWorld, const LocomoBody& inBody, const LocomoStat
 	outState = next_state;
 	FootState& tune_next_foot = (outState.support & ELFlag) ? outState.l : outState.r;
 	tune_next_foot.pos = to2d_point(closest_tune);
-	tune_next_foot.dir =  gRadToDeg(atan2f(path_dir.y, path_dir.x));
+	tune_next_foot.dir =  gDegConstrain360(gRadToDeg(atan2f(-path_dir.x, path_dir.y)));
 
 	inPlanState.cursor = new_cursor;
 
