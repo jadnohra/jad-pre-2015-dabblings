@@ -282,7 +282,7 @@ struct triangulateio {
 
 #ifdef ANSI_DECLARATORS
 void triangulate(char *, struct triangulateio *, struct triangulateio *,
-                 struct triangulateio *);
+                 struct triangulateio *, float maxa = 0.0f);
 #else /* not ANSI_DECLARATORS */
 void triangulate();
 #endif /* not ANSI_DECLARATORS */

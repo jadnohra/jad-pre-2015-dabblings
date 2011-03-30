@@ -390,7 +390,7 @@ void BigfootViewerScene::RenderTestBasicScene(BE::Renderer& inRenderer)
 #ifdef BUILD_SUBMISSION
 			return;
 #endif
-
+/*
 	glBegin(GL_TRIANGLES);							// Start Drawing A Triangle
 	glColor3f(1.0f,0.0f,0.0f);						// Red
 	glVertex3f( 0.0f, 1.0f, 0.0f);					// Top Of Triangle (Front)
@@ -417,12 +417,19 @@ void BigfootViewerScene::RenderTestBasicScene(BE::Renderer& inRenderer)
 	glColor3f(0.0f,1.0f,0.0f);						// Green
 	glVertex3f(-1.0f,-1.0f, 1.0f);					// Right Of Triangle (Left)
 	glEnd();											// Done Drawing The Pyramid
-
+*/
 	
 
 	if (test_controller)
 	{
-		glm::mat4 quad_world_matrix = glm::rotate(glm::translate(glm::mat4(), glm::vec3(1.5f,0.0f,-7.0f)), rquad, 1.0f,1.0f,1.0f);
+		//glm::mat4 quad_world_matrix = glm::rotate(glm::translate(glm::mat4(), glm::vec3(1.5f,0.0f,-7.0f)), rquad, 1.0f,1.0f,1.0f);
+		//glm::mat4 quad_world_matrix = glm::rotate(15.0f, 1.0f,0.0f,0.0f);
+		//glm::mat4 quad_world_matrix = glm::translate(glm::mat4(), glm::vec3(0.0f,2.0f,0.0f));
+
+		// Read left to right.
+
+		glm::mat4 quad_world_matrix = glm::translate(glm::rotate(30.0f, 1.0f,0.0f,0.0f), glm::vec3(0.0f,5.0f,0.0f));
+		//glm::mat4 quad_world_matrix = glm::rotate(glm::translate(glm::mat4(), glm::vec3(0.0f,5.0f,0.0f)), 30.0f, glm::vec3(1.0f,0.0f,0.0f));
 		glLoadMatrixf(glm::value_ptr(view_matrix * quad_world_matrix));
 	}
 	else

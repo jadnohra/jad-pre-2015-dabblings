@@ -248,7 +248,7 @@
 /*   library (triangle.o) by defining the TRILIBRARY symbol.                 */
 
 #define REDUCED
-#define CDT_ONLY
+//#define CDT_ONLY
 
 /* On some machines, my exact arithmetic routines might be defeated by the   */
 /*   use of internal extended precision floating-point registers.  The best  */
@@ -15594,7 +15594,7 @@ struct behavior *b;
 
 #ifdef ANSI_DECLARATORS
 void triangulate(char *triswitches, struct triangulateio *in,
-                 struct triangulateio *out, struct triangulateio *vorout)
+                 struct triangulateio *out, struct triangulateio *vorout, float maxa)
 #else /* not ANSI_DECLARATORS */
 void triangulate(triswitches, in, out, vorout)
 char *triswitches;
@@ -15637,6 +15637,14 @@ char **argv;
   triangleinit(&m);
 #ifdef TRILIBRARY
   parsecommandline(1, &triswitches, &b);
+
+  if (maxa > 0.0f)
+  {
+	  b.quality = 1;
+	  b.fixedarea = 1;
+	  b.maxarea = maxa;
+  }
+
 #else /* not TRILIBRARY */
   parsecommandline(argc, argv, &b);
 #endif /* not TRILIBRARY */

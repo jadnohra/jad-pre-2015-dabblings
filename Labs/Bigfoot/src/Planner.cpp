@@ -448,12 +448,10 @@ void BigfootPlannerScene::Triangulate()
 	triangulateio in;
 	triangulateio mid;
 	triangulateio out;
-	triangulateio vorout;
 
 	memset(&in, 0, sizeof(triangulateio));
 	memset(&out, 0, sizeof(triangulateio));
 	memset(&mid, 0, sizeof(triangulateio));
-	memset(&vorout, 0, sizeof(triangulateio));
 
 	in.numberofpoints = mNavmeshPoints.size();
 	in.numberofpointattributes = 0;
@@ -474,7 +472,39 @@ void BigfootPlannerScene::Triangulate()
 		in.segmentlist[i*2+1] = 1+(int)mNavmeshLinks[i].y;
 	}
 
-	triangulate("p", &in, &out, 0);
+	triangulate("p", &in, &mid, 0, false);
+
+	//mid.segmentlist = 0;
+
+	mid.numberoftriangleattributes = mid.numberoftriangles;
+	mid.triangleattributelist = (REAL *) malloc(mid.numberoftriangleattributes * sizeof(REAL));
+
+	BF::Random rnd;
+	for (int i = 0; i < mid.numberoftriangleattributes; ++i)
+	{
+		mid.triangleattributelist[i] = rnd.randr(0.0f, 10.0f);
+	}
+
+	triangulate("r", &mid, &out, 0, 2.0f);
+
+	free(in.pointlist);
+	free(in.segmentlist);
+	free(in.pointattributelist);
+
+	if (mid.segmentlist != NULL)
+		{
+			mNavmeshBorderSegs.clear();
+			mNavmeshBorderSegs.resize(mid.numberofsegments*2);
+			for (int i = 0; i < mid.numberofsegments; ++i)
+			{
+				mNavmeshBorderSegs[i*2] = mid.segmentlist[i*2] - 1;
+				mNavmeshBorderSegs[i*2+1] = mid.segmentlist[i*2+1] - 1;
+			}
+		}
+
+	free(mid.pointlist);
+	free(mid.segmentlist);
+	free(mid.pointattributelist);
 
 	mNavmeshTrisVerts.clear();
 	mNavmeshTris.clear();
@@ -484,8 +514,7 @@ void BigfootPlannerScene::Triangulate()
 	{
 		mNavmeshPoints.clear();
 		mNavmeshLinks.clear();
-		mNavmeshBorderSegs.clear();
-
+		
 		mNavmeshTrisVerts.resize(out.numberofpoints);
 		for (int i = 0; i < out.numberofpoints; ++i)
 		{
@@ -499,13 +528,21 @@ void BigfootPlannerScene::Triangulate()
 			mNavmeshTris[i] = out.trianglelist[i]-1;
 		}
 
-		mNavmeshBorderSegs.resize(out.numberofsegments*2);
-		for (int i = 0; i < out.numberofsegments; ++i)
+		if (out.segmentlist != NULL)
 		{
-			mNavmeshBorderSegs[i*2] = out.segmentlist[i*2] - 1;
-			mNavmeshBorderSegs[i*2+1] = out.segmentlist[i*2+1] - 1;
+			mNavmeshBorderSegs.clear();
+			mNavmeshBorderSegs.resize(out.numberofsegments*2);
+			for (int i = 0; i < out.numberofsegments; ++i)
+			{
+				mNavmeshBorderSegs[i*2] = out.segmentlist[i*2] - 1;
+				mNavmeshBorderSegs[i*2+1] = out.segmentlist[i*2+1] - 1;
+			}
 		}
 	}
+
+	free(out.pointlist);
+	free(out.segmentlist);
+	free(out.pointattributelist);
 }
 
 void BigfootPlannerScene::ProcessWidgetEvents(BE::MainWindow* inWindow, BE::WidgetEventManager& inManager)
@@ -856,7 +893,7 @@ void BigfootPlannerScene::Render(BE::Renderer& inRenderer)
 		sphere.mPosition = glm::vec3(0.0f,0.0f,0.0f);
 #endif
 		glm::vec2 auto_depth_planes;
-		camera_auto_setup.SetFollowParams(glm::vec3(1.0f, 1.0f, 1.0f));
+		camera_auto_setup.SetFollowParams(glm::vec3(0.0f, 3.0f, 3.0f));
 		camera_auto_setup.SetupCamera(sphere, mCameraSetup.GetFOV(), glm::vec2(0.001f, 1000.0f), mCamera, auto_depth_planes);
 		auto_depth_planes.y *= 100.0f;
 		mCameraSetup.SetupDepthPlanes(auto_depth_planes);
@@ -1054,6 +1091,7 @@ void BigfootPlannerScene::Render(BE::Renderer& inRenderer)
 		glEnd();	
 		glLineWidth(1.0f);
 
+		/*
 		glPointSize(4.0f);
 		glBegin(GL_POINTS);		
 		glColor4ub(0,0,0,196);
@@ -1071,6 +1109,7 @@ void BigfootPlannerScene::Render(BE::Renderer& inRenderer)
 			glVertex3f(cx, 0.0f, cz);
 		}
 		glEnd();	
+		*/
 
 
 		//glDisable(GL_CULL_FACE); 
