@@ -1,0 +1,90 @@
+import struct
+from bitarray import bitarray
+from bitstring import BitArray
+
+
+def bbf32(b0=0b0, b1=0b0, b2=0b0, b3=0b0):
+	return struct.unpack('>f', struct.pack('b', int(b0)) + struct.pack('b', int(b1)) + struct.pack('b', int(b2)) + struct.pack('b', int(b3)))[0]
+
+
+def sbf32(sb='00000000000000000000000000000000'):
+	ba = BitArray(bin=sb)
+	return struct.unpack('<f', struct.pack('I', ba.uint))[0]
+
+
+def sbf32(exp='00000000', mant='00000000000000000000000', sgn='0'):
+	ba = BitArray(bin=sgn+exp+mant)
+	return struct.unpack('<f', struct.pack('I', ba.uint))[0]
+
+
+def abf32(exp=[], mant=[], sgn='0'):
+	exps='00000000'
+	mants='00000000000000000000000'
+	
+	ba = BitArray(bin=sgn+exps+mants)
+
+	for i in exp: 
+		ba.set(1, (len(sgn) + len(exps) - i) - 1)
+	for i in mant: 
+		ba.set(1, (len(sgn) + len(exps) + len(mants) + i) - 1)
+
+	#print ba.uint
+	#print struct.unpack('<f', struct.pack('I', ba.uint))
+	
+	#print ba.bin
+	#return ba.floatbe
+	return struct.unpack('<f', struct.pack('I', ba.uint))[0]
+
+def f32b(flt):
+	return BitArray('float:32='+`flt`).bin
+
+def bf32test():
+	#print `struct.unpack('h', '\xFF\b0000000000000000')`
+	#print `struct.unpack('h', '\b002\000')`
+	#print 'i':bitarray('0001')
+	#print 'i':bitarray('0001')
+	#print `bitarray('0001').pack()`
+	print hex(0b0011)
+	ss = (str(hex(0b0010011))+str(hex(0b0010011))+str(hex(0b010011))+str(hex(0b010011))).replace('0x', '\\x')
+	print ss
+	print type(ss)
+	#ss = '\x13\x13\x13\x13'
+	print ss[0]
+	print '\x13\x13\x13\x13'[0]
+	print ss[2] == '\x13\x13\x13\x13'[2]
+	print '\\x{0}'.format(1)
+	print type(ss)
+	print struct.pack('h', 18)
+	print struct.unpack('h', struct.pack('h', 18))
+	print struct.unpack('h', struct.pack('h', int(0b01)))
+	print struct.unpack('h', struct.pack('b', 18) + struct.pack('b', 18))
+	print struct.unpack('i', struct.pack('b', 18) + struct.pack('b', 18) + struct.pack('b', 18) + struct.pack('b', 18))
+	print struct.unpack('f', struct.pack('b', 18) + struct.pack('b', 18) + struct.pack('b', 18) + struct.pack('b', 18))
+	print struct.unpack('>f', struct.pack('b', int(0b00)) + struct.pack('b', int(0b00)) + struct.pack('b', int(0b00)) + struct.pack('b', int(0b01)))
+	print bbf32()
+	print bbf32(0b0, 0b0, 0b0, 0b1)
+	ba = BitArray(bin='00000000000000000000000000000001')
+	print ba.float
+	print sbf32()
+
+	arr=[1]
+	for i in arr: print i
+
+
+	print abf32([], [0])
+	#print struct.unpack('f', ss)
+	#print struct.unpack('f', '\x13\x13\x13\x13')
+	#print struct.unpack('f', str(hex(11)))
+	#print struct.unpack('f', 12)
+	#print bin(12)
+
+
+bf32test()
+print abf32([],[0]) + abf32([],[0])	
+print abf32([1],[])
+print f32b(abf32([1],[]))
+print abf32([0],[])
+print f32b(abf32([0],[]))
+print abf32([0],[]) + abf32([1],[])
+print f32b(abf32([0],[]) + abf32([1],[]))
+print f32b(1.25)
