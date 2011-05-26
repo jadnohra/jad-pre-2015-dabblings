@@ -1,6 +1,4 @@
 import struct
-import ctypes
-from bitarray import bitarray
 from bitstring import BitArray
 
 def cf32(num):
@@ -65,6 +63,7 @@ def bf32test():
 	print struct.unpack('h', struct.pack('h', int(0b01)))
 	print struct.unpack('h', struct.pack('b', 18) + struct.pack('b', 18))
 	print struct.unpack('i', struct.pack('b', 18) + struct.pack('b', 18) + struct.pack('b', 18) + struct.pack('b', 18))
+
 	print struct.unpack('f', struct.pack('b', 18) + struct.pack('b', 18) + struct.pack('b', 18) + struct.pack('b', 18))
 	print struct.unpack('>f', struct.pack('b', int(0b00)) + struct.pack('b', int(0b00)) + struct.pack('b', int(0b00)) + struct.pack('b', int(0b01)))
 	print bbf32()
@@ -94,13 +93,26 @@ print f32b(abf32([0],[]))
 print abf32([0],[]) + abf32([1],[])
 print f32b(abf32([0],[]) + abf32([1],[]))
 print f32b(1.25)
+
 print ""
 fone = abf32([0,1,2,3,4,5,6],[])
 feps = abf32([0,1,2,5,6],[])
 print `fone` + " + " + `feps` + " = " + `cf32(fone+feps)`
 print `f32b(fone)` + " + " + `f32b(feps)` + " = " + `f32b(cf32(fone+feps))`
+
 print ""
 feps = abf32([0,1,2,5,6],[0])
+print `fone` + " + " + `feps` + " = " + `cf32(fone+feps)`
+print `f32b(fone)` + " + " + `f32b(feps)` + " = " + `f32b(cf32(fone+feps))`
+
+print ""
+fone = abf32([1,2,3,4,5,6,7],[])
+feps = abf32([1,2,5,6,7],[])
+print `fone` + " + " + `feps` + " = " + `cf32(fone+feps)`
+print `f32b(fone)` + " + " + `f32b(feps)` + " = " + `f32b(cf32(fone+feps))`
+
+print ""
+feps = abf32([1,2,5,6,7],[0])
 print `fone` + " + " + `feps` + " = " + `cf32(fone+feps)`
 print `f32b(fone)` + " + " + `f32b(feps)` + " = " + `f32b(cf32(fone+feps))`
 
