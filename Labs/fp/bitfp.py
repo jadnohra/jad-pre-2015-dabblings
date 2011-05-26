@@ -1,20 +1,26 @@
 import struct
+import ctypes
 from bitarray import bitarray
 from bitstring import BitArray
 
+def cf32(num):
+	bstr = str(f32b(num)) 
+	ba = BitArray(bin=bstr)
+	return struct.unpack('<f', struct.pack('I', ba.uint))[0]
+
 
 def bbf32(b0=0b0, b1=0b0, b2=0b0, b3=0b0):
-	return struct.unpack('>f', struct.pack('b', int(b0)) + struct.pack('b', int(b1)) + struct.pack('b', int(b2)) + struct.pack('b', int(b3)))[0]
+	return cf32(struct.unpack('>f', struct.pack('b', int(b0)) + struct.pack('b', int(b1)) + struct.pack('b', int(b2)) + struct.pack('b', int(b3)))[0])
 
 
 def sbf32(sb='00000000000000000000000000000000'):
 	ba = BitArray(bin=sb)
-	return struct.unpack('<f', struct.pack('I', ba.uint))[0]
+	return cf32(struct.unpack('<f', struct.pack('I', ba.uint))[0])
 
 
 def sbf32(exp='00000000', mant='00000000000000000000000', sgn='0'):
 	ba = BitArray(bin=sgn+exp+mant)
-	return struct.unpack('<f', struct.pack('I', ba.uint))[0]
+	return cf32(struct.unpack('<f', struct.pack('I', ba.uint))[0])
 
 
 def abf32(exp=[], mant=[], sgn='0'):
@@ -33,7 +39,7 @@ def abf32(exp=[], mant=[], sgn='0'):
 	
 	#print ba.bin
 	#return ba.floatbe
-	return struct.unpack('<f', struct.pack('I', ba.uint))[0]
+	return cf32(struct.unpack('<f', struct.pack('I', ba.uint))[0])
 
 def f32b(flt):
 	return BitArray('float:32='+`flt`).bin
@@ -79,7 +85,7 @@ def bf32test():
 	#print bin(12)
 
 
-bf32test()
+#bf32test()
 print abf32([],[0]) + abf32([],[0])	
 print abf32([1],[])
 print f32b(abf32([1],[]))
@@ -88,3 +94,13 @@ print f32b(abf32([0],[]))
 print abf32([0],[]) + abf32([1],[])
 print f32b(abf32([0],[]) + abf32([1],[]))
 print f32b(1.25)
+print ""
+fone = abf32([0,1,2,3,4,5,6],[])
+feps = abf32([0,1,2,5,6],[])
+print `fone` + " + " + `feps` + " = " + `cf32(fone+feps)`
+print `f32b(fone)` + " + " + `f32b(feps)` + " = " + `f32b(cf32(fone+feps))`
+print ""
+feps = abf32([0,1,2,5,6],[0])
+print `fone` + " + " + `feps` + " = " + `cf32(fone+feps)`
+print `f32b(fone)` + " + " + `f32b(feps)` + " = " + `f32b(cf32(fone+feps))`
+
