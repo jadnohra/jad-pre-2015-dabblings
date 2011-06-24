@@ -85,33 +85,45 @@ def bf32test():
 
 
 #bf32test()
-print abf32([],[0]) + abf32([],[0])	
-print abf32([1],[])
-print f32b(abf32([1],[]))
-print abf32([0],[])
-print f32b(abf32([0],[]))
+print "\nNumbers:"
+print "Smallest fp (denormalized) dec.: " + '{0}'.format(abf32([0],[]))	
+print "Smallest fp (denormalized) bin.: " + '{0}'.format(f32b(abf32([0],[])))	
+print "Double smallest fp (denormalized) dec.: " + '{0}'.format(abf32([],[0]) + abf32([],[0]))	
+print "Smallest fp dec.: " + '{0}'.format(abf32([1],[]))
+print "Smallest fp bin.: " + '{0}'.format(f32b(abf32([1],[])))
+
+print "\nMisc.:"
 print abf32([0],[]) + abf32([1],[])
 print f32b(abf32([0],[]) + abf32([1],[]))
 print f32b(1.25)
 
-print ""
+
+print "\nPrecision:"
+print "\nLargest fp killed by addition to 1:"
 fone = abf32([0,1,2,3,4,5,6],[])
 feps = abf32([0,1,2,5,6],[])
 print `fone` + " + " + `feps` + " = " + `cf32(fone+feps)`
 print `f32b(fone)` + " + " + `f32b(feps)` + " = " + `f32b(cf32(fone+feps))`
 
-print ""
+print "\nSmallest fp killing 1 by addition:"
+fone = abf32([0,1,2,3,4,5,6],[])
+fkiller = abf32([0,1,2,4,7],[])
+print `fone` + " + " + `fkiller` + " = " + `cf32(fone+fkiller)`
+print `f32b(fone)` + " + " + `f32b(fkiller)` + " = " + `f32b(cf32(fone+fkiller))`
+
+
+print "\nSmallest fp that can be added to 1 without dying:"
 feps = abf32([0,1,2,5,6],[0])
 print `fone` + " + " + `feps` + " = " + `cf32(fone+feps)`
 print `f32b(fone)` + " + " + `f32b(feps)` + " = " + `f32b(cf32(fone+feps))`
 
-print ""
+print "\nLargest fp killed by addition:"
 fone = abf32([1,2,3,4,5,6,7],[])
 feps = abf32([1,2,5,6,7],[])
 print `fone` + " + " + `feps` + " = " + `cf32(fone+feps)`
 print `f32b(fone)` + " + " + `f32b(feps)` + " = " + `f32b(cf32(fone+feps))`
 
-print ""
+print "\nLargest fp not killed by addition to fp_max:"
 feps = abf32([1,2,5,6,7],[0])
 print `fone` + " + " + `feps` + " = " + `cf32(fone+feps)`
 print `f32b(fone)` + " + " + `f32b(feps)` + " = " + `f32b(cf32(fone+feps))`
