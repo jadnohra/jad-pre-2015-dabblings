@@ -1,8 +1,38 @@
 import pyglet
 import math
 
-window = pyglet.window.Window()
+#--------------------------------
+#------------ PHYSICS -----------
+#--------------------------------
 
+class World:
+	particles = []
+
+
+class Particle:
+	pos = [0,0]
+	vel = [0,0]
+	radius = 0.2
+
+	def __init__(self, p, v, r):
+		self.pos = p
+		self.vel = v
+		self.radius = r
+
+class ContactPair:
+	obj = []
+
+
+def findContactPairs(world):
+	return 0
+
+
+#--------------------------------
+#------------ RENDERING	---------
+#--------------------------------
+
+ppm = 40.0      # pixels per meter
+mpp = 1.0/ppm   # meters per pixel
 particle_vcount = 16
 particle_angles = [ 2*math.pi*float(i)/particle_vcount for i in range( particle_vcount ) ]
 particle_sincos = [ [math.cos(a), math.sin(a)] for a in particle_angles ]
@@ -22,45 +52,34 @@ def draw_particle(x, y, r):
 		vertices.append(y + r*sc[1])
 	pyglet.graphics.draw(particle_vcount, pyglet.gl.GL_LINE_LOOP, ('v2f', vertices))
 
-class Particle:
-	pos = [0,0]
-	vel = [0,0]
-	
-	def __init__(self, p, v):
-		self.pos = p
-		self.vel = v
-	
-particles = []
-particles.append(Particle([200,100], [12, 5]))	
-particles.append(Particle([200,200], [5, 12]))	
 
-xm = 100.0
+#--------------------------------
+#------------ MAIN	-------------
+#--------------------------------
+	
+world = World()
+world.particles.append(Particle([10.0,10.0], [1, 0.5], 0.2))	
+world.particles.append(Particle([12.0,10.0], [0.3, -1.2], 0.2))	
+
+config = pyglet.gl.Config(double_buffer=True)
+window = pyglet.window.Window(800,600, config=config)
+
 
 @window.event
 def on_draw():
-	global xm
 	window.clear()
-	#pyglet.clock.ClockDisplay().draw()
-	#640X480
-	#label.draw()
-	#pyglet.graphics.draw(2, pyglet.gl.GL_POINTS, ('v2i', (10, 15, 30, 35)))
-	#pyglet.graphics.draw(2, pyglet.gl.GL_POINTS, ('v2i', (630, 15, 30, 35)))
-	draw_box(630, 15, 30, 35)
-	draw_line(630, 215, 30, 235)
-	draw_particle(xm, 100, 10)
+	pyglet.clock.ClockDisplay().draw()
 	
-	for p in particles:
-		draw_particle(p.pos[0], p.pos[1], 5)
+	for p in world.particles:
+		draw_particle(p.pos[0] * ppm, p.pos[1] * ppm, p.radius * ppm)
 	
 
 def update(dt):
-	global xm
-	global particles
-	xm += 10.0 * dt
-	for p in particles:
+	for p in world.particles:
 		for i in range(2):
 			p.pos[i] = p.pos[i] + p.vel[i] * dt
 
-	
-pyglet.clock.schedule_interval(update, 1.0/60)	
+
+pyglet.clock.schedule_interval(update, 1.0/30.0)	
 pyglet.app.run()
+
