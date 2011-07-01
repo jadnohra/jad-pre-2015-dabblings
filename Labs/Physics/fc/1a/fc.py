@@ -7,9 +7,12 @@ import time
 #--------------------------------
 #
 # Defects:
-#	1. Smaller frame rate directly causes tunneling
-#	2. Need a separate position update after collisions, otherwize impulse is lost
-#	3. Cr less than 1 direcly causes penetration	
+#	1. Smaller frame rate directly causes tunneling.
+#	2. Need a separate position update after collisions, otherwize impulse is lost.
+#	3. Cr less than 1 direcly causes penetration.	
+#
+# Incomplete:
+#	1. no circle segment endpoint intersections.
 #
 
 def v2_add(v1, v2):
