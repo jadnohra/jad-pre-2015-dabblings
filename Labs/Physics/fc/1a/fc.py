@@ -45,12 +45,18 @@ class World:
 	perfTime = -1.0
 	frame = -1
 	dt = 0.0
-	statics = []
-	particles = []
-	staticContactPairs = []
-	contactPairs = []
+	statics = None
+	particles = None
+	staticContactPairs = None
+	contactPairs = None
 	clientUpdate = None
 	
+	def __init__(self):
+		self.statics = []
+		self.particles = []
+		self.staticContactPairs = []
+		self.contactPairs = []
+		self.clientUpdate = None
 	
 class Material:
 	cr = 1.0
@@ -129,8 +135,6 @@ def stepWorld(w, dt):
 		stepMotion(w)
 		allPairs = findContactPairs(w)
 		w.staticContactPairs = allPairs[0]
-		#if (len(w.staticContactPairs) > 0):
-		#	print w.staticContactPairs
 		w.contactPairs = allPairs[1]
 		resolveContacts(w)
 		stepCollidedMotion(w)
@@ -325,9 +329,8 @@ def fillWorld1(w):
 		w.particles.append(Particle([3.0,1.5], [0.0, 0.0], 0.4, sharedMat))	
 		w.particles.append(Particle([4.0,1.6], [0.0, 0.0], 0.4, sharedMat))	
 
-	
-
 	#platform
+	floorMat = Material(1.0)
 	w.statics.append(Convex([25.0,8.0], [35.0, 8.0], floorMat))	
 
 
@@ -350,17 +353,18 @@ def fillWorld2(w):
 	w.statics.append(Convex([39.0,29.0], [39.0, 1.0], wallMat))	
 
 
-lastClientTime = 0.0
+lastClientTime = -1.0
 def updateVWorld1(w, dt):
 	global lastClientTime
 	sharedMat = Material(1.0)
 		
-	if (w.lastTime - lastClientTime > 3.0):
+	if (lastClientTime == -1.0 or w.lastTime - lastClientTime > 3.0):
 		lastClientTime = w.lastTime
 		w.particles.append(Particle([18.0, 20.0], [0.0, 0.0], 0.4, sharedMat))
 		
 
 def fillVWorld1(w):
+	global lastClientTime
 
 	fillWorldBox(w)
 
@@ -369,8 +373,11 @@ def fillVWorld1(w):
 	w.statics.append(Convex([20.0,7.0], [15.0, 20.0], funnelMat))	
 	w.statics.append(Convex([20.0,7.0], [25.0, 20.0], funnelMat))	
 
+	lastClientTime = -1.0
 	w.clientUpdate = updateVWorld1
 
+worldFillers = [fillWorld1, fillWorld2, fillVWorld1]
+worldFillerIndex = -1
 
 world = World()
 #fillWorld1(world)
@@ -389,8 +396,7 @@ def on_draw():
 	fps_display.update_text()
 	fps = pyglet.text.Label(fps_display.label.text, font_name='Arial', font_size=12, x=window.width, y=window.height,anchor_x='right', anchor_y='top')
 	fps.draw()
-	
-	
+		
 	
 	for s in world.statics:
 		draw_line(s.v1[0] * ppm, s.v1[1] * ppm, s.v2[0] * ppm, s.v2[1] * ppm)
@@ -405,7 +411,18 @@ def on_draw():
 
 def update(dt):
 	stepWorld(world, dt)
+
+@window.event	
+def on_key_press(symbol, modifiers):
+	global world
+	global worldFillers
+	global worldFillerIndex
 	
+	if symbol == pyglet.window.key.N:
+		worldFillerIndex = (worldFillerIndex+1) % len(worldFillers)
+		world = World()
+		worldFillers[worldFillerIndex](world)
+		
 
 pyglet.clock.schedule_interval(update, 1.0/60.0)	
 pyglet.app.run()
