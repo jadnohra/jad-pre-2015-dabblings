@@ -49,6 +49,7 @@ class World:
 	particles = []
 	staticContactPairs = []
 	contactPairs = []
+	clientUpdate = None
 	
 	
 class Material:
@@ -120,6 +121,10 @@ def stepWorld(w, dt):
 	frameCount = 0
 	w.dt = w.timeStep
 	while (stepTime + w.timeStep <= newTime):
+		
+		if (w.clientUpdate != None):
+			w.clientUpdate(w, w.timeStep)
+		
 		applyExternalForces(w)
 		stepMotion(w)
 		allPairs = findContactPairs(w)
@@ -218,12 +223,44 @@ def resolveContacts(w):
 		nDot = v2_dot(o2.vel, n)
 		
 		if (nDot < 0):
-			nVel = v2_muls(n, nDot);
+			nVel = v2_muls(n, nDot)
 			tVel = v2_sub(o2.vel, nVel)
 			cr = o1.mat.cr * o2.mat.cr
 			rnVel = nDot * -cr
 			o2.vel = v2_add(v2_muls(n, rnVel), tVel)
 			o2.collided = True
+			
+			
+	for pair in w.contactPairs:
+		o1 = pair.obj[0]
+		o2 = pair.obj[1]
+		
+		n = pair.info.n
+		n1Dot = v2_dot(o1.vel, n)
+		n2Dot = v2_dot(o2.vel, n)
+		
+		if (n2Dot-n1Dot < 0):
+			
+			nVel1 = v2_muls(n, n1Dot)
+			tVel1 = v2_sub(o1.vel, nVel1)
+			
+			nVel2 = v2_muls(n, n2Dot)
+			tVel2 = v2_sub(o2.vel, nVel2)
+			
+			cr = o1.mat.cr * o2.mat.cr
+			
+			p = o1.m * n1Dot + o2.m * n2Dot
+			q = cr * (n2Dot - n1Dot)
+			tm = o1.m + o2.m
+						
+			rnVel1 = (p + o2.m * q) / tm
+			rnVel2 = (p - o1.m * q) / tm
+			
+			o1.vel = v2_add(v2_muls(n, rnVel1), tVel1)
+			o1.collided = True		
+			
+			o2.vel = v2_add(v2_muls(n, rnVel2), tVel2)
+			o2.collided = True		
 
 #--------------------------------
 #------------ RENDERING	---------
@@ -255,38 +292,90 @@ def draw_particle(x, y, r):
 #------------ MAIN	-------------
 #--------------------------------
 	
-world = World()
+def fillWorldBox(w):	
+	#floor
+	floorMat = Material(1.0)
+	w.statics.append(Convex([0.5,1.0], [39.5, 1.0], floorMat))	
 
-sharedMat = Material(1.0)
-world.particles.append(Particle([22.0,10.0], [0.0, 0.0], 0.4, sharedMat))	
-
-if 1:
-	#random
-	world.particles.append(Particle([20.0,20.0], [1, 0.5], 0.4, sharedMat))	
-	world.particles.append(Particle([24.0,20.0], [0.3, -1.2], 0.4, sharedMat))	
-	world.particles.append(Particle([16.0,16.0], [-1.2, -1.2], 0.7, sharedMat))	
-	#intersect
-	world.particles.append(Particle([20.0,10.0], [0.8, 0.0], 0.4, sharedMat))	
-	world.particles.append(Particle([24.0,10.0], [-0.6, 0.0], 0.4, sharedMat))	
+	#walls
+	wallMat = Material(1.0)
+	w.statics.append(Convex([1.0,0.5], [1.0, 29.5], wallMat))	
+	w.statics.append(Convex([39.5,29.0], [0.5, 29.0], wallMat))	
+	w.statics.append(Convex([39.0,29.5], [39.0, 0.5], wallMat))	
 	
-if 1:
-	world.particles.append(Particle([2.0,1.4], [0.0, 0.0], 0.4, sharedMat))	
-	world.particles.append(Particle([3.0,1.5], [0.0, 0.0], 0.4, sharedMat))	
-	world.particles.append(Particle([4.0,1.6], [0.0, 0.0], 0.4, sharedMat))	
+	
+def fillWorld1(w):
+	sharedMat = Material(1.0)
+	
+	fillWorldBox(w)
+	
+	w.particles.append(Particle([22.0,10.0], [0.0, 0.0], 0.4, sharedMat))	
 
-#floor
-floorMat = Material(1.0)
-world.statics.append(Convex([1.0,1.0], [39.0, 1.0], floorMat))	
+	if 1:
+		#random
+		w.particles.append(Particle([20.0,20.0], [1, 0.5], 0.4, sharedMat))	
+		w.particles.append(Particle([24.0,20.0], [0.3, -1.2], 0.4, sharedMat))	
+		w.particles.append(Particle([16.0,16.0], [-1.2, -1.2], 0.7, sharedMat))	
+		#intersect
+		w.particles.append(Particle([20.0,10.0], [0.8, 0.0], 0.4, sharedMat))	
+		w.particles.append(Particle([24.0,10.0], [-0.6, 0.0], 0.4, sharedMat))	
+		
+	if 1:
+		w.particles.append(Particle([2.0,1.4], [0.0, 0.0], 0.4, sharedMat))	
+		w.particles.append(Particle([3.0,1.5], [0.0, 0.0], 0.4, sharedMat))	
+		w.particles.append(Particle([4.0,1.6], [0.0, 0.0], 0.4, sharedMat))	
 
-#walls
-wallMat = Material(1.0)
-world.statics.append(Convex([1.0,1.0], [1.0, 29.0], wallMat))	
-world.statics.append(Convex([39.0,29.0], [1.0, 29.0], wallMat))	
-world.statics.append(Convex([39.0,29.0], [39.0, 1.0], wallMat))	
+	
 
-#platform
-world.statics.append(Convex([25.0,8.0], [35.0, 8.0], floorMat))	
+	#platform
+	w.statics.append(Convex([25.0,8.0], [35.0, 8.0], floorMat))	
 
+
+def fillWorld2(w):
+	sharedMat = Material(1.0)
+
+	fillWorldBox(w)
+
+	w.particles.append(Particle([10.0,10.0], [7.8, 0.0], 0.4, sharedMat))	
+	w.particles.append(Particle([30.0,10.0], [-7.8, 0.0], 0.4, sharedMat))	
+
+	#floor
+	floorMat = Material(1.0)
+	w.statics.append(Convex([1.0,1.0], [39.0, 1.0], floorMat))	
+
+	#walls
+	wallMat = Material(1.0)
+	w.statics.append(Convex([1.0,1.0], [1.0, 29.0], wallMat))	
+	w.statics.append(Convex([39.0,29.0], [1.0, 29.0], wallMat))	
+	w.statics.append(Convex([39.0,29.0], [39.0, 1.0], wallMat))	
+
+
+lastClientTime = 0.0
+def updateVWorld1(w, dt):
+	global lastClientTime
+	sharedMat = Material(1.0)
+		
+	if (w.lastTime - lastClientTime > 3.0):
+		lastClientTime = w.lastTime
+		w.particles.append(Particle([18.0, 20.0], [0.0, 0.0], 0.4, sharedMat))
+		
+
+def fillVWorld1(w):
+
+	fillWorldBox(w)
+
+	#funnel
+	funnelMat = Material(1.0)
+	w.statics.append(Convex([20.0,7.0], [15.0, 20.0], funnelMat))	
+	w.statics.append(Convex([20.0,7.0], [25.0, 20.0], funnelMat))	
+
+	w.clientUpdate = updateVWorld1
+
+
+world = World()
+#fillWorld1(world)
+fillWorld2(world)
+#fillVWorld1(world)
 
 config = pyglet.gl.Config(double_buffer=True)
 window = pyglet.window.Window(800,600, config=config)
