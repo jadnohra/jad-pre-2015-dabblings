@@ -50,6 +50,7 @@ class World:
 	staticContactPairs = None
 	contactPairs = None
 	clientUpdate = None
+	momentum = 0.0
 	
 	def __init__(self):
 		self.statics = []
@@ -159,9 +160,14 @@ def applyExternalForces(w):
 		p.acc = [0.0, w.g]
 
 def stepMotion(w):
+	
+	w.momentum = 0.0
+	
 	for p in w.particles:
 		p.vel = v2_add(p.vel, v2_muls(p.acc, w.dt))
 		p.pos = v2_add(p.pos, v2_muls(p.vel, w.dt))
+		
+		w.momentum = w.momentum + v2_len(p.vel) * p.m
 
 def stepCollidedMotion(w):
 	for p in w.particles:
@@ -394,8 +400,11 @@ def on_draw():
 	window.clear()
 	
 	fps_display.update_text()
-	fps = pyglet.text.Label(fps_display.label.text, font_name='Arial', font_size=12, x=window.width, y=window.height,anchor_x='right', anchor_y='top')
+	fps = pyglet.text.Label(fps_display.label.text, font_name='Arial', font_size=6, x=window.width, y=window.height,anchor_x='right', anchor_y='top')
 	fps.draw()
+	
+	mom = pyglet.text.Label('{0:.2f} - {1:.2f}'.format(world.momentum, world.momentum/len(world.particles)), font_name='Arial', font_size=6, x=0, y=window.height,anchor_x='left', anchor_y='top')
+	mom.draw()
 		
 	
 	for s in world.statics:
