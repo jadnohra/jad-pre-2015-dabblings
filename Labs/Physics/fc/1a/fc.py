@@ -5,6 +5,12 @@ import time
 #--------------------------------
 #------------ PHYSICS -----------
 #--------------------------------
+#
+# Defects:
+#	1. Smaller frame rate directly causes tunneling
+#	2. Need a separate position update after collisions, otherwize impulse is lost
+#	3. Cr less than 1 direcly causes penetration	
+#
 
 def v2_add(v1, v2):
 	return [v1[0]+v2[0], v1[1]+v2[1]]
@@ -255,6 +261,7 @@ if 1:
 	#random
 	world.particles.append(Particle([20.0,20.0], [1, 0.5], 0.4, sharedMat))	
 	world.particles.append(Particle([24.0,20.0], [0.3, -1.2], 0.4, sharedMat))	
+	world.particles.append(Particle([16.0,16.0], [-1.2, -1.2], 0.7, sharedMat))	
 	#intersect
 	world.particles.append(Particle([20.0,10.0], [0.8, 0.0], 0.4, sharedMat))	
 	world.particles.append(Particle([24.0,10.0], [-0.6, 0.0], 0.4, sharedMat))	
