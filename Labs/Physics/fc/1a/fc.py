@@ -1,5 +1,6 @@
 import pyglet
 import math
+import time
 
 #--------------------------------
 #------------ PHYSICS -----------
@@ -28,21 +29,35 @@ def v2_normalize(v1):
 
 
 class World:
-	g = -9.8
-	timeScale = 0.2
+	g = -9.8 * 1.0
+	timeScale = 1.0
+	timeStep = 1.0/60.0
+	lastTime = -1.0
+	perfTime = -1.0
+	frame = -1
 	dt = 0.0
 	statics = []
 	particles = []
-	contactPais = []
+	staticContactPairs = []
+	contactPairs = []
 	
 	
+class Material:
+	cr = 1.0
+	
+	def __init__(self, cr):
+		self.cr = cr
+
+
 class Convex:
 	v1 = [0,0]
 	v2 = [0,0]
+	mat = None
 
-	def __init__(self, v1, v2):
+	def __init__(self, v1, v2, mat):
 		self.v1 = v1
 		self.v2 = v2
+		self.mat = mat
 	
 
 class Particle:
@@ -50,11 +65,16 @@ class Particle:
 	vel = [0,0]
 	radius = 0.2
 	acc = [0,0]
-
-	def __init__(self, p, v, r):
+	m = 1.0
+	invM = 1.0 / m
+	mat = None
+	collided = False
+	
+	def __init__(self, p, v, r, mat):
 		self.pos = p
 		self.vel = v
 		self.radius = r
+		self.mat = mat
 
 
 class ContactInfo:
@@ -72,15 +92,48 @@ class ContactPair:
 	info = None
 	
 	def __init__(self, o1, o2, inf):
-		self.obj[0] = o1
-		self.obj[1] = o2
+		self.obj = [o1, o2]
 		self.info = inf
 
 def stepWorld(w, dt):
-	w.dt = dt * w.timeScale
-	applyExternalForces(w)
-	stepMotion(w)
-	w.contactPais = findContactPairs(w)
+	
+	w.perfTime = time.time()
+	
+	if (w.frame < 0):
+		w.frame = 0
+		w.lastTime = 0.0
+		
+	newTime = w.lastTime + dt*w.timeScale
+	stepTime = 1.0 * w.frame * w.timeStep
+
+	#print newTime, stepTime
+	
+	frameCount = 0
+	w.dt = w.timeStep
+	while (stepTime + w.timeStep <= newTime):
+		applyExternalForces(w)
+		stepMotion(w)
+		allPairs = findContactPairs(w)
+		w.staticContactPairs = allPairs[0]
+		#if (len(w.staticContactPairs) > 0):
+		#	print w.staticContactPairs
+		w.contactPairs = allPairs[1]
+		resolveContacts(w)
+		stepCollidedMotion(w)
+		w.frame = w.frame + 1
+		frameCount = frameCount + 1
+		stepTime = 1.0 * w.frame * w.timeStep
+		#print "+", stepTime
+	
+	#print "*", newTime, stepTime
+	
+	w.lastTime = newTime
+	
+	if (frameCount == 0):
+		w.perfTime = -1.0
+	else:
+		w.perfTime = (time.time() - w.perfTime) / (1.0 * frameCount)
+	#print '{0:.3f}'.format(perfTime)
 
 
 def applyExternalForces(w):
@@ -91,6 +144,12 @@ def stepMotion(w):
 	for p in w.particles:
 		p.vel = v2_add(p.vel, v2_muls(p.acc, w.dt))
 		p.pos = v2_add(p.pos, v2_muls(p.vel, w.dt))
+
+def stepCollidedMotion(w):
+	for p in w.particles:
+		if p.collided:
+			p.pos = v2_add(p.pos, v2_muls(p.vel, w.dt))
+			p.collided = False
 
 
 def contactCircleCircle(p1, r1, p2, r2):
@@ -118,6 +177,7 @@ def contactSegmentCircle(s1, s2, p, r):
 def findContactPairs(w):
 	
 	pairs = []
+	staticPairs = []
 	
 	for i1 in range(len(w.particles)):
 		p1 = w.particles[i1]
@@ -125,16 +185,36 @@ def findContactPairs(w):
 		for s in w.statics:
 			info = contactSegmentCircle(s.v1, s.v2, p1.pos, p1.radius)
 			if (info != None):
-				pairs.append(ContactPair(s, p1, info))
+				info.n = v2_normalize(info.n)
+				staticPairs.append(ContactPair(s, p1, info))
+				
 		
 		for i2 in range(i1+1, len(w.particles)):
 			p2 = w.particles[i2]
 			info = contactCircleCircle(p1.pos, p1.radius, p2.pos, p2.radius)
 			if (info != None):
+				info.n = v2_normalize(info.n)
 				pairs.append(ContactPair(p1, p2, info))
 	
-	return pairs
+	return [staticPairs, pairs]
 
+
+def resolveContacts(w):
+	
+	for pair in w.staticContactPairs:
+		o1 = pair.obj[0]
+		o2 = pair.obj[1]
+		
+		n = pair.info.n
+		nDot = v2_dot(o2.vel, n)
+		
+		if (nDot < 0):
+			nVel = v2_muls(n, nDot);
+			tVel = v2_sub(o2.vel, nVel)
+			cr = o1.mat.cr * o2.mat.cr
+			rnVel = nDot * -cr
+			o2.vel = v2_add(v2_muls(n, rnVel), tVel)
+			o2.collided = True
 
 #--------------------------------
 #------------ RENDERING	---------
@@ -167,30 +247,51 @@ def draw_particle(x, y, r):
 #--------------------------------
 	
 world = World()
-#random
-world.particles.append(Particle([20.0,20.0], [1, 0.5], 0.4))	
-world.particles.append(Particle([24.0,20.0], [0.3, -1.2], 0.4))	
-#intersect
-world.particles.append(Particle([20.0,10.0], [0.8, 0.0], 0.4))	
-world.particles.append(Particle([24.0,10.0], [-0.6, 0.0], 0.4))	
 
-world.particles.append(Particle([2.0,1.4], [0.0, 0.0], 0.4))	
-world.particles.append(Particle([3.0,1.5], [0.0, 0.0], 0.4))	
-world.particles.append(Particle([4.0,1.6], [0.0, 0.0], 0.4))	
+sharedMat = Material(1.0)
+world.particles.append(Particle([22.0,10.0], [0.0, 0.0], 0.4, sharedMat))	
+
+if 1:
+	#random
+	world.particles.append(Particle([20.0,20.0], [1, 0.5], 0.4, sharedMat))	
+	world.particles.append(Particle([24.0,20.0], [0.3, -1.2], 0.4, sharedMat))	
+	#intersect
+	world.particles.append(Particle([20.0,10.0], [0.8, 0.0], 0.4, sharedMat))	
+	world.particles.append(Particle([24.0,10.0], [-0.6, 0.0], 0.4, sharedMat))	
+	
+if 1:
+	world.particles.append(Particle([2.0,1.4], [0.0, 0.0], 0.4, sharedMat))	
+	world.particles.append(Particle([3.0,1.5], [0.0, 0.0], 0.4, sharedMat))	
+	world.particles.append(Particle([4.0,1.6], [0.0, 0.0], 0.4, sharedMat))	
 
 #floor
-world.statics.append(Convex([1.0,6.0], [39.0, 6.0]))	
-world.statics.append(Convex([1.0,1.0], [39.0, 1.0]))	
+floorMat = Material(1.0)
+world.statics.append(Convex([1.0,1.0], [39.0, 1.0], floorMat))	
+
+#walls
+wallMat = Material(1.0)
+world.statics.append(Convex([1.0,1.0], [1.0, 29.0], wallMat))	
+world.statics.append(Convex([39.0,29.0], [1.0, 29.0], wallMat))	
+world.statics.append(Convex([39.0,29.0], [39.0, 1.0], wallMat))	
+
+#platform
+world.statics.append(Convex([25.0,8.0], [35.0, 8.0], floorMat))	
 
 
 config = pyglet.gl.Config(double_buffer=True)
 window = pyglet.window.Window(800,600, config=config)
 
+fps_display = pyglet.clock.ClockDisplay(pyglet.font.load('Arial', 10), interval=0.1, format='%(fps).0f', color=(1.0, 1.0, 1.0, 0.5))
 
 @window.event
 def on_draw():
 	window.clear()
-	pyglet.clock.ClockDisplay().draw()
+	
+	fps_display.update_text()
+	fps = pyglet.text.Label(fps_display.label.text, font_name='Arial', font_size=12, x=window.width, y=window.height,anchor_x='right', anchor_y='top')
+	fps.draw()
+	
+	
 	
 	for s in world.statics:
 		draw_line(s.v1[0] * ppm, s.v1[1] * ppm, s.v2[0] * ppm, s.v2[1] * ppm)
@@ -198,7 +299,7 @@ def on_draw():
 	for p in world.particles:
 		draw_particle(p.pos[0] * ppm, p.pos[1] * ppm, p.radius * ppm)
 		
-	for c in world.contactPais:
+	for c in world.contactPairs:
 		pt2 = v2_add(c.info.p, v2_muls(v2_normalize(c.info.n), c.info.d))
 		draw_line(c.info.p[0]*ppm, c.info.p[1]*ppm, pt2[0]*ppm, pt2[1]*ppm)
 	
@@ -207,6 +308,6 @@ def update(dt):
 	stepWorld(world, dt)
 	
 
-pyglet.clock.schedule_interval(update, 1.0/30.0)	
+pyglet.clock.schedule_interval(update, 1.0/60.0)	
 pyglet.app.run()
 
