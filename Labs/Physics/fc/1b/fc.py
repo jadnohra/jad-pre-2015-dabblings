@@ -430,13 +430,24 @@ def fillVWorld1(w):
 	lastClientTime = -1.0
 	w.clientUpdate = updateVWorld1
 
+
+def nextWorld():
+	global world
+	global worldFillers
+	global worldFillerIndex
+	
+	world = World()
+	worldFillers[worldFillerIndex](world)
+	worldFillerIndex = (worldFillerIndex+1) % len(worldFillers)
+
 worldFillers = [fillWorld1, fillWorld2, fillVWorld1]
-worldFillerIndex = -1
 
 world = World()
 #fillWorld1(world)
-fillWorld2(world)
+#fillWorld2(world)
 #fillVWorld1(world)
+worldFillerIndex = 0
+nextWorld()
 
 config = pyglet.gl.Config(double_buffer=True)
 window = pyglet.window.Window(800,600, config=config)
@@ -469,16 +480,12 @@ def on_draw():
 def update(dt):
 	stepWorld(world, dt)
 
+
+
 @window.event	
 def on_key_press(symbol, modifiers):
-	global world
-	global worldFillers
-	global worldFillerIndex
-	
 	if symbol == pyglet.window.key.N:
-		worldFillerIndex = (worldFillerIndex+1) % len(worldFillers)
-		world = World()
-		worldFillers[worldFillerIndex](world)
+		nextWorld()
 		
 
 pyglet.clock.schedule_interval(update, 1.0/60.0)	
