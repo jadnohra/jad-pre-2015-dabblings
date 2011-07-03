@@ -10,6 +10,32 @@ import time
 #	1. Smaller frame rate directly causes tunneling.
 #	2. Need a separate position update after collisions, otherwize impulse is lost.
 #	3. Cr less than 1 direcly causes penetration.	
+#		- use hard penetration resolution before processing the impulse 
+#			(of course not precise, but fixing that goes under 'tunneling' at the moment.
+#		- Defect
+#			Hard penetration resolution works 'perfectly' if all we ever have is 2 objects.
+#			As soon as we have fixed time steps, we will always end up with penetrations and therefore 'lost info'
+#			But we can never have zero time steps, Use TOI? as an alternative to give us time steps up to precision of floating point.
+#			But even with that we have problems:
+#			Once we have more, e.g: particle squashed between 2 walls that are closer to each other than radius,
+#			Fixing one penetration can produce another ad. infinitum, the one object update per frame leaves us
+#			with rest penetrations depending on the order.
+#			with one update per object per frame a iterative method will always fail, instead we need a condition of all
+#			contacts having been resolved, can take forever .. fp .. not possible ..
+#			Can we solve it globally? no because this depends on the 'future' (except if all are resting contacts).
+#			Can we build a graph for ordering going from largest mass and contacts? e.g: particles colliding with static
+#			(inf. mass) first? how would this help, have to think more...
+#			What happens in the real world: everything takes time, it is sequential in the sense that it goes from atom
+#			to atom, but in parallel and at the speed of light (think rod with size 10 light seconds twisted from both sides
+#			in opposite directions), if done with a 'physics engine' we would be breaking the speed of light
+#			So we have to this speed of light parallel compu on our crappy computers, and as we already knew, the best approx. wins.
+#			It is good to think of nothing as hard, e.g in V test, imagine bottom is elastic, it would take time for a high speed 
+#			collision from above to be seen in a buldge on the bottom, and then the reaction, and this is what happens
+#			except on atomic level and at speed of light ... In effect the idea of a physics engine is crazy but we have to do it!
+#			also this means a very close look at FEM is crucial!!
+#			Try to V experiment in box2d, havok, bullet, what makes it work?  watch out we need to compare to a micro-collision based
+#			engine.
+#			
 #
 # Incomplete:
 #	1. no circle segment endpoint intersections.
@@ -39,7 +65,7 @@ def v2_normalize(v1):
 
 class World:
 	g = -9.8 * 1.0
-	timeScale = 3.0
+	timeScale = 1.0
 	timeStep = 1.0/60.0
 	lastTime = -1.0
 	perfTime = -1.0
@@ -92,6 +118,8 @@ class Particle:
 		self.vel = v
 		self.radius = r
 		self.mat = mat
+		self.m = r
+		self.invM = 1.0/self.m
 
 
 class ContactInfo:
@@ -106,7 +134,7 @@ class ContactInfo:
 
 class ContactPair:
 	obj = [None, None]
-	info = None
+	info = None	#info is relative to 1st obj (e.g: normal from 1st to 2nd obj)
 	
 	def __init__(self, o1, o2, inf):
 		self.obj = [o1, o2]
@@ -223,6 +251,13 @@ def findContactPairs(w):
 	return [staticPairs, pairs]
 
 
+def removeContactPenetration(w, cInfo, o1, f1, o2, f2):
+	if (f1 != 0.0):
+		o1.pos = v2_add(o1.pos, v2_muls(cInfo.n, cInfo.d * f1))
+		
+	if (f2 != 0.0):
+		o2.pos = v2_add(o2.pos, v2_muls(cInfo.n, -cInfo.d * f2))
+
 def resolveContacts(w):
 	
 	for pair in w.staticContactPairs:
@@ -232,6 +267,8 @@ def resolveContacts(w):
 		n = pair.info.n
 		nDot = v2_dot(o2.vel, n)
 		
+		removeContactPenetration(w, pair.info, o1, 0.0, o2, 1.0)
+		
 		if (nDot < 0):
 			nVel = v2_muls(n, nDot)
 			tVel = v2_sub(o2.vel, nVel)
@@ -239,7 +276,7 @@ def resolveContacts(w):
 			rnVel = nDot * -cr
 			o2.vel = v2_add(v2_muls(n, rnVel), tVel)
 			o2.collided = True
-			
+						
 			
 	for pair in w.contactPairs:
 		o1 = pair.obj[0]
@@ -248,6 +285,9 @@ def resolveContacts(w):
 		n = pair.info.n
 		n1Dot = v2_dot(o1.vel, n)
 		n2Dot = v2_dot(o2.vel, n)
+		
+		tm = o1.m + o2.m
+		removeContactPenetration(w, pair.info, o1, o2.m/tm, o2, o1.m/tm)
 		
 		if (n2Dot-n1Dot < 0):
 			
@@ -261,8 +301,7 @@ def resolveContacts(w):
 			
 			p = o1.m * n1Dot + o2.m * n2Dot
 			q = cr * (n2Dot - n1Dot)
-			tm = o1.m + o2.m
-						
+									
 			rnVel1 = (p + o2.m * q) / tm
 			rnVel2 = (p - o1.m * q) / tm
 			
@@ -271,6 +310,8 @@ def resolveContacts(w):
 			
 			o2.vel = v2_add(v2_muls(n, rnVel2), tVel2)
 			o2.collided = True		
+			
+			
 
 #--------------------------------
 #------------ RENDERING	---------
@@ -315,11 +356,12 @@ def fillWorldBox(w):
 	
 	
 def fillWorld1(w):
-	sharedMat = Material(1.0)
+	sharedMat = Material(1.0 * 0.8)
 	
 	fillWorldBox(w)
 	
-	w.particles.append(Particle([22.0,10.0], [0.0, 0.0], 0.4, sharedMat))	
+	if 1:
+		w.particles.append(Particle([22.0,10.0], [0.0, 0.0], 0.4, sharedMat))	
 
 	if 1:
 		#random
@@ -331,12 +373,18 @@ def fillWorld1(w):
 		w.particles.append(Particle([24.0,10.0], [-0.6, 0.0], 0.4, sharedMat))	
 		
 	if 1:
+		#floor bounce
 		w.particles.append(Particle([2.0,1.4], [0.0, 0.0], 0.4, sharedMat))	
 		w.particles.append(Particle([3.0,1.5], [0.0, 0.0], 0.4, sharedMat))	
 		w.particles.append(Particle([4.0,1.6], [0.0, 0.0], 0.4, sharedMat))	
+		
+	if 0:
+		#separating
+		w.particles.append(Particle([6.0,1.4], [0.0, 0.0], 0.4, sharedMat))	
+		w.particles.append(Particle([6.6,1.4], [0.0, 0.0], 0.4, sharedMat))	
 
 	#platform
-	floorMat = Material(1.0)
+	floorMat = Material(1.0 * 0.9)
 	w.statics.append(Convex([25.0,8.0], [35.0, 8.0], floorMat))	
 
 
@@ -362,7 +410,7 @@ def fillWorld2(w):
 lastClientTime = -1.0
 def updateVWorld1(w, dt):
 	global lastClientTime
-	sharedMat = Material(1.0)
+	sharedMat = Material(0.5)
 		
 	if (lastClientTime == -1.0 or w.lastTime - lastClientTime > 3.0):
 		lastClientTime = w.lastTime
