@@ -559,6 +559,12 @@ def nextWorld():
 	worldFillers[worldFillerIndex](world)
 	worldFillerIndex = (worldFillerIndex+1) % len(worldFillers)
 
+def repeatWorld():
+	global worldFillerIndex
+	worldFillerIndex = (len(worldFillers) + worldFillerIndex-1) % len(worldFillers)
+	nextWorld()
+
+world = World()
 
 world = World()
 #fillWorld1(world)
@@ -607,6 +613,8 @@ def on_key_press(symbol, modifiers):
 	if symbol == pyglet.window.key.N:
 		nextWorld()
 		
+	if symbol == pyglet.window.key.R:
+		repeatWorld()
 
 pyglet.clock.schedule_interval(update, 1.0/60.0)	
 pyglet.app.run()
