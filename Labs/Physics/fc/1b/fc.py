@@ -140,6 +140,7 @@ class ContactPair:
 		self.obj = [o1, o2]
 		self.info = inf
 
+
 def stepWorld(w, dt):
 	
 	w.perfTime = time.time()
@@ -258,7 +259,7 @@ def removeContactPenetration(w, cInfo, o1, f1, o2, f2):
 	if (f2 != 0.0):
 		o2.pos = v2_add(o2.pos, v2_muls(cInfo.n, -cInfo.d * f2))
 
-def resolveContacts(w):
+def resolveStaticContacts(w):
 	
 	for pair in w.staticContactPairs:
 		o1 = pair.obj[0]
@@ -277,7 +278,7 @@ def resolveContacts(w):
 			o2.vel = v2_add(v2_muls(n, rnVel), tVel)
 			o2.collided = True
 						
-			
+def resolveNonStaticContacts(w):			
 	for pair in w.contactPairs:
 		o1 = pair.obj[0]
 		o2 = pair.obj[1]
@@ -311,6 +312,9 @@ def resolveContacts(w):
 			o2.vel = v2_add(v2_muls(n, rnVel2), tVel2)
 			o2.collided = True		
 			
+def resolveContacts(w):
+	resolveNonStaticContacts(w)
+	resolveStaticContacts(w)
 			
 
 #--------------------------------
