@@ -522,6 +522,26 @@ worldFillerIndex = len(worldFillers)
 worldFillers.append(fillWorldSpring1)
 
 
+def fillWorldSpring2(w):
+	sharedMat = Material(0.6)
+
+	fillWorldBox(w)
+	#w.g = 0.0
+
+	if 1:
+		s=500.0
+		w.particles.append(Particle([20.0,10.0], [0.0, 0.0], 0.4, sharedMat))	
+		w.particles.append(Particle([24.0,10.0], [0.0, 0.0], 0.4, sharedMat))	
+		w.particles.append(Particle([24.0,6.0], [0.0, 0.0], 0.4, sharedMat))	
+		w.particles.append(Particle([20.0,6.0], [0.0, 0.0], 0.4, sharedMat))	
+		w.forces.append(SpringForce(w.particles[-1], w.particles[-2], s, 4.0))
+		w.forces.append(SpringForce(w.particles[-1], w.particles[-3], s, 4.0*1.4142))
+		w.forces.append(SpringForce(w.particles[-1], w.particles[-4], s, 4.0))
+		w.forces.append(SpringForce(w.particles[-2], w.particles[-3], s, 4.0))
+		w.forces.append(SpringForce(w.particles[-2], w.particles[-4], s, 4.0*1.4142))
+		w.forces.append(SpringForce(w.particles[-3], w.particles[-4], s, 4.0))
+
+worldFillers.append(fillWorldSpring2)
 
 
 
