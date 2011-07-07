@@ -585,7 +585,7 @@ def on_draw():
 	fps = pyglet.text.Label(fps_display.label.text, font_name='Arial', font_size=6, x=window.width, y=window.height,anchor_x='right', anchor_y='top')
 	fps.draw()
 	
-	mom = pyglet.text.Label('{0:.2f} - {1:.2f}'.format(world.momentum, world.momentum/len(world.particles)), font_name='Arial', font_size=6, x=0, y=window.height,anchor_x='left', anchor_y='top')
+	mom = pyglet.text.Label('{0:.2f} - {1:.2f}'.format(world.momentum, world.momentum/max(1,len(world.particles))), font_name='Arial', font_size=6, x=0, y=window.height,anchor_x='left', anchor_y='top')
 	mom.draw()
 		
 	
