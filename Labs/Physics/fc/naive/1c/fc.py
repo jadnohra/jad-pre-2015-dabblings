@@ -149,7 +149,7 @@ class ContactPair:
 
 
 class SpringForce:
-	obj = [None, None]
+	obj = None
 	k = 1.0
 	r = 1.0
 	dz = 0.001
@@ -181,6 +181,47 @@ class SpringForce:
 				#print o2.acc
 				#print v2_muls(fvec, o2.invM)
 	
+sCableForceMat = Material(1.0)
+
+class CableForce:
+	obj = None
+	l = 1.0
+	mat = None
+
+	def __init__(self, o1, o2, r, l):
+		self.obj = [o1, o2]
+		self.l = l
+		self.mat = Material(math.sqrt(r))
+
+	def apply(self, w):
+		o1 = self.obj[0]
+		o2 = self.obj[1]
+		posVec = v2_sub(o2.pos, o1.pos)
+		dist = v2_len(posVec)
+
+		if (dist > self.l):
+			n = v2_normalize(v2_sub(o1.pos, o2.pos))
+			
+			info = ContactInfo(n, 0.0, o1.pos)
+			pair = ContactPair(o1, o2, info)
+
+			if (o1.m > 0.0):
+				newVels = processNonStaticContact(w, pair, self.mat, sCableForceMat)
+
+				if (newVels != None):
+					pair.obj[0].vel = newVels[0]
+					#pair.obj[0].collided = True
+					pair.obj[1].vel = newVels[1]
+					#pair.obj[1].collided = True
+
+			else:
+				newVel = processStaticContact(w, pair, self.mat, sCableForceMat)
+
+				if (newVel != None):
+					pair.obj[1].vel = newVel
+					#pair.obj[1].collided = True
+
+
 
 def stepWorld(w, dt):
 	
@@ -225,6 +266,7 @@ def stepWorld(w, dt):
 	#print '{0:.3f}'.format(perfTime)
 
 
+
 def applyForces(w):
 	
 	for p in w.particles:
@@ -237,6 +279,7 @@ def applyForces(w):
 		f.apply(w)
 
 
+
 def stepMotion(w):
 	
 	w.momentum = 0.0
@@ -247,11 +290,14 @@ def stepMotion(w):
 		
 		w.momentum = w.momentum + v2_len(p.vel) * p.m
 
+
+
 def stepCollidedMotion(w):
 	for p in w.particles:
 		if p.collided:
 			p.pos = v2_add(p.pos, v2_muls(p.vel, w.dt))
 			p.collided = False
+
 
 
 def contactCircleCircle(p1, r1, p2, r2):
@@ -260,6 +306,7 @@ def contactCircleCircle(p1, r1, p2, r2):
 	if dist <= 0:
 		return ContactInfo(n, dist, v2_add(p1, v2_muls(v2_normalize(n), r1)))
 	return None	
+
 
 
 def contactSegmentCircle(s1, s2, p, r):
@@ -304,6 +351,7 @@ def findContactPairs(w):
 	return [staticPairs, pairs]
 
 
+
 def removeContactPenetration(w, cInfo, o1, f1, o2, f2):
 	if (f1 != 0.0):
 		o1.pos = v2_add(o1.pos, v2_muls(cInfo.n, cInfo.d * f1))
@@ -311,9 +359,9 @@ def removeContactPenetration(w, cInfo, o1, f1, o2, f2):
 	if (f2 != 0.0):
 		o2.pos = v2_add(o2.pos, v2_muls(cInfo.n, -cInfo.d * f2))
 
-def resolveStaticContacts(w):
-	
-	for pair in w.staticContactPairs:
+
+
+def processStaticContact(w, pair, mat1, mat2):
 		o1 = pair.obj[0]
 		o2 = pair.obj[1]
 		
@@ -325,16 +373,28 @@ def resolveStaticContacts(w):
 		if (nDot < 0):
 			nVel = v2_muls(n, nDot)
 			tVel = v2_sub(o2.vel, nVel)
-			cr = o1.mat.cr * o2.mat.cr
+			cr = mat1.cr * mat2.cr
 			rnVel = nDot * -cr
-			o2.vel = v2_add(v2_muls(n, rnVel), tVel)
+			return v2_add(v2_muls(n, rnVel), tVel)
+			
+		return None	
+
+
+def resolveStaticContacts(w):
+	
+	for pair in w.staticContactPairs:
+		newVel = processStaticContact(w, pair, pair.obj[0].mat, pair.obj[1].mat)
+		
+		if (newVel != None):
+			o2 = pair.obj[1]
+			o2.vel = newVel
 			o2.collided = True
-						
-def resolveNonStaticContacts(w):			
-	for pair in w.contactPairs:
+
+
+def processNonStaticContact(w, pair, mat1, mat2):			
 		o1 = pair.obj[0]
 		o2 = pair.obj[1]
-		
+
 		n = pair.info.n
 		n1Dot = v2_dot(o1.vel, n)
 		n2Dot = v2_dot(o2.vel, n)
@@ -350,7 +410,7 @@ def resolveNonStaticContacts(w):
 			nVel2 = v2_muls(n, n2Dot)
 			tVel2 = v2_sub(o2.vel, nVel2)
 			
-			cr = o1.mat.cr * o2.mat.cr
+			cr = mat1.cr * mat2.cr
 			
 			p = o1.m * n1Dot + o2.m * n2Dot
 			q = cr * (n2Dot - n1Dot)
@@ -358,11 +418,23 @@ def resolveNonStaticContacts(w):
 			rnVel1 = (p + o2.m * q) / tm
 			rnVel2 = (p - o1.m * q) / tm
 			
-			o1.vel = v2_add(v2_muls(n, rnVel1), tVel1)
-			o1.collided = True		
-			
-			o2.vel = v2_add(v2_muls(n, rnVel2), tVel2)
-			o2.collided = True		
+			o1NewVel = v2_add(v2_muls(n, rnVel1), tVel1)		
+			o2NewVel = v2_add(v2_muls(n, rnVel2), tVel2)
+			return [o1NewVel, o2NewVel]
+		return None	
+	
+
+def resolveNonStaticContacts(w):			
+	for pair in w.contactPairs:
+		newVels = processNonStaticContact(w, pair, pair.obj[0].mat, pair.obj[1].mat)
+
+		if (newVels != None):
+			o1 = pair.obj[0]
+			o1.vel = newVels[0]
+			o1.collided = True
+			o2 = pair.obj[1]
+			o2.vel = newVels[1]
+			o2.collided = True
 			
 def resolveContacts(w):
 	resolveNonStaticContacts(w)
@@ -542,6 +614,59 @@ def fillWorldSpring2(w):
 		w.forces.append(SpringForce(w.particles[-3], w.particles[-4], s, 4.0))
 
 worldFillers.append(fillWorldSpring2)
+
+
+def fillWorldCable1(w):
+	sharedMat = Material(0.9)
+
+	fillWorldBox(w)
+	#w.g = 0.0
+
+	if 1:	
+		w.particles.append(Particle([20.0,10.0], [1.0, 0.0], 0.4, sharedMat))	
+		w.particles.append(Particle([20.0,10.5], [0.0, 0.0], 0.0, sharedMat))	
+		w.forces.append(CableForce(w.particles[-1], w.particles[-2], 0.05, 1.0))
+
+	if 1: 
+		w.particles.append(Particle([10.0,10.0], [0.0, 0.0], 0.4, sharedMat))	
+		w.particles.append(Particle([10.0,14.8], [0.0, 0.0], 0.0, sharedMat))	
+		w.forces.append(CableForce(w.particles[-1], w.particles[-2], 0.05, 5.0))
+
+	if 1:
+		w.particles.append(Particle([12.0,10.0], [0.0, 0.0], 0.4, sharedMat))	
+		w.particles.append(Particle([12.0,10.5], [0.0, 0.0], 0.0, sharedMat))	
+		w.forces.append(CableForce(w.particles[-1], w.particles[-2], 0.05, 1.0))
+
+	if 1:
+		w.particles.append(Particle([14.0,3.0], [0.0, 0.0], 0.4, sharedMat))	
+		w.particles.append(Particle([14.0,3.5], [0.0, 0.0], 0.0, sharedMat))	
+		w.forces.append(CableForce(w.particles[-1], w.particles[-2], 0.05, 4.0))
+
+
+	if 1:	
+		w.particles.append(Particle([25.0,10.0], [0.0, 0.0], 0.4, sharedMat))	
+		w.particles.append(Particle([25.0,10.5], [0.0, 0.0], 0.4, sharedMat))	
+		w.forces.append(CableForce(w.particles[-1], w.particles[-2], 0.05, 1.0))
+
+	if 1:	
+		w.particles.append(Particle([34.0,10.0], [0.0, 0.0], 0.4, sharedMat))	
+		w.particles.append(Particle([35.0,10.5], [0.0, 0.0], 0.4, sharedMat))	
+		w.forces.append(CableForce(w.particles[-1], w.particles[-2], 0.05, 1.5))
+		wallMat = Material(1.0)
+		w.statics.append(Convex([30.0,0.5], [30.0, 29.0], wallMat))	
+
+	if 1:	
+		w.particles.append(Particle([34.0,25.0], [0.5, 0.0], 0.4, sharedMat))	
+		w.particles.append(Particle([35.0,25.5], [0.0, 0.0], 0.4, sharedMat))	
+		w.forces.append(CableForce(w.particles[-1], w.particles[-2], 0.05, 2.0))
+		w.particles.append(Particle([37.0,23.0], [0.5, 0.0], 0.4, sharedMat))	
+		w.particles.append(Particle([38.0,23.5], [0.0, 0.0], 0.4, sharedMat))	
+		w.forces.append(CableForce(w.particles[-1], w.particles[-2], 0.05, 2.0))
+		wallMat = Material(0.9)
+		w.statics.append(Convex([29.5,18.0], [40.5, 18.0], wallMat))	
+
+
+worldFillers.append(fillWorldCable1)
 
 
 
