@@ -202,7 +202,8 @@ class CableForce:
 		if (dist > self.l):
 			n = v2_normalize(v2_sub(o1.pos, o2.pos))
 			
-			info = ContactInfo(n, 0.0, o1.pos)
+			err = self.l - dist
+			info = ContactInfo(n, err, o1.pos)
 			pair = ContactPair(o1, o2, info)
 
 			if (o1.m > 0.0):
@@ -618,6 +619,7 @@ worldFillers.append(fillWorldSpring2)
 
 def fillWorldCable1(w):
 	sharedMat = Material(0.9)
+	defR = 0.3
 
 	fillWorldBox(w)
 	#w.g = 0.0
@@ -625,47 +627,48 @@ def fillWorldCable1(w):
 	if 1:	
 		w.particles.append(Particle([20.0,10.0], [1.0, 0.0], 0.4, sharedMat))	
 		w.particles.append(Particle([20.0,10.5], [0.0, 0.0], 0.0, sharedMat))	
-		w.forces.append(CableForce(w.particles[-1], w.particles[-2], 0.05, 1.0))
+		w.forces.append(CableForce(w.particles[-1], w.particles[-2], defR , 1.0))
 
 	if 1: 
 		w.particles.append(Particle([10.0,10.0], [0.0, 0.0], 0.4, sharedMat))	
-		w.particles.append(Particle([10.0,14.8], [0.0, 0.0], 0.0, sharedMat))	
-		w.forces.append(CableForce(w.particles[-1], w.particles[-2], 0.05, 5.0))
+		w.particles.append(Particle([10.0,11.8], [0.0, 0.0], 0.0, sharedMat))	
+		w.forces.append(CableForce(w.particles[-1], w.particles[-2], defR , 5.0))
 
 	if 1:
 		w.particles.append(Particle([12.0,10.0], [0.0, 0.0], 0.4, sharedMat))	
 		w.particles.append(Particle([12.0,10.5], [0.0, 0.0], 0.0, sharedMat))	
-		w.forces.append(CableForce(w.particles[-1], w.particles[-2], 0.05, 1.0))
+		w.forces.append(CableForce(w.particles[-1], w.particles[-2], defR , 1.0))
 
 	if 1:
 		w.particles.append(Particle([14.0,3.0], [0.0, 0.0], 0.4, sharedMat))	
 		w.particles.append(Particle([14.0,3.5], [0.0, 0.0], 0.0, sharedMat))	
-		w.forces.append(CableForce(w.particles[-1], w.particles[-2], 0.05, 4.0))
+		w.forces.append(CableForce(w.particles[-1], w.particles[-2], defR , 4.0))
 
 
 	if 1:	
 		w.particles.append(Particle([25.0,10.0], [0.0, 0.0], 0.4, sharedMat))	
 		w.particles.append(Particle([25.0,10.5], [0.0, 0.0], 0.4, sharedMat))	
-		w.forces.append(CableForce(w.particles[-1], w.particles[-2], 0.05, 1.0))
+		w.forces.append(CableForce(w.particles[-1], w.particles[-2], defR , 1.0))
 
 	if 1:	
 		w.particles.append(Particle([34.0,10.0], [0.0, 0.0], 0.4, sharedMat))	
 		w.particles.append(Particle([35.0,10.5], [0.0, 0.0], 0.4, sharedMat))	
-		w.forces.append(CableForce(w.particles[-1], w.particles[-2], 0.05, 1.5))
+		w.forces.append(CableForce(w.particles[-1], w.particles[-2], defR , 1.5))
 		wallMat = Material(1.0)
 		w.statics.append(Convex([30.0,0.5], [30.0, 29.0], wallMat))	
 
 	if 1:	
 		w.particles.append(Particle([34.0,25.0], [0.5, 0.0], 0.4, sharedMat))	
 		w.particles.append(Particle([35.0,25.5], [0.0, 0.0], 0.4, sharedMat))	
-		w.forces.append(CableForce(w.particles[-1], w.particles[-2], 0.05, 2.0))
+		w.forces.append(CableForce(w.particles[-1], w.particles[-2], defR , 2.0))
 		w.particles.append(Particle([37.0,23.0], [0.5, 0.0], 0.4, sharedMat))	
 		w.particles.append(Particle([38.0,23.5], [0.0, 0.0], 0.4, sharedMat))	
-		w.forces.append(CableForce(w.particles[-1], w.particles[-2], 0.05, 2.0))
+		w.forces.append(CableForce(w.particles[-1], w.particles[-2], defR , 2.0))
 		wallMat = Material(0.9)
 		w.statics.append(Convex([29.5,18.0], [40.5, 18.0], wallMat))	
 
 
+worldFillerIndex = len(worldFillers)
 worldFillers.append(fillWorldCable1)
 
 
