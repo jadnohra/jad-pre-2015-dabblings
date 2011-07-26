@@ -680,16 +680,17 @@ def fillWorldLongCable1(w):
 	#w.g = 0.0
 
 	if 1:	
-		tl = 5.0
-		rf = 0.5
-		sx = 20.0
-		sy = 20.0
-		ox = 2.0
-		num=10
-		w.particles.append(Particle([sx,sy], [0.0, 0.0], 0.0, sharedMat))	
-		for i in range(1, num):
-			w.particles.append(Particle([sx+ox*i/num,sy+rf*tl*i/num], [0.0, 0.0], 0.01, sharedMat))
-			w.forces.append(CableForce(w.particles[-2], w.particles[-1], defR , tl/num))
+		for j in range(1, 5):
+			tl = 5.0
+			rf = 0.5
+			sx = 5.0+j*5
+			sy = 20.0
+			ox = 2.0
+			num=j*5
+			w.particles.append(Particle([sx,sy], [0.0, 0.0], 0.0, sharedMat))	
+			for i in range(1, num):
+				w.particles.append(Particle([sx+ox*i/num,sy+rf*tl*i/num], [0.0, 0.0], 0.01, sharedMat))
+				w.forces.append(CableForce(w.particles[-2], w.particles[-1], defR , tl/num))
 
 
 worldFillerIndex = len(worldFillers)
