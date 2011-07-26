@@ -70,6 +70,7 @@ class World:
 	g = -9.8 * 1.0
 	timeScale = 1.0
 	timeStep = 1.0/60.0
+#	timeStep = 1.0/160.0
 	lastTime = -1.0
 	perfTime = -1.0
 	frame = -1
