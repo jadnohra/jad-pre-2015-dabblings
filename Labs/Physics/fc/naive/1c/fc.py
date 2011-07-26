@@ -60,7 +60,10 @@ def v2_muls(v1, s):
 	return [v1[0]*s, v1[1]*s]	
 
 def v2_normalize(v1):
-	return v2_muls(v1, 1.0/v2_len(v1))
+	l = v2_len(v1)
+	if l != 0.0:
+		return v2_muls(v1, 1.0/l)
+	return v1
 
 
 class World:
@@ -667,9 +670,30 @@ def fillWorldCable1(w):
 		wallMat = Material(0.9)
 		w.statics.append(Convex([29.5,18.0], [40.5, 18.0], wallMat))	
 
+worldFillers.append(fillWorldCable1)
+
+def fillWorldLongCable1(w):
+	sharedMat = Material(0.9)
+	defR = 0.3
+
+	fillWorldBox(w)
+	#w.g = 0.0
+
+	if 1:	
+		tl = 5.0
+		rf = 0.5
+		sx = 20.0
+		sy = 20.0
+		ox = 2.0
+		num=10
+		w.particles.append(Particle([sx,sy], [0.0, 0.0], 0.0, sharedMat))	
+		for i in range(1, num):
+			w.particles.append(Particle([sx+ox*i/num,sy+rf*tl*i/num], [0.0, 0.0], 0.01, sharedMat))
+			w.forces.append(CableForce(w.particles[-2], w.particles[-1], defR , tl/num))
+
 
 worldFillerIndex = len(worldFillers)
-worldFillers.append(fillWorldCable1)
+worldFillers.append(fillWorldLongCable1)
 
 
 
