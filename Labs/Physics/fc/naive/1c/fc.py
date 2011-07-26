@@ -700,8 +700,54 @@ worldFillerIndex = len(worldFillers)
 worldFillers.append(fillWorldLongCable1)
 
 
-
 lastClientTime = -1.0
+def updateWorldSupportCable1(w, dt):
+	global lastClientTime
+	sharedMat = Material(0.5)
+	
+	if (lastClientTime == -2.0):
+		return
+		
+	if (lastClientTime == -1.0):
+		lastClientTime = w.lastTime
+		
+	if (w.lastTime - lastClientTime > 5.0):
+		lastClientTime = -2.0
+		for k in range(2):
+			for j in range(1,4):
+				w.particles.append(Particle([5.0+((j-1)*10)+2.5, 11.0+k*10.0], [0.0, 0.0], 1.5, sharedMat))
+
+
+def fillWorldSupportCable1(w):
+	global lastClientTime
+	sharedMat = Material(0.9)
+	defR = 0.3
+
+	fillWorldBox(w)
+	#w.g = 0.0
+
+	if 1:	
+		for k in range (2):
+			for j in range(1, 4):
+				tl = 5.0
+				rf = 0.5
+				sx = 5.0+(j-1)*10
+				sy = 10.0+k*10
+				ox = 2.0
+				num=j*5
+				w.particles.append(Particle([sx,sy], [0.0, 0.0], 0.0, sharedMat))	
+				for i in range(1, num):
+					w.particles.append(Particle([sx+ox*i/num,sy], [0.0, 0.0], 0.05 + k*0.1, sharedMat))
+					w.forces.append(CableForce(w.particles[-2], w.particles[-1], defR , tl/(num-1)))
+				w.particles.append(Particle([sx+tl,sy], [0.0, 0.0], 0.0, sharedMat))		
+				w.forces.append(CableForce(w.particles[-1], w.particles[-2], defR , tl/(num-1)))
+
+	lastClientTime = -1.0
+	w.clientUpdate = updateWorldSupportCable1
+
+worldFillerIndex = len(worldFillers)
+worldFillers.append(fillWorldSupportCable1)
+
 def updateVWorld1(w, dt):
 	global lastClientTime
 	sharedMat = Material(0.5)
