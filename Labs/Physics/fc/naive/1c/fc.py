@@ -82,6 +82,7 @@ class World:
 	contactPairs = None
 	clientUpdate = None
 	momentum = 0.0
+	corout = False
 	
 	def __init__(self):
 		self.statics = []
@@ -228,9 +229,10 @@ class CableForce:
 
 
 
-def stepWorld(w, dt):
+def stepWorld(w, dt, corout):
 	
 	w.perfTime = time.time()
+	w.corout = corout
 	
 	if (w.frame < 0):
 		w.frame = 0
@@ -690,7 +692,7 @@ def fillWorldLongCable1(w):
 			num=j*5
 			w.particles.append(Particle([sx,sy], [0.0, 0.0], 0.0, sharedMat))	
 			for i in range(1, num):
-				w.particles.append(Particle([sx+ox*i/num,sy+rf*tl*i/num], [0.0, 0.0], 0.01, sharedMat))
+				w.particles.append(Particle([sx+(ox*i)/num,sy+(rf*tl*i)/num], [0.0, 0.0], 0.01, sharedMat))
 				w.forces.append(CableForce(w.particles[-2], w.particles[-1], defR , tl/(num-1)))
 
 	wallMat = Material(0.9)
@@ -734,7 +736,7 @@ def fillWorldSupportCable1(w):
 				rf = 0.5
 				sx = 5.0+(j-1)*10
 				sy = 10.0+k*10
-				ox = 2.0
+				ox = tl
 				num=j*5
 				w.particles.append(Particle([sx,sy], [0.0, 0.0], 0.0, sharedMat))	
 				for i in range(1, num):
@@ -748,6 +750,8 @@ def fillWorldSupportCable1(w):
 
 worldFillerIndex = len(worldFillers)
 worldFillers.append(fillWorldSupportCable1)
+
+
 
 def updateVWorld1(w, dt):
 	global lastClientTime
@@ -795,10 +799,15 @@ world = World()
 #fillVWorld1(world)
 nextWorld()
 
+
 config = pyglet.gl.Config(double_buffer=True)
 window = pyglet.window.Window(800,600, config=config)
 
 fps_display = pyglet.clock.ClockDisplay(pyglet.font.load('Arial', 10), interval=0.1, format='%(fps).0f', color=(1.0, 1.0, 1.0, 0.5))
+singleStep = False
+doSingleStep = False
+microStep = False
+doMicroStep = False
 
 @window.event
 def on_draw():
@@ -824,20 +833,67 @@ def on_draw():
 
 	for f in world.forces:
 		draw_line(f.obj[0].pos[0] * ppm, f.obj[0].pos[1] * ppm, f.obj[1].pos[0] * ppm, f.obj[1].pos[1] * ppm)
-	
+
+	if 0:
+		mat = Material(0.9)
+		p1 = Particle([10.0,10.0], [0.0, 0.0], 5.0, mat)
+		p2 = Particle([15.2,10.0], [0.0, 0.0], 0.5, mat)
+
+		draw_particle(p1.pos[0] * ppm, p1.pos[1] * ppm, p1.radius * ppm)
+		draw_particle(p2.pos[0] * ppm, p2.pos[1] * ppm, p2.radius * ppm)
+
+		info = contactCircleCircle(p1.pos, p1.radius, p2.pos, p2.radius)
+		if (info != None):
+			info.n = v2_normalize(info.n)
+			pt2 = v2_add(info.p, v2_muls(v2_normalize(info.n), info.d))
+			draw_line(info.p[0]*ppm, info.p[1]*ppm, pt2[0]*ppm, pt2[1]*ppm)
 
 def update(dt):
-	stepWorld(world, dt)
+	global microStep
+	global doMicroStep
+	global singleStep
+	global doSingleStep
+
+	if singleStep:
+		if (doSingleStep):
+			stepWorld(world, world.timeStep, False)
+			doSingleStep = False
+#	elif microStep:
+#		if (doMicroStep):
+#			stepWorld(world, world.timeStep, True)
+#			doMicroStep = False
+	else:
+		stepWorld(world, dt, False)
 
 
 
 @window.event	
 def on_key_press(symbol, modifiers):
+	global microStep
+	global doMicroStep
+	global singleStep
+	global doSingleStep
+
 	if symbol == pyglet.window.key.N:
 		nextWorld()
 		
 	if symbol == pyglet.window.key.R:
 		repeatWorld()
+
+	if symbol == pyglet.window.key.S:
+		singleStep = ~singleStep
+		doSingleStep = False
+
+	if symbol == pyglet.window.key.SPACE:
+		doSingleStep = True	
+
+	if symbol == pyglet.window.key.M:
+		microStep = ~microStep
+		doMicroStep = False
+
+	if symbol == pyglet.window.key.SPACE:
+		doMicroStep = True	
+
 
 pyglet.clock.schedule_interval(update, 1.0/60.0)	
 pyglet.app.run()
