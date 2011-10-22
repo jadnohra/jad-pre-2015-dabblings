@@ -250,13 +250,19 @@ def stepWorld(w, dt, corout):
 		if (w.clientUpdate != None):
 			w.clientUpdate(w, w.timeStep)
 		
-		applyForces(w)
+		#applyForces(w)
 		stepMotion(w)
 		allPairs = findContactPairs(w)
 		w.staticContactPairs = allPairs[0]
 		w.contactPairs = allPairs[1]
+		
+		for i in range(16):
+			applyForces(w)
+
 		resolveContacts(w)
+			
 		stepCollidedMotion(w)
+		
 		w.frame = w.frame + 1
 		frameCount = frameCount + 1
 		stepTime = 1.0 * w.frame * w.timeStep
