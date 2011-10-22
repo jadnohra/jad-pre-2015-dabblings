@@ -21,6 +21,56 @@ def PrintVector(row):
 	print '>'	
 
 
+def MulMatrix(M1, M2):
+	r1 = len(M1)
+	c1 = len(M1[0])
+	r2 = len(M2)
+	c2 = len(M2[0])
+
+	r3 = r1
+	c3 = c2
+
+	M3 = [None]*r3
+
+	for i in range(r3):
+		M3[i] = [None]*c3
+		row_3 = M3[i]
+		row_1 = M1[i]
+		for j in range(c3):
+			dot = 0.0
+			for d in range(c1):
+				dot = dot + row_1[d] * M2[d][j]
+			row_3[j] = dot
+	
+	return M3		
+
+
+def Transp(M):
+	r = len(M)
+	c = len(M[0])
+
+	T = [None]*r
+
+	for i in range(r):
+		T[i] = [None]*c
+		row = M[i]
+		for j in range(c):
+			row[j] = M[j][i]
+	return T 		
+
+
+def InvDiag(M):
+	r = len(M)
+	c = len(M[0])
+
+	I = [0.0]*r
+
+	for i in range(r):
+		I[i] = [0.0]*c
+		I[i][i] = 1.0/M[i][i]
+
+	return I
+	
 
 def GaussElimNoPivot(ioMatrix):
 	
@@ -150,3 +200,8 @@ def Test():
 	PrintVector(GaussSolve([ [0, 0] ]))
 	PrintVector(GaussSolve([ [2, -1] ]))
 	PrintVector(GaussSolve([ [1, 0, 1], [0, 1, 2] ]))
+
+	PrintMatrix( MulMatrix( [ [1.0, 0.0], [0.0, 1.0] ], [ [2.0, 3.0], [4.0, 5.0] ] ) )
+	PrintMatrix( MulMatrix( [ [0.5, 0.0], [0.0, -1.0] ], [ [2.0, 3.0], [4.0, 5.0] ] ) )
+
+Test()	
