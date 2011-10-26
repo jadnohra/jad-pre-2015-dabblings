@@ -47,41 +47,52 @@ class Particle:
 		self.radius = r
 		self.m = r
 
+	def applyImpulse(self, imp, dt):
+		if self.m > 0.0:
+			dv = v2_muls(imp, 1.0/self.m)
+			dp = v2_muls(dv, dt)
+			self.pos = v2_add(self.pos, dp)
 
-def createInvMDiag(particles):
-	invMDiag = Matrix( len(particles), 1, 0.0 )
+
+def createMinvDiag(particles):
+	invMDiag = [0.0]*(len(particles)*2)
 	for i in range(len(particles)):
-		invMDiag[i][0] = particles[i].m
+		if particles[i].m > 0.0: 
+			invMDiag[2*i+0] = 1.0/particles[i].m
+		else:
+			invMDiag[2*i+0] = 0.0
+		invMDiag[2*i+1] = invMDiag[2*i+0]
 	return invMDiag	
 
 def createExtVel(particles, dt):
-	extVel = Matrix( len(particles), 2, 0.0 )
+	extVel = Matrix( len(particles)*2, 1, 0.0 )
 	for i in range(len(particles)):
 		vel = v2_muls( particles[i].acc, particles[i].m * dt )
-		extVel[i][0] = vel[0]
-		extVel[i][1] = vel[1]
+		extVel[2*i+0][0] = vel[0]
+		extVel[2*i+1][0] = vel[1]
 	return extVel	
 
 def createIntVel(particles, dt):
-	intVel = Matrix( len(particles), 2, 0.0 )
+	invDt = 1.0/dt
+	intVel = Matrix( len(particles)*2, 1, 0.0 )
 	for i in range(len(particles)):
-		vel = v2_muls(  v2_sub(particles[i].pos, particles[i].ppos), dt )
-		intVel[i][0] = vel[0]
-		intVel[i][1] = vel[1]
+		vel = v2_muls(  v2_sub(particles[i].pos, particles[i].ppos), invDt )
+		intVel[2*i+0][0] = vel[0]
+		intVel[2*i+1][0] = vel[1]
 	return intVel	
 
 
 def createJacobian(constraints, particles):
 		
 	J = Matrix( len(constraints), len(particles) * 2, 0.0 )
-
+	
 	for index in range(len(constraints)):	
 		ct = constraints[index]
 		Jrow = J[index]	
 		Jb1 = ct.p[0] * 2
 		Jb2 = ct.p[1] * 2
 		
-		if (particles[ct.p[0]].m > 0.0 and particles[ct.p[1]].m > 0.0):
+		if (particles[ct.p[0]].m > 0.0 or particles[ct.p[1]].m > 0.0):
 			vdist = v2_sub(particles[ct.p[0]].pos, particles[ct.p[1]].pos)
 			if (particles[ct.p[0]].m > 0.0):
 				Jrow[Jb1] = vdist[0]
@@ -89,10 +100,54 @@ def createJacobian(constraints, particles):
 			#else TODO add bias support for non zero static body: add to rhs d.v
 
 			if (particles[ct.p[1]].m > 0.0):
-				Jrow[Jb1] = -vdist[0]
-				Jrow[Jb1+1] = -vdist[1]
+				Jrow[Jb2] = -vdist[0]
+				Jrow[Jb2+1] = -vdist[1]
 			#else TODO add bias support for non zero static body: add to rhs d.v
 	return J
+
+
+def solveConstraints(constraints, particles, dt):
+	if (len(constraints) == 0):
+		return
+
+	J = createJacobian(constraints, particles)
+	PrintM(J, 'J')
+	Jt = Transp(J)
+	MinvDiag = createMinvDiag(particles)
+	extVel = createExtVel(particles, dt)
+	intVel = createIntVel(particles, dt)
+
+	#PrintV(MinvDiag)
+	#PrintM(Jt)
+	B = MulMDiag1(MinvDiag, Jt)
+	#PrintM(B)
+	JB = MulM(J, B)
+	#bias is zero
+	PrintM(intVel, 'intVel')
+	#PrintM(extVel)
+	RHS_V = AddM(intVel, extVel)
+	#PrintM(J)
+	#PrintM(RHS_V)
+	RHS_JV = MulM(J, RHS_V)
+	RHS = NegM(RHS_JV)
+
+	#PrintM(JB)
+	#PrintM(RHS)
+
+	lbda = GaussSolve2(JB, RHS)
+
+	PrintV(lbda)
+
+	if (lbda[0] == None):
+		return
+	
+	impulses = MulMV(Jt, lbda)
+	PrintM(impulses, 'Impulses')
+
+	for i in range(len(particles)):
+		imp = [ impulses[i*2+0][0], impulses[i*2+1][0] ]
+		#PrintV(imp)
+		particles[i].applyImpulse(imp, dt)
 
 
 class DistConstraint:
@@ -102,25 +157,7 @@ class DistConstraint:
 	def __init__(self, p1, p2, rl):
 		self.p = [ p1, p2 ]
 		self.rl = rl
-	
-	def fillSolutionMatrices(particles, J, bias, index):
-		Jrow = J[index]
-		Jb1 = p[0] * 2
-		Jb2 = p[1] * 2
-		
-		if (particles[p[0]].m > 0.0 and particles[p[1]].m > 0.0):
-			vdist = v2_sub(particles[p[0]].pos, particles[p[1]].pos)
-			if (particles[p[0]].m > 0.0):
-				Jrow[Jb1] = vdist[0]
-				Jrow[Jb1+1] = vdist[1]
-			#else TODO add bias support for non zero static body: add to rhs d.v
-
-			if (particles[p[1]].m > 0.0):
-				Jrow[Jb1] = -vdist[0]
-				Jrow[Jb1+1] = -vdist[1]
-			#else TODO add bias support for non zero static body: add to rhs d.v
-			
-			
+					
 
 
 def stepWorld(w, dt, corout):
@@ -145,8 +182,10 @@ def stepWorld(w, dt, corout):
 			w.clientUpdate(w, w.timeStep)
 		
 		applyExternalForces(w)
+		solve(w)
 		stepMotion(w)
-		
+	
+
 		w.frame = w.frame + 1
 		frameCount = frameCount + 1
 		stepTime = 1.0 * w.frame * w.timeStep
@@ -165,7 +204,7 @@ def stepWorld(w, dt, corout):
 
 
 def solve(w):
-	J = Matrix(w.
+	solveConstraints(w.constraints, w.particles, w.dt)
 	
 
 def applyExternalForces(w):
@@ -230,12 +269,16 @@ worldFillerIndex = 0
 
 def fillWorldLongCable1(w):
 	if 1:
-		w.partiles.append(Particle([5.0,20.0], 0.0))
-		w.partiles.append(Particle([6.0,20.0], 0.001))
+		p1 = len(w.particles)
+		w.particles.append(Particle([5.0,20.0], 0.1))
+		w.particles[-1].m = 0.0
+		p2 = len(w.particles)
+		w.particles.append(Particle([6.0,20.0], 0.1))
+		w.constraints.append(DistConstraint(p1, p2, 1.0))
 
 
 	if 0:	
-		for j in range(1, 2):
+		for j in range(1, 5):
 			tl = 5.0
 			rf = 0.5
 			sx = 5.0+j*5
