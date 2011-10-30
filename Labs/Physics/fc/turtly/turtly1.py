@@ -36,22 +36,31 @@ class World:
 class Particle:
 	acc = [0,0]
 	ppos = [0,0]
+	vel = [0,0]
+	#todo use vel so that the impulse forumaltion works
 	pos = [0,0]
 	radius = 0.2
 	m = 1.0
 	
 	def __init__(self, p, r):
 		self.acc = [0,0]
+		self.vel = [0,0]
 		self.ppos = [p[0], p[1]]
 		self.pos = [p[0], p[1]]
 		self.radius = r
 		self.m = r
 
-	def applyImpulse(self, imp, dt):
+	def applyImpulse_(self, imp, dt):
 		if self.m > 0.0:
 			dv = v2_muls(imp, 1.0/self.m)
 			dp = v2_muls(dv, dt)
 			self.pos = v2_add(self.pos, dp)
+
+
+	def applyImpulse(self, imp, dt):
+		if self.m > 0.0:
+			dv = v2_muls(imp, 1.0/self.m)
+			self.vel = v2_add(self.vel, dv)
 
 
 def createMinvDiag(particles):
@@ -64,6 +73,7 @@ def createMinvDiag(particles):
 		invMDiag[2*i+1] = invMDiag[2*i+0]
 	return invMDiag	
 
+
 def createExtVel(particles, dt):
 	extVel = Matrix( len(particles)*2, 1, 0.0 )
 	for i in range(len(particles)):
@@ -72,11 +82,13 @@ def createExtVel(particles, dt):
 		extVel[2*i+1][0] = vel[1]
 	return extVel	
 
+
 def createIntVel(particles, dt):
 	invDt = 1.0/dt
 	intVel = Matrix( len(particles)*2, 1, 0.0 )
 	for i in range(len(particles)):
-		vel = v2_muls(  v2_sub(particles[i].pos, particles[i].ppos), invDt )
+		#vel = v2_muls(  v2_sub(particles[i].pos, particles[i].ppos), invDt )
+		vel = particles[i].vel
 		intVel[2*i+0][0] = vel[0]
 		intVel[2*i+1][0] = vel[1]
 	return intVel	
@@ -93,7 +105,7 @@ def createJacobian(constraints, particles):
 		Jb2 = ct.p[1] * 2
 		
 		if (particles[ct.p[0]].m > 0.0 or particles[ct.p[1]].m > 0.0):
-			vdist = v2_sub(particles[ct.p[0]].pos, particles[ct.p[1]].pos)
+			vdist = v2_normalize(v2_sub(particles[ct.p[0]].pos, particles[ct.p[1]].pos))
 			if (particles[ct.p[0]].m > 0.0):
 				Jrow[Jb1] = vdist[0]
 				Jrow[Jb1+1] = vdist[1]
@@ -124,7 +136,7 @@ def solveConstraints(constraints, particles, dt):
 	JB = MulM(J, B)
 	#bias is zero
 	PrintM(intVel, 'intVel')
-	#PrintM(extVel)
+	PrintM(extVel, 'extVel')
 	RHS_V = AddM(intVel, extVel)
 	#PrintM(J)
 	#PrintM(RHS_V)
@@ -139,6 +151,7 @@ def solveConstraints(constraints, particles, dt):
 	PrintV(lbda)
 
 	if (lbda[0] == None):
+		PrintM(JB, 'Failed JB')
 		return
 	
 	impulses = MulMV(Jt, lbda)
@@ -219,6 +232,24 @@ def applyExternalForces(w):
 def stepMotion(w):
 	
 	w.momentum = 0.0
+	dt = w.dt
+	
+	print 'positions'
+
+	for p in w.particles:
+		p.vel = v2_add( p.vel, v2_muls(p.acc, dt))
+		p.pos = v2_add( p.pos, v2_muls(p.vel, dt))
+		PrintV(p.pos)
+		#p.vel = v2_add( p.vel, v2_muls(p.acc, dt))
+		v2_zero(p.acc)
+
+		speed = v2_len(p.vel)
+		w.momentum = w.momentum + speed * p.m
+
+
+def stepMotion_(w):
+	
+	w.momentum = 0.0
 	dt2 = w.dt * w.dt
 	
 	for p in w.particles:
@@ -268,13 +299,32 @@ worldFillerIndex = 0
 
 
 def fillWorldLongCable1(w):
-	if 1:
+
+	if 0:
 		p1 = len(w.particles)
 		w.particles.append(Particle([5.0,20.0], 0.1))
 		w.particles[-1].m = 0.0
 		p2 = len(w.particles)
 		w.particles.append(Particle([6.0,20.0], 0.1))
 		w.constraints.append(DistConstraint(p1, p2, 1.0))
+
+
+	if 1:
+		l = 2.0
+		ct = 8
+		dl = l / ct
+		r = 0.1
+		
+		p1 = len(w.particles)
+		w.particles.append(Particle([10.0,20.0], r))
+		w.particles[-1].m = 0.0
+	
+		for pi in range(1, ct):
+			p2 = len(w.particles)
+			w.particles.append(Particle([10.0+pi*dl,20.0], r))
+			w.constraints.append(DistConstraint(p1, p2, dl))
+			p1 = p2
+
 
 
 	if 0:	
