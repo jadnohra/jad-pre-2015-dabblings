@@ -211,6 +211,7 @@ def GaussElimNoPivot(ioMatrix):
 			row_div = A[i]
 			for c in range(n):
 				row_div[c] = row_div[c] * scale
+			#A[i][j] = 1.0
 			#Now A[i,j] has the value of 1
 			row_i = A[i]
 			for u in range(i+1, m):
@@ -218,6 +219,7 @@ def GaussElimNoPivot(ioMatrix):
 				scale = row_u[j]
 				for c in range(n):
 					row_u[c] = row_u[c] - scale * row_i[c]
+				A[u][j] = 0.0 # needed for accuracy problems
 				# Now A[u,j] will be zero
 			i = i + 1
 		j = j + 1	
@@ -253,13 +255,15 @@ def GaussElim(ioMatrix):
 			row_div = A[i]
 			for c in range(n):
 				row_div[c] = row_div[c] * scale
-			#Now A[i,j] has the value of will1
+			#A[i][j] = 1.0
+			#Now A[i,j] has the value of 1
 			row_i = A[i]
 			for u in range(i+1, m):
 				row_u = A[u]
 				scale = row_u[j]
 				for c in range(n):
 					row_u[c] = row_u[c] - scale * row_i[c]
+				A[u][j] = 0.0 # needed for accuracy problems
 				# Now A[u,j] will be zero
 			i = i + 1
 		j = j + 1	
