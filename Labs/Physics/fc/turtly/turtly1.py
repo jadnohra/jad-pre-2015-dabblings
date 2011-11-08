@@ -1,8 +1,11 @@
-import pyglet
+import sys
 import math
 import time
 from gaussy import *
+import pyglet
 
+dbgPositions = False
+dbgSolver = False
 
 class World:
 	updateDt = 1.0/60.0
@@ -21,6 +24,7 @@ class World:
 	clientUpdate = None
 	momentum = 0.0
 	corout = False
+	solveLSFunc = None
 	
 	def __init__(self):
 		self.statics = []
@@ -30,6 +34,7 @@ class World:
 		self.staticContactPairs = []
 		self.contactPairs = []
 		self.clientUpdate = None
+		self.solveLSFunc = GaussSolve2
 
 	
 
@@ -118,12 +123,41 @@ def createJacobian(constraints, particles):
 	return J
 
 
-def solveConstraints(constraints, particles, dt):
+def solveLS_G(JB, RHS):
+	# Gaussian
+	return GaussSolve2(JB, RHS)
+
+
+def solveLS_GS1(JB, RHS):
+	# Gauss-Seidel Solver
+	#print 'Will converge:', GaussSeidelWillConverge(JB, True), 'Might:', GaussSeidelMightConverge(JB, True)
+	return GaussSeidelSolve2ZeroGuess(JB, RHS, IterObj(1, -1.0)) # 4 iter
+
+
+def solveLS_GS4(JB, RHS):
+	# Gauss-Seidel Solver
+	#print 'Will converge:', GaussSeidelWillConverge(JB, True), 'Might:', GaussSeidelMightConverge(JB, True)
+	return GaussSeidelSolve2ZeroGuess(JB, RHS, IterObj(4, -1.0)) # 4 iter
+
+
+def solveLS_GSC01(JB, RHS):
+	iter = IterObj(50, 0.01)
+	ret = GaussSeidelSolve2ZeroGuess(JB, RHS, iter) # 0.01 maxerr, 50 iter
+	#print iter.it
+	#if iter.it >= 50:
+	#	print iter.it, 'iters,', iter.err, 'err'
+	return ret
+
+
+def solveConstraints(constraints, particles, solveLinSystFunc, dt):
 	if (len(constraints) == 0):
 		return
 
+	dbg = dbgSolver	
+
 	J = createJacobian(constraints, particles)
-	PrintM(J, 'J')
+	if dbg:
+		PrintM(J, 'J')
 	Jt = Transp(J)
 	MinvDiag = createMinvDiag(particles)
 	extVel = createExtVel(particles, dt)
@@ -135,8 +169,9 @@ def solveConstraints(constraints, particles, dt):
 	#PrintM(B)
 	JB = MulM(J, B)
 	#bias is zero
-	PrintM(intVel, 'intVel')
-	PrintM(extVel, 'extVel')
+	if dbg:
+		PrintM(intVel, 'intVel')
+		PrintM(extVel, 'extVel')
 	RHS_V = AddM(intVel, extVel)
 	#PrintM(J)
 	#PrintM(RHS_V)
@@ -145,17 +180,33 @@ def solveConstraints(constraints, particles, dt):
 
 	#PrintM(JB)
 	#PrintM(RHS)
+		
+	lbda = solveLinSystFunc(JB, RHS)
+	
+	# Gaussian solver
+	#lbda = GaussSolve2(JB, RHS)
 
-	lbda = GaussSolve2(JB, RHS)
+	# Gauss-Seidel Solver
+	#print 'Will converge:', GaussSeidelWillConverge(JB, True), 'Might:', GaussSeidelMightConverge(JB, True)
+	
+	#lbda = GaussSeidelSolve2ZeroGuess(JB, RHS, IterObj(4, -1.0)) # 4 iter
+	
+	#iter = IterObj(50, 0.01)
+	#lbda = GaussSeidelSolve2ZeroGuess(JB, RHS, iter) # 0.01 maxerr, 50 iter
+	#print iter.it
+	#if iter.it >= 50:
+	#	print iter.it, 'iters,', iter.err, 'err'
 
-	PrintV(lbda)
+	if dbg:
+		PrintV(lbda)
 
 	if (lbda[0] == None):
 		PrintM(JB, 'Failed JB')
 		return
 	
 	impulses = MulMV(Jt, lbda)
-	PrintM(impulses, 'Impulses')
+	if dbg:
+		PrintM(impulses, 'Impulses')
 
 	for i in range(len(particles)):
 		imp = [ impulses[i*2+0][0], impulses[i*2+1][0] ]
@@ -217,7 +268,7 @@ def stepWorld(w, dt, corout):
 
 
 def solve(w):
-	solveConstraints(w.constraints, w.particles, w.dt)
+	solveConstraints(w.constraints, w.particles, w.solveLSFunc, w.dt)
 	
 
 def applyExternalForces(w):
@@ -233,13 +284,17 @@ def stepMotion(w):
 	
 	w.momentum = 0.0
 	dt = w.dt
-	
-	print 'positions'
+
+	dbg = dbgPositions
+
+	if dbg:
+		print 'positions'
 
 	for p in w.particles:
 		p.vel = v2_add( p.vel, v2_muls(p.acc, dt))
 		p.pos = v2_add( p.pos, v2_muls(p.vel, dt))
-		PrintV(p.pos)
+		if dbg:
+			PrintV(p.pos)
 		#p.vel = v2_add( p.vel, v2_muls(p.acc, dt))
 		v2_zero(p.acc)
 
@@ -343,28 +398,31 @@ def fillWorldLongCable1(w):
 worldFillerIndex = len(worldFillers)
 worldFillers.append(fillWorldLongCable1)
 
-
 #--------------------------------
 #------------ MAIN	-------------
 #--------------------------------
 	
 
+argLSFuncName = ''
+
 def nextWorld():
 	global world
 	global worldFillers
 	global worldFillerIndex
+	global argLSFuncName
 	
 	world = World()
 	worldFillers[worldFillerIndex](world)
 	worldFillerIndex = (worldFillerIndex+1) % len(worldFillers)
 	#pyglet.clock.schedule_interval(update, world.updateDt)	
+	if globals().has_key(argLSFuncName):
+		world.solveLSFunc = globals()[argLSFuncName]
+		
 
 def repeatWorld():
 	global worldFillerIndex
 	worldFillerIndex = (len(worldFillers) + worldFillerIndex-1) % len(worldFillers)
 	nextWorld()
-
-nextWorld()
 
 
 config = pyglet.gl.Config(double_buffer=True)
@@ -376,15 +434,23 @@ doSingleStep = False
 microStep = False
 doMicroStep = False
 
+for arg in sys.argv:
+	if (arg == '-step'):
+		singleStep = True
+	if (arg.startswith('solveLS_')):
+		argLSFuncName = arg
+
+nextWorld()
+
 @window.event
 def on_draw():
 	window.clear()
 	
 	fps_display.update_text()
-	fps = pyglet.text.Label(fps_display.label.text, font_name='Arial', font_size=6, x=window.width, y=window.height,anchor_x='right', anchor_y='top')
+	fps = pyglet.text.Label(fps_display.label.text, font_name='Arial', font_size=10, x=window.width, y=window.height,anchor_x='right', anchor_y='top')
 	fps.draw()
 	
-	mom = pyglet.text.Label('{0:.2f} - {1:.2f}'.format(world.momentum, world.momentum/max(1,len(world.particles))), font_name='Arial', font_size=6, x=0, y=window.height,anchor_x='left', anchor_y='top')
+	mom = pyglet.text.Label('{0:.2f} - {1:.2f}'.format(world.momentum, world.momentum/max(1,len(world.particles))), font_name='Arial', font_size=10, x=0, y=window.height,anchor_x='left', anchor_y='top')
 	mom.draw()
 		
 	
@@ -397,6 +463,7 @@ def update(dt):
 	global doMicroStep
 	global singleStep
 	global doSingleStep
+
 
 	if singleStep:
 		if (doSingleStep):
@@ -425,14 +492,14 @@ def on_key_press(symbol, modifiers):
 		repeatWorld()
 
 	if symbol == pyglet.window.key.S:
-		singleStep = ~singleStep
+		singleStep = not singleStep
 		doSingleStep = False
 
 	if symbol == pyglet.window.key.SPACE:
 		doSingleStep = True	
 
 	if symbol == pyglet.window.key.M:
-		microStep = ~microStep
+		microStep = not microStep
 		doMicroStep = False
 
 	if symbol == pyglet.window.key.SPACE:
