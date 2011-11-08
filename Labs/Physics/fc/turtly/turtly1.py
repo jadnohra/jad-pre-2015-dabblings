@@ -140,6 +140,11 @@ def solveLS_GS4(JB, RHS):
 	return GaussSeidelSolve2ZeroGuess(JB, RHS, IterObj(4, -1.0)) # 4 iter
 
 
+def solveLS_GS16(JB, RHS):
+	# Gauss-Seidel Solver
+	#print 'Will converge:', GaussSeidelWillConverge(JB, True), 'Might:', GaussSeidelMightConverge(JB, True)
+	return GaussSeidelSolve2ZeroGuess(JB, RHS, IterObj(16, -1.0)) # 4 iter
+
 def solveLS_GSC01(JB, RHS):
 	iter = IterObj(50, 0.01)
 	ret = GaussSeidelSolve2ZeroGuess(JB, RHS, iter) # 0.01 maxerr, 50 iter
