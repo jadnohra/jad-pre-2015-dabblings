@@ -509,4 +509,4 @@ def on_key_press(symbol, modifiers):
 pyglet.clock.schedule_interval(update, 1.0/60.0)	
 pyglet.app.run()
 
-
+# arch -i386 python2.6 turtly1.py 
