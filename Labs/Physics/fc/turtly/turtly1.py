@@ -1,3 +1,11 @@
+#
+# idea: if a closed form solution is not possible, what about some closed form expression for some 
+# other variables than positins, e.g kineric energy, speed, work , no clue ... that can be used to 
+# improve the solver results
+#
+#
+#
+
 import sys
 import math
 import time
@@ -386,7 +394,7 @@ def fillWorldLongCable1(w):
 
 
 	if 1:
-		fac = 3
+		fac = 3.8
 		r = 0.1
 		l = fac * 2.0
 		ct = fac * 8
