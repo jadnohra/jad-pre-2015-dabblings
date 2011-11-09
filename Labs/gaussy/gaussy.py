@@ -95,6 +95,21 @@ def AddM(M, N):
 	return S	
 
 
+def SubM(M, N):
+	r1 = len(M)
+	c1 = len(M[0])
+	
+	S = Matrix(r1, c1, None)
+
+	for i in range(r1):
+		rm = M[i]
+		rn = N[i]
+		rs = S[i]
+		for j in range(c1):
+			rs[j] = rm[j]-rn[j]
+	return S	
+
+
 def MulM(M1, M2):
 	r1 = len(M1)
 	c1 = len(M1[0])
@@ -388,7 +403,7 @@ def GaussSeidelSolve2ZeroGuess(inLHS, inRHS, iterObj):
 			M[i][j] = inLHS[i][j]
 		M[i][c1] = inRHS[i][0]
 	
-	return GaussSolveSolveZeroGuess(M, iterObj)
+	return GaussSeidelSolveZeroGuess(M, iterObj)
 
 
 class IterObj:
@@ -461,7 +476,7 @@ def GaussSeidelMightConverge(inMatrix, isOnlyLHS):
 	
 	for i in range(r1):
 		row = M[i]
-		diag = math.abs(row[i])
+		diag = math.fabs(row[i])
 
 		for j in range(i):
 			if (diag < math.fabs(row[j])):
