@@ -25,7 +25,7 @@ class World:
 	momentum = 0.0
 	corout = False
 	solveLSFunc = None
-	ERP = 1.0
+	ERP = 0.05
 	
 	def __init__(self):
 		self.statics = []
@@ -386,11 +386,12 @@ def fillWorldLongCable1(w):
 
 
 	if 1:
-		l = 2.0
-		ct = 8
-		dl = l / ct
+		fac = 3
 		r = 0.1
+		l = fac * 2.0
+		ct = fac * 8
 		
+		dl = l / ct	
 		p1 = len(w.particles)
 		w.particles.append(Particle([10.0,20.0], r))
 		w.particles[-1].m = 0.0
