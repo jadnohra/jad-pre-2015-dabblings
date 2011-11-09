@@ -25,6 +25,7 @@ class World:
 	momentum = 0.0
 	corout = False
 	solveLSFunc = None
+	ERP = 1.0
 	
 	def __init__(self):
 		self.statics = []
@@ -99,10 +100,12 @@ def createIntVel(particles, dt):
 	return intVel	
 
 
-def createJacobian(constraints, particles):
+def createJacobianAndBias(constraints, particles, erp, dt):
 		
+	invDt = 1.0 / dt	
 	J = Matrix( len(constraints), len(particles) * 2, 0.0 )
-	
+	Bias = Matrix( len(constraints), 1, 0.0 )
+
 	for index in range(len(constraints)):	
 		ct = constraints[index]
 		Jrow = J[index]	
@@ -110,17 +113,24 @@ def createJacobian(constraints, particles):
 		Jb2 = ct.p[1] * 2
 		
 		if (particles[ct.p[0]].m > 0.0 or particles[ct.p[1]].m > 0.0):
-			vdist = v2_normalize(v2_sub(particles[ct.p[0]].pos, particles[ct.p[1]].pos))
+			
+			vdist = v2_sub(particles[ct.p[0]].pos, particles[ct.p[1]].pos)
+			err = v2_len(vdist) - ct.rl
+			vdir = v2_normalize(vdist)
+
 			if (particles[ct.p[0]].m > 0.0):
-				Jrow[Jb1] = vdist[0]
-				Jrow[Jb1+1] = vdist[1]
+				Jrow[Jb1] = vdir[0]
+				Jrow[Jb1+1] = vdir[1]
 			#else TODO add bias support for non zero static body: add to rhs d.v
 
 			if (particles[ct.p[1]].m > 0.0):
-				Jrow[Jb2] = -vdist[0]
-				Jrow[Jb2+1] = -vdist[1]
+				Jrow[Jb2] = -vdir[0]
+				Jrow[Jb2+1] = -vdir[1]
 			#else TODO add bias support for non zero static body: add to rhs d.v
-	return J
+			
+			Bias[index][0] = -err * invDt * 1.0 * erp
+
+	return [J, Bias]
 
 
 def solveLS_G(JB, RHS):
@@ -154,15 +164,19 @@ def solveLS_GSC01(JB, RHS):
 	return ret
 
 
-def solveConstraints(constraints, particles, solveLinSystFunc, dt):
+def solveConstraints(constraints, particles, solveLinSystFunc, erp, dt):
 	if (len(constraints) == 0):
 		return
 
 	dbg = dbgSolver	
 
-	J = createJacobian(constraints, particles)
+	J_Bias = createJacobianAndBias(constraints, particles, erp, dt)
+	J = J_Bias[0]
+	Bias = J_Bias[1]
+
 	if dbg:
 		PrintM(J, 'J')
+		PrintM(Bias, 'Bias')
 	Jt = Transp(J)
 	MinvDiag = createMinvDiag(particles)
 	extVel = createExtVel(particles, dt)
@@ -181,7 +195,8 @@ def solveConstraints(constraints, particles, solveLinSystFunc, dt):
 	#PrintM(J)
 	#PrintM(RHS_V)
 	RHS_JV = MulM(J, RHS_V)
-	RHS = NegM(RHS_JV)
+	#RHS = NegM(RHS_JV)
+	RHS = SubM(Bias, RHS_JV)
 
 	#PrintM(JB)
 	#PrintM(RHS)
@@ -273,7 +288,7 @@ def stepWorld(w, dt, corout):
 
 
 def solve(w):
-	solveConstraints(w.constraints, w.particles, w.solveLSFunc, w.dt)
+	solveConstraints(w.constraints, w.particles, w.solveLSFunc, w.ERP, w.dt)
 	
 
 def applyExternalForces(w):
@@ -365,8 +380,9 @@ def fillWorldLongCable1(w):
 		w.particles.append(Particle([5.0,20.0], 0.1))
 		w.particles[-1].m = 0.0
 		p2 = len(w.particles)
-		w.particles.append(Particle([6.0,20.0], 0.1))
+		w.particles.append(Particle([6.5,20.0], 0.1))
 		w.constraints.append(DistConstraint(p1, p2, 1.0))
+		w.g=0
 
 
 	if 1:
@@ -409,6 +425,7 @@ worldFillers.append(fillWorldLongCable1)
 	
 
 argLSFuncName = ''
+argERP = 1.0
 
 def nextWorld():
 	global world
@@ -422,7 +439,7 @@ def nextWorld():
 	#pyglet.clock.schedule_interval(update, world.updateDt)	
 	if globals().has_key(argLSFuncName):
 		world.solveLSFunc = globals()[argLSFuncName]
-		
+	world.ERP = argERP	
 
 def repeatWorld():
 	global worldFillerIndex
@@ -442,8 +459,11 @@ doMicroStep = False
 for arg in sys.argv:
 	if (arg == '-step'):
 		singleStep = True
-	if (arg.startswith('solveLS_')):
+	elif (arg.startswith('solveLS_')):
 		argLSFuncName = arg
+	elif (arg.startswith('-erp=')):
+		spl = arg.split('=')
+		argERP = float(spl[1])
 
 nextWorld()
 
