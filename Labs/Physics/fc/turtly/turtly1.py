@@ -33,6 +33,7 @@ class World:
 	momentum = 0.0
 	corout = False
 	solveLSFunc = None
+	solveFunc = None
 	ERP = 0.05
 	
 	def __init__(self):
@@ -43,6 +44,7 @@ class World:
 		self.staticContactPairs = []
 		self.contactPairs = []
 		self.clientUpdate = None
+		self.solveFunc = solveConstraintsLS
 		self.solveLSFunc = GaussSolve2
 
 	
@@ -170,7 +172,7 @@ def solveLS_GSC01(JB, RHS):
 	return ret
 
 
-def solveConstraints(constraints, particles, solveLinSystFunc, erp, dt):
+def solveConstraintsLS(w, constraints, particles, erp, dt):
 
 	if (len(constraints) == 0):
 		return
@@ -208,7 +210,7 @@ def solveConstraints(constraints, particles, solveLinSystFunc, erp, dt):
 	#PrintM(JB)
 	#PrintM(RHS)
 		
-	lbda = solveLinSystFunc(JB, RHS)
+	lbda = w.solveLSFunc(JB, RHS)
 	
 	# Gaussian solver
 	#lbda = GaussSolve2(JB, RHS)
@@ -328,7 +330,7 @@ def stepWorld(w, dt, corout):
 
 def solve(w):
 	#solveConstraints(w.constraints, w.particles, w.solveLSFunc, w.ERP, w.dt)
-	solveConstraintsSeqImp(w.constraints, w.particles, w.ERP, w.dt)
+	w.solveConstraintsFunc(w, w.constraints, w.particles, w.ERP, w.dt)
 	
 
 def applyExternalForces(w):
