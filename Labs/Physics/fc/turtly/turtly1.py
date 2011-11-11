@@ -34,6 +34,7 @@ class World:
 	corout = False
 	solveLSFunc = None
 	solveFunc = None
+	solveIters = 1 # only used for iterative solvers
 	ERP = 0.05
 	
 	def __init__(self):
@@ -141,29 +142,18 @@ def createJacobianAndBias(constraints, particles, erp, dt):
 	return [J, Bias]
 
 
-def solveLS_G(JB, RHS):
+def solveLS_G(JB, RHS, iters):
 	# Gaussian
 	return GaussSolve2(JB, RHS)
 
 
-def solveLS_GS1(JB, RHS):
+def solveLS_GS(JB, RHS, iters):
 	# Gauss-Seidel Solver
 	#print 'Will converge:', GaussSeidelWillConverge(JB, True), 'Might:', GaussSeidelMightConverge(JB, True)
-	return GaussSeidelSolve2ZeroGuess(JB, RHS, IterObj(1, -1.0)) # 4 iter
+	return GaussSeidelSolve2ZeroGuess(JB, RHS, IterObj(iters, -1.0)) 
 
 
-def solveLS_GS4(JB, RHS):
-	# Gauss-Seidel Solver
-	#print 'Will converge:', GaussSeidelWillConverge(JB, True), 'Might:', GaussSeidelMightConverge(JB, True)
-	return GaussSeidelSolve2ZeroGuess(JB, RHS, IterObj(4, -1.0)) # 4 iter
-
-
-def solveLS_GS16(JB, RHS):
-	# Gauss-Seidel Solver
-	#print 'Will converge:', GaussSeidelWillConverge(JB, True), 'Might:', GaussSeidelMightConverge(JB, True)
-	return GaussSeidelSolve2ZeroGuess(JB, RHS, IterObj(16, -1.0)) # 4 iter
-
-def solveLS_GSC01(JB, RHS):
+def solveLS_GSC01(JB, RHS, iters):
 	iter = IterObj(50, 0.01)
 	ret = GaussSeidelSolve2ZeroGuess(JB, RHS, iter) # 0.01 maxerr, 50 iter
 	#print iter.it
@@ -210,7 +200,7 @@ def solveConstraintsLS(w, constraints, particles, erp, dt):
 	#PrintM(JB)
 	#PrintM(RHS)
 		
-	lbda = w.solveLSFunc(JB, RHS)
+	lbda = w.solveLSFunc(JB, RHS, w.solveIters)
 	
 	# Gaussian solver
 	#lbda = GaussSolve2(JB, RHS)
@@ -232,7 +222,7 @@ def solveConstraintsLS(w, constraints, particles, erp, dt):
 		particles[i].applyImpulse(imp, dt)
 
 
-def solveConstraintsSeqImpIter(constraints, particles, erp, dt):
+def solveConstraintsSI_iter(constraints, particles, erp, dt):
 		
 	invDt = 1.0 / dt	
 
@@ -270,9 +260,9 @@ def solveConstraintsSeqImpIter(constraints, particles, erp, dt):
 				p1.applyImpulse(imp1, dt)
 
 
-def solveConstraintsSeqImp(constraints, particles, erp, dt):
-	for i in range(16):
-		solveConstraintsSeqImpIter(constraints, particles, erp, dt)
+def solveConstraintsSI(w, constraints, particles, erp, dt):
+	for i in range(w.solveIters):
+		solveConstraintsSI_iter(constraints, particles, erp, dt)
 
 
 class DistConstraint:
@@ -330,7 +320,7 @@ def stepWorld(w, dt, corout):
 
 def solve(w):
 	#solveConstraints(w.constraints, w.particles, w.solveLSFunc, w.ERP, w.dt)
-	w.solveConstraintsFunc(w, w.constraints, w.particles, w.ERP, w.dt)
+	w.solveFunc(w, w.constraints, w.particles, w.ERP, w.dt)
 	
 
 def applyExternalForces(w):
@@ -466,23 +456,29 @@ worldFillers.append(fillWorldLongCable1)
 #------------ MAIN	-------------
 #--------------------------------
 	
-
-argLSFuncName = ''
+argSolveFuncName = ''
+argIters = 1
 argERP = 1.0
 
 def nextWorld():
 	global world
 	global worldFillers
 	global worldFillerIndex
-	global argLSFuncName
+	global argSolveFuncName
 	
 	world = World()
 	worldFillers[worldFillerIndex](world)
 	worldFillerIndex = (worldFillerIndex+1) % len(worldFillers)
 	#pyglet.clock.schedule_interval(update, world.updateDt)	
-	if globals().has_key(argLSFuncName):
-		world.solveLSFunc = globals()[argLSFuncName]
-	world.ERP = argERP	
+	if (argSolveFuncName.startswith('solveLS')):
+		world.solveFunc = solveConstraintsLS
+		world.solveLSFunc = globals()[argSolveFuncName]
+	elif (argSolveFuncName.startswith('solveSI')):
+		world.solveFunc = solveConstraintsSI
+	
+	world.solveIters = argIters
+	world.ERP = argERP
+
 
 def repeatWorld():
 	global worldFillerIndex
@@ -502,9 +498,12 @@ doMicroStep = False
 for arg in sys.argv:
 	if (arg == '-step'):
 		singleStep = True
-	elif (arg.startswith('solveLS_')):
-		argLSFuncName = arg
-	elif (arg.startswith('-erp=')):
+	elif (arg.startswith('solve')):
+		argSolveFuncName = arg
+	elif (arg.startswith('-iters=')):
+		spl = arg.split('=')
+		argIters = int(spl[1])
+	elif (arg.startswith('-erp')):
 		spl = arg.split('=')
 		argERP = float(spl[1])
 
