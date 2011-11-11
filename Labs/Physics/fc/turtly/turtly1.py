@@ -9,6 +9,7 @@
 import sys
 import math
 import time
+import random
 from gaussy import *
 import pyglet
 
@@ -186,7 +187,10 @@ def solveConstraintsLS(w, constraints, particles, erp, dt):
 	B = MulMDiag1(MinvDiag, Jt)
 	#PrintM(B)
 	JB = MulM(J, B)
-	#bias is zero
+
+	if dbg:
+		PrintM(JB, 'JB')
+
 	if dbg:
 		PrintM(intVel, 'intVel')
 		PrintM(extVel, 'extVel')
@@ -370,6 +374,9 @@ def stepMotion_(w):
 		w.momentum = w.momentum + speed * p.m
 
 
+def shuffleConstraints(w):
+	random.seed(0)
+	random.shuffle(w.constraints)	
 
 #--------------------------------
 #------------ RENDERING	---------
@@ -459,13 +466,15 @@ worldFillers.append(fillWorldLongCable1)
 argSolveFuncName = ''
 argIters = 1
 argERP = 1.0
+argShuffle = False
 
 def nextWorld():
 	global world
 	global worldFillers
 	global worldFillerIndex
 	global argSolveFuncName
-	
+	global argRand
+
 	world = World()
 	worldFillers[worldFillerIndex](world)
 	worldFillerIndex = (worldFillerIndex+1) % len(worldFillers)
@@ -478,6 +487,10 @@ def nextWorld():
 	
 	world.solveIters = argIters
 	world.ERP = argERP
+	
+	if (argShuffle):
+		shuffleConstraints(world)
+		
 
 
 def repeatWorld():
@@ -498,6 +511,10 @@ doMicroStep = False
 for arg in sys.argv:
 	if (arg == '-step'):
 		singleStep = True
+	if (arg == '-shuffle'):
+		argShuffle = True
+	elif (arg.startswith('solve')):
+		argSolveFuncName = arg
 	elif (arg.startswith('solve')):
 		argSolveFuncName = arg
 	elif (arg.startswith('-iters=')):
