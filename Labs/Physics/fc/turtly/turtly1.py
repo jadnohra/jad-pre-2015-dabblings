@@ -129,12 +129,10 @@ def createJacobianAndBias(constraints, particles, erp, dt):
 			if (particles[ct.p[0]].m > 0.0):
 				Jrow[Jb1] = vdir[0]
 				Jrow[Jb1+1] = vdir[1]
-			#else TODO add bias support for non zero static body: add to rhs d.v
 
 			if (particles[ct.p[1]].m > 0.0):
 				Jrow[Jb2] = -vdir[0]
 				Jrow[Jb2+1] = -vdir[1]
-			#else TODO add bias support for non zero static body: add to rhs d.v
 			
 			Bias[index][0] = -err * invDt * 1.0 * erp
 
@@ -173,6 +171,7 @@ def solveLS_GSC01(JB, RHS):
 
 
 def solveConstraints(constraints, particles, solveLinSystFunc, erp, dt):
+
 	if (len(constraints) == 0):
 		return
 
@@ -214,17 +213,6 @@ def solveConstraints(constraints, particles, solveLinSystFunc, erp, dt):
 	# Gaussian solver
 	#lbda = GaussSolve2(JB, RHS)
 
-	# Gauss-Seidel Solver
-	#print 'Will converge:', GaussSeidelWillConverge(JB, True), 'Might:', GaussSeidelMightConverge(JB, True)
-	
-	#lbda = GaussSeidelSolve2ZeroGuess(JB, RHS, IterObj(4, -1.0)) # 4 iter
-	
-	#iter = IterObj(50, 0.01)
-	#lbda = GaussSeidelSolve2ZeroGuess(JB, RHS, iter) # 0.01 maxerr, 50 iter
-	#print iter.it
-	#if iter.it >= 50:
-	#	print iter.it, 'iters,', iter.err, 'err'
-
 	if dbg:
 		PrintV(lbda)
 
@@ -240,6 +228,49 @@ def solveConstraints(constraints, particles, solveLinSystFunc, erp, dt):
 		imp = [ impulses[i*2+0][0], impulses[i*2+1][0] ]
 		#PrintV(imp)
 		particles[i].applyImpulse(imp, dt)
+
+
+def solveConstraintsSeqImpIter(constraints, particles, erp, dt):
+		
+	invDt = 1.0 / dt	
+
+	for index in range(len(constraints)):	
+		ct = constraints[index]
+
+		p0 = particles[ct.p[0]]
+		p1 = particles[ct.p[1]]
+		
+		if (p0.m > 0.0 or p1.m > 0.0):
+			
+			vdist = v2_sub(p0.pos, p1.pos)
+			err = v2_len(vdist) - ct.rl
+			vdir = v2_normalize(vdist)
+
+			dvel = v2_sub(p0.vel, p1.vel)
+			dvelProj = v2_dot(dvel, vdir)
+			bias = -err * invDt * 1.0 * erp
+
+			corrVel = v2_muls(vdir, bias - dvelProj)
+
+			invSumMass = 1.0 / (p0.m + p1.m)
+
+			if (p0.m > 0.0):
+				fac = p1.m * invSumMass
+				if fac == 0.0: 
+					fac = 1.0
+				imp0 = v2_muls(corrVel, fac * p0.m )
+				p0.applyImpulse(imp0, dt)	
+			if (p1.m > 0.0):
+				fac = p0.m * invSumMass
+				if fac == 0.0: 
+					fac = 1.0
+				imp1 = v2_muls(corrVel, -fac * p1.m )
+				p1.applyImpulse(imp1, dt)
+
+
+def solveConstraintsSeqImp(constraints, particles, erp, dt):
+	for i in range(16):
+		solveConstraintsSeqImpIter(constraints, particles, erp, dt)
 
 
 class DistConstraint:
@@ -296,7 +327,8 @@ def stepWorld(w, dt, corout):
 
 
 def solve(w):
-	solveConstraints(w.constraints, w.particles, w.solveLSFunc, w.ERP, w.dt)
+	#solveConstraints(w.constraints, w.particles, w.solveLSFunc, w.ERP, w.dt)
+	solveConstraintsSeqImp(w.constraints, w.particles, w.ERP, w.dt)
 	
 
 def applyExternalForces(w):
@@ -390,14 +422,14 @@ def fillWorldLongCable1(w):
 		p2 = len(w.particles)
 		w.particles.append(Particle([6.5,20.0], 0.1))
 		w.constraints.append(DistConstraint(p1, p2, 1.0))
-		w.g=0
+		#w.g=0
 
 
 	if 1:
-		fac = 3.8
+		fac = 3.0
 		r = 0.1
 		l = fac * 2.0
-		ct = fac * 8
+		ct = int(fac * 8)
 		
 		dl = l / ct	
 		p1 = len(w.particles)
