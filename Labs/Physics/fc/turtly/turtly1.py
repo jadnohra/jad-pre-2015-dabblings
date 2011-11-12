@@ -17,7 +17,6 @@ dbgPositions = False
 dbgSolver = False
 
 class World:
-	updateDt = 1.0/60.0
 	g = -9.8 * 1.0
 	timeScale = 1.0
 	timeStep = 1.0/60.0
@@ -425,9 +424,9 @@ def fillWorldLongCable1(w):
 
 
 	if 1:
-		fac = 3.0
-		r = 0.1
-		l = fac * 2.0
+		fac = 3.4
+		r = 0.22
+		l = fac * 3.0
 		ct = int(fac * 8)
 		
 		dl = l / ct	
@@ -441,7 +440,7 @@ def fillWorldLongCable1(w):
 			w.constraints.append(DistConstraint(p1, p2, dl))
 			p1 = p2
 
-
+		w.g=-40.0
 
 	if 0:	
 		for j in range(1, 5):
@@ -467,6 +466,7 @@ argSolveFuncName = ''
 argIters = 1
 argERP = 1.0
 argShuffle = False
+argDt = 1.0/60.0
 
 def nextWorld():
 	global world
@@ -490,7 +490,7 @@ def nextWorld():
 	
 	if (argShuffle):
 		shuffleConstraints(world)
-		
+	world.timeStep = argDt	
 
 
 def repeatWorld():
@@ -523,6 +523,10 @@ for arg in sys.argv:
 	elif (arg.startswith('-erp')):
 		spl = arg.split('=')
 		argERP = float(spl[1])
+	elif (arg.startswith('-dt')):
+		spl = arg.split('=')
+		argDt = 1.0/float(spl[1])
+
 
 nextWorld()
 
@@ -590,7 +594,7 @@ def on_key_press(symbol, modifiers):
 		doMicroStep = True	
 
 
-pyglet.clock.schedule_interval(update, 1.0/60.0)	
+pyglet.clock.schedule_interval(update, argDt)	
 pyglet.app.run()
 
 # arch -i386 python2.6 turtly1.py 
