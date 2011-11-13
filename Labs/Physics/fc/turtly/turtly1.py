@@ -467,6 +467,7 @@ argIters = 1
 argERP = 1.0
 argShuffle = False
 argDt = 1.0/60.0
+argG = None
 
 def nextWorld():
 	global world
@@ -474,6 +475,7 @@ def nextWorld():
 	global worldFillerIndex
 	global argSolveFuncName
 	global argRand
+	global argG
 
 	world = World()
 	worldFillers[worldFillerIndex](world)
@@ -490,8 +492,10 @@ def nextWorld():
 	
 	if (argShuffle):
 		shuffleConstraints(world)
-	world.timeStep = argDt	
+	world.timeStep = argDt
 
+	if (argG != None):
+		world.g = argG
 
 def repeatWorld():
 	global worldFillerIndex
@@ -505,12 +509,16 @@ window = pyglet.window.Window(800,600, config=config)
 fps_display = pyglet.clock.ClockDisplay(pyglet.font.load('Arial', 10), interval=0.1, format='%(fps).0f', color=(1.0, 1.0, 1.0, 0.5))
 singleStep = False
 doSingleStep = False
+doMultiStep = False
 microStep = False
 doMicroStep = False
 
 for arg in sys.argv:
 	if (arg == '-step'):
 		singleStep = True
+	if (arg == '-mstep'):
+		singleStep = True
+		doMultiStep = True
 	if (arg == '-shuffle'):
 		argShuffle = True
 	elif (arg.startswith('solve')):
@@ -526,6 +534,10 @@ for arg in sys.argv:
 	elif (arg.startswith('-dt')):
 		spl = arg.split('=')
 		argDt = 1.0/float(spl[1])
+	elif (arg.startswith('-g')):
+		spl = arg.split('=')
+		argG = float(spl[1])
+
 
 
 nextWorld()
@@ -551,10 +563,10 @@ def update(dt):
 	global doMicroStep
 	global singleStep
 	global doSingleStep
-
+	global doMultiStep
 
 	if singleStep:
-		if (doSingleStep):
+		if (doSingleStep) or (doMultiStep):
 			stepWorld(world, world.timeStep, False)
 			doSingleStep = False
 #	elif microStep:
