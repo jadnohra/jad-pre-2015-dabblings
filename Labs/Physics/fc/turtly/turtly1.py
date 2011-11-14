@@ -440,7 +440,7 @@ def fillWorldLongCable1(w):
 			w.constraints.append(DistConstraint(p1, p2, dl))
 			p1 = p2
 
-		w.g=-40.0
+		#w.g=-40.0
 
 	if 0:	
 		for j in range(1, 5):
