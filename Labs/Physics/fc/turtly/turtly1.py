@@ -10,11 +10,12 @@ import sys
 import math
 import time
 import random
-from gaussy import *
 import pyglet
+from gaussy import *
 
 dbgPositions = False
 dbgSolver = False
+doTestWorld = True
 
 class World:
 	g = -9.8 * 1.0
@@ -36,6 +37,8 @@ class World:
 	solveFunc = None
 	solveIters = 1 # only used for iterative solvers
 	ERP = 0.05
+
+	drawColor = None
 	
 	def __init__(self):
 		self.statics = []
@@ -47,7 +50,7 @@ class World:
 		self.clientUpdate = None
 		self.solveFunc = solveConstraintsLS
 		self.solveLSFunc = GaussSolve2
-
+		self.drawColor = None
 	
 
 class Particle:
@@ -392,21 +395,38 @@ def draw_box(x1, y1, x2, y2):
 	#pyglet.graphics.draw(4, pyglet.gl.GL_LINE_LOOP, ('v2f', (x1, y1, x2, y1, x2, y2, x1, y2)))
 
 def draw_line(x1, y1, x2, y2):
-	pyglet.graphics.draw(2, pyglet.gl.GL_LINES, ('v2f', (x1, y1, x2, y2)))
+	pyglet.graphics.draw(2, pyglet.gl.GL_LINES, ('v2f', (x1, y1, x2, y2)) )
 
 
-def draw_particle(x, y, r):
+def draw_particle(x, y, r, col):
+	if col == None:
+		col = (255,255,255,255)
 	vertices = []
 	for sc in particle_sincos:
 		vertices.append(x + r*sc[0])
 		vertices.append(y + r*sc[1])
-	pyglet.graphics.draw(particle_vcount, pyglet.gl.GL_LINE_LOOP, ('v2f', vertices))
+	pyglet.graphics.draw(particle_vcount, pyglet.gl.GL_LINE_LOOP, ('v2f', vertices), ('c4B', col*len(particle_sincos)) )
 
 
 #--------------------------------
 #------------ WORLDS ------------
 #--------------------------------
 	
+class Worlds:
+	worlds = None
+
+	def __init__(self):
+		self.worlds = []
+
+
+def stepWorlds(worlds, fixedDt, corout):
+	for w in worlds.worlds:
+		if fixedDt > 0.0:
+			stepWorld(w, fixedDt, corout)
+		else:
+			stepWorld(w, w.timeStep, corout)
+
+
 worldFillers = []
 worldFillerIndex = 0
 
@@ -424,7 +444,7 @@ def fillWorldLongCable1(w):
 
 
 	if 1:
-		fac = 3.4
+		fac = 2.0
 		r = 0.22
 		l = fac * 3.0
 		ct = int(fac * 8)
@@ -469,7 +489,58 @@ argShuffle = False
 argDt = 1.0/60.0
 argG = None
 
+
+def testWorld():
+	global worlds
+	global world
+	global worldFillers
+	global worldFillerIndex
+	global argSolveFuncName
+	global argRand
+	global argG
+
+	worlds = Worlds()
+	worlds.worlds = []
+
+	for ti in range(3):
+
+		world = World()
+		worldFillers[worldFillerIndex](world)
+		#worldFillerIndex = (worldFillerIndex+1) % len(worldFillers)
+		#pyglet.clock.schedule_interval(update, world.updateDt)	
+		if (argSolveFuncName.startswith('solveLS')):
+			world.solveFunc = solveConstraintsLS
+			world.solveLSFunc = globals()[argSolveFuncName]
+		elif (argSolveFuncName.startswith('solveSI')):
+			world.solveFunc = solveConstraintsSI
+
+		if ti == 0:
+			world.solveFunc = solveConstraintsLS
+			world.solveLSFunc = globals()['solveLS_G']
+			world.drawColor = (255,255,255,255)
+		if ti == 1:
+			world.solveFunc = solveConstraintsLS
+			world.solveLSFunc = globals()['solveLS_GS']
+			world.drawColor = (200,200,0,255)
+		if ti == 2:
+			world.solveFunc = solveConstraintsSI
+			world.drawColor = (200,0,200,255)
+
+		world.solveIters = argIters
+		world.ERP = argERP
+	
+		if (argShuffle):
+			shuffleConstraints(world)
+		world.timeStep = argDt
+
+		if (argG != None):
+			world.g = argG
+
+		worlds.worlds.append( world )
+
+
 def nextWorld():
+	global worlds
 	global world
 	global worldFillers
 	global worldFillerIndex
@@ -496,6 +567,10 @@ def nextWorld():
 
 	if (argG != None):
 		world.g = argG
+
+	worlds = Worlds()
+	worlds.worlds = [ world ]
+
 
 def repeatWorld():
 	global worldFillerIndex
@@ -539,8 +614,10 @@ for arg in sys.argv:
 		argG = float(spl[1])
 
 
-
-nextWorld()
+if doTestWorld:
+	testWorld()
+else:
+	nextWorld()
 
 @window.event
 def on_draw():
@@ -553,12 +630,14 @@ def on_draw():
 	mom = pyglet.text.Label('{0:.2f} - {1:.2f}'.format(world.momentum, world.momentum/max(1,len(world.particles))), font_name='Arial', font_size=10, x=0, y=window.height,anchor_x='left', anchor_y='top')
 	mom.draw()
 		
-	
-	for p in world.particles:
-		draw_particle(p.pos[0] * ppm, p.pos[1] * ppm, p.radius * ppm)
+	for w in worlds.worlds:	
+		for p in w.particles:
+			draw_particle(p.pos[0] * ppm, p.pos[1] * ppm, p.radius * ppm, w.drawColor)
 		
 
 def update(dt):
+	global worlds
+	global world
 	global microStep
 	global doMicroStep
 	global singleStep
@@ -567,14 +646,16 @@ def update(dt):
 
 	if singleStep:
 		if (doSingleStep) or (doMultiStep):
-			stepWorld(world, world.timeStep, False)
+			#stepWorld(world, world.timeStep, False)
+			stepWorlds(worlds, -1.0, False)
 			doSingleStep = False
 #	elif microStep:
 #		if (doMicroStep):
 #			stepWorld(world, world.timeStep, True)
 #			doMicroStep = False
 	else:
-		stepWorld(world, dt, False)
+		#stepWorld(world, dt, False)
+		stepWorlds(worlds, dt, False)
 
 
 
