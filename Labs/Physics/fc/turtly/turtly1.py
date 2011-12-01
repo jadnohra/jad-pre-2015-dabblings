@@ -202,6 +202,7 @@ def solveConstraintsLS(w, constraints, particles, erp, dt):
 	RHS_JV = MulM(J, RHS_V)
 	#RHS = NegM(RHS_JV)
 	RHS = SubM(Bias, RHS_JV)
+	#RHS = Bias
 
 	#PrintM(JB)
 	#PrintM(RHS)
@@ -247,6 +248,8 @@ def solveConstraintsSI_iter(constraints, particles, erp, dt):
 			dvel = v2_sub(p0.vel, p1.vel)
 			dvelProj = v2_dot(dvel, vdir)
 			bias = -err * invDt * 1.0 * erp
+
+			#dvelProj = 0.0
 
 			corrVel = v2_muls(vdir, bias - dvelProj)
 
@@ -444,7 +447,7 @@ def fillWorldLongCable1(w):
 
 
 	if 1:
-		fac = 2.0
+		fac = 1.0
 		r = 0.22
 		l = fac * 3.0
 		ct = int(fac * 8)
