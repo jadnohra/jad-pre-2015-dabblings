@@ -65,6 +65,19 @@ def Eye(r,c):
 	return M
 
 
+def CopyM(M):
+	r1 = len(M)
+	c1 = len(M[0])
+	
+	N = Matrix(r1, c1, None)
+
+	for i in range(r1):
+		rm = M[i]
+		rn = N[i]
+		for j in range(c1):
+			rn[j] = rm[j]
+	return N		
+
 
 def NegM(M):
 	r1 = len(M)
@@ -526,5 +539,26 @@ def Test():
 	PrintV(GaussSeidelSolve( M, sol, iter) )
 	print iter.err, 'error in', iter.it, 'iterations'
 
+
+	# other tests
+	PrintV(GaussSolve([ [1, -1, 10], [1, -2, 0] ]))
+	PrintV(GaussSeidelSolveZeroGuess([ [1, -1, 10], [1, -2, 0] ], IterObj(1, -1.0)))
+	PrintV(GaussSeidelSolveZeroGuess([ [1, -1, 10], [1, -2, 0] ], IterObj(2, -1.0)))
+	PrintV(GaussSeidelSolveZeroGuess([ [1, -1, 10], [1, -2, 0] ], IterObj(3, -1.0)))
+	PrintV(GaussSeidelSolveZeroGuess([ [1, -1, 10], [1, -2, 0] ], IterObj(4, -1.0)))
+	PrintV(GaussSeidelSolveZeroGuess([ [1, -1, 10], [1, -2, 0] ], IterObj(5, -1.0)))
+	
+	for i in range(10):
+		m1 = 1.0 / (1.0 + 10.0 * (i))
+		m2 = 1.0
+		g = 10.0
+		dt = 1.0
+		e = g * dt
+		print 'Mass Ratio', m2 / m1
+		lin_syst = [ [1.0/m1, -1.0/m1, e], [1.0/m1, -(1.0/m1 + 1.0/m2), 0] ]
+		PrintV(GaussSolve( CopyM(lin_syst) ))
+		iter = IterObj(1000, 0.001)
+		PrintV(GaussSeidelSolveZeroGuess( CopyM(lin_syst) , iter))
+		print iter.err, 'error in', iter.it, 'iterations'
 
 #Test()
