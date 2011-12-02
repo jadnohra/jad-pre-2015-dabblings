@@ -482,12 +482,14 @@ worldFillers.append(fillWorldLongCable1)
 
 def fillWorldSupportCable1(w):
 
+	straight = 1
+
 	if 1:	
-		#for k in range (2):
-		if 1:
+		for k in range (2):
+		#if 1:
 			k = 1
-			#for j in range(1, 4):
-			if 1:
+			for j in range(1, 4):
+			#if 1:
 				j = 2
 				tl = 5.0
 				rf = 0.5
@@ -501,19 +503,23 @@ def fillWorldSupportCable1(w):
 				p1 = len(w.particles)
 				w.particles.append(Particle([sx,sy], rad))	
 				w.particles[-1].m = 0.0
-				for i in range(1, num-1):
-				#for i in range(1, num):
+				rr = num
+				dl = 1.0/(num)
+				if straight:
+					rr = num-1
+					dl = 1.0/num-1
+				for i in range(1, rr):
 					p2 = p1 + 1
 					#w.particles.append(Particle([sx+ox*i/(num),sy], rad))
-					w.particles.append(Particle([sx+ox*i/(num-1),sy], rad))
-					w.constraints.append(DistConstraint(p1, p2, 1.0 * tl/(num-1)))
+					w.particles.append(Particle([sx+ox*i*dl,sy], rad))
+					w.constraints.append(DistConstraint(p1, p2, 1.0 * ox/dl))
 					if i == num/2:
 						w.particles[-1].m = 10.0
 					p1 = p2
 				p2 = p1 + 1	
 				w.particles.append(Particle([sx+tl,sy], rad))		
 				w.particles[-1].m = 0.0
-				w.constraints.append(DistConstraint(p1, p2, 1.0 * tl/(num-1)))
+				w.constraints.append(DistConstraint(p1, p2, 1.0 * ox/dl))
 
 
 
