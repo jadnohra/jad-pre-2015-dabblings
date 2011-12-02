@@ -97,7 +97,7 @@ def createMinvDiag(particles):
 def createExtVel(particles, dt):
 	extVel = Matrix( len(particles)*2, 1, 0.0 )
 	for i in range(len(particles)):
-		vel = v2_muls( particles[i].acc, particles[i].m * dt )
+		vel = v2_muls( particles[i].acc, dt )
 		extVel[2*i+0][0] = vel[0]
 		extVel[2*i+1][0] = vel[1]
 	return extVel	
@@ -463,8 +463,6 @@ def fillWorldLongCable1(w):
 			w.constraints.append(DistConstraint(p1, p2, dl))
 			p1 = p2
 
-		#w.g=-40.0
-
 	if 0:	
 		for j in range(1, 5):
 			tl = 5.0
@@ -480,6 +478,47 @@ def fillWorldLongCable1(w):
 
 worldFillerIndex = len(worldFillers)
 worldFillers.append(fillWorldLongCable1)
+
+
+def fillWorldSupportCable1(w):
+
+	if 1:	
+		#for k in range (2):
+		if 1:
+			k = 1
+			#for j in range(1, 4):
+			if 1:
+				j = 2
+				tl = 5.0
+				rf = 0.5
+				sx = 5.0+(j-1)*10
+				sy = 10.0+k*10
+				ox = tl
+				#num=j*5
+				num=j*5+1
+				num=3
+				rad = 0.05+k*0.1
+				p1 = len(w.particles)
+				w.particles.append(Particle([sx,sy], rad))	
+				w.particles[-1].m = 0.0
+				for i in range(1, num-1):
+				#for i in range(1, num):
+					p2 = p1 + 1
+					#w.particles.append(Particle([sx+ox*i/(num),sy], rad))
+					w.particles.append(Particle([sx+ox*i/(num-1),sy], rad))
+					w.constraints.append(DistConstraint(p1, p2, 1.0 * tl/(num-1)))
+					if i == num/2:
+						w.particles[-1].m = 10.0
+					p1 = p2
+				p2 = p1 + 1	
+				w.particles.append(Particle([sx+tl,sy], rad))		
+				w.particles[-1].m = 0.0
+				w.constraints.append(DistConstraint(p1, p2, 1.0 * tl/(num-1)))
+
+
+
+worldFillers.append(fillWorldSupportCable1)
+
 
 #--------------------------------
 #------------ MAIN	-------------
