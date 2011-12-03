@@ -514,8 +514,8 @@ def fillWorldSupportCable1(w):
 				sy = 10.0+k*10
 				ox = tl
 				num=j*5
-				#num=j*5+1
-				num=3
+				num=j*5+1
+				#num=3
 				rad = 0.05+k*0.1
 				p1 = len(w.particles)
 				w.particles.append(Particle([sx,sy], rad))	
@@ -529,8 +529,8 @@ def fillWorldSupportCable1(w):
 					#w.particles.append(Particle([sx+ox*i/(num),sy], rad))
 					w.particles.append(Particle([sx+ox*i*dl,sy], rad))
 					w.constraints.append(DistConstraint(p1, p2, 1.0 * ox/dl))
-				#	if i == num/2:
-				#		w.particles[-1].m = 10.0
+					if i == num/2:
+						w.particles[-1].m = 10.0
 					p1 = p2
 				p2 = p1 + 1	
 				w.particles.append(Particle([sx+tl,sy], rad))		
@@ -760,3 +760,4 @@ pyglet.clock.schedule_interval(update, argDt)
 pyglet.app.run()
 
 # arch -i386 python2.6 turtly1.py 
+# arch -i386 python2.6 turtly1.py solveLS_G -iters=8 -erp=0.00 -g=-10.0 -shuffle -mstep -avgJacs
