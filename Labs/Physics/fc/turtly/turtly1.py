@@ -37,6 +37,7 @@ class World:
 	solveFunc = None
 	solveIters = 1 # only used for iterative solvers
 	ERP = 0.05
+	avgJacs = False
 
 	drawColor = None
 	
@@ -114,8 +115,9 @@ def createIntVel(particles, dt):
 	return intVel	
 
 
-def createJacobianAndBias(constraints, particles, erp, dt):
-		
+def createJacobianAndBias(constraints, particles, erp, avgJacs, dt):
+	
+
 	invDt = 1.0 / dt	
 	J = Matrix( len(constraints), len(particles) * 2, 0.0 )
 	Bias = Matrix( len(constraints), 1, 0.0 )
@@ -132,6 +134,13 @@ def createJacobianAndBias(constraints, particles, erp, dt):
 			err = v2_len(vdist) - ct.rl
 			vdir = v2_normalize(vdist)
 
+			# average predictive jacobians
+			if avgJacs:
+				n_pos0 = v2_add(particles[ct.p[0]].pos,	v2_muls(particles[ct.p[0]].vel, 0.5 * dt))
+				n_pos1 = v2_add(particles[ct.p[1]].pos,	v2_muls(particles[ct.p[1]].vel, 0.5 * dt))
+				vdist2 = v2_sub(n_pos0, n_pos1)
+				vdir = v2_normalize(vdist2)
+			
 			if (particles[ct.p[0]].m > 0.0):
 				Jrow[Jb1] = vdir[0]
 				Jrow[Jb1+1] = vdir[1]
@@ -147,7 +156,15 @@ def createJacobianAndBias(constraints, particles, erp, dt):
 
 def solveLS_G(JB, RHS, iters):
 	# Gaussian
-	return GaussSolve2(JB, RHS)
+	#j = CopyM(JB)
+	#r = CopyM(RHS)
+	solution = GaussSolve2(JB, RHS)
+	
+	# hack for 3 point straight suspended chain, infinite solutions? impossible? jacobian cannot fix velocity?
+	#if (solution[0] == None):
+	#	return solveLS_GS(j, r, 4)
+
+	return solution	
 
 
 def solveLS_GS(JB, RHS, iters):
@@ -172,7 +189,7 @@ def solveConstraintsLS(w, constraints, particles, erp, dt):
 
 	dbg = dbgSolver	
 
-	J_Bias = createJacobianAndBias(constraints, particles, erp, dt)
+	J_Bias = createJacobianAndBias(constraints, particles, erp, w.avgJacs, dt)
 	J = J_Bias[0]
 	Bias = J_Bias[1]
 
@@ -447,7 +464,7 @@ def fillWorldLongCable1(w):
 
 
 	if 1:
-		fac = 1.0
+		fac = 3.0
 		r = 0.22
 		l = fac * 3.0
 		ct = int(fac * 8)
@@ -485,36 +502,35 @@ def fillWorldSupportCable1(w):
 	straight = 1
 
 	if 1:	
-		for k in range (2):
-		#if 1:
+		#for k in range (2):
+		if 1:
 			k = 1
-			for j in range(1, 4):
-			#if 1:
+			#for j in range(1, 4):
+			if 1:
 				j = 2
 				tl = 5.0
 				rf = 0.5
 				sx = 5.0+(j-1)*10
 				sy = 10.0+k*10
 				ox = tl
-				#num=j*5
-				num=j*5+1
+				num=j*5
+				#num=j*5+1
 				num=3
 				rad = 0.05+k*0.1
 				p1 = len(w.particles)
 				w.particles.append(Particle([sx,sy], rad))	
 				w.particles[-1].m = 0.0
 				rr = num
-				dl = 1.0/(num)
 				if straight:
 					rr = num-1
-					dl = 1.0/num-1
+				dl = 1.0/rr
 				for i in range(1, rr):
 					p2 = p1 + 1
 					#w.particles.append(Particle([sx+ox*i/(num),sy], rad))
 					w.particles.append(Particle([sx+ox*i*dl,sy], rad))
 					w.constraints.append(DistConstraint(p1, p2, 1.0 * ox/dl))
-					if i == num/2:
-						w.particles[-1].m = 10.0
+				#	if i == num/2:
+				#		w.particles[-1].m = 10.0
 					p1 = p2
 				p2 = p1 + 1	
 				w.particles.append(Particle([sx+tl,sy], rad))		
@@ -536,6 +552,7 @@ argERP = 1.0
 argShuffle = False
 argDt = 1.0/60.0
 argG = None
+argAvgJacs = False
 
 
 def testWorld():
@@ -546,6 +563,7 @@ def testWorld():
 	global argSolveFuncName
 	global argRand
 	global argG
+	global argAvgJacs
 
 	worlds = Worlds()
 	worlds.worlds = []
@@ -576,6 +594,7 @@ def testWorld():
 
 		world.solveIters = argIters
 		world.ERP = argERP
+		world.avgJacs = argAvgJacs
 	
 		if (argShuffle):
 			shuffleConstraints(world)
@@ -595,6 +614,7 @@ def nextWorld():
 	global argSolveFuncName
 	global argRand
 	global argG
+	global argAvgJacs
 
 	world = World()
 	worldFillers[worldFillerIndex](world)
@@ -608,7 +628,8 @@ def nextWorld():
 	
 	world.solveIters = argIters
 	world.ERP = argERP
-	
+	world.avgJacs = argAvgJacs
+
 	if (argShuffle):
 		shuffleConstraints(world)
 	world.timeStep = argDt
@@ -639,13 +660,13 @@ doMicroStep = False
 for arg in sys.argv:
 	if (arg == '-step'):
 		singleStep = True
-	if (arg == '-mstep'):
+	elif (arg == '-mstep'):
 		singleStep = True
 		doMultiStep = True
-	if (arg == '-shuffle'):
+	elif (arg == '-shuffle'):
 		argShuffle = True
-	elif (arg.startswith('solve')):
-		argSolveFuncName = arg
+	elif (arg == '-avgJacs'):
+		argAvgJacs = True
 	elif (arg.startswith('solve')):
 		argSolveFuncName = arg
 	elif (arg.startswith('-iters=')):
