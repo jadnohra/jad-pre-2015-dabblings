@@ -256,7 +256,7 @@ def stepWorld(w, dt, corout):
 		w.staticContactPairs = allPairs[0]
 		w.contactPairs = allPairs[1]
 		
-		for i in range(16):
+		for i in range(8):
 			applyForces(w)
 
 		resolveContacts(w)

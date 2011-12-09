@@ -459,6 +459,7 @@ def fillWorldLongCable1(w):
 		w.particles[-1].m = 0.0
 		p2 = len(w.particles)
 		w.particles.append(Particle([6.5,20.0], 0.1))
+		w.particles[-1].m = 1.0
 		w.constraints.append(DistConstraint(p1, p2, 1.0))
 		#w.g=0
 
@@ -468,6 +469,7 @@ def fillWorldLongCable1(w):
 		r = 0.22
 		l = fac * 3.0
 		ct = int(fac * 8)
+		ct = 3
 		
 		dl = l / ct	
 		p1 = len(w.particles)
@@ -477,8 +479,11 @@ def fillWorldLongCable1(w):
 		for pi in range(1, ct):
 			p2 = len(w.particles)
 			w.particles.append(Particle([10.0+pi*dl,20.0], r))
+			w.particles[-1].m = 1.0
 			w.constraints.append(DistConstraint(p1, p2, dl))
 			p1 = p2
+
+		w.particles[-1].m = 10000.0
 
 	if 0:	
 		for j in range(1, 5):
@@ -515,7 +520,7 @@ def fillWorldSupportCable1(w):
 				ox = tl
 				num=j*5
 				num=j*5+1
-				#num=3
+				num=5
 				rad = 0.05+k*0.1
 				p1 = len(w.particles)
 				w.particles.append(Particle([sx,sy], rad))	
@@ -528,9 +533,10 @@ def fillWorldSupportCable1(w):
 					p2 = p1 + 1
 					#w.particles.append(Particle([sx+ox*i/(num),sy], rad))
 					w.particles.append(Particle([sx+ox*i*dl,sy], rad))
+					w.particles[-1].m = 1.0
 					w.constraints.append(DistConstraint(p1, p2, 1.0 * ox/dl))
 					if i == num/2:
-						w.particles[-1].m = 10.0
+						w.particles[-1].m = 1000.0
 					p1 = p2
 				p2 = p1 + 1	
 				w.particles.append(Particle([sx+tl,sy], rad))		
@@ -658,6 +664,11 @@ microStep = False
 doMicroStep = False
 
 for arg in sys.argv:
+	
+	if (arg == '-dbgSolver'):
+		dbgSolver = True
+	if (arg == '-dbgPositions'):
+		dbgPositions = True
 	if (arg == '-step'):
 		singleStep = True
 	elif (arg == '-mstep'):
