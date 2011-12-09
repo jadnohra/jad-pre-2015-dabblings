@@ -20,8 +20,19 @@ def v2_lenSq(v1):
 def v2_len(v1):
 	return math.sqrt(v2_lenSq(v1))
 	
+def v2_distSq(p1, p2):
+	vec = v2_sub(p2, p1)
+	return v2_lenSq(vec)
+
+def v2_dist(p1, p2):
+	vec = v2_sub(p2, p1)
+	return v2_len(vec)
+
 def v2_muls(v1, s):
 	return [v1[0]*s, v1[1]*s]	
+
+def v2_copy(v):
+	return [v[0], v[1]] 
 
 def v2_normalize(v1):
 	l = v2_len(v1)
@@ -29,7 +40,15 @@ def v2_normalize(v1):
 		return v2_muls(v1, 1.0/l)
 	return v1
 
+def v2_angle(v1,v2):
+	vec = v2_sub(v2, v1)
+	return math.atan2(vec[1], vec[0])
 
+def v2_rot(v1,a):
+	c = math.cos(a)
+	s = math.sin(a)
+	ret = [ v1[0]*c + v1[1]*(-s), v1[0]*s + v1[1]*(c) ]
+	return ret
 
 def PrintM(inMatrix, inName):
 	rows = len(inMatrix)
