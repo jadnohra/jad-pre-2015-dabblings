@@ -1,3 +1,4 @@
+import sys
 import pyglet
 import math
 import time
@@ -154,6 +155,121 @@ class DoublePendulumRK4(DoublePendulum):
 	def __init__(self, particles, p0, p1, p2):
 		DoublePendulum.__init__(self, particles, p0,p1,p2)
 
+
+	#indices th1,w1,th2,w2
+	@staticmethod
+	def derivs(M1,M2,L1,L2,G, xin, yin, dydx):
+
+		dydx[0] = yin[1] 
+  
+		del1 = yin[2]-yin[0]
+		den1 = (M1+M2)*L1 - M2*L1*math.cos(del1)*math.cos(del1)
+		dydx[1] = (M2*L1*yin[1]*yin[1]*math.sin(del1)*math.cos(del1) + M2*G*math.sin(yin[2])*math.cos(del1) + M2*L2*yin[3]*yin[3]*math.sin(del1) - (M1+M2)*G*math.sin(yin[0]))/den1
+
+		dydx[2] = yin[3]
+
+		den2 = (L2/L1)*den1
+		dydx[3] = (-M2*L2*yin[3]*yin[3]*math.sin(del1)*math.cos(del1) + (M1+M2)*G*math.sin(yin[0])*math.cos(del1)  - (M1+M2)*L1*yin[1]*yin[1]*math.sin(del1) - (M1+M2)*G*math.sin(yin[2]))/den2
+
+
+	@staticmethod
+	def RK4(M1,M2,L1,L2,G,h,xin,yin,yout):
+		dydx=[0.0]*4
+		dydxt=[0.0]*4
+		yt=[0.0]*4
+		k1=[0.0]*4
+		k2=[0.0]*4
+		k3=[0.0]*4
+		k4=[0.0]*4
+  
+		hh = 0.5*h
+		xh = xin + hh 
+  
+		DoublePendulumRK4.derivs(M1,M2,L1,L2,G, xin, yin, dydx)
+		for i in range(4):
+			k1[i] = h*dydx[i]
+			yt[i] = yin[i] + 0.5*k1[i]
+	
+		DoublePendulumRK4.derivs(M1,M2,L1,L2,G, xh, yt, dydxt)
+		for i in range(4):
+			k2[i] = h*dydxt[i]
+			yt[i] = yin[i] + 0.5*k2[i]
+	
+		DoublePendulumRK4.derivs(M1,M2,L1,L2,G, xh, yt, dydxt)
+		for i in range(4):
+			k3[i] = h*dydxt[i]
+			yt[i] = yin[i] + k3[i]
+	
+		DoublePendulumRK4.derivs(M1,M2,L1,L2,G, xin + h, yt, dydxt)
+		for i in range(4):
+			k4[i] = h*dydxt[i]
+			yout[i] = yin[i] + k1[i]/6. + k2[i]/3. + k3[i]/3. + k4[i]/6.
+
+
+	def step(self, g, particles, dt):
+
+		step_dt = self.dt
+		if self.dt == -1.0:
+			step_dt = dt
+
+		steps = dt / step_dt 
+		steps = steps + self.restSteps
+		
+		g=-g
+
+		for i in range(int(steps)):
+
+		#	print 'RK4', self.fixed, self.p[0], self.p[1]
+			
+			p1 = particles[self.p[0]]
+			p2 = particles[self.p[1]]
+			m1 = p1.m
+			m2 = p2.m
+			L1 = self.l[0]
+			L2 = self.l[1]
+			halfpi = 0.5*math.pi
+			th1 = v2_angle(particles[self.fixed].pos, p1.pos)+halfpi
+			th2 = v2_angle(p1.pos, p2.pos)+halfpi
+			w1 = self.w[0]
+			w2 = self.w[1]
+			h=step_dt
+
+			xin=0.0 #unused
+			yin=[th1,w1,th2,w2]
+			yout=[0.0,0.0,0.0,0.0]
+			DoublePendulumRK4.RK4(m1,m2,L1,L2,g,h,xin,yin,yout)
+
+			new_w1 = yout[1]
+			new_w2 = yout[3]
+	
+			new_th1 = yout[0]
+			new_th2 = yout[2]
+	
+			self.w[0] = new_w1
+			self.w[1] = new_w2
+	
+			ref = [1.0, 0.0]
+			dp1 = v2_rot( ref, new_th1-halfpi )
+			dp2 = v2_rot( ref, new_th2-halfpi )
+	
+			p0 = particles[self.fixed]
+			
+			invDt = 1.0/step_dt
+			
+			old_p1 = v2_copy(p1.pos)
+			p1.pos = v2_add(p0.pos, v2_muls(dp1, L1))
+			p1.vel = v2_muls(v2_sub(p1.pos, old_p1), invDt)
+			
+			old_p2 = v2_copy(p2.pos)
+			p2.pos = v2_add(p1.pos, v2_muls(dp2, L2))
+			p2.vel = v2_muls(v2_sub(p2.pos, old_p2), invDt)
+
+
+		if ( float(int(steps)) != steps):
+			self.restSteps = 1
+
+
+
 	@staticmethod
 	def func_w(g, w1, w2, th1, th2, m1, m2, L1, L2):
 		w1sq = w1*w1
@@ -189,7 +305,7 @@ class DoublePendulumRK4(DoublePendulum):
 	#def integ_th(h, w1, w2):
 		
 
-	def step(self, g, particles, dt):
+	def step_old(self, g, particles, dt):
 
 		step_dt = self.dt
 		if self.dt == -1.0:
@@ -250,7 +366,10 @@ class DoublePendulumRK4(DoublePendulum):
 
 
 def stepWorld(w, dt, corout):
-	
+
+	if dt == -1.0:
+		dt = w.timeStep
+
 	w.perfTime = time.time()
 	w.corout = corout
 	
@@ -341,6 +460,8 @@ def draw_particle(x, y, r):
 	
 worldFillers = []
 worldFillerIndex = 0
+argDt = 1.0/60.0
+argG = None
 
 
 def setupPendulum(w, offset):
@@ -354,7 +475,7 @@ def setupPendulum(w, offset):
 		
 		p1 = len(particles)
 		particles.append(Particle(v2_add(offset, [1.0,0.0]), 0.1))
-		particles[-1].m = 1.0
+		particles[-1].m = 100.0
 		
 		p2 = len(particles)
 		particles.append(Particle(v2_add(offset, [1.0,-1.0]), 0.1))
@@ -386,31 +507,31 @@ def fillWorldLongCable1(w):
 			w.pendulums.append(createPendulum(i, particles, ps))
 			w.pendulums[-1].dt = 1.0/(60.0)
 	
-		if 1:
+		if 0:
 			ps = setupPendulum(w, [off[0]+ox, off[1]])
 			ox = ox + 4.0
 			w.pendulums.append(createPendulum(i, particles, ps))
 			w.pendulums[-1].dt = 1.0/(60.0)
 	
-		if 1:
+		if 0:
 			ps = setupPendulum(w, [off[0]+ox, off[1]])
 			ox = ox + 4.0
 			w.pendulums.append(createPendulum(i, particles, ps))
 			w.pendulums[-1].dt = 1.0/(60.0*2.0)
 	
-		if 1:
+		if 0:
 			ps = setupPendulum(w, [off[0]+ox, off[1]])
 			ox = ox + 4.0
 			w.pendulums.append(createPendulum(i, particles, ps))
 			w.pendulums[-1].dt = 1.0/(60.0*8.0)
 	
-		if 1:
+		if 0:
 			ps = setupPendulum(w, [off[0]+ox, off[1]])
 			ox = ox + 4.0
 			w.pendulums.append(createPendulum(i, particles, ps))
 			w.pendulums[-1].dt = 1.0/(60.0*16.0)
 
-		if 1:
+		if 0:
 			ps = setupPendulum(w, [off[0]+ox, off[1]])
 			ox = ox + 4.0
 			w.pendulums.append(createPendulum(i, particles, ps))
@@ -430,6 +551,12 @@ def nextWorld():
 	worldFillers[worldFillerIndex](world)
 	worldFillerIndex = (worldFillerIndex+1) % len(worldFillers)
 
+	world.timeStep = argDt
+
+	if (argG != None):
+		world.g = argG
+
+
 def repeatWorld():
 	global worldFillerIndex
 	worldFillerIndex = (len(worldFillers) + worldFillerIndex-1) % len(worldFillers)
@@ -444,8 +571,23 @@ window = pyglet.window.Window(800,600, config=config)
 fps_display = pyglet.clock.ClockDisplay(pyglet.font.load('Arial', 10), interval=0.1, format='%(fps).0f', color=(1.0, 1.0, 1.0, 0.5))
 singleStep = False
 doSingleStep = False
+doMultiStep = False
 microStep = False
 doMicroStep = False
+
+for arg in sys.argv:
+	
+	if (arg == '-step'):
+		singleStep = True
+	elif (arg == '-mstep'):
+		singleStep = True
+		doMultiStep = True
+	elif (arg.startswith('-dt')):
+		spl = arg.split('=')
+		argDt = 1.0/float(spl[1])
+	elif (arg.startswith('-g')):
+		spl = arg.split('=')
+		argG = float(spl[1])
 
 @window.event
 def on_draw():
@@ -497,21 +639,26 @@ def on_draw():
 			draw_line(info.p[0]*ppm, info.p[1]*ppm, pt2[0]*ppm, pt2[1]*ppm)
 
 def update(dt):
+	global worlds
+	global world
 	global microStep
 	global doMicroStep
 	global singleStep
 	global doSingleStep
+	global doMultiStep
 
 	if singleStep:
-		if (doSingleStep):
-			stepWorld(world, world.timeStep, False)
+		if (doSingleStep) or (doMultiStep):
+			#stepWorld(world, world.timeStep, False)
+			stepWorld(world, -1.0, False)
 			doSingleStep = False
 #	elif microStep:
 #		if (doMicroStep):
 #			stepWorld(world, world.timeStep, True)
 #			doMicroStep = False
 	else:
-		stepWorld(world, 1.0/60.0, False)
+		#stepWorld(world, dt, False)
+		stepWorld(world, dt, False)
 
 
 
@@ -543,7 +690,7 @@ def on_key_press(symbol, modifiers):
 		doMicroStep = True	
 
 
-pyglet.clock.schedule_interval(update, 1.0/60.0)	
+pyglet.clock.schedule_interval(update, 1.0/30.0)	
 pyglet.app.run()
 
 #arch -i386 python2.6 doublependulum.py
