@@ -70,6 +70,7 @@ class DoublePendulum:
 		self.w = [0.0, 0.0]
 
 
+#tt_=0
 class DoublePendulumEuler(DoublePendulum):		
 
 	def __init__(self, particles, p0, p1, p2):
@@ -83,10 +84,12 @@ class DoublePendulumEuler(DoublePendulum):
 
 		steps = dt / step_dt
 		steps = steps + self.restSteps
-		
-		
-		for i in range(steps):
+		#print 'Euler', steps, step_dt, self.fixed, self.p[0], self.p[1]
 
+		g=-g
+
+		for i in range(int(steps)):
+			
 			p1 = particles[self.p[0]]
 			p2 = particles[self.p[1]]
 			m1 = p1.m
@@ -100,7 +103,6 @@ class DoublePendulumEuler(DoublePendulum):
 			w1sq = w1*w1
 			w2 = self.w[1]
 			w2sq = w2*w2
-			g=-g
 			
 			
 			w1p_n = ( ( -g*(2.0*m1+m2)*math.sin(th1) ) - ( m2*g*math.sin(th1-2.0*th2) ) - ( 2.0*math.sin(th1-th2) * m2 * (w2sq*L2 + w1sq*L1*math.cos(th1-th2)  ) ) )
@@ -110,10 +112,114 @@ class DoublePendulumEuler(DoublePendulum):
 			w2p_n = ( 2.0*math.sin(th1-th2) * (w1sq * L1 * (m1+m2) + g*(m1+m2)*math.cos(th1) + w2sq*L2*m2*math.cos(th1-th2 ) ) )
 			w2p_d = L2* ( 2.0*m1 + m2 - m2*math.cos(2.0*th1-2.0*th2) )
 			w2p = w2p_n / w2p_d
-	
-	
+		
 			new_w1 = w1 + w1p*step_dt
 			new_w2 = w2 + w2p*step_dt
+	
+			new_th1 = th1 + w1*step_dt
+			new_th2 = th2 + w2*step_dt
+	
+			#global tt_
+			#print tt_,w1,w2,th1,th2,new_w1,new_w2,new_th1,new_th2,p1.pos[0],p1.pos[1],p2.pos[0],p2.pos[1]
+			#tt_=tt_+1
+
+			self.w[0] = new_w1
+			self.w[1] = new_w2
+	
+			ref = [1.0, 0.0]
+			dp1 = v2_rot( ref, new_th1-halfpi )
+			dp2 = v2_rot( ref, new_th2-halfpi )
+	
+			p0 = particles[self.fixed]
+			
+			invDt = 1.0/step_dt
+			
+			old_p1 = v2_copy(p1.pos)
+			p1.pos = v2_add(p0.pos, v2_muls(dp1, L1))
+			p1.vel = v2_muls(v2_sub(p1.pos, old_p1), invDt)
+			
+			old_p2 = v2_copy(p2.pos)
+			p2.pos = v2_add(p1.pos, v2_muls(dp2, L2))
+			p2.vel = v2_muls(v2_sub(p2.pos, old_p2), invDt)
+
+
+		if ( float(int(steps)) != steps):
+			self.restSteps = 1
+		else:
+			self.restSteps = 0
+
+
+class DoublePendulumRK4(DoublePendulum):		
+
+	def __init__(self, particles, p0, p1, p2):
+		DoublePendulum.__init__(self, particles, p0,p1,p2)
+
+	@staticmethod
+	def func_w(g, w1, w2, th1, th2, m1, m2, L1, L2):
+		w1sq = w1*w1
+		w2sq = w2*w2
+		w1p_n = ( ( -g*(2.0*m1+m2)*math.sin(th1) ) - ( m2*g*math.sin(th1-2.0*th2) ) - ( 2.0*math.sin(th1-th2) * m2 * (w2sq*L2 + w1sq*L1*math.cos(th1-th2)  ) ) )
+		w1p_d = L1* ( 2.0*m1 + m2 - m2*math.cos(2.0*th1 - 2.0*th2) )
+		w1p = w1p_n / w1p_d
+			
+		w2p_n = ( 2.0*math.sin(th1-th2) * (w1sq * L1 * (m1+m2) + g*(m1+m2)*math.cos(th1) + w2sq*L2*m2*math.cos(th1-th2 ) ) )
+		w2p_d = L2* ( 2.0*m1 + m2 - m2*math.cos(2.0*th1-2.0*th2) )
+		w2p = w2p_n / w2p_d
+	
+		return [w1p, w2p]
+
+	@staticmethod
+	def integ_w(h, g, w1, w2, th1, th2, m1, m2, L1, L2):
+		a = DoublePendulumRK4.func_w(g, w1, w2, th1, th2, m1, m2, L1, L2)	
+		b_w = [ w1 + 0.5*h*a[0], w2 + 0.5*h*a[1] ]
+		b = DoublePendulumRK4.func_w(g, b_w[0], b_w[1], th1, th2, m1, m2, L1, L2)	
+		c_w = [ w1 + 0.5*h*b[0], w2 + 0.5*h*b[1] ]
+		c = DoublePendulumRK4.func_w(g, c_w[0], c_w[1], th1, th2, m1, m2, L1, L2)	
+		d_w = [ w1 + h*c[0], w2 + h*c[1] ]
+		d = DoublePendulumRK4.func_w(g, d_w[0], d_w[1], th1, th2, m1, m2, L1, L2)	
+		
+		h6 = h/6.0
+		wp = [ h6*( a[0]+ 2.0*b[0] + 2.0*c[0] + d[0] ), h6*( a[1]+ 2.0*b[1] + 2.0*c[1] + d[1] ) ]
+
+		return wp
+
+	#def func_th(w1, w2):
+	#	return [w1, w2]
+
+	#def integ_th(h, w1, w2):
+		
+
+	def step(self, g, particles, dt):
+
+		step_dt = self.dt
+		if self.dt == -1.0:
+			step_dt = dt
+
+		steps = dt / step_dt 
+		steps = steps + self.restSteps
+		
+		g=-g
+
+		for i in range(int(steps)):
+
+		#	print 'RK4', self.fixed, self.p[0], self.p[1]
+			
+			p1 = particles[self.p[0]]
+			p2 = particles[self.p[1]]
+			m1 = p1.m
+			m2 = p2.m
+			L1 = self.l[0]
+			L2 = self.l[1]
+			halfpi = 0.5*math.pi
+			th1 = v2_angle(particles[self.fixed].pos, p1.pos)+halfpi
+			th2 = v2_angle(p1.pos, p2.pos)+halfpi
+			w1 = self.w[0]
+			w2 = self.w[1]
+			
+			wpd = DoublePendulumRK4.integ_w(step_dt, g, w1, w2, th1, th2, m1, m2, L1, L2)
+	
+			new_w1 = w1 + wpd[0]
+			new_w2 = w2 + wpd[1]
 	
 			new_th1 = th1 + w1*step_dt
 			new_th2 = th2 + w2*step_dt
@@ -140,7 +246,6 @@ class DoublePendulumEuler(DoublePendulum):
 
 		if ( float(int(steps)) != steps):
 			self.restSteps = 1
-
 
 
 
@@ -255,48 +360,61 @@ def setupPendulum(w, offset):
 		particles.append(Particle(v2_add(offset, [1.0,-1.0]), 0.1))
 		particles[-1].m = 1.0
 		
-		w.pendulums.append(DoublePendulumEuler(particles, p0, p1, p2))
-
 		return [p0, p1, p2]	
+
+
+
+def createPendulum(ptype, particles, ps):
+	if (ptype == 1):
+		return DoublePendulumRK4(particles, ps[0], ps[1], ps[2])
+	return DoublePendulumEuler(particles, ps[0], ps[1], ps[2])
+
 
 
 def fillWorldLongCable1(w):
 
 	particles = w.staticParticles
 
-	off = [5.0, 20.0]
-	ox = 0.0
+	for i in range(2):
 
-	if 1:
-		ps = setupPendulum(w, [off[0]+ox, off[1]])
-		ox = ox + 4.0
-		w.pendulums.append(DoublePendulumEuler(particles, ps[0], ps[1], ps[2]))
-		w.pendulums[-1].dt = 1.0/(60.0)
+		off = [5.0, 20.0 + -5.0 * i]
+		ox = 0.0
 
-	if 1:
-		ps = setupPendulum(w, [off[0]+ox, off[1]])
-		ox = ox + 4.0
-		w.pendulums.append(DoublePendulumEuler(particles, ps[0], ps[1], ps[2]))
-		w.pendulums[-1].dt = 1.0/(60.0)
+		if 1:
+			ps = setupPendulum(w, [off[0]+ox, off[1]])
+			ox = ox + 4.0
+			w.pendulums.append(createPendulum(i, particles, ps))
+			w.pendulums[-1].dt = 1.0/(60.0)
+	
+		if 1:
+			ps = setupPendulum(w, [off[0]+ox, off[1]])
+			ox = ox + 4.0
+			w.pendulums.append(createPendulum(i, particles, ps))
+			w.pendulums[-1].dt = 1.0/(60.0)
+	
+		if 1:
+			ps = setupPendulum(w, [off[0]+ox, off[1]])
+			ox = ox + 4.0
+			w.pendulums.append(createPendulum(i, particles, ps))
+			w.pendulums[-1].dt = 1.0/(60.0*2.0)
+	
+		if 1:
+			ps = setupPendulum(w, [off[0]+ox, off[1]])
+			ox = ox + 4.0
+			w.pendulums.append(createPendulum(i, particles, ps))
+			w.pendulums[-1].dt = 1.0/(60.0*8.0)
+	
+		if 1:
+			ps = setupPendulum(w, [off[0]+ox, off[1]])
+			ox = ox + 4.0
+			w.pendulums.append(createPendulum(i, particles, ps))
+			w.pendulums[-1].dt = 1.0/(60.0*16.0)
 
-	if 1:
-		ps = setupPendulum(w, [off[0]+ox, off[1]])
-		ox = ox + 4.0
-		w.pendulums.append(DoublePendulumEuler(particles, ps[0], ps[1], ps[2]))
-		w.pendulums[-1].dt = 1.0/(60.0*4.0)
-
-	if 1:
-		ps = setupPendulum(w, [off[0]+ox, off[1]])
-		ox = ox + 4.0
-		w.pendulums.append(DoublePendulumEuler(particles, ps[0], ps[1], ps[2]))
-		w.pendulums[-1].dt = 1.0/(60.0*8.0)
-
-	if 1:
-		ps = setupPendulum(w, [off[0]+ox, off[1]])
-		ox = ox + 4.0
-		w.pendulums.append(DoublePendulumEuler(particles, ps[0], ps[1], ps[2]))
-		w.pendulums[-1].dt = 1.0/(60.0*16.0)
-
+		if 1:
+			ps = setupPendulum(w, [off[0]+ox, off[1]])
+			ox = ox + 4.0
+			w.pendulums.append(createPendulum(i, particles, ps))
+			w.pendulums[-1].dt = 1.0/(60.0*32.0)
 
 
 worldFillerIndex = len(worldFillers)
@@ -393,7 +511,7 @@ def update(dt):
 #			stepWorld(world, world.timeStep, True)
 #			doMicroStep = False
 	else:
-		stepWorld(world, dt, False)
+		stepWorld(world, 1.0/60.0, False)
 
 
 
