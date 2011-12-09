@@ -252,7 +252,7 @@ def setupPendulum(w, offset):
 		particles[-1].m = 1.0
 		
 		p2 = len(particles)
-		particles.append(Particle(v2_add(offset, [2.0,0.0]), 0.1))
+		particles.append(Particle(v2_add(offset, [1.0,-1.0]), 0.1))
 		particles[-1].m = 1.0
 		
 		w.pendulums.append(DoublePendulumEuler(particles, p0, p1, p2))
