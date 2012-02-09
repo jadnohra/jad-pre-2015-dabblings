@@ -31,6 +31,9 @@ def v2_dist(p1, p2):
 def v2_muls(v1, s):
 	return [v1[0]*s, v1[1]*s]	
 
+def v2_neg(v1):
+	return [ -v1[0], -v1[1] ]
+
 def v2_copy(v):
 	return [v[0], v[1]] 
 
@@ -591,22 +594,139 @@ def TestLinAlg():
 
 def d2_NullSupportMapping(dir):
 	return [ 0.0, 0.0 ]
+
+def d2_ConvexMap(dir, vertices):
+
+	prevDot = 0.0
+
+	cnt = 0
+	i = 0
+	ip = 1
+
+	if (ip >= len(vertices)):
+		ip = 0
+
+
+	while ( cnt < len(vertices) + 1 ):
+
+
+		edir = v2_normalize(v2_sub(vertices[i], vertices[ip]))
+		dot = v2_dot(edir, dir)
+		
+		if (dot == 0.0):
+			return vertices[i]
+
+		if ( i == 0 ):
+			prevDot = dot
+		else:
+			if (dot * prevDot <= 0.0):
+				return vertices[i]
+
+		i = i + 1
+		if (i >= len(vertices)):
+			i = 0
+
+		ip = ip + 1	
+		if (ip >= len(vertices)):
+			ip = 0
+
+		cnt = cnt + 1
+
+
+class D2_GFK_ConvexMap:
+
+	vertices = None 
+
+	def __init__(self, vertices):
+		self.vertices = vertices
+
+	def map(self, dir):
+		return d2_ConvexMap(dir, self.vertices)
+
+
+def d2_GJK_ClosestPointOnEdge(v0, v1, edge):
 	
+	vToO = v2_neg(v0)
+	dot = v2_dot(vToO, edge)
+	dotMax = v2_dot(edge, edge)
+
+	if (dotMax == 0.0):
+		return [v0, True]
+	
+	isExtremum = False
+
+	if (dot < 0.0):
+		dot = 0.0
+		isExtremum = True
+	if (dot > dotMax):
+		dot = dotMax
+		isExtremum = True
+
+	closest = v2_muls(edge, 1.0/dotMax)	
+	return [ closest, isExtremum ]
+		
+
+def d2_GJK_ClosestPointOnSimplex(v0, v1, v2):
+	edges = [ [v0,v1,v2], [v1,v2,v0], [v2,v0,v1] ]
+
+	closestEdge = None
+	closest = None
+	isExtremum = None
+	isInside = True
+	lastCrossSign = 0
+
+	for i in range(3):
+		edge = edges[i]
+
+		edgeVec = v2_sub(v1, v0)
+
+		# closest point on line
+		out = d2_GJK_ClosestPointOnEdge(edge[0], edge[1], edgeVec)
+		dist = v2_len( out[0] )
+		
+		if ( i == 0 or dist < minDist):
+			minDist = dist
+			closest = out[0]
+			isExtrem = out[1]
+			closestEdge = i
+			
+		refDir = v2_rot90( edgeVec)
+
+
+		refDot = v2_dot(refDir, v2_sub(edge[2], edge[0]))
+		testDot = v2_dot(refDir, v2_neg(edge[0]))
+
+		dotMul = refDot * testDot
+		if ( dotMul < 0.0 ):
+			isInside = False
+		# only needed if we allow collapsed triangles
+		elif ( dotMul == 0.0 ):
+			if ( testDot != 0.0 ):
+				isInside = False
+			
+
+	return (isInside, closest, closestEdge, isExtremum)
+
+
 def d2_CheckIntersectionGJK( map ):
 	dir = [ 1.0, 0.0 ]
 	
 	s_dir = dir
-	s_v0 = map( dir )
-	s_v1 = map( v2_neg(dir) )
+	s_v0 = map.map( dir )
+	s_v1 = map.map( v2_neg(dir) )
 	s_dim = 1
 	
-	while (1):
+	print s_v0
+	print s_v1
+
+	if (1):
+	#while (1):
 		
 		# complete simplex
 		while (s_dim < 2):
 			if (s_dim == 0):
 				# using opposite direction
-				s_v1 = map( v2_neg(dir) )
+				s_v1 = map.map( v2_neg(dir) )
 				s_dim = 1
 			else:
 				# using orthogonal direction
@@ -614,10 +734,49 @@ def d2_CheckIntersectionGJK( map ):
 				dirToOrig = v2_neg( s_v0 )
 				if ( v2_dot(dirToOrig, orthDir) < 0.0 ):
 					orthDir = v2_neg( orthDir )
-				s_v3 = map( orthDir)
+				s_v2 = map.map( orthDir)
 				s_dim = 2
+
+	print s_v2
+
+	out = d2_GJK_ClosestPointOnSimplex(s_v0, s_v1, s_v2)		
+	if ( out[0] ):
+		return True
+	
+	print out[1]
+
+	if ( out[3] ):
+		s_v0 = out[1]
+		s_dim = 0
+	else:
+		s_dim = 1
+		if ( out[2] == 0 ):
+			#oops 
+			print('oops')
+			return False
+		elif (out[2] == 1):
+			s_v0 = s_v2
+		else:
+			s_v1 = s_v2	
 				
-				
-				
-				
-			
+
+
+def TestGJK():
+
+	# support mapping is wrong!
+
+	if (1):
+		vertices = [ [ -1.0, -1.0 ], [ 0.0, 1.0 ], [ 1.0, -1.0 ] ]	
+		map = D2_GFK_ConvexMap(vertices)
+		print d2_CheckIntersectionGJK(map)
+	
+	if (1):
+		vertices = [ [ -1.0, 1.0 ], [ 0.0, 2.0 ], [ 1.0, 1.0 ] ]	
+		map = D2_GFK_ConvexMap(vertices)
+		print d2_CheckIntersectionGJK(map)
+
+
+
+
+TestGJK()
+
