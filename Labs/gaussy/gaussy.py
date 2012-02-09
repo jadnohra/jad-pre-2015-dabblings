@@ -50,6 +50,12 @@ def v2_rot(v1,a):
 	ret = [ v1[0]*c + v1[1]*(-s), v1[0]*s + v1[1]*(c) ]
 	return ret
 
+def v2_rot90(v1):
+	return [ -v1[1], v1[0] ]
+	
+def v2_rotm90(v1):
+	return [ v1[1], -v1[0] ]
+	
 def PrintM(inMatrix, inName):
 	rows = len(inMatrix)
 	print inName, '[',rows,'x',len(inMatrix[0]),']'
@@ -521,7 +527,7 @@ def GaussSeidelMightConverge(inMatrix, isOnlyLHS):
 	return True	
 
 
-def Test():
+def TestLinAlg():
 	#PrintMatrix( [[1, 2, 3], [4, 5, 6]] )	
 
 	# Gaussian elim
@@ -580,4 +586,38 @@ def Test():
 		PrintV(GaussSeidelSolveZeroGuess( CopyM(lin_syst) , iter))
 		print iter.err, 'error in', iter.it, 'iterations'
 
-#Test()
+#TestLinAlg()
+
+
+def d2_NullSupportMapping(dir):
+	return [ 0.0, 0.0 ]
+	
+def d2_CheckIntersectionGJK( map ):
+	dir = [ 1.0, 0.0 ]
+	
+	s_dir = dir
+	s_v0 = map( dir )
+	s_v1 = map( v2_neg(dir) )
+	s_dim = 1
+	
+	while (1):
+		
+		# complete simplex
+		while (s_dim < 2):
+			if (s_dim == 0):
+				# using opposite direction
+				s_v1 = map( v2_neg(dir) )
+				s_dim = 1
+			else:
+				# using orthogonal direction
+				orthDir = v2_rot90(s_dir)
+				dirToOrig = v2_neg( s_v0 )
+				if ( v2_dot(dirToOrig, orthDir) < 0.0 ):
+					orthDir = v2_neg( orthDir )
+				s_v3 = map( orthDir)
+				s_dim = 2
+				
+				
+				
+				
+			

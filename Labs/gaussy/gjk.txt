@@ -1,0 +1,27 @@
+Convex hull Cvx
+Origin O
+
+Choose first point in convex, make it the simplex S.
+Complete simplex S
+	if S is 0-simplex
+		get direction to origin D
+		get support vertex for D, V
+		add V to S
+		Complete simplex S
+	if S is 1-simplex
+		choose orthog direction to O, P
+		get support vertex for P, V
+		add V to S
+		done
+Get closest point on S to O, C
+if C is O 
+	done, intersecting
+else
+	reduce S using C
+		if C is a vertex in S, reduce to 0-simplex
+		reduce to 1-simplex containing C
+	goto Complete Simple S	
+		
+		
+		
+
