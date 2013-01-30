@@ -1,0 +1,5 @@
+[
+	{ "keys": ["ctrl+alt+q"], "command": "jad_checkout" },
+	{ "keys": ["ctrl+alt+s"], "command": "jad_checkout_save" },
+	{ "keys": ["ctrl+alt+p"], "command": "jad_copy_path" }
+]

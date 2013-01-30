@@ -1,0 +1,8 @@
+[
+	{ "caption": "Jad: P4 Info", "command": "jad_p4_info" },
+	{ "caption": "Jad: Checkout", "command": "jad_checkout" },
+	{ "caption": "Jad: Checkout & Save", "command": "jad_checkout_save" },
+	{ "caption": "Jad: build.py", "command": "jad_build_py" },
+	{ "caption": "Jad: Close build.py", "command": "jad_close_build_py" }
+	
+]
