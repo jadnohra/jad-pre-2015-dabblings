@@ -597,7 +597,21 @@ def d2_NullSupportMapping(dir):
 
 def d2_ConvexMap(dir, vertices):
 
+	winding = 0
+	if (len(vertices) >= 3):
+		edge = v2_sub(vertices[1], vertices[0])
+		normal = v2_rot90(edge)
+		nextEdge = v2_sub( vertices[2], vertices[1])
+		if (v2_dot(normal, nextEdge) > 0.0):
+			winding = 1
+
+	if (winding == 0):
+		ndir = v2_rotm90(dir)
+	else:	
+		ndir = v2_rot90(dir)		
+			
 	prevDot = 0.0
+	prevNDot = 0.0
 
 	cnt = 0
 	i = 0
@@ -606,21 +620,26 @@ def d2_ConvexMap(dir, vertices):
 	if (ip >= len(vertices)):
 		ip = 0
 
-
 	while ( cnt < len(vertices) + 1 ):
 
-
 		edir = v2_normalize(v2_sub(vertices[i], vertices[ip]))
-		dot = v2_dot(edir, dir)
 		
-		if (dot == 0.0):
-			return vertices[i]
+		dot = v2_dot(edir, dir)
+		ndot = v2_dot(edir, ndir)
+		
+		if (cnt > 0):
+		
+			isPos = (prevNDot > 0.0) or (ndot > 0.0)
+			
+			if (isPos):
+				if (dot == 0.0):
+					return vertices[i]
 
-		if ( i == 0 ):
-			prevDot = dot
-		else:
-			if (dot * prevDot <= 0.0):
-				return vertices[i]
+				if (dot * prevDot <= 0.0):
+					return vertices[i]
+		
+		prevDot = dot
+		prevNDot = ndot			
 
 		i = i + 1
 		if (i >= len(vertices)):
