@@ -640,7 +640,7 @@ class GJK_Perm_2:
 	count = 7
 	Di_count = 12;
 	Is = [[0], [1], [2], [0,1], [0,2], [1,2], [0,1,2]]
-	Isp = [[1,2], [0,2], [0,1], [1], [0], []]
+	Isp = [[1,2], [0,2], [0,1], [2], [1], [0], []]
 	Di_index = [0, 1, 2, 3, 5, 7, 9]
 	Union_index = [[4,6], [3,8], [5,7], [11] ,[10], [9]]
 
@@ -667,6 +667,68 @@ def gjk_support_mink_cvx(cvx1, cvx2, d):
 	i1 = gjk_support_cvx(cvx1, d)
 	i2 = gjk_support_cvx(cvx2, d)
 	return [i1[0]-i2[0], v2_sub(cvx1.v[i1[1]], cvx2.v[i2[1]])]
+
+
+def gjk_subdist_fallback(ctx, Vk):
+
+	perm = ctx.perms[len(Vk)-1]
+	Di = [1.0] * perm.Di_count;	
+
+	best = -1
+	best_v = None
+	best_dist = None
+	best_nVi = None
+
+	for pi in range(perm.count):
+
+		d = len(perm.Is[pi])
+		di_index = perm.Di_index[pi]
+
+		D = 0.0
+		for i in range(d):
+			D = D + Di[di_index+i]
+
+		cond1 = D > 0.0
+		if (cond1):
+
+			cond2 = True
+			for i in range(d):
+				if (Di[di_index+i] <= 0.0):
+					cond2 = False
+					break
+		
+			Is = perm.Is[pi]	
+			Isp = perm.Isp[pi]
+
+			for j in range(len(Isp)):
+				Dj = 0.0
+				for i in range(d):
+					Dj = Dj + ( Di[di_index+i] * ( v2_dot(Vk[Is[i]], Vk[Is[0]]) - v2_dot(Vk[Is[i]], Vk[Isp[j]]) ) )
+					Di[perm.Union_index[pi][j]] = Dj
+
+			if (cond2):
+
+				v = [0.0, 0.0]
+				nVi = Isp
+				iD = 1.0 / D
+				for i in range(d):
+					li = Di[di_index+i] * iD
+					v = v2_add(v, v2_muls(Vk[Is[i]], li))
+					if (li == 0.0):
+						nVi.append(Is[i])
+
+				dist = v2_len(v)
+				if (best < 0 or dist < best_dist):
+					best = pi
+					best_v = v
+					best_dist = dist
+					best_nVi = nVi
+
+
+	if (best >= 0):
+		return [best_v, best_nVi]
+					
+	return None
 
 
 def gjk_subdist(ctx, Vk):
@@ -708,31 +770,42 @@ def gjk_subdist(ctx, Vk):
 							
 				if (cond3):
 
-					v = [0.0, 0.0]	
+					v = [0.0, 0.0]
+					nVi = Isp
 					iD = 1.0 / D
 					for i in range(d):
 						li = Di[di_index+i] * iD
 						v = v2_add(v, v2_muls(Vk[Is[i]], li))
+						if (li == 0.0):
+							nVi.append(Is[i])
 
-					return v		
-	#Fallback
+					return [v, nVi]
 					
-	return [None, None]
+	return gjk_subdist_fallback(ctx, Vk)
 
 
-def gjk_distance(cvx1, cvx2, dbg = None):
+def gjk_distance(cvx1, cvx2, eps=0.0000001, dbg = None):
 
 	ctx = GJK_Context()
 
-	eps = 0.0000001
 	d = [-1.0, 0.0]
-
 	h = gjk_support_mink_cvx(cvx1, cvx2, d) 
 	Vk = [ h[1] ]
 
+	max_iter = 3 + (len(cvx1.v) + len(cvx2.v))*3
+	iter = 0
+	last_dist = v2_len( Vk[0] )
+	#fallback = False
+
 	while (True):
+		iter = iter + 1	
 		
-		vk = gjk_subdist(ctx, Vk)
+		#if (fallback):
+		#	sd = gjk_subdist_fallback(ctx, Vk)
+		#else:
+		sd = gjk_subdist(ctx, Vk)
+
+		vk = sd[0]
 		nvk = v2_neg(vk)	
 		h = gjk_support_mink_cvx(cvx1, cvx2, nvk) 
 		g = v2_dot(vk, vk) + h[0]
@@ -740,12 +813,24 @@ def gjk_distance(cvx1, cvx2, dbg = None):
 		if dbg != None:
 			dbg.append( [copy.deepcopy(Vk), copy.deepcopy(vk), copy.deepcopy(d)] )
 
-		if (math.fabs(g) < eps):
-			return v2_len(vk)
+		dist = v2_len(vk)	
+		if ((math.fabs(g) < eps) or (iter > max_iter)):
+			return [dist, eps]
 
+		#if (dist > last_dist):
+		#	fallback = True
+
+		last_dist = dist
 		Vk.append( h[1] )
 		if (len(Vk)>3):
-			Vk .pop(0)
+			nVi = sd[1]
+			if (len(nVi) > 0):
+				Vk.pop(nVi[0])
+			else:
+				Vk.pop(0)
+				Vk[0] = vk
+
+
 
 
 def TestGJK():
@@ -756,25 +841,56 @@ def TestGJK():
 	cvx2 = Convex()
 	cvx2.v = [[0.0,1.5]]
 	
-	dist = gjk_distance(cvx1, cvx2)
+	cvx1.v = [[0.0,1.0], [0.0,2.0], [-1.0,1.0]]
+	cvx2.v = [[0.0,0.0]]
+	dist = gjk_distance(cvx1, cvx2)[0]
 	print dist
 
-	# Test convex combinations inside cvx1
-	for x in range(512):
-		l = [x/512.0, 1.0-x/512.0]
-		cvx2.v = [linComb(cvx1.v, l)]
-		dd = gjk_distance(cvx1, cvx2)
-		if (dd != 0.0):
-			print 'Fail'
+	cvx1.v = [[0.0,1.0], [0.0,2.0], [-1.0,1.0]]
+	cvx2.v = [[0.0,1.5]]
+	dist = gjk_distance(cvx1, cvx2)[0]
+	print dist
 
-	for x in range(512):
-		l = [x/512.0, 1.1+x/512.0]
-		cvx2.v = [linComb(cvx1.v, l)]
-		dd = gjk_distance(cvx1, cvx2)
-		if (dd == 0.0):
-			print 'Fail'		
+	cvx1.v = [[0.0,1.0], [0.0,2.0], [-1.0,1.0]]
+	cvx2.v = [[0.0,1.5]]
+	cvx2.v = [linComb(cvx1.v, [1.0/256.0, 1.0/256.0, 1.0-(2.0/256.0)])]
+	dist = gjk_distance(cvx1, cvx2)[0]
+	print dist
+
+	cvx1.v = [[0.0,1.0], [0.0,2.0], [-1.0,1.0]]
+	cvx2.v = [[0.0,1.5]]
+	off = linComb(cvx1.v, [1.0/256.0, 1.0/256.0, 1.0-(2.0/256.0)])
+	cvx1.v = [ v2_sub(cvx1.v[0], off), v2_sub(cvx1.v[1], off), v2_sub(cvx1.v[2], off) ]
+	cvx2.v = [[0.0,0.0]]
+	dist = gjk_distance(cvx1, cvx2)[0]
+	print dist
+	
+	
+	# Test convex combinations inside cvx1
+	if (False):
+		cvx1.v = [[0.0,1.0], [0.0,2.0], [-1.0,1.0]]
+		cvx2.v = [[0.0,1.5]]
+		for x in range(512):
+			for y in range(512):
+				l = [x/512.0, y/512.0, 0.0]
+				l[2] = 1.0 - l[0] - l[1]
+				if (l[2] >= 0.0):
+					cvx2.v = [linComb(cvx1.v, l)]
+					dd = gjk_distance(cvx1, cvx2)
+					if (dd[0] > dd[1]):
+						print 'Fail'
+
+		# Test combinations outside cvx1
+		cvx1.v = [[0.0,1.0], [0.0,2.0], [-1.0,1.0]]
+		cvx2.v = [[0.0,1.5]]
+		for x in range(512):
+			l = [x/512.0, 1.1+x/512.0, 0.0]
+			cvx2.v = [linComb(cvx1.v, l)]
+			dd = gjk_distance(cvx1, cvx2)
+			if (dd[0] == 0.0):
+				print 'Fail'		
 
 	return 0
 
-#TestGJK()
+TestGJK()
 
