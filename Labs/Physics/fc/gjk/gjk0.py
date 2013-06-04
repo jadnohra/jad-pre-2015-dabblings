@@ -3,7 +3,8 @@ import math
 import time
 import os
 
-execfile('../../gaussy.py')
+#execfile('../../../gaussy/gaussy.py')
+execfile('Z:/Personal/Lab/gaussy/gaussy.py')
 
 
 class World:
@@ -431,7 +432,8 @@ def fillWorldBox(w):
 	w.statics.append(Convex([1.0,0.5], [1.0, 29.5], wallMat))	
 	w.statics.append(Convex([39.5,29.0], [0.5, 29.0], wallMat))	
 	w.statics.append(Convex([39.0,29.5], [39.0, 0.5], wallMat))	
-	
+worldFillers.append(fillWorldBox)	
+worldFillerIndex = len(worldFillers)-1
 	
 def fillWorld1(w):
 	sharedMat = Material(1.0 * 0.8)
@@ -537,7 +539,6 @@ def fillWorldSpring1(w):
 		w.statics.append(Convex([29.5,18.0], [40.5, 18.0], wallMat))	
 
 
-worldFillerIndex = len(worldFillers)
 worldFillers.append(fillWorldSpring1)
 
 
@@ -639,7 +640,6 @@ def fillWorldLongCable1(w):
 	w.statics.append(Convex([2.0,20.0], [2.0, 15.0], wallMat))	
 
 
-worldFillerIndex = len(worldFillers)
 worldFillers.append(fillWorldLongCable1)
 
 
@@ -688,7 +688,6 @@ def fillWorldSupportCable1(w):
 	lastClientTime = -1.0
 	w.clientUpdate = updateWorldSupportCable1
 
-worldFillerIndex = len(worldFillers)
 worldFillers.append(fillWorldSupportCable1)
 
 
@@ -732,11 +731,6 @@ def repeatWorld():
 	nextWorld()
 
 world = World()
-
-world = World()
-#fillWorld1(world)
-#fillWorld2(world)
-#fillVWorld1(world)
 nextWorld()
 
 
