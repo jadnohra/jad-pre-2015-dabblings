@@ -742,6 +742,7 @@ singleStep = False
 doSingleStep = False
 microStep = False
 doMicroStep = False
+mousePos = None
 
 @window.event
 def on_draw():
@@ -781,6 +782,11 @@ def on_draw():
 			info.n = v2_normalize(info.n)
 			pt2 = v2_add(info.p, v2_muls(v2_normalize(info.n), info.d))
 			draw_line(info.p[0]*ppm, info.p[1]*ppm, pt2[0]*ppm, pt2[1]*ppm)
+
+	
+	if (mousePos != None):
+		draw_particle(mousePos[0], mousePos[1], 2.0)	
+
 
 def update(dt):
 	global microStep
@@ -827,6 +833,12 @@ def on_key_press(symbol, modifiers):
 
 	if symbol == pyglet.window.key.SPACE:
 		doMicroStep = True	
+
+
+@window.event
+def on_mouse_motion(x, y, dx, dy):
+	global mousePos
+	mousePos = [x, y]
 
 
 pyglet.clock.schedule_interval(update, 1.0/60.0)	
