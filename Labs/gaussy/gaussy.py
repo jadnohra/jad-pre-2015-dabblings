@@ -892,5 +892,5 @@ def TestGJK():
 
 	return 0
 
-TestGJK()
+#TestGJK()
 
