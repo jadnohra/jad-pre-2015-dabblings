@@ -1,4 +1,5 @@
 import math
+import itertools
 
 
 def v2_zero(v):
@@ -79,11 +80,20 @@ def PrintV(row):
 	print '>'	
 
 
+def EmptySquareMatrix(d):
+	return [[]*d for x in xrange(d)]
+
+
+def EmptyMatrix(r,c):
+	return [[]*r for x in xrange(c)]
+
+
 def Matrix(r,c,v):
-	M = [v]*r
-	for i in range(r):
-		M[i] = [v]*c
-	return M	
+	return [[v]*r for x in xrange(c)]
+	#M = [v]*r
+	#for i in range(r):
+	#	M[i] = [v]*c
+	#return M	
 
 
 def Eye(r,c):
@@ -592,210 +602,179 @@ def TestLinAlg():
 #TestLinAlg()
 
 
-def d2_NullSupportMapping(dir):
-	return [ 0.0, 0.0 ]
+class Convex:
+	v = []
 
-def d2_ConvexMap(dir, vertices):
+	def __init__(self):
+		return
 
-	winding = 0
-	if (len(vertices) >= 3):
-		edge = v2_sub(vertices[1], vertices[0])
-		normal = v2_rot90(edge)
-		nextEdge = v2_sub( vertices[2], vertices[1])
-		if (v2_dot(normal, nextEdge) > 0.0):
-			winding = 1
-
-	if (winding == 0):
-		ndir = v2_rotm90(dir)
-	else:	
-		ndir = v2_rot90(dir)		
-			
-	prevDot = 0.0
-	prevNDot = 0.0
-
-	cnt = 0
-	i = 0
-	ip = 1
-
-	if (ip >= len(vertices)):
-		ip = 0
-
-	while ( cnt < len(vertices) + 1 ):
-
-		edir = v2_normalize(v2_sub(vertices[i], vertices[ip]))
-		
-		dot = v2_dot(edir, dir)
-		ndot = v2_dot(edir, ndir)
-		
-		if (cnt > 0):
-		
-			isPos = (prevNDot > 0.0) or (ndot > 0.0)
-			
-			if (isPos):
-				if (dot == 0.0):
-					return vertices[i]
-
-				if (dot * prevDot <= 0.0):
-					return vertices[i]
-		
-		prevDot = dot
-		prevNDot = ndot			
-
-		i = i + 1
-		if (i >= len(vertices)):
-			i = 0
-
-		ip = ip + 1	
-		if (ip >= len(vertices)):
-			ip = 0
-
-		cnt = cnt + 1
+	def set4(self, v0, v1, v2, v3):	
+		v = [v0, v1, v2, v3]
 
 
-class D2_GFK_ConvexMap:
-
-	vertices = None 
-
-	def __init__(self, vertices):
-		self.vertices = vertices
-
-	def map(self, dir):
-		return d2_ConvexMap(dir, self.vertices)
-
-
-def d2_GJK_ClosestPointOnEdge(v0, v1, edge):
+def linComb(v, l):
+	vc = [0.0, 0.0]
+	for i in range(len(l)):
+		vc = v2_add( vc, v2_muls(v[i], l[i]) )
+	return vc	
 	
-	vToO = v2_neg(v0)
-	dot = v2_dot(vToO, edge)
-	dotMax = v2_dot(edge, edge)
 
-	if (dotMax == 0.0):
-		return [v0, True]
-	
-	isExtremum = False
+class GJK_Perm_0:
+	count = 1
+	Di_count = 1;
+	Is = [[0]]
+	Isp = [[]]
+	Dis = [[1]]
+	Di_index = [0]
+	Union_Index = None
 
-	if (dot < 0.0):
-		dot = 0.0
-		isExtremum = True
-	if (dot > dotMax):
-		dot = dotMax
-		isExtremum = True
+class GJK_Perm_1:
+	count = 3
+	Di_count = 4;
+	Is = [[0], [1], [0, 1]]
+	Isp = [[1], [0], []]
+	Di_index = [0, 1, 2]
+	Union_index = [[3], [2]]
 
-	closest = v2_muls(edge, 1.0/dotMax)	
-	return [ closest, isExtremum ]
+class GJK_Perm_2:
+	count = 7
+	Di_count = 12;
+	Is = [[0], [1], [2], [0,1], [0,2], [1,2], [0,1,2]]
+	Isp = [[1,2], [0,2], [0,1], [1], [0], []]
+	Di_index = [0, 1, 2, 3, 5, 7, 9]
+	Union_index = [[4,6], [3,8], [5,7], [11] ,[10], [9]]
+
+class GJK_Context:
+	perms = [GJK_Perm_0(), GJK_Perm_1(), GJK_Perm_2()]
+
+
+def gjk_support_cvx(cvx, d):
+
+	mi = 0
+	max = v2_dot(cvx.v[0], d)	
+
+	for i in range(1, len(cvx.v)):
+		dot = v2_dot(cvx.v[i], d)	
+		if (dot > max):
+			max = dot
+			mi = i
+	return [max, mi]
+
+
+
+def gjk_support_mink_cvx(cvx1, cvx2, d):
+
+	i1 = gjk_support_cvx(cvx1, d)
+	i2 = gjk_support_cvx(cvx2, d)
+	return [i1[0]-i2[0], v2_sub(cvx1.v[i1[1]], cvx2.v[i2[1]])]
+
+
+def gjk_subdist(ctx, Vk):
+
+	perm = ctx.perms[len(Vk)-1]
+	Di = [1.0] * perm.Di_count;	
+
+	for pi in range(perm.count):
+
+		d = len(perm.Is[pi])
+		di_index = perm.Di_index[pi]
+
+		D = 0.0
+		for i in range(d):
+			D = D + Di[di_index+i]
+
+		cond1 = D > 0.0
+		if (cond1):
+
+			cond2 = True
+			for i in range(d):
+				if (Di[di_index+i] <= 0.0):
+					cond2 = False
+					break
+
+			if (cond2):
+
+				Is = perm.Is[pi]	
+				Isp = perm.Isp[pi]
+
+				cond3 = True	
+				for j in range(len(Isp)):
+					Dj = 0.0
+					for i in range(d):
+						Dj = Dj + ( Di[di_index+i] * ( v2_dot(Vk[Is[i]], Vk[Is[0]]) - v2_dot(Vk[Is[i]], Vk[Isp[j]]) ) )
+						if (Dj > 0.0):
+							cond3 = False
+						Di[perm.Union_index[pi][j]] = Dj
+							
+				if (cond3):
+
+					v = [0.0, 0.0]	
+					iD = 1.0 / D
+					for i in range(d):
+						li = Di[di_index+i] * iD
+						v = v2_add(v, v2_muls(Vk[Is[i]], li))
+
+					return v		
+	#Fallback
+					
+	return [None, None]
+
+
+def gjk_distance(cvx1, cvx2, dbg = None):
+
+	ctx = GJK_Context()
+
+	eps = 0.0000001
+	d = [-1.0, 0.0]
+
+	h = gjk_support_mink_cvx(cvx1, cvx2, d) 
+	Vk = [ h[1] ]
+
+	while (True):
 		
+		vk = gjk_subdist(ctx, Vk)
+		nvk = v2_neg(vk)	
+		h = gjk_support_mink_cvx(cvx1, cvx2, nvk) 
+		g = v2_dot(vk, vk) + h[0]
 
-def d2_GJK_ClosestPointOnSimplex(v0, v1, v2):
-	edges = [ [v0,v1,v2], [v1,v2,v0], [v2,v0,v1] ]
+		if dbg != None:
+			dbg.append( [copy.deepcopy(Vk), copy.deepcopy(vk), copy.deepcopy(d)] )
 
-	closestEdge = None
-	closest = None
-	isExtremum = None
-	isInside = True
-	lastCrossSign = 0
+		if (math.fabs(g) < eps):
+			return v2_len(vk)
 
-	for i in range(3):
-		edge = edges[i]
-
-		edgeVec = v2_sub(v1, v0)
-
-		# closest point on line
-		out = d2_GJK_ClosestPointOnEdge(edge[0], edge[1], edgeVec)
-		dist = v2_len( out[0] )
-		
-		if ( i == 0 or dist < minDist):
-			minDist = dist
-			closest = out[0]
-			isExtrem = out[1]
-			closestEdge = i
-			
-		refDir = v2_rot90( edgeVec)
-
-
-		refDot = v2_dot(refDir, v2_sub(edge[2], edge[0]))
-		testDot = v2_dot(refDir, v2_neg(edge[0]))
-
-		dotMul = refDot * testDot
-		if ( dotMul < 0.0 ):
-			isInside = False
-		# only needed if we allow collapsed triangles
-		elif ( dotMul == 0.0 ):
-			if ( testDot != 0.0 ):
-				isInside = False
-			
-
-	return (isInside, closest, closestEdge, isExtremum)
-
-
-def d2_CheckIntersectionGJK( map ):
-	dir = [ 1.0, 0.0 ]
-	
-	s_dir = dir
-	s_v0 = map.map( dir )
-	s_v1 = map.map( v2_neg(dir) )
-	s_dim = 1
-	
-	print s_v0
-	print s_v1
-
-	if (1):
-	#while (1):
-		
-		# complete simplex
-		while (s_dim < 2):
-			if (s_dim == 0):
-				# using opposite direction
-				s_v1 = map.map( v2_neg(dir) )
-				s_dim = 1
-			else:
-				# using orthogonal direction
-				orthDir = v2_rot90(s_dir)
-				dirToOrig = v2_neg( s_v0 )
-				if ( v2_dot(dirToOrig, orthDir) < 0.0 ):
-					orthDir = v2_neg( orthDir )
-				s_v2 = map.map( orthDir)
-				s_dim = 2
-
-	print s_v2
-
-	out = d2_GJK_ClosestPointOnSimplex(s_v0, s_v1, s_v2)		
-	if ( out[0] ):
-		return True
-	
-	print out[1]
-
-	if ( out[3] ):
-		s_v0 = out[1]
-		s_dim = 0
-	else:
-		s_dim = 1
-		if ( out[2] == 0 ):
-			#oops 
-			print('oops')
-			return False
-		elif (out[2] == 1):
-			s_v0 = s_v2
-		else:
-			s_v1 = s_v2	
-				
+		Vk.append( h[1] )
+		if (len(Vk)>3):
+			Vk .pop(0)
 
 
 def TestGJK():
 
-	# support mapping is wrong!
+	cvx1 = Convex()
+	cvx1.v = [[0.0,1.0], [0.0,2.0], [-1.0,1.0]]
 
-	if (1):
-		vertices = [ [ -1.0, -1.0 ], [ 0.0, 1.0 ], [ 1.0, -1.0 ] ]	
-		map = D2_GFK_ConvexMap(vertices)
-		print d2_CheckIntersectionGJK(map)
+	cvx2 = Convex()
+	cvx2.v = [[0.0,1.5]]
 	
-	if (1):
-		vertices = [ [ -1.0, 1.0 ], [ 0.0, 2.0 ], [ 1.0, 1.0 ] ]	
-		map = D2_GFK_ConvexMap(vertices)
-		print d2_CheckIntersectionGJK(map)
+	dist = gjk_distance(cvx1, cvx2)
+	print dist
 
+	# Test convex combinations inside cvx1
+	for x in range(512):
+		l = [x/512.0, 1.0-x/512.0]
+		cvx2.v = [linComb(cvx1.v, l)]
+		dd = gjk_distance(cvx1, cvx2)
+		if (dd != 0.0):
+			print 'Fail'
 
+	for x in range(512):
+		l = [x/512.0, 1.1+x/512.0]
+		cvx2.v = [linComb(cvx1.v, l)]
+		dd = gjk_distance(cvx1, cvx2)
+		if (dd == 0.0):
+			print 'Fail'		
 
+	return 0
 
-TestGJK()
+#TestGJK()
 
