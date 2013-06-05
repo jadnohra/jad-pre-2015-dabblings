@@ -1,5 +1,5 @@
 import math
-import itertools
+import random
 
 
 def v2_zero(v):
@@ -619,6 +619,21 @@ def linComb(v, l):
 	return vc	
 	
 
+def randConvex(r, vc):
+	v = [None] * vc
+	
+	t = [None] * vc
+	for i in range(vc):
+		t[i] = random.uniform(0.0, 2.0*math.pi)
+	t.sort()
+	
+	for i in range(vc):
+		v[i] = [math.cos(t[i])*r, math.sin(t[i])*r]
+
+	return v	
+
+
+
 class GJK_Perm_0:
 	count = 1
 	Di_count = 1;
@@ -908,5 +923,5 @@ def TestGJK1():
 	return 0
 
 #TestGJK()
-#TestGJK1()
+#PTestGJK1()
 
