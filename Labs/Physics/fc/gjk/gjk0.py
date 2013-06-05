@@ -867,10 +867,15 @@ def on_draw():
 
 
 def handleMouse():
-
 	global gPrevMousePick
 	global gMousePickStart 
+	global gMouseHoverObj
+	global gMousePickObj
 	
+	gMouseHoverObj = None
+	if (gMousePick == 0):
+		gMousePickObj = None
+
 	if (gMousePos == None):
 		return
 
@@ -900,7 +905,6 @@ def doHover(pos):
 
 
 def doPick(pos, startPos, init):
-
 	global gMousePickObj
 	global gMousePickObjVec
 
