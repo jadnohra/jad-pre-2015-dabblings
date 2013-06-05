@@ -418,12 +418,16 @@ def draw_convex_col(p, v, ppm, col):
 	for i in range(len(v)):
 		flatv[2*i] = (p[0]+v[i][0]) * ppm
 		flatv[2*i+1] = (p[1]+v[i][1]) * ppm
-	pyglet.graphics.draw(len(v), pyglet.gl.GL_LINE_LOOP, ('v2f', flatv), ('c3f', (col) * (len(v))))
+	pyglet.graphics.draw(len(v), pyglet.gl.GL_LINE_LOOP, ('v2f', flatv), ('c3f', (col)*len(v)) )
 
 
 
 def draw_line(x1, y1, x2, y2):
 	pyglet.graphics.draw(2, pyglet.gl.GL_LINES, ('v2f', (x1, y1, x2, y2)))
+
+
+def draw_line_col(x1, y1, x2, y2, col):
+	pyglet.graphics.draw(2, pyglet.gl.GL_LINES, ('v2f', (x1, y1, x2, y2)), ('c3f', (col)*2) )
 
 
 def draw_cross(x, y, r):
@@ -466,8 +470,8 @@ def fillWorldGJK1(w):
 	fillWorldBox(w)
 
 	w.kinetics.append(Convex([[20.0,20.0], [24.0,20.0], [24.0,24.0], [20.0,24.0]], sharedMat))	
-	w.kinetics.append(Convex([[0.0,0.0], [5.0,0.0], [5.0,5.0], [0.0,5.0]], sharedMat))	
-	w.kinetics.append(Convex([[0.0,0.0], [2.0,0.0], [2.0,2.0], [0.0,2.0]], sharedMat))	
+	#w.kinetics.append(Convex([[0.0,0.0], [5.0,0.0], [5.0,5.0], [0.0,5.0]], sharedMat))	
+	#w.kinetics.append(Convex([[0.0,0.0], [2.0,0.0], [2.0,2.0], [0.0,2.0]], sharedMat))	
 	#w.kinetics.append(Convex([[-1.0,-1.0], [1.0,-1.0], [1.0,1.0], [-1.0,1.0]], sharedMat))	
 
 	cvx1 = Convex([[0.0,-5.0], [5.0,-5.0], [5.0,5.0], [0.0,5.0]], sharedMat)
@@ -480,9 +484,9 @@ def fillWorldGJK1(w):
 
 	random.seed(66)
 
-	for i in range(10):
+	for i in range(3):
 
-		num_v = random.randrange(3, 12)
+		num_v = random.randrange(3, 8)
 		r = random.uniform(1.0, 4.0)
 		cvx = Convex(randConvex(r, num_v), sharedMat)
 		cvx.p =  [random.uniform(10.0, 35.0), random.uniform(10.0, 25.0)]
@@ -801,12 +805,14 @@ gDoSingleStep = False
 gMicroStep = False
 gDoMicroStep = False
 gMousePos = None
+gMouseHoverObj = None
 gMousePick = 0
 gPrevMousePick = 0
 gMousePickStart = None
 gMousePickObj = None
 gMousePickObjVec = None
 gDoTest = False
+
 
 @window.event
 def on_draw():
@@ -850,8 +856,14 @@ def on_draw():
 			pt2 = v2_add(info.p, v2_muls(v2_normalize(info.n), info.d))
 			draw_line(info.p[0]*ppm, info.p[1]*ppm, pt2[0]*ppm, pt2[1]*ppm)
 
+	if gMouseHoverObj != None:
+		draw_convex_col(gMouseHoverObj.p, gMouseHoverObj.v, ppm, [1.0, 0.0, 0.0])
+	if gMousePickObj != None:
+		draw_convex_col(gMousePickObj.p, gMousePickObj.v, ppm, [1.0, 0.0, 0.0])	
+
 	handleMouse()
 	handleKeyboard()
+	
 
 
 def handleMouse():
@@ -874,11 +886,17 @@ def handleMouse():
 
 
 def doHover(pos):
+	global gMouseHoverObj
 
+	gMouseHoverObj = None
 	for k in gWorld.kinetics:
 		dist = gjk_distance(k.p, k.v, [0.0,0.0], [pos])
 		if (dist[0] <= dist[1]):
-			draw_convex_col(k.p, k.v, ppm, [1.0, 0.0, 0.0])
+			gMouseHoverObj = k
+			#draw_convex_col(k.p, k.v, ppm, [1.0, 0.0, 0.0])
+		else:
+			draw_line_col(dist[2][0]*ppm, dist[2][1]*ppm, dist[3][0]*ppm, dist[3][1]*ppm, [0.1, 0.1, 0.1])
+			
 
 
 def doPick(pos, startPos, init):
@@ -898,7 +916,7 @@ def doPick(pos, startPos, init):
 	if gMousePickObj != None:
 		move = v2_sub(pos, startPos)
 		gMousePickObj.p = v2_add(gMousePickObjVec, move)
-		draw_convex_col(gMousePickObj.p, gMousePickObj.v, ppm, [1.0, 0.0, 1.0])
+		#draw_convex_col(gMousePickObj.p, gMousePickObj.v, ppm, [1.0, 0.0, 1.0])
 
 
 def handleKeyboard():
@@ -913,6 +931,8 @@ def handleKeyboard():
 				if (dist[0] <= dist[1]):
 					draw_convex_col(ks[i].p, ks[i].v, ppm, [1.0, 1.0, 0.0])
 					draw_convex_col(ks[j].p, ks[j].v, ppm, [1.0, 1.0, 0.0])
+				else:	
+					draw_line_col(dist[2][0]*ppm, dist[2][1]*ppm, dist[3][0]*ppm, dist[3][1]*ppm, [0.3, 0.3, 0.0])	
 		
 
 
