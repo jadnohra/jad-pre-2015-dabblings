@@ -1,7 +1,9 @@
-import pyglet
 import math
 import time
+import pprint
 import os
+import random
+import pyglet
 
 #execfile('../../../gaussy/gaussy.py')
 execfile('Z:/Personal/Lab/gaussy/gaussy.py')
@@ -17,6 +19,7 @@ class World:
 	frame = -1
 	dt = 0.0
 	statics = None
+	kinetics = None
 	particles = None
 	forces = None
 	staticContactPairs = None
@@ -27,6 +30,7 @@ class World:
 	
 	def __init__(self):
 		self.statics = []
+		self.kinetics = []
 		self.forces = []
 		self.particles = []
 		self.staticContactPairs = []
@@ -42,13 +46,12 @@ class Material:
 
 
 class Convex:
-	v1 = [0,0]
-	v2 = [0,0]
+	v = []
+	p = [0.0, 0.0]
 	mat = None
 
-	def __init__(self, v1, v2, mat):
-		self.v1 = v1
-		self.v2 = v2
+	def __init__(self, v, mat):
+		self.v = v
 		self.mat = mat
 	
 
@@ -401,10 +404,30 @@ particle_sincos = [ [math.cos(a), math.sin(a)] for a in particle_angles ]
 
 def draw_box(x1, y1, x2, y2):
 	pyglet.graphics.draw(4, pyglet.gl.GL_QUADS, ('v2f', (x1, y1, x2, y1, x2, y2, x1, y2)))
-	#pyglet.graphics.draw(4, pyglet.gl.GL_LINE_LOOP, ('v2f', (x1, y1, x2, y1, x2, y2, x1, y2)))
+
+
+def draw_convex(p, v, ppm):
+	flatv = [0.0] * (len(v)*2)
+	for i in range(len(v)):
+		flatv[2*i] = (p[0]+v[i][0]) * ppm
+		flatv[2*i+1] = (p[1]+v[i][1]) * ppm
+	pyglet.graphics.draw(len(v), pyglet.gl.GL_LINE_LOOP, ('v2f', flatv))
+
+def draw_convex_col(p, v, ppm, col):
+	flatv = [0.0] * (len(v)*2)
+	for i in range(len(v)):
+		flatv[2*i] = (p[0]+v[i][0]) * ppm
+		flatv[2*i+1] = (p[1]+v[i][1]) * ppm
+	pyglet.graphics.draw(len(v), pyglet.gl.GL_LINE_LOOP, ('v2f', flatv), ('c3f', (col) * (len(v))))
+
+
 
 def draw_line(x1, y1, x2, y2):
 	pyglet.graphics.draw(2, pyglet.gl.GL_LINES, ('v2f', (x1, y1, x2, y2)))
+
+
+def draw_cross(x, y, r):
+	pyglet.graphics.draw(4, pyglet.gl.GL_LINES, ('v2f', (x-r, y, x+r, y, x, y-r, x, y+r)))
 
 
 def draw_particle(x, y, r):
@@ -425,16 +448,38 @@ worldFillerIndex = 0
 def fillWorldBox(w):	
 	#floor
 	floorMat = Material(1.0)
-	w.statics.append(Convex([0.5,1.0], [39.5, 1.0], floorMat))	
+	w.statics.append(Convex([[0.5,1.0], [39.5, 1.0]], floorMat))	
 
 	#walls
 	wallMat = Material(1.0)
-	w.statics.append(Convex([1.0,0.5], [1.0, 29.5], wallMat))	
-	w.statics.append(Convex([39.5,29.0], [0.5, 29.0], wallMat))	
-	w.statics.append(Convex([39.0,29.5], [39.0, 0.5], wallMat))	
+	w.statics.append(Convex([[1.0,0.5], [1.0, 29.5]], wallMat))	
+	w.statics.append(Convex([[39.5,29.0], [0.5, 29.0]], wallMat))	
+	w.statics.append(Convex([[39.0,29.5], [39.0, 0.5]], wallMat))	
 worldFillers.append(fillWorldBox)	
 worldFillerIndex = len(worldFillers)-1
+
 	
+def fillWorldGJK1(w):
+	sharedMat = Material(1.0)
+	
+	fillWorldBox(w)
+
+	w.kinetics.append(Convex([[20.0,20.0], [24.0,20.0], [24.0,24.0], [20.0,24.0]], sharedMat))	
+
+	for i in range(5):
+
+		num_v = random.randrange(3, 4)
+		cvx = Convex([0.0]*num_v, sharedMat)
+		for vi in range(num_v):
+			cvx.v[vi] = [random.uniform(2.0, 38.0), random.uniform(2.0, 28.0)]
+
+		w.kinetics.append(cvx)
+
+
+worldFillers.append(fillWorldGJK1)	
+worldFillerIndex = len(worldFillers)-1
+
+
 def fillWorld1(w):
 	sharedMat = Material(1.0 * 0.8)
 	
@@ -465,7 +510,7 @@ def fillWorld1(w):
 
 	#platform
 	floorMat = Material(1.0 * 0.9)
-	w.statics.append(Convex([25.0,8.0], [35.0, 8.0], floorMat))	
+	w.statics.append(Convex([[25.0,8.0], [35.0, 8.0]], floorMat))	
 worldFillers.append(fillWorld1)
 
 
@@ -479,13 +524,13 @@ def fillWorld2(w):
 
 	#floor
 	floorMat = Material(1.0)
-	w.statics.append(Convex([1.0,1.0], [39.0, 1.0], floorMat))	
+	w.statics.append(Convex([[1.0,1.0], [39.0, 1.0]], floorMat))	
 
 	#walls
 	wallMat = Material(1.0)
-	w.statics.append(Convex([1.0,1.0], [1.0, 29.0], wallMat))	
-	w.statics.append(Convex([39.0,29.0], [1.0, 29.0], wallMat))	
-	w.statics.append(Convex([39.0,29.0], [39.0, 1.0], wallMat))	
+	w.statics.append(Convex([[1.0,1.0], [1.0, 29.0]], wallMat))	
+	w.statics.append(Convex([[39.0,29.0], [1.0, 29.0]], wallMat))	
+	w.statics.append(Convex([[39.0,29.0], [39.0, 1.0]], wallMat))	
 worldFillers.append(fillWorld2)
 
 
@@ -526,7 +571,7 @@ def fillWorldSpring1(w):
 		w.particles.append(Particle([35.0,10.5], [0.0, 0.0], 0.4, sharedMat))	
 		w.forces.append(SpringForce(w.particles[-1], w.particles[-2], 0.7, 1.0))
 		wallMat = Material(1.0)
-		w.statics.append(Convex([30.0,0.5], [30.0, 29.0], wallMat))	
+		w.statics.append(Convex([[30.0,0.5], [30.0, 29.0]], wallMat))	
 
 	if 1:	
 		w.particles.append(Particle([34.0,25.0], [0.5, 0.0], 0.4, sharedMat))	
@@ -536,7 +581,7 @@ def fillWorldSpring1(w):
 		w.particles.append(Particle([38.0,23.5], [0.0, 0.0], 0.4, sharedMat))	
 		w.forces.append(SpringForce(w.particles[-1], w.particles[-2], 0.7, 1.0))
 		wallMat = Material(0.9)
-		w.statics.append(Convex([29.5,18.0], [40.5, 18.0], wallMat))	
+		w.statics.append(Convex([[29.5,18.0], [40.5, 18.0]], wallMat))	
 
 
 worldFillers.append(fillWorldSpring1)
@@ -602,7 +647,7 @@ def fillWorldCable1(w):
 		w.particles.append(Particle([35.0,10.5], [0.0, 0.0], 0.4, sharedMat))	
 		w.forces.append(CableForce(w.particles[-1], w.particles[-2], defR , 1.5))
 		wallMat = Material(1.0)
-		w.statics.append(Convex([30.0,0.5], [30.0, 29.0], wallMat))	
+		w.statics.append(Convex([[30.0,0.5], [30.0, 29.0]], wallMat))	
 
 	if 1:	
 		w.particles.append(Particle([34.0,25.0], [0.5, 0.0], 0.4, sharedMat))	
@@ -612,7 +657,7 @@ def fillWorldCable1(w):
 		w.particles.append(Particle([38.0,23.5], [0.0, 0.0], 0.4, sharedMat))	
 		w.forces.append(CableForce(w.particles[-1], w.particles[-2], defR , 2.0))
 		wallMat = Material(0.9)
-		w.statics.append(Convex([29.5,18.0], [40.5, 18.0], wallMat))	
+		w.statics.append(Convex([[29.5,18.0], [40.5, 18.0]], wallMat))	
 
 worldFillers.append(fillWorldCable1)
 
@@ -637,7 +682,7 @@ def fillWorldLongCable1(w):
 				w.forces.append(CableForce(w.particles[-2], w.particles[-1], defR , tl/(num-1)))
 
 	wallMat = Material(0.9)
-	w.statics.append(Convex([2.0,20.0], [2.0, 15.0], wallMat))	
+	w.statics.append(Convex([[2.0,20.0], [2.0, 15.0]], wallMat))	
 
 
 worldFillers.append(fillWorldLongCable1)
@@ -708,8 +753,8 @@ def fillVWorld1(w):
 
 	#funnel
 	funnelMat = Material(1.0)
-	w.statics.append(Convex([20.0,7.0], [15.0, 20.0], funnelMat))	
-	w.statics.append(Convex([20.0,7.0], [25.0, 20.0], funnelMat))	
+	w.statics.append(Convex([[20.0,7.0], [15.0, 20.0]], funnelMat))	
+	w.statics.append(Convex([[20.0,7.0], [25.0, 20.0]], funnelMat))	
 
 	lastClientTime = -1.0
 	w.clientUpdate = updateVWorld1
@@ -717,12 +762,12 @@ worldFillers.append(fillVWorld1)
 
 
 def nextWorld():
-	global world
+	global gWorld
 	global worldFillers
 	global worldFillerIndex
 	
-	world = World()
-	worldFillers[worldFillerIndex](world)
+	gWorld = World()
+	worldFillers[worldFillerIndex](gWorld)
 	worldFillerIndex = (worldFillerIndex+1) % len(worldFillers)
 
 def repeatWorld():
@@ -730,7 +775,7 @@ def repeatWorld():
 	worldFillerIndex = (len(worldFillers) + worldFillerIndex-1) % len(worldFillers)
 	nextWorld()
 
-world = World()
+gWorld = World()
 nextWorld()
 
 
@@ -738,11 +783,16 @@ config = pyglet.gl.Config(double_buffer=True)
 window = pyglet.window.Window(800,600, config=config)
 
 fps_display = pyglet.clock.ClockDisplay(pyglet.font.load('Arial', 10), interval=0.1, format='%(fps).0f', color=(1.0, 1.0, 1.0, 0.5))
-singleStep = False
-doSingleStep = False
-microStep = False
-doMicroStep = False
-mousePos = None
+gSingleStep = False
+gDoSingleStep = False
+gMicroStep = False
+gDoMicroStep = False
+gMousePos = None
+gMousePick = 0
+gPrevMousePick = 0
+gMousePickStart = None
+gMousePickObj = None
+gMousePickObjVec = None
 
 @window.event
 def on_draw():
@@ -752,21 +802,24 @@ def on_draw():
 	fps = pyglet.text.Label(fps_display.label.text, font_name='Arial', font_size=6, x=window.width, y=window.height,anchor_x='right', anchor_y='top')
 	fps.draw()
 	
-	mom = pyglet.text.Label('{0:.2f} - {1:.2f}'.format(world.momentum, world.momentum/max(1,len(world.particles))), font_name='Arial', font_size=6, x=0, y=window.height,anchor_x='left', anchor_y='top')
+	mom = pyglet.text.Label('{0:.2f} - {1:.2f}'.format(gWorld.momentum, gWorld.momentum/max(1,len(gWorld.particles))), font_name='Arial', font_size=6, x=0, y=window.height,anchor_x='left', anchor_y='top')
 	mom.draw()
 		
 	
-	for s in world.statics:
-		draw_line(s.v1[0] * ppm, s.v1[1] * ppm, s.v2[0] * ppm, s.v2[1] * ppm)
+	for s in gWorld.statics:
+		draw_convex(s.p, s.v, ppm)
+
+	for k in gWorld.kinetics:
+		draw_convex(k.p, k.v, ppm)
 	
-	for p in world.particles:
+	for p in gWorld.particles:
 		draw_particle(p.pos[0] * ppm, p.pos[1] * ppm, p.radius * ppm)
 		
-	for c in world.contactPairs:
+	for c in gWorld.contactPairs:
 		pt2 = v2_add(c.info.p, v2_muls(v2_normalize(c.info.n), c.info.d))
 		draw_line(c.info.p[0]*ppm, c.info.p[1]*ppm, pt2[0]*ppm, pt2[1]*ppm)
 
-	for f in world.forces:
+	for f in gWorld.forces:
 		draw_line(f.obj[0].pos[0] * ppm, f.obj[0].pos[1] * ppm, f.obj[1].pos[0] * ppm, f.obj[1].pos[1] * ppm)
 
 	if 0:
@@ -783,36 +836,83 @@ def on_draw():
 			pt2 = v2_add(info.p, v2_muls(v2_normalize(info.n), info.d))
 			draw_line(info.p[0]*ppm, info.p[1]*ppm, pt2[0]*ppm, pt2[1]*ppm)
 
+	handleMouse()
+
+
+def handleMouse():
+
+	global gPrevMousePick
+	global gMousePickStart 
 	
-	if (mousePos != None):
-		draw_particle(mousePos[0], mousePos[1], 2.0)	
+	if (gMousePos == None):
+		return
+
+	if (gMousePick == 0):
+		draw_particle(gMousePos[0], gMousePos[1], 2.0)
+		doHover(v2_muls(gMousePos, mpp))
+	else:	
+		draw_cross(gMousePos[0], gMousePos[1], 8.0)
+		doPick(v2_muls(gMousePos, mpp), v2_muls(gMousePickStart, mpp), gPrevMousePick == 0)
+
+	gPrevMousePick = gMousePick			
+
+
+
+def doHover(pos):
+
+	for k in gWorld.kinetics:
+		pos_cvx = [v2_sub(pos, k.p)]
+		dist = gjk_distance(k.v, pos_cvx)
+		if (dist[0] <= dist[1]):
+			draw_convex_col(k.p, k.v, ppm, [1.0, 0.0, 0.0])
+
+
+def doPick(pos, startPos, init):
+
+	global gMousePickObj
+	global gMousePickObjVec
+
+	if init:
+		gMousePickObj = None
+		for k in gWorld.kinetics:
+			pos_cvx = [v2_sub(pos, k.p)]
+			dist = gjk_distance(k.v, pos_cvx)
+			if (dist[0] <= dist[1]):
+				gMousePickObj = k
+				gMousePickObjVec = k.p
+
+	
+	if gMousePickObj != None:
+		move = v2_sub(pos, startPos)
+		gMousePickObj.p = v2_add(gMousePickObjVec, move)
+		draw_convex_col(gMousePickObj.p, gMousePickObj.v, ppm, [1.0, 0.0, 1.0])
 
 
 def update(dt):
-	global microStep
-	global doMicroStep
-	global singleStep
-	global doSingleStep
+	global gMicroStep
+	global gDoMicroStep
+	global gSingleStep
+	global gDoSingleStep
 
-	if singleStep:
-		if (doSingleStep):
-			stepWorld(world, world.timeStep, False)
-			doSingleStep = False
-#	elif microStep:
-#		if (doMicroStep):
-#			stepWorld(world, world.timeStep, True)
-#			doMicroStep = False
+	if gSingleStep:
+		if (gDoSingleStep):
+			stepWorld(gWorld, gWorld.timeStep, False)
+			gDoSingleStep = False
+#	elif gMicroStep:
+#		if (gDoMicroStep):
+#			stepWorld(gWorld, gWorld.timeStep, True)
+#			gDoMicroStep = False
 	else:
-		stepWorld(world, dt, False)
+		stepWorld(gWorld, dt, False)
 
 
 
 @window.event	
 def on_key_press(symbol, modifiers):
-	global microStep
-	global doMicroStep
-	global singleStep
-	global doSingleStep
+	global gMicroStep
+	global gDoMicroStep
+	global gSingleStep
+	global gDoSingleStep
 
 	if symbol == pyglet.window.key.N:
 		nextWorld()
@@ -821,24 +921,45 @@ def on_key_press(symbol, modifiers):
 		repeatWorld()
 
 	if symbol == pyglet.window.key.S:
-		singleStep = ~singleStep
-		doSingleStep = False
+		gSingleStep = ~gSingleStep
+		gDoSingleStep = False
 
 	if symbol == pyglet.window.key.SPACE:
-		doSingleStep = True	
+		gDoSingleStep = True	
 
 	if symbol == pyglet.window.key.M:
-		microStep = ~microStep
-		doMicroStep = False
+		gMicroStep = ~gMicroStep
+		gDoMicroStep = False
 
 	if symbol == pyglet.window.key.SPACE:
-		doMicroStep = True	
+		gDoMicroStep = True	
 
 
 @window.event
 def on_mouse_motion(x, y, dx, dy):
-	global mousePos
-	mousePos = [x, y]
+	global gMousePos
+	global gMousePick
+	gMousePos = [x, y]
+	gMousePick = 0
+
+@window.event	
+def on_mouse_press(x, y, button, modifiers):
+	global gMousePick
+	global gMousePickStart
+	gMousePick = 1
+	gMousePickStart = [x, y]
+
+@window.event
+def on_mouse_release(x, y, button, modifiers):
+	global gMousePick
+	gMousePick = 0
+
+@window.event
+def on_mouse_drag(x, y, dx, dy, buttons, modifiers):
+	global gMousePos
+	global gMousePick
+	gMousePos = [x, y]
+	gMousePick = 1
 
 
 pyglet.clock.schedule_interval(update, 1.0/60.0)	
