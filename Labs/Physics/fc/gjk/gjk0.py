@@ -468,7 +468,7 @@ def fillWorldGJK1(w):
 	w.kinetics.append(Convex([[20.0,20.0], [24.0,20.0], [24.0,24.0], [20.0,24.0]], sharedMat))	
 	w.kinetics.append(Convex([[0.0,0.0], [5.0,0.0], [5.0,5.0], [0.0,5.0]], sharedMat))	
 	w.kinetics.append(Convex([[0.0,0.0], [2.0,0.0], [2.0,2.0], [0.0,2.0]], sharedMat))	
-	w.kinetics.append(Convex([[-1.0,-1.0], [1.0,-1.0], [1.0,1.0], [-1.0,1.0]], sharedMat))	
+	#w.kinetics.append(Convex([[-1.0,-1.0], [1.0,-1.0], [1.0,1.0], [-1.0,1.0]], sharedMat))	
 
 	cvx1 = Convex([[0.0,-5.0], [5.0,-5.0], [5.0,5.0], [0.0,5.0]], sharedMat)
 	cvx1.p = [9.0, 10.0]
@@ -478,14 +478,17 @@ def fillWorldGJK1(w):
 	cvx2.p = [10.0, 10.0]
 	w.kinetics.append(cvx2)	
 
-	for i in range(5):
+	random.seed(66)
 
-		num_v = random.randrange(3, 4)
-		cvx = Convex([0.0]*num_v, sharedMat)
-		for vi in range(num_v):
-			cvx.v[vi] = [random.uniform(10.0, 20.0), random.uniform(10.0, 20.0)]
+	for i in range(10):
+
+		num_v = random.randrange(3, 12)
+		r = random.uniform(1.0, 4.0)
+		cvx = Convex(randConvex(r, num_v), sharedMat)
+		cvx.p =  [random.uniform(10.0, 35.0), random.uniform(10.0, 25.0)]
 
 		w.kinetics.append(cvx)
+
 worldFillers.append(fillWorldGJK1)	
 worldFillerIndex = len(worldFillers)-1
 
