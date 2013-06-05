@@ -811,7 +811,7 @@ gPrevMousePick = 0
 gMousePickStart = None
 gMousePickObj = None
 gMousePickObjVec = None
-gDoTest = False
+gDoTest = True
 
 
 @window.event
@@ -895,7 +895,7 @@ def doHover(pos):
 			gMouseHoverObj = k
 			#draw_convex_col(k.p, k.v, ppm, [1.0, 0.0, 0.0])
 		else:
-			draw_line_col(dist[2][0]*ppm, dist[2][1]*ppm, dist[3][0]*ppm, dist[3][1]*ppm, [0.1, 0.1, 0.1])
+			draw_line_col(dist[2][0]*ppm, dist[2][1]*ppm, dist[3][0]*ppm, dist[3][1]*ppm, [0.2, 0.2, 0.2])
 			
 
 
