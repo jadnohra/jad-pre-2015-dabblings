@@ -438,6 +438,7 @@ def draw_particle(x, y, r):
 	pyglet.graphics.draw(particle_vcount, pyglet.gl.GL_LINE_LOOP, ('v2f', vertices))
 
 
+
 #--------------------------------
 #------------ MAIN	-------------
 #--------------------------------
