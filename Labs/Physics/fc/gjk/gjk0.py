@@ -466,17 +466,26 @@ def fillWorldGJK1(w):
 	fillWorldBox(w)
 
 	w.kinetics.append(Convex([[20.0,20.0], [24.0,20.0], [24.0,24.0], [20.0,24.0]], sharedMat))	
+	w.kinetics.append(Convex([[0.0,0.0], [5.0,0.0], [5.0,5.0], [0.0,5.0]], sharedMat))	
+	w.kinetics.append(Convex([[0.0,0.0], [2.0,0.0], [2.0,2.0], [0.0,2.0]], sharedMat))	
+	w.kinetics.append(Convex([[-1.0,-1.0], [1.0,-1.0], [1.0,1.0], [-1.0,1.0]], sharedMat))	
+
+	cvx1 = Convex([[0.0,-5.0], [5.0,-5.0], [5.0,5.0], [0.0,5.0]], sharedMat)
+	cvx1.p = [9.0, 10.0]
+	w.kinetics.append(cvx1)	
+
+	cvx2 = Convex([[0.0,0.0], [-3.0,3.0], [-3.0,-3.0]], sharedMat)
+	cvx2.p = [10.0, 10.0]
+	w.kinetics.append(cvx2)	
 
 	for i in range(5):
 
 		num_v = random.randrange(3, 4)
 		cvx = Convex([0.0]*num_v, sharedMat)
 		for vi in range(num_v):
-			cvx.v[vi] = [random.uniform(2.0, 38.0), random.uniform(2.0, 28.0)]
+			cvx.v[vi] = [random.uniform(10.0, 20.0), random.uniform(10.0, 20.0)]
 
 		w.kinetics.append(cvx)
-
-
 worldFillers.append(fillWorldGJK1)	
 worldFillerIndex = len(worldFillers)-1
 
@@ -794,6 +803,7 @@ gPrevMousePick = 0
 gMousePickStart = None
 gMousePickObj = None
 gMousePickObjVec = None
+gDoTest = False
 
 @window.event
 def on_draw():
@@ -838,6 +848,7 @@ def on_draw():
 			draw_line(info.p[0]*ppm, info.p[1]*ppm, pt2[0]*ppm, pt2[1]*ppm)
 
 	handleMouse()
+	handleKeyboard()
 
 
 def handleMouse():
@@ -862,8 +873,7 @@ def handleMouse():
 def doHover(pos):
 
 	for k in gWorld.kinetics:
-		pos_cvx = [v2_sub(pos, k.p)]
-		dist = gjk_distance(k.v, pos_cvx)
+		dist = gjk_distance(k.p, k.v, [0.0,0.0], [pos])
 		if (dist[0] <= dist[1]):
 			draw_convex_col(k.p, k.v, ppm, [1.0, 0.0, 0.0])
 
@@ -876,8 +886,7 @@ def doPick(pos, startPos, init):
 	if init:
 		gMousePickObj = None
 		for k in gWorld.kinetics:
-			pos_cvx = [v2_sub(pos, k.p)]
-			dist = gjk_distance(k.v, pos_cvx)
+			dist = gjk_distance(k.p, k.v, [0.0, 0.0], [pos])
 			if (dist[0] <= dist[1]):
 				gMousePickObj = k
 				gMousePickObjVec = k.p
@@ -887,6 +896,21 @@ def doPick(pos, startPos, init):
 		move = v2_sub(pos, startPos)
 		gMousePickObj.p = v2_add(gMousePickObjVec, move)
 		draw_convex_col(gMousePickObj.p, gMousePickObj.v, ppm, [1.0, 0.0, 1.0])
+
+
+def handleKeyboard():
+	global gDoTest
+
+	if gDoTest:
+		ks = gWorld.kinetics
+		for i in range(len(ks)):
+			for j in range(i+1, len(ks)):
+				dist = gjk_distance(ks[i].p, ks[i].v, ks[j].p, ks[j].v)
+				#print dist[0]
+				if (dist[0] <= dist[1]):
+					draw_convex_col(ks[i].p, ks[i].v, ppm, [1.0, 1.0, 0.0])
+					draw_convex_col(ks[j].p, ks[j].v, ppm, [1.0, 1.0, 0.0])
+		
 
 
 def update(dt):
@@ -914,6 +938,7 @@ def on_key_press(symbol, modifiers):
 	global gDoMicroStep
 	global gSingleStep
 	global gDoSingleStep
+	global gDoTest
 
 	if symbol == pyglet.window.key.N:
 		nextWorld()
@@ -934,6 +959,9 @@ def on_key_press(symbol, modifiers):
 
 	if symbol == pyglet.window.key.SPACE:
 		gDoMicroStep = True	
+
+	if symbol == pyglet.window.key.T:
+		gDoTest = ~gDoTest
 
 
 @window.event
