@@ -85,11 +85,11 @@ def EmptySquareMatrix(d):
 
 
 def EmptyMatrix(r,c):
-	return [[]*r for x in xrange(c)]
+	return [[]*c for x in xrange(r)]
 
 
 def Matrix(r,c,v):
-	return [[v]*r for x in xrange(c)]
+	return [[v]*c for x in xrange(r)]
 	#M = [v]*r
 	#for i in range(r):
 	#	M[i] = [v]*c
@@ -97,7 +97,7 @@ def Matrix(r,c,v):
 
 
 def Eye(r,c):
-	M = Matrix(r,c,v)
+	M = Matrix(r,c,0.0)
 	for i in range(r):
 		M[i][i] = 1.0
 	return M
@@ -681,7 +681,11 @@ def gjk_support_mink_cvx(p1, cvx1, p2, cvx2, d):
 
 	i1 = gjk_support_cvx(p1, cvx1, d)
 	i2 = gjk_support_cvx(p2, cvx2, v2_neg(d))
-	return [i1[0]+i2[0], v2_sub( v2_add(p1, cvx1[i1[1]]), v2_add(p2, cvx2[i2[1]]))]
+
+	h = i1[0]+i2[0]
+	s = v2_sub( v2_add(p1, cvx1[i1[1]]), v2_add(p2, cvx2[i2[1]]))
+	pi = [i1[1], i2[1]]
+	return [ h, s, pi ] # h, s, point_indices
 
 
 def gjk_subdist_fallback(ctx, Vk):
@@ -692,7 +696,8 @@ def gjk_subdist_fallback(ctx, Vk):
 	best = -1
 	best_v = None
 	best_dist = None
-	best_nVi = None
+	best_Isp = None
+	best_Li = None
 
 	for pi in range(perm.count):
 
@@ -724,24 +729,24 @@ def gjk_subdist_fallback(ctx, Vk):
 			if (cond2):
 
 				v = [0.0, 0.0]
-				nVi = Isp
+				Li = [0.0] * len(Vk)
 				iD = 1.0 / D
 				for i in range(d):
-					li = Di[di_index+i] * iD
-					v = v2_add(v, v2_muls(Vk[Is[i]], li))
-					if (li == 0.0):
-						nVi.append(Is[i])
+					l = Di[di_index+i] * iD
+					v = v2_add(v, v2_muls(Vk[Is[i]], l))
+					Li[Is[i]] = l
 
 				dist = v2_len(v)
 				if (best < 0 or dist < best_dist):
 					best = pi
 					best_v = v
 					best_dist = dist
-					best_nVi = nVi
+					best_Isp = Isp
+					best_Li = Li
 
 
 	if (best >= 0):
-		return [best_v, best_nVi]
+		return [best_v, best_Isp, best_Li]
 					
 	return None
 
@@ -752,6 +757,27 @@ def gjk_subdist(ctx, Vk):
 	Di = [1.0] * perm.Di_count;	
 
 	for pi in range(perm.count):
+
+		# test
+		#if (pi == 6):
+			# As = Matrix(3,4, 0.0)
+			# As[0][0] = 1.0
+			# As[0][1] = 1.0
+			# As[0][2] = 1.0
+			# As[0][3] = 1.0
+			# As[1][0] = v2_dot(v2_sub(Vk[1], Vk[0]), Vk[0])
+			# As[1][1] = v2_dot(v2_sub(Vk[1], Vk[0]), Vk[1])
+			# As[1][2] = v2_dot(v2_sub(Vk[1], Vk[0]), Vk[2])
+			# As[1][3] = 0.0
+			# As[2][0] = v2_dot(v2_sub(Vk[2], Vk[0]), Vk[0])
+			# As[2][1] = v2_dot(v2_sub(Vk[2], Vk[0]), Vk[1])
+			# As[2][2] = v2_dot(v2_sub(Vk[2], Vk[0]), Vk[2])
+			# As[2][3] = 0.0
+
+			# PrintM(As, 'As')
+			# l = GaussSolve(As)
+			# print l
+			# print linComb(Vk, l)
 
 		d = len(perm.Is[pi])
 		di_index = perm.Di_index[pi]
@@ -784,15 +810,14 @@ def gjk_subdist(ctx, Vk):
 			if (cond2 and cond3):
 
 				v = [0.0, 0.0]
-				nVi = Isp
+				Li = [0.0] * len(Vk)
 				iD = 1.0 / D
 				for i in range(d):
-					li = Di[di_index+i] * iD
-					v = v2_add(v, v2_muls(Vk[Is[i]], li))
-					if (li == 0.0):
-						nVi.append(Is[i])
+					l = Di[di_index+i] * iD
+					v = v2_add(v, v2_muls(Vk[Is[i]], l))
+					Li[Is[i]] = l
 
-				return [v, nVi]
+				return [v, Isp, Li]	# vertex, unused Vk's, lambdas
 					
 	return gjk_subdist_fallback(ctx, Vk)
 
@@ -802,8 +827,9 @@ def gjk_distance(p1, cvx1, p2, cvx2, eps=0.0000001, dbg = None):
 	ctx = GJK_Context()
 
 	d = [-1.0, 0.0]
-	h = gjk_support_mink_cvx(p1, cvx1, p2, cvx2, d) 
-	Vk = [ h[1] ]
+	supp = gjk_support_mink_cvx(p1, cvx1, p2, cvx2, d) 
+	Vk = [ supp[1] ]
+	Vi = [ supp[2] ]
 
 	max_iter = 3 + (len(cvx1) + len(cvx2))*5
 	iter = 0
@@ -814,34 +840,44 @@ def gjk_distance(p1, cvx1, p2, cvx2, eps=0.0000001, dbg = None):
 		iter = iter + 1	
 		
 		#if (fallback):
-		#	sd = gjk_subdist_fallback(ctx, Vk)
+		#	subd = gjk_subdist_fallback(ctx, Vk)
 		#else:
-		sd = gjk_subdist(ctx, Vk)
+		subd = gjk_subdist(ctx, Vk)
 
-		vk = sd[0]
+		vk = subd[0]
 		nvk = v2_neg(vk)	
-		h = gjk_support_mink_cvx(p1, cvx1, p2, cvx2, nvk) 
-		g = v2_dot(vk, vk) + h[0]
+		supp = gjk_support_mink_cvx(p1, cvx1, p2, cvx2, nvk) 
+		g = v2_dot(vk, vk) + supp[0]
 
 		if dbg != None:
 			dbg.append( [copy.deepcopy(Vk), copy.deepcopy(vk), copy.deepcopy(d)] )
 
 		dist = v2_len(vk)	
 		if ((math.fabs(g) < eps) or (iter > max_iter)):
-			return [dist, eps]
+			
+			v1 = p1
+			v2 = p2
+			li = subd[2]
+			for i in range(len(li)):
+				v1 = v2_add(v1, v2_muls(cvx1[Vi[i][0]], li[i]))
+				v2 = v2_add(v2, v2_muls(cvx2[Vi[i][1]], li[i]))
+
+			return [dist, eps, v1, v2]
+
 
 		#if (dist > last_dist):
 		#	fallback = True
 
 		last_dist = dist
-		Vk.append( h[1] )
+		Vk.append( supp[1] )
+		Vi.append( supp[2] )
 		if (len(Vk)>3):
-			nVi = sd[1]
+			nVi = subd[1]
 			if (len(nVi) > 0):
 				Vk.pop(nVi[0])
+				Vi.pop(nVi[0])
 			else:
-				Vk.pop(0)
-				Vk[0] = vk
+				return None
 
 
 
@@ -922,6 +958,26 @@ def TestGJK1():
 
 	return 0
 
+
+def TestGJK2():
+
+	p1 = [0.0, 0.0]
+	p2 = [0.0, 0.0]
+	cvx1 = [[1.0,0.0], [3.0,3.0], [0.0,-5.0]]
+	cvx2 = [[0.0,0.0]]
+	dist = gjk_distance(p1, cvx1, p2, cvx2)[0]
+	print dist
+
+	p1 = [0.0, 0.0]
+	p2 = [0.0, 0.0]
+	cvx1 = [[-1.0,0.0], [3.0,3.0], [0.0,-5.0]]
+	cvx2 = [[0.0,0.0]]
+	dist = gjk_distance(p1, cvx1, p2, cvx2)[0]
+	print dist
+
+	return 0	
+
 #TestGJK()
-#PTestGJK1()
+#TestGJK1()
+#TestGJK2()
 
