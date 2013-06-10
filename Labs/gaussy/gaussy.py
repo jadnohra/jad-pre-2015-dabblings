@@ -714,7 +714,7 @@ def gjk_subdist_fallback(ctx, Vk):
 		for j in range(len(Isp)):
 			Dj = 0.0
 			for i in range(d):
-				Dj = Dj + ( Di[di_index+i] * ( v2_dot(Vk[Is[i]], Vk[Is[0]]) - v2_dot(Vk[Is[i]], Vk[Isp[j]]) ) )
+				Dj = Dj + ( Di[di_index+i] * ( v2_dot(Vk[Is[i]], v2_sub(Vk[Is[0]], Vk[Isp[j]]) )  ) )
 			Di[perm.Union_index[pi][j]] = Dj
 
 		cond1 = D > 0.0
@@ -758,27 +758,6 @@ def gjk_subdist(ctx, Vk):
 
 	for pi in range(perm.count):
 
-		# test
-		#if (pi == 6):
-			# As = Matrix(3,4, 0.0)
-			# As[0][0] = 1.0
-			# As[0][1] = 1.0
-			# As[0][2] = 1.0
-			# As[0][3] = 1.0
-			# As[1][0] = v2_dot(v2_sub(Vk[1], Vk[0]), Vk[0])
-			# As[1][1] = v2_dot(v2_sub(Vk[1], Vk[0]), Vk[1])
-			# As[1][2] = v2_dot(v2_sub(Vk[1], Vk[0]), Vk[2])
-			# As[1][3] = 0.0
-			# As[2][0] = v2_dot(v2_sub(Vk[2], Vk[0]), Vk[0])
-			# As[2][1] = v2_dot(v2_sub(Vk[2], Vk[0]), Vk[1])
-			# As[2][2] = v2_dot(v2_sub(Vk[2], Vk[0]), Vk[2])
-			# As[2][3] = 0.0
-
-			# PrintM(As, 'As')
-			# l = GaussSolve(As)
-			# print l
-			# print linComb(Vk, l)
-
 		d = len(perm.Is[pi])
 		di_index = perm.Di_index[pi]
 
@@ -793,7 +772,7 @@ def gjk_subdist(ctx, Vk):
 		for j in range(len(Isp)):
 			Dj = 0.0
 			for i in range(d):
-				Dj = Dj + ( Di[di_index+i] * ( v2_dot(Vk[Is[i]], Vk[Is[0]]) - v2_dot(Vk[Is[i]], Vk[Isp[j]]) ) )
+				Dj = Dj + ( Di[di_index+i] * ( v2_dot(Vk[Is[i]], v2_sub(Vk[Is[0]], Vk[Isp[j]]) )  ) )
 			Di[perm.Union_index[pi][j]] = Dj
 			if (Dj > 0.0):
 				cond3 = False
