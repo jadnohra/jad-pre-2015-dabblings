@@ -849,6 +849,7 @@ gMousePickStart = None
 gMousePickObj = None
 gMousePickObjVec = None
 gDoTest = True
+gDoDelete = False
 
 
 @window.event
@@ -967,6 +968,9 @@ def doPick(pos, startPos, init):
 
 def handleKeyboard():
 	global gDoTest
+	global gDoDelete
+	global gMousePickObj
+	global gMouseHoverObj
 
 	if gDoTest:
 		ks = gWorld.kinetics
@@ -984,6 +988,18 @@ def handleKeyboard():
 				else:	
 					draw_line_col(dist[2][0]*ppm, dist[2][1]*ppm, dist[3][0]*ppm, dist[3][1]*ppm, [0.3, 0.3, 0.0])	
 		
+	if gDoDelete:
+		if (gMousePickObj or gMouseHoverObj):
+			for i in range(len(gWorld.kinetics)):
+				if ((gWorld.kinetics[i] == gMousePickObj) or (gWorld.kinetics[i] == gMouseHoverObj)):
+					if (gWorld.kinetics[i] == gMousePickObj):
+						gMousePickObj = None
+					if (gWorld.kinetics[i] == gMouseHoverObj):	
+						gMouseHoverObj = None
+					gWorld.kinetics.pop(i)	
+					break
+					
+	gDoDelete = False
 
 
 def update(dt):
@@ -1012,6 +1028,7 @@ def on_key_press(symbol, modifiers):
 	global gSingleStep
 	global gDoSingleStep
 	global gDoTest
+	global gDoDelete
 	global gTestEpa
 
 	if symbol == pyglet.window.key.N:
@@ -1039,6 +1056,9 @@ def on_key_press(symbol, modifiers):
 
 	if symbol == pyglet.window.key.E:
 		gTestEpa = not gTestEpa
+
+	if symbol == pyglet.window.key.DELETE:
+		gDoDelete = True
 
 
 @window.event
