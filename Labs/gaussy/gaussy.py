@@ -861,10 +861,8 @@ def gjk_distance(p1, cvx1, p2, cvx2, eps=0.0000001, dbg = None):
 
 
 def gjk_epa_closest_on_edge(ctx, v1, v2):
-
 	Vk = [v1, v2]
 	subd = gjk_subdist(ctx, Vk)
-
 	return [subd[0], subd[2]] # vert, lambdas
 
 
