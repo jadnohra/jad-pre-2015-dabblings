@@ -8,6 +8,15 @@ import pyglet
 #execfile('../../../gaussy/gaussy.py')
 execfile('Z:/Personal/Lab/gaussy/gaussy.py')
 
+gTestEpa = True
+
+def test_gjk_distance(p1, cvx1, p2, cvx2):
+	global gTestEpa
+	if (gTestEpa):
+		return gjk_epa_distance(p1, cvx1, p2, cvx2, 0.0001)
+	else:
+		return gjk_distance(p1, cvx1, p2, cvx2)
+
 
 class World:
 	g = -9.8 * 1.0
@@ -469,7 +478,7 @@ def fillWorldGJK1(w):
 	
 	fillWorldBox(w)
 
-	w.kinetics.append(Convex([[20.0,20.0], [24.0,20.0], [24.0,24.0], [20.0,24.0]], sharedMat))	
+	#w.kinetics.append(Convex([[20.0,20.0], [24.0,20.0], [24.0,24.0], [20.0,24.0]], sharedMat))	
 	#w.kinetics.append(Convex([[0.0,0.0], [5.0,0.0], [5.0,5.0], [0.0,5.0]], sharedMat))	
 	#w.kinetics.append(Convex([[0.0,0.0], [2.0,0.0], [2.0,2.0], [0.0,2.0]], sharedMat))	
 	#w.kinetics.append(Convex([[-1.0,-1.0], [1.0,-1.0], [1.0,1.0], [-1.0,1.0]], sharedMat))	
@@ -484,7 +493,7 @@ def fillWorldGJK1(w):
 
 	random.seed(66)
 
-	for i in range(3):
+	for i in range(0):
 
 		num_v = random.randrange(3, 8)
 		r = random.uniform(1.0, 4.0)
@@ -895,8 +904,12 @@ def doHover(pos):
 
 	gMouseHoverObj = None
 	for k in gWorld.kinetics:
-		dist = gjk_distance(k.p, k.v, [0.0,0.0], [pos])
+		dist = test_gjk_distance(k.p, k.v, [0.0,0.0], [pos])
+		#print pos
+		#print dist[0]
 		if (dist[0] <= dist[1]):
+			if (dist[0] < 0.0):
+				draw_line_col(dist[2][0]*ppm, dist[2][1]*ppm, dist[3][0]*ppm, dist[3][1]*ppm, [0.3, 0.3, 0.2])
 			gMouseHoverObj = k
 			#draw_convex_col(k.p, k.v, ppm, [1.0, 0.0, 0.0])
 		else:
@@ -911,7 +924,7 @@ def doPick(pos, startPos, init):
 	if init:
 		gMousePickObj = None
 		for k in gWorld.kinetics:
-			dist = gjk_distance(k.p, k.v, [0.0, 0.0], [pos])
+			dist = test_gjk_distance(k.p, k.v, [0.0, 0.0], [pos])
 			if (dist[0] <= dist[1]):
 				gMousePickObj = k
 				gMousePickObjVec = k.p
@@ -930,11 +943,14 @@ def handleKeyboard():
 		ks = gWorld.kinetics
 		for i in range(len(ks)):
 			for j in range(i+1, len(ks)):
-				dist = gjk_distance(ks[i].p, ks[i].v, ks[j].p, ks[j].v)
+				dist = test_gjk_distance(ks[i].p, ks[i].v, ks[j].p, ks[j].v)
 				#print dist[0]
 				if (dist[0] <= dist[1]):
 					draw_convex_col(ks[i].p, ks[i].v, ppm, [1.0, 1.0, 0.0])
 					draw_convex_col(ks[j].p, ks[j].v, ppm, [1.0, 1.0, 0.0])
+					
+					if (dist[0] < 0.0):
+						draw_line_col(dist[2][0]*ppm, dist[2][1]*ppm, dist[3][0]*ppm, dist[3][1]*ppm, [0.4, 0.4, 0.0])	
 				else:	
 					draw_line_col(dist[2][0]*ppm, dist[2][1]*ppm, dist[3][0]*ppm, dist[3][1]*ppm, [0.3, 0.3, 0.0])	
 		
@@ -966,6 +982,7 @@ def on_key_press(symbol, modifiers):
 	global gSingleStep
 	global gDoSingleStep
 	global gDoTest
+	global gTestEpa
 
 	if symbol == pyglet.window.key.N:
 		nextWorld()
@@ -974,21 +991,24 @@ def on_key_press(symbol, modifiers):
 		repeatWorld()
 
 	if symbol == pyglet.window.key.S:
-		gSingleStep = ~gSingleStep
+		gSingleStep = not gSingleStep
 		gDoSingleStep = False
 
 	if symbol == pyglet.window.key.SPACE:
 		gDoSingleStep = True	
 
 	if symbol == pyglet.window.key.M:
-		gMicroStep = ~gMicroStep
+		gMicroStep = not gMicroStep
 		gDoMicroStep = False
 
 	if symbol == pyglet.window.key.SPACE:
 		gDoMicroStep = True	
 
 	if symbol == pyglet.window.key.T:
-		gDoTest = ~gDoTest
+		gDoTest = not gDoTest
+
+	if symbol == pyglet.window.key.E:
+		gTestEpa = not gTestEpa
 
 
 @window.event
