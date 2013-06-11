@@ -1104,4 +1104,4 @@ def TestEPA():
 #TestGJK()
 #TestGJK1()
 #TestGJK2()
-TestEPA()
+#TestEPA()
