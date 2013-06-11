@@ -798,6 +798,7 @@ def gjk_subdist(ctx, Vk):
 
 				return [v, Isp, Li]	# vertex, unused Vk's, lambdas
 					
+	# Add failure case support from original paper and from VanDenBergen 'A Fast and Robust GJK Implementation for Collision Detection of Convex Objects'
 	return gjk_subdist_fallback(ctx, Vk)
 
 
@@ -812,7 +813,7 @@ def gjk_distance(p1, cvx1, p2, cvx2, eps=0.0000001, dbg = None):
 
 	max_iter = 3 + (len(cvx1) + len(cvx2))*5
 	iter = 0
-	last_dist = v2_len( Vk[0] )
+	#last_dist = v2_len( Vk[0] )
 	#fallback = False
 
 	while (True):
@@ -841,13 +842,13 @@ def gjk_distance(p1, cvx1, p2, cvx2, eps=0.0000001, dbg = None):
 				v1 = v2_add(v1, v2_muls(cvx1[Vi[i][0]], li[i]))
 				v2 = v2_add(v2, v2_muls(cvx2[Vi[i][1]], li[i]))
 
-			return [dist, eps, v1, v2]
+			return [dist, eps, v1, v2, Vk, Vi]
 
 
 		#if (dist > last_dist):
 		#	fallback = True
 
-		last_dist = dist
+		#last_dist = dist
 		Vk.append( supp[1] )
 		Vi.append( supp[2] )
 		if (len(Vk)>3):
@@ -859,6 +860,80 @@ def gjk_distance(p1, cvx1, p2, cvx2, eps=0.0000001, dbg = None):
 				return None
 
 
+def gjk_epa_closest_on_edge(ctx, v1, v2):
+
+	Vk = [v1, v2]
+	subd = gjk_subdist(ctx, Vk)
+
+	return [subd[0], subd[2]] # vert, lambdas
+
+
+def gjk_epa_distance(p1, cvx1, p2, cvx2, epa_eps, eps=0.0000001, dbg = None):
+
+	out = gjk_distance(p1, cvx1, p2, cvx2, eps, dbg) 
+	if (out[0] >= out[1]):
+		return out
+
+	ctx = GJK_Context()
+
+	Vk = out[4]
+	Vi = out[5]
+	
+	if (len(Vk)==1):
+		supp = gjk_support_mink_cvx(p1, cvx1, p2, cvx2, [1.0, 0.0])
+		Vk.append(supp[1])
+		Vi.append(supp[2])
+
+	if (len(Vk)==2):	
+		d = v2_sub(Vk[1], Vk[0])
+		supp = gjk_support_mink_cvx(p1, cvx1, p2, cvx2, [-d[1], d[0]])
+		Vk.append(supp[1])
+		Vi.append(supp[2])
+		supp = gjk_support_mink_cvx(p1, cvx1, p2, cvx2, [d[1], -d[0]])
+		Vk.insert(1, supp[1])
+		Vi.insert(1, supp[2])
+
+	Dk = [-1.0] * len(Vk)
+	Ck = [None] * len(Vk)
+	Li = [None] * len(Vk)
+
+	max_iter = 3 + (len(cvx1) + len(cvx2))*5
+	iter = 0
+
+	while (True):
+		iter = iter+1
+
+		min_i = -1
+
+		lV = len(Vk)
+		for i in range(lV):
+			if (Dk[i] < 0.0):
+				cl = gjk_epa_closest_on_edge(ctx, Vk[i], Vk[(i+1)%lV])
+				Ck[i] = cl[0]
+				Li[i] = cl[1]
+				Dk[i] = v2_lenSq(cl[0])
+
+			if ((min_i < 0) or (Dk[i] < Dk[min_i])):
+				min_i = i
+
+		supp = gjk_support_mink_cvx(p1, cvx1, p2, cvx2, Ck[min_i])
+		if ((v2_len(supp[1]) - v2_len(Ck[min_i]) < epa_eps) or (iter > max_iter)):
+
+			v1 = p1
+			v2 = p2
+			for i in range(2):
+				v1 = v2_add(v1, v2_muls(cvx1[Vi[(min_i+i)%lV][0]], Li[min_i][i]))
+				v2 = v2_add(v2, v2_muls(cvx2[Vi[(min_i+i)%lV][1]], Li[min_i][i]))
+
+			return [-v2_len(Ck[min_i]), 0.0, v1, v2]
+
+		ii = (min_i+1) % lV
+		Vk.insert(ii, supp[1])
+		Vi.insert(ii, supp[2])
+		Dk[min_i] = -1.0
+		Dk.insert(ii, -1.0)
+		Ck.insert(ii, None)
+		Li.insert(ii, None)
 
 
 def TestGJK():
@@ -956,7 +1031,77 @@ def TestGJK2():
 
 	return 0	
 
+
+def TestEPA():
+
+	p1 = [0.0, 0.0]
+	p2 = [0.1, 0.0]
+	cvx1 = [[-2.0,-2.0], [2.0,-2.0], [2.0,2.0], [-2.0, 2.0] ]
+	cvx2 = [[0.0,0.0]]
+	dist = gjk_epa_distance(p1, cvx1, p2, cvx2, 0.001)
+	print dist[0]
+	print dist[2]
+	print dist[3]
+
+	p1 = [0.0, 0.0]
+	p2 = [0.0, 0.0]
+	cvx1 = [[-2.0,-2.0], [2.0,-2.0], [2.0,2.0], [-2.0, 2.0] ]
+	cvx2 = [[0.0,0.0]]
+	dist = gjk_epa_distance(p1, cvx1, p2, cvx2, 0.001)[0]
+	print dist
+
+	p1 = [0.0, 0.0]
+	p2 = [0.0, 0.0]
+	cvx1 = [[-2.0,-2.0], [2.0,-2.0], [2.0,2.0], [-2.0, 2.0] ]
+	cvx2 = [[0.0,0.0]]
+	dist = gjk_epa_distance(p1, cvx1, p2, cvx2, 0.001)[0]
+	print dist
+
+	p1 = [0.0, 0.0]
+	p2 = [0.0, 0.1]
+	cvx1 = [[-2.0,-2.0], [2.0,-2.0], [2.0,2.0], [-2.0, 2.0] ]
+	cvx2 = [[0.0,0.0]]
+	dist = gjk_epa_distance(p1, cvx1, p2, cvx2, 0.001)[0]
+	print dist
+
+	p1 = [0.0, 0.0]
+	p2 =[21.25,22.15]
+	cvx1 = [[20.0,20.0], [24.0,20.0], [24.0,24.0], [20.0,24.0]]
+	cvx2 = [[0.0,0.0]]
+	dist = gjk_epa_distance(p1, cvx1, p2, cvx2, 0.001)[0]
+	print dist
+
+	p1 = [0.0, 0.0]
+	p2 =[22.0,22.0]
+	cvx1 = [[20.0,20.0], [24.0,20.0], [24.0,24.0], [20.0,24.0]]
+	cvx2 = [[0.0,0.0]]
+	dist = gjk_epa_distance(p1, cvx1, p2, cvx2, 0.001)[0]
+	print dist
+
+	p1 = [0.0, 0.0]
+	p2 =[22.0,21.9]
+	cvx1 = [[20.0,20.0], [24.0,20.0], [24.0,24.0], [20.0,24.0]]
+	cvx2 = [[0.0,0.0]]
+	dist = gjk_epa_distance(p1, cvx1, p2, cvx2, 0.001)[0]
+	print dist
+
+	p1 = [0.0, 0.0]
+	p2 = [0.0, 0.0]
+	cvx1 = [[1.0,0.0], [3.0,3.0], [0.0,-5.0]]
+	cvx2 = [[0.0,0.0]]
+	dist = gjk_epa_distance(p1, cvx1, p2, cvx2, 0.001)[0]
+	print dist
+
+	p1 = [0.0, 0.0]
+	p2 = [0.0, 0.0]
+	cvx1 = [[-1.0,0.0], [3.0,3.0], [0.0,-5.0]]
+	cvx2 = [[0.0,0.0]]
+	dist = gjk_epa_distance(p1, cvx1, p2, cvx2, 0.001)[0]
+	print dist
+
+	return 0	
+
 #TestGJK()
 #TestGJK1()
 #TestGJK2()
-
+TestEPA()
