@@ -430,13 +430,41 @@ def draw_convex_col(p, v, ppm, col):
 	pyglet.graphics.draw(len(v), pyglet.gl.GL_LINE_LOOP, ('v2f', flatv), ('c3f', (col)*len(v)) )
 
 
-
 def draw_line(x1, y1, x2, y2):
 	pyglet.graphics.draw(2, pyglet.gl.GL_LINES, ('v2f', (x1, y1, x2, y2)))
 
 
+def draw_thick_line_col(x1, y1, x2, y2, ppm, w, col):
+	if (w <= 1):
+		draw_line(x1, y1, x2, y2)
+	n = v2_sub([x2, y2], [x1, y1])	
+	n = [-n[1], n[0]]
+	n = v2_normalize(n)
+	sc = w/(2.0*ppm)
+	v0 = v2_add([x1, y1], v2_muls(n, sc))
+	v1 = v2_add([x2, y2], v2_muls(n, sc))
+	v2 = v2_add([x2, y2], v2_muls(n, -sc))
+	v3 = v2_add([x1, y1], v2_muls(n, -sc))
+
+	draw_convex_col([0.0, 0.0], [v0, v1, v2, v3], ppm, col)
+
+
 def draw_line_col(x1, y1, x2, y2, col):
 	pyglet.graphics.draw(2, pyglet.gl.GL_LINES, ('v2f', (x1, y1, x2, y2)), ('c3f', (col)*2) )
+
+
+def draw_arrow_col(x1, y1, x2, y2, ppm, w, col):
+	if (w <= 1):
+		draw_line(x1, y1, x2, y2)
+	n = v2_sub([x2, y2], [x1, y1])	
+	n = [-n[1], n[0]]
+	n = v2_normalize(n)
+	sc = w/(2.0*ppm)
+	v0 = v2_add([x1, y1], v2_muls(n, sc))
+	v1 = v2_add([x1, y1], v2_muls(n, -sc))
+	v2 = [x2, y2]
+
+	draw_convex_col([0.0, 0.0], [v0, v1, v2], ppm, col)
 
 
 def draw_cross(x, y, r):
@@ -478,7 +506,7 @@ def fillWorldGJK1(w):
 	
 	fillWorldBox(w)
 
-	#w.kinetics.append(Convex([[20.0,20.0], [24.0,20.0], [24.0,24.0], [20.0,24.0]], sharedMat))	
+	w.kinetics.append(Convex([[20.0,20.0], [24.0,20.0], [24.0,24.0], [20.0,24.0]], sharedMat))	
 	#w.kinetics.append(Convex([[0.0,0.0], [5.0,0.0], [5.0,5.0], [0.0,5.0]], sharedMat))	
 	#w.kinetics.append(Convex([[0.0,0.0], [2.0,0.0], [2.0,2.0], [0.0,2.0]], sharedMat))	
 	#w.kinetics.append(Convex([[-1.0,-1.0], [1.0,-1.0], [1.0,1.0], [-1.0,1.0]], sharedMat))	
@@ -493,7 +521,7 @@ def fillWorldGJK1(w):
 
 	random.seed(66)
 
-	for i in range(0):
+	for i in range(3):
 
 		num_v = random.randrange(3, 8)
 		r = random.uniform(1.0, 4.0)
@@ -909,7 +937,8 @@ def doHover(pos):
 		#print dist[0]
 		if (dist[0] <= dist[1]):
 			if (dist[0] < 0.0):
-				draw_line_col(dist[2][0]*ppm, dist[2][1]*ppm, dist[3][0]*ppm, dist[3][1]*ppm, [0.3, 0.3, 0.2])
+				#draw_line_col(dist[2][0]*ppm, dist[2][1]*ppm, dist[3][0]*ppm, dist[3][1]*ppm, [0.3, 0.3, 0.2])
+				draw_arrow_col(dist[3][0], dist[3][1], dist[2][0], dist[2][1], ppm, 20.0, [0.3, 0.3, 0.2])
 			gMouseHoverObj = k
 			#draw_convex_col(k.p, k.v, ppm, [1.0, 0.0, 0.0])
 		else:
@@ -950,7 +979,8 @@ def handleKeyboard():
 					draw_convex_col(ks[j].p, ks[j].v, ppm, [1.0, 1.0, 0.0])
 					
 					if (dist[0] < 0.0):
-						draw_line_col(dist[2][0]*ppm, dist[2][1]*ppm, dist[3][0]*ppm, dist[3][1]*ppm, [0.4, 0.4, 0.0])	
+						#draw_line_col(dist[2][0]*ppm, dist[2][1]*ppm, dist[3][0]*ppm, dist[3][1]*ppm, [0.4, 0.4, 0.0])	
+						draw_arrow_col(dist[2][0], dist[2][1], dist[3][0], dist[3][1], ppm, 12.0, [0.4, 0.4, 0.0])	
 				else:	
 					draw_line_col(dist[2][0]*ppm, dist[2][1]*ppm, dist[3][0]*ppm, dist[3][1]*ppm, [0.3, 0.3, 0.0])	
 		
