@@ -2,6 +2,9 @@ import math
 import random
 
 
+def v2_z():
+	return [0.0, 0.0]
+
 def v2_zero(v):
 	v[0] = 0.0
 	v[1] = 0.0
@@ -62,6 +65,54 @@ def v2_rot90(v1):
 	
 def v2_rotm90(v1):
 	return [ v1[1], -v1[0] ]
+
+def m2_zero():
+	return Matrix(3, 3, 0.0)
+
+def m2_id():
+	return Eye(3, 3)
+
+def m2_trans(m, off):
+	m[0][2] = off[0]
+	m[1][2] = off[1]
+	return m
+
+def m2_rot(m, a):
+	c = math.cos(a)
+	s = math.sin(a)
+	m[0][0] = c
+	m[0][1] = -s
+	m[1][0] = s
+	m[1][1] = c
+	return m
+
+def m2_tr(off, a):
+	return m2_trans(m2_rot(Eye(3,3), a), off)
+
+def m2_mul(m1, m2):
+	p = Eye(3, 3)
+	for i in range(3):
+		for j in range(3):
+			p[i][j] = m1[i][0]*m2[0][j]+m1[i][1]*m2[1][j]+m1[i][2]*m2[2][j]
+	return p		
+
+def m2_transp(m, v):
+	p = [0.0, 0.0]
+	p[0] = m[0][0]*v[0]+m[0][1]*v[1]+m[0][2]
+	p[1] = m[1][0]*v[0]+m[1][1]*v[1]+m[1][2]
+	return p
+
+def m2_transv(m, v):
+	p = [0.0, 0.0]
+	p[0] = m[0][0]*v[0]+m[0][1]*v[1]
+	p[1] = m[1][0]*v[0]+m[1][1]*v[1]
+	return p
+
+def m2_orth(m):
+	orth = v2_orth([m[0][0], m[0][1]])
+	m[1][0] = orth[0]
+	m[1][1] = orth[1]
+	return m
 	
 def PrintM(inMatrix, inName):
 	rows = len(inMatrix)
