@@ -619,6 +619,11 @@ def linComb(v, l):
 	return vc	
 	
 
+def convexVertex(p, cvx, r, n, i):
+	v = v2_add(p, cvx[i])
+	v = v2_add(v, v2_muls(n, r))
+	return v
+
 def randConvex(r, vc):
 	v = [None] * vc
 	
@@ -663,13 +668,13 @@ class GJK_Context:
 	perms = [GJK_Perm_0(), GJK_Perm_1(), GJK_Perm_2()]
 
 
-def gjk_support_cvx(p, cvx, d):
+def gjk_support_cvx(p, cvx, r, d, nd):
 
 	mi = 0
-	max = v2_dot( v2_add(p, cvx[0]), d)	
+	max = v2_dot( convexVertex(p, cvx, r, nd, 0), d)	
 
 	for i in range(1, len(cvx)):
-		dot = v2_dot( v2_add(p, cvx[i]), d)	
+		dot = v2_dot( convexVertex(p, cvx, r, nd, i), d)	
 		if (dot > max):
 			max = dot
 			mi = i
@@ -677,15 +682,18 @@ def gjk_support_cvx(p, cvx, d):
 
 
 
-def gjk_support_mink_cvx(p1, cvx1, p2, cvx2, d):
+def gjk_support_mink_cvx(p1, cvx1, r1, p2, cvx2, r2, d):
 
-	i1 = gjk_support_cvx(p1, cvx1, d)
-	i2 = gjk_support_cvx(p2, cvx2, v2_neg(d))
+	n = v2_normalize(d)
+
+	i1 = gjk_support_cvx(p1, cvx1, r1, d, n)
+	i2 = gjk_support_cvx(p2, cvx2, r2, v2_neg(d), v2_neg(n))
 
 	h = i1[0]+i2[0]
-	s = v2_sub( v2_add(p1, cvx1[i1[1]]), v2_add(p2, cvx2[i2[1]]))
-	pi = [i1[1], i2[1]]
-	return [ h, s, pi ] # h, s, point_indices
+	p1 = convexVertex(p1, cvx1, r1, n, i1[1])
+	p2 = convexVertex(p2, cvx2, r2, v2_neg(n), i2[1])
+	s = v2_sub(p1, p2)
+	return [ h, s, [p1, p2] ] # h, s, points
 
 
 def gjk_subdist_fallback(ctx, Vk):
@@ -802,14 +810,14 @@ def gjk_subdist(ctx, Vk):
 	return gjk_subdist_fallback(ctx, Vk)
 
 
-def gjk_distance(p1, cvx1, p2, cvx2, eps=0.0000001, dbg = None):
+def gjk_distance(p1, cvx1, r1, p2, cvx2, r2, eps=0.0000001, dbg = None):
 
 	ctx = GJK_Context()
 
 	d = [-1.0, 0.0]
-	supp = gjk_support_mink_cvx(p1, cvx1, p2, cvx2, d) 
+	supp = gjk_support_mink_cvx(p1, cvx1, r1, p2, cvx2, r2, d) 
 	Vk = [ supp[1] ]
-	Vi = [ supp[2] ]
+	Pi = [ supp[2] ]
 
 	max_iter = 3 + (len(cvx1) + len(cvx2))*5
 	iter = 0
@@ -826,7 +834,7 @@ def gjk_distance(p1, cvx1, p2, cvx2, eps=0.0000001, dbg = None):
 
 		vk = subd[0]
 		nvk = v2_neg(vk)	
-		supp = gjk_support_mink_cvx(p1, cvx1, p2, cvx2, nvk) 
+		supp = gjk_support_mink_cvx(p1, cvx1, r1, p2, cvx2, r2, nvk) 
 		g = v2_dot(vk, vk) + supp[0]
 
 		if dbg != None:
@@ -835,14 +843,14 @@ def gjk_distance(p1, cvx1, p2, cvx2, eps=0.0000001, dbg = None):
 		dist = v2_len(vk)	
 		if ((math.fabs(g) < eps) or (iter > max_iter)):
 			
-			v1 = p1
-			v2 = p2
+			v1 = [0.0, 0.0]
+			v2 = [0.0, 0.0]
 			li = subd[2]
 			for i in range(len(li)):
-				v1 = v2_add(v1, v2_muls(cvx1[Vi[i][0]], li[i]))
-				v2 = v2_add(v2, v2_muls(cvx2[Vi[i][1]], li[i]))
+				v1 = v2_add(v1, v2_muls(Pi[i][0], li[i]))
+				v2 = v2_add(v2, v2_muls(Pi[i][1], li[i]))
 
-			return [dist, eps, v1, v2, Vk, Vi]
+			return [dist, eps, v1, v2, Vk, Pi]
 
 
 		#if (dist > last_dist):
@@ -850,12 +858,12 @@ def gjk_distance(p1, cvx1, p2, cvx2, eps=0.0000001, dbg = None):
 
 		#last_dist = dist
 		Vk.append( supp[1] )
-		Vi.append( supp[2] )
+		Pi.append( supp[2] )
 		if (len(Vk)>3):
 			nVi = subd[1]
 			if (len(nVi) > 0):
 				Vk.pop(nVi[0])
-				Vi.pop(nVi[0])
+				Pi.pop(nVi[0])
 			else:
 				return None
 
@@ -866,30 +874,30 @@ def gjk_epa_closest_on_edge(ctx, v1, v2):
 	return [subd[0], subd[2]] # vert, lambdas
 
 
-def gjk_epa_distance(p1, cvx1, p2, cvx2, epa_eps, eps=0.0000001, dbg = None):
+def gjk_epa_distance(p1, cvx1, r1, p2, cvx2, r2, epa_eps, eps=0.0000001, dbg = None):
 
-	out = gjk_distance(p1, cvx1, p2, cvx2, eps, dbg) 
+	out = gjk_distance(p1, cvx1, r1, p2, cvx2, r2, eps, dbg) 
 	if (out[0] >= out[1]):
 		return out
 
 	ctx = GJK_Context()
 
 	Vk = out[4]
-	Vi = out[5]
+	Pi = out[5]
 	
 	if (len(Vk)==1):
-		supp = gjk_support_mink_cvx(p1, cvx1, p2, cvx2, [1.0, 0.0])
+		supp = gjk_support_mink_cvx(p1, cvx1, r1, p2, cvx2, r2, [1.0, 0.0])
 		Vk.append(supp[1])
-		Vi.append(supp[2])
+		Pi.append(supp[2])
 
 	if (len(Vk)==2):	
 		d = v2_sub(Vk[1], Vk[0])
-		supp = gjk_support_mink_cvx(p1, cvx1, p2, cvx2, [-d[1], d[0]])
+		supp = gjk_support_mink_cvx(p1, cvx1, r1, p2, cvx2, r2, [-d[1], d[0]])
 		Vk.append(supp[1])
-		Vi.append(supp[2])
-		supp = gjk_support_mink_cvx(p1, cvx1, p2, cvx2, [d[1], -d[0]])
+		Pi.append(supp[2])
+		supp = gjk_support_mink_cvx(p1, cvx1, r1, p2, cvx2, r2, [d[1], -d[0]])
 		Vk.insert(1, supp[1])
-		Vi.insert(1, supp[2])
+		Pi.insert(1, supp[2])
 
 	Dk = [-1.0] * len(Vk)
 	Ck = [None] * len(Vk)
@@ -914,20 +922,21 @@ def gjk_epa_distance(p1, cvx1, p2, cvx2, epa_eps, eps=0.0000001, dbg = None):
 			if ((min_i < 0) or (Dk[i] < Dk[min_i])):
 				min_i = i
 
-		supp = gjk_support_mink_cvx(p1, cvx1, p2, cvx2, Ck[min_i])
+		supp = gjk_support_mink_cvx(p1, cvx1, r1, p2, cvx2, r2, Ck[min_i])
 		if ((v2_len(supp[1]) - v2_len(Ck[min_i]) < epa_eps) or (iter > max_iter)):
 
-			v1 = p1
-			v2 = p2
+			v1 = [0.0, 0.0]
+			v2 = [0.0, 0.0]
 			for i in range(2):
-				v1 = v2_add(v1, v2_muls(cvx1[Vi[(min_i+i)%lV][0]], Li[min_i][i]))
-				v2 = v2_add(v2, v2_muls(cvx2[Vi[(min_i+i)%lV][1]], Li[min_i][i]))
+				j = (min_i+i)%lV
+				v1 = v2_add(v1, v2_muls(Pi[j][0], Li[min_i][i]))
+				v2 = v2_add(v2, v2_muls(Pi[j][1], Li[min_i][i]))	
 
 			return [-v2_len(Ck[min_i]), 0.0, v1, v2]
 
 		ii = (min_i+1) % lV
 		Vk.insert(ii, supp[1])
-		Vi.insert(ii, supp[2])
+		Pi.insert(ii, supp[2])
 		Dk[min_i] = -1.0
 		Dk.insert(ii, -1.0)
 		Ck.insert(ii, None)
@@ -943,18 +952,18 @@ def TestGJK():
 	
 	cvx1 = [[0.0,1.0], [0.0,2.0], [-1.0,1.0]]
 	cvx2 = [[0.0,0.0]]
-	dist = gjk_distance(p1, cvx1, p2, cvx2)[0]
+	dist = gjk_distance(p1, cvx1, 0.0, p2, cvx2, 0.0)[0]
 	print dist
 
 	cvx1 = [[0.0,1.0], [0.0,2.0], [-1.0,1.0]]
 	cvx2 = [[0.0,1.5]]
-	dist = gjk_distance(p1, cvx1, p2, cvx2)[0]
+	dist = gjk_distance(p1, cvx1, 0.0, p2, cvx2, 0.0)[0]
 	print dist
 
 	cvx1 = [[0.0,1.0], [0.0,2.0], [-1.0,1.0]]
 	cvx2 = [[0.0,1.5]]
 	cvx2 = [linComb(cvx1, [1.0/256.0, 1.0/256.0, 1.0-(2.0/256.0)])]
-	dist = gjk_distance(p1, cvx1, p2, cvx2)[0]
+	dist = gjk_distance(p1, cvx1, 0.0, p2, cvx2, 0.0)[0]
 	print dist
 
 	cvx1 = [[0.0,1.0], [0.0,2.0], [-1.0,1.0]]
@@ -962,7 +971,7 @@ def TestGJK():
 	off = linComb(cvx1, [1.0/256.0, 1.0/256.0, 1.0-(2.0/256.0)])
 	cvx1.v = [ v2_sub(cvx1[0], off), v2_sub(cvx1[1], off), v2_sub(cvx1[2], off) ]
 	cvx2.v = [[0.0,0.0]]
-	dist = gjk_distance(p1, cvx1, p2, cvx2)[0]
+	dist = gjk_distance(p1, cvx1, 0.0, p2, cvx2, 0.0)[0]
 	print dist
 	
 	
@@ -976,7 +985,7 @@ def TestGJK():
 				l[2] = 1.0 - l[0] - l[1]
 				if (l[2] >= 0.0):
 					cvx2 = [linComb(cvx1, l)]
-					dd = gjk_distance(p1, cvx1, p2, cvx2)
+					dd = gjk_distance(p1, cvx1, 0.0, p2, cvx2, 0.0)
 					if (dd[0] > dd[1]):
 						print 'Fail'
 
@@ -986,7 +995,7 @@ def TestGJK():
 		for x in range(512):
 			l = [x/512.0, 1.1+x/512.0, 0.0]
 			cvx2 = [linComb(cvx1, l)]
-			dd = gjk_distance(p1, cvx1, p2, cvx2)
+			dd = gjk_distance(p1, cvx1, 0.0, p2, cvx2, 0.0)
 			if (dd[0] == 0.0):
 				print 'Fail'		
 
@@ -1000,12 +1009,12 @@ def TestGJK1():
 
 	#cvx1 = [[0.0,0.0], [5.0,0.0], [5.0,5.0], [0.0,5.0]]
 	#cvx2 = [[-1.0,-1.0], [1.0,-1.0], [1.0,1.0], [-1.0,1.0]]
-	#dist = gjk_distance(p1, cvx1, p2, cvx2)[0]
+	#dist = gjk_distance(p1, cvx1, 0.0, p2, cvx2, 0.0)[0]
 	#print dist
 
 	cvx1 = [[0.0-1.0,-5.0], [5.0-1.0,-5.0], [5.0-1.0,5.0], [0.0-1.0,5.0]]
 	cvx2 = [[0.0,0.0], [-3.0,3.0], [-3.0,-3.0]]
-	dist = gjk_distance(p1, cvx1, p2, cvx2)[0]
+	dist = gjk_distance(p1, cvx1, 0.0, p2, cvx2, 0.0)[0]
 	print dist
 
 	return 0
@@ -1017,14 +1026,14 @@ def TestGJK2():
 	p2 = [0.0, 0.0]
 	cvx1 = [[1.0,0.0], [3.0,3.0], [0.0,-5.0]]
 	cvx2 = [[0.0,0.0]]
-	dist = gjk_distance(p1, cvx1, p2, cvx2)[0]
+	dist = gjk_distance(p1, cvx1, 0.0, p2, cvx2, 0.0)[0]
 	print dist
 
 	p1 = [0.0, 0.0]
 	p2 = [0.0, 0.0]
 	cvx1 = [[-1.0,0.0], [3.0,3.0], [0.0,-5.0]]
 	cvx2 = [[0.0,0.0]]
-	dist = gjk_distance(p1, cvx1, p2, cvx2)[0]
+	dist = gjk_distance(p1, cvx1, 0.0, p2, cvx2, 0.0)[0]
 	print dist
 
 	return 0	
@@ -1036,7 +1045,7 @@ def TestEPA():
 	p2 = [0.1, 0.0]
 	cvx1 = [[-2.0,-2.0], [2.0,-2.0], [2.0,2.0], [-2.0, 2.0] ]
 	cvx2 = [[0.0,0.0]]
-	dist = gjk_epa_distance(p1, cvx1, p2, cvx2, 0.001)
+	dist = gjk_epa_distance(p1, cvx1, 0.0, p2, cvx2, 0.0, 0.001)
 	print dist[0]
 	print dist[2]
 	print dist[3]
@@ -1045,61 +1054,74 @@ def TestEPA():
 	p2 = [0.0, 0.0]
 	cvx1 = [[-2.0,-2.0], [2.0,-2.0], [2.0,2.0], [-2.0, 2.0] ]
 	cvx2 = [[0.0,0.0]]
-	dist = gjk_epa_distance(p1, cvx1, p2, cvx2, 0.001)[0]
+	dist = gjk_epa_distance(p1, cvx1, 0.0, p2, cvx2, 0.0, 0.001)[0]
 	print dist
 
 	p1 = [0.0, 0.0]
 	p2 = [0.0, 0.0]
 	cvx1 = [[-2.0,-2.0], [2.0,-2.0], [2.0,2.0], [-2.0, 2.0] ]
 	cvx2 = [[0.0,0.0]]
-	dist = gjk_epa_distance(p1, cvx1, p2, cvx2, 0.001)[0]
+	dist = gjk_epa_distance(p1, cvx1, 0.0, p2, cvx2, 0.0, 0.001)[0]
 	print dist
 
 	p1 = [0.0, 0.0]
 	p2 = [0.0, 0.1]
 	cvx1 = [[-2.0,-2.0], [2.0,-2.0], [2.0,2.0], [-2.0, 2.0] ]
 	cvx2 = [[0.0,0.0]]
-	dist = gjk_epa_distance(p1, cvx1, p2, cvx2, 0.001)[0]
+	dist = gjk_epa_distance(p1, cvx1, 0.0, p2, cvx2, 0.0, 0.001)[0]
 	print dist
 
 	p1 = [0.0, 0.0]
 	p2 =[21.25,22.15]
 	cvx1 = [[20.0,20.0], [24.0,20.0], [24.0,24.0], [20.0,24.0]]
 	cvx2 = [[0.0,0.0]]
-	dist = gjk_epa_distance(p1, cvx1, p2, cvx2, 0.001)[0]
+	dist = gjk_epa_distance(p1, cvx1, 0.0, p2, cvx2, 0.0, 0.001)[0]
 	print dist
 
 	p1 = [0.0, 0.0]
 	p2 =[22.0,22.0]
 	cvx1 = [[20.0,20.0], [24.0,20.0], [24.0,24.0], [20.0,24.0]]
 	cvx2 = [[0.0,0.0]]
-	dist = gjk_epa_distance(p1, cvx1, p2, cvx2, 0.001)[0]
+	dist = gjk_epa_distance(p1, cvx1, 0.0, p2, cvx2, 0.0, 0.001)[0]
 	print dist
 
 	p1 = [0.0, 0.0]
 	p2 =[22.0,21.9]
 	cvx1 = [[20.0,20.0], [24.0,20.0], [24.0,24.0], [20.0,24.0]]
 	cvx2 = [[0.0,0.0]]
-	dist = gjk_epa_distance(p1, cvx1, p2, cvx2, 0.001)[0]
+	dist = gjk_epa_distance(p1, cvx1, 0.0, p2, cvx2, 0.0, 0.001)[0]
 	print dist
 
 	p1 = [0.0, 0.0]
 	p2 = [0.0, 0.0]
 	cvx1 = [[1.0,0.0], [3.0,3.0], [0.0,-5.0]]
 	cvx2 = [[0.0,0.0]]
-	dist = gjk_epa_distance(p1, cvx1, p2, cvx2, 0.001)[0]
+	dist = gjk_epa_distance(p1, cvx1, 0.0, p2, cvx2, 0.0, 0.001)[0]
 	print dist
 
 	p1 = [0.0, 0.0]
 	p2 = [0.0, 0.0]
 	cvx1 = [[-1.0,0.0], [3.0,3.0], [0.0,-5.0]]
 	cvx2 = [[0.0,0.0]]
-	dist = gjk_epa_distance(p1, cvx1, p2, cvx2, 0.001)[0]
+	dist = gjk_epa_distance(p1, cvx1, 0.0, p2, cvx2, 0.0, 0.001)[0]
 	print dist
 
 	return 0	
+
+
+def TestGJKr():
+
+	p1 = [0.0, 0.0]
+	p2 = [2.0, 0.0]
+	cvx1 = [[-1.0,-1.0], [1.0,-1.0], [1.0,1.0], [-1.0, 1.0] ]
+	cvx2 = [[0.0,0.0]]
+	dist = gjk_epa_distance(p1, cvx1, 0.5, p2, cvx2, 0.0, 0.001)
+	print dist[0]
+	print dist[2]
+	print dist[3]
 
 #TestGJK()
 #TestGJK1()
 #TestGJK2()
 #TestEPA()
+#TestGJKr()
