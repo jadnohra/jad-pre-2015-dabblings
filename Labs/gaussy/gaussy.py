@@ -54,6 +54,9 @@ def v2_rot(v1,a):
 	ret = [ v1[0]*c + v1[1]*(-s), v1[0]*s + v1[1]*(c) ]
 	return ret
 
+def v2_orth(v1):
+	return [ -v1[1], v1[0] ]
+
 def v2_rot90(v1):
 	return [ -v1[1], v1[0] ]
 	
