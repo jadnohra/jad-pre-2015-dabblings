@@ -10,12 +10,12 @@ execfile('Z:/Personal/Lab/gaussy/gaussy.py')
 
 gTestEpa = True
 
-def test_gjk_distance(p1, cvx1, r1, p2, cvx2, r2):
+def test_gjk_distance(m1, cvx1, r1, m2, cvx2, r2):
 	global gTestEpa
 	if (gTestEpa):
-		return gjk_epa_distance(p1, cvx1, r1, p2, cvx2, r2, 0.0001)
+		return gjk_epa_distance(m1, cvx1, r1, m2, cvx2, r2, 0.0001)
 	else:
-		return gjk_distance(p1, cvx1, r1, p2, cvx2, r2)
+		return gjk_distance(m1, cvx1, r1, m2, cvx2, r2)
 
 
 class World:
@@ -56,7 +56,6 @@ class Material:
 
 class Convex:
 	v = []
-	p = [0.0, 0.0]
 	r = 0.0
 	m = None
 	dyn = None
@@ -66,7 +65,7 @@ class Convex:
 		self.v = v
 		self.mat = mat
 		self.r = 0.0
-		self.p = [0.0, 0.0]
+		self.m = m2_id()
 		self.dyn = None
 	
 
@@ -259,8 +258,7 @@ def stepMotion(w):
 	dm = m2_id()
 	for k in w.kinetics:
 		if (k.dyn != None):
-			dm = m2_trans(dm, v2_muls(k.dyn[0], w.dt))
-			dm = m2_rot(dm, k.dyn[1]*w.dt)
+			dm = m2_tr(v2_muls(k.dyn[0], w.dt), k.dyn[1]*w.dt)
 			k.m = m2_mul(k.m, dm)
 			m2_orth(k.m)
 
@@ -444,52 +442,8 @@ def draw_convex_col(p, v, ppm, col):
 	pyglet.graphics.draw(len(v), pyglet.gl.GL_LINE_LOOP, ('v2f', flatv), ('c3f', (col)*len(v)) )
 
 
-
-def draw_convex_r_col(p, v, r, ppm, col):
+def draw_convex_r_col(m, v, r, ppm, col):
 	
-	if (r == 0.0):
-		draw_convex_col(p, v, ppm, col)
-		return
-	if (len(v) == 1):
-		pv = v2_add(p, v[0])
-		draw_particle(pv[0]*ppm, pv[1]*ppm, r)
-
-	def append_vertex(p, v, r, ppm, flatv, i):
-
-		d1 = v2_sub(v[i], v[(i+lv-1)%lv])
-		d2 = v2_sub(v[(i+1)%lv], v[i])
-		n1 = v2_orth(v2_normalize(d1))
-		n2 = v2_orth(v2_normalize(d2))
-		
-		if v2_dot(n1, d2) > 0.0:
-			n1 = v2_neg(n1)
-			n2 = v2_neg(n2)
-
-		vcount = particle_vcount/2
-
-		l = 0.0
-		dl = 1.0/float(vcount)
-		for j in range(vcount+1):
-			dv = v2_add(v[i], v2_muls(v2_normalize(linComb([n1, n2], [l, 1.0-l])), r))
-			dv = v2_add(dv, p)
-			l = l + dl
-			flatv.append(dv[0]*ppm)
-			flatv.append(dv[1]*ppm)
-
-	flatv = []
-	lv = len(v)
-	for i in range(lv):
-		append_vertex(p, v, r, ppm, flatv, (lv-1-i))
-
-	vc = len(flatv)/2
-	pyglet.graphics.draw(vc, pyglet.gl.GL_LINE_LOOP, ('v2f', flatv), ('c3f', (col)*(vc))  )
-
-
-def draw_convex_r_col2(m, v, r, ppm, col):
-	
-	if (r == 0.0):
-		draw_convex_col(p, v, ppm, col)
-		return
 	if (len(v) == 1):
 		pv = v2_add(p, v[0])
 		draw_particle(pv[0]*ppm, pv[1]*ppm, r)
@@ -511,7 +465,7 @@ def draw_convex_r_col2(m, v, r, ppm, col):
 		dl = 1.0/float(vcount)
 		for j in range(vcount+1):
 			dv = v2_add(v[i], v2_muls(v2_normalize(linComb([n1, n2], [l, 1.0-l])), r))
-			dv = m2_transp(m, dv)
+			dv = m2_mulp(m, dv)
 			l = l + dl
 			flatv.append(dv[0]*ppm)
 			flatv.append(dv[1]*ppm)
@@ -601,12 +555,12 @@ def fillWorldGJK1(w):
 	
 	fillWorldBox(w)
 
-	#cvxr4 = Convex([[0.0,0.0], [2.0,0.0], [2.0,2.0]], sharedMat)
-	#cvxr4.m = m2_tr([6.0, 6.0], 0.0)
-	#cvxr4.r = 1.0
-	#cvxr4.dyn = [v2_z(), 0.7]
-	#w.kinetics.append(cvxr4)	
-	#return 0
+	cvxr4 = Convex([[0.0,0.0], [2.0,0.0], [2.0,2.0]], sharedMat)
+	cvxr4.m = m2_tr([6.0, 6.0], 0.0)
+	cvxr4.r = 1.0
+	cvxr4.dyn = [v2_z(), 0.7]
+	w.kinetics.append(cvxr4)	
+	
 
 	w.kinetics.append(Convex([[20.0,20.0], [24.0,20.0], [24.0,24.0], [20.0,24.0]], sharedMat))	
 	#w.kinetics.append(Convex([[0.0,0.0], [5.0,0.0], [5.0,5.0], [0.0,5.0]], sharedMat))	
@@ -618,21 +572,23 @@ def fillWorldGJK1(w):
 	w.kinetics.append(cvxr1)	
 
 	cvxr2 = Convex([[0.0,0.0], [2.0,0.0], [2.0,2.0], [0.0,2.0]], sharedMat)
-	cvxr2.p = [5.0, 5.0]
+	cvxr2.m = m2_tr([5.0, 5.0], 0.0)
 	cvxr2.r = 1.5
 	w.kinetics.append(cvxr2)	
 
+	return 0
+
 	cvxr3 = Convex([[0.0,0.0], [2.0,0.0], [2.0,2.0]], sharedMat)
-	cvxr3.p = [10.0, 5.0]
+	cvxr3.m = m2_tr([10.0, 5.0], 0.0) 
 	cvxr3.r = 1.0
 	w.kinetics.append(cvxr3)	
 
 	cvx1 = Convex([[0.0,-5.0], [5.0,-5.0], [5.0,5.0], [0.0,5.0]], sharedMat)
-	cvx1.p = [9.0, 10.0]
+	cvx1.p = m2_tr([9.0, 10.0], 0.0)
 	w.kinetics.append(cvx1)	
 
 	cvx2 = Convex([[0.0,0.0], [-3.0,3.0], [-3.0,-3.0]], sharedMat)
-	cvx2.p = [10.0, 10.0]
+	cvx2.m = m2_tr([10.0, 10.0], 0.0)
 	w.kinetics.append(cvx2)	
 
 	random.seed(66)
@@ -642,7 +598,7 @@ def fillWorldGJK1(w):
 		num_v = random.randrange(3, 8)
 		r = random.uniform(1.0, 4.0)
 		cvx = Convex(randConvex(r, num_v), sharedMat)
-		cvx.p =  [random.uniform(10.0, 35.0), random.uniform(10.0, 25.0)]
+		cvx.m = m2_tr([random.uniform(10.0, 35.0), random.uniform(10.0, 25.0)], 0.0)
 
 		w.kinetics.append(cvx)
 
@@ -980,15 +936,11 @@ def on_draw():
 	mom.draw()
 		
 	
-	for s in gWorld.statics:
-		draw_convex(s.p, s.v, ppm)
+	#for s in gWorld.statics:
+	#	draw_convex(s.p, s.v, ppm)
 
 	for k in gWorld.kinetics:
-		#draw_convex(k.p, k.v, ppm)
-		if (k.m == None):
-			draw_convex_r_col(k.p, k.v, k.r, ppm, [1.0, 1.0, 1.0])
-		else:
-			draw_convex_r_col2(k.m, k.v, k.r, ppm, [1.0, 1.0, 1.0])
+		draw_convex_r_col(k.m, k.v, k.r, ppm, [1.0, 1.0, 1.0])
 	
 	for p in gWorld.particles:
 		draw_particle(p.pos[0] * ppm, p.pos[1] * ppm, p.radius * ppm)
@@ -1015,9 +967,9 @@ def on_draw():
 			draw_line(info.p[0]*ppm, info.p[1]*ppm, pt2[0]*ppm, pt2[1]*ppm)
 
 	if gMouseHoverObj != None:
-		draw_convex_r_col(gMouseHoverObj.p, gMouseHoverObj.v, gMouseHoverObj.r, ppm, [1.0, 0.0, 0.0])
+		draw_convex_r_col(gMouseHoverObj.m, gMouseHoverObj.v, gMouseHoverObj.r, ppm, [1.0, 0.0, 0.0])
 	if gMousePickObj != None:
-		draw_convex_r_col(gMousePickObj.p, gMousePickObj.v, gMousePickObj.r, ppm, [1.0, 0.0, 0.0])	
+		draw_convex_r_col(gMousePickObj.m, gMousePickObj.v, gMousePickObj.r, ppm, [1.0, 0.0, 0.0])	
 
 	handleMouse()
 	handleKeyboard()
@@ -1053,7 +1005,7 @@ def doHover(pos):
 
 	gMouseHoverObj = None
 	for k in gWorld.kinetics:
-		dist = test_gjk_distance(k.p, k.v, k.r, [0.0,0.0], [pos], 0.0)
+		dist = test_gjk_distance(k.m, k.v, k.r, m2_id(), [pos], 0.0)
 		#print pos
 		#print dist[0]
 		if (dist[0] <= dist[1]):
@@ -1074,15 +1026,15 @@ def doPick(pos, startPos, init):
 	if init:
 		gMousePickObj = None
 		for k in gWorld.kinetics:
-			dist = test_gjk_distance(k.p, k.v, k.r, [0.0, 0.0], [pos], 0.0)
+			dist = test_gjk_distance(k.m, k.v, k.r, m2_id(), [pos], 0.0)
 			if (dist[0] <= dist[1]):
 				gMousePickObj = k
-				gMousePickObjVec = k.p
+				gMousePickObjVec = m2_get_trans(k.m)
 
 	
 	if gMousePickObj != None:
 		move = v2_sub(pos, startPos)
-		gMousePickObj.p = v2_add(gMousePickObjVec, move)
+		m2_set_trans(gMousePickObj.m, v2_add(gMousePickObjVec, move))
 		#draw_convex_col(gMousePickObj.p, gMousePickObj.v, ppm, [1.0, 0.0, 1.0])
 
 
@@ -1096,11 +1048,11 @@ def handleKeyboard():
 		ks = gWorld.kinetics
 		for i in range(len(ks)):
 			for j in range(i+1, len(ks)):
-				dist = test_gjk_distance(ks[i].p, ks[i].v, ks[i].r, ks[j].p, ks[j].v, ks[j].r)
+				dist = test_gjk_distance(ks[i].m, ks[i].v, ks[i].r, ks[j].m, ks[j].v, ks[j].r)
 				#print dist[0]
 				if (dist[0] <= dist[1]):
-					draw_convex_r_col(ks[i].p, ks[i].v, ks[i].r, ppm, [1.0, 1.0, 0.0])
-					draw_convex_r_col(ks[j].p, ks[j].v, ks[j].r, ppm, [1.0, 1.0, 0.0])
+					draw_convex_r_col(ks[i].m, ks[i].v, ks[i].r, ppm, [1.0, 1.0, 0.0])
+					draw_convex_r_col(ks[j].m, ks[j].v, ks[j].r, ppm, [1.0, 1.0, 0.0])
 					
 					if (dist[0] < 0.0):
 						#draw_line_col(dist[2][0]*ppm, dist[2][1]*ppm, dist[3][0]*ppm, dist[3][1]*ppm, [0.4, 0.4, 0.0])	
