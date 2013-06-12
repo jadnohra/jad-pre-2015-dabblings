@@ -58,12 +58,16 @@ class Convex:
 	v = []
 	p = [0.0, 0.0]
 	r = 0.0
+	m = None
+	dyn = None
 	mat = None
 
 	def __init__(self, v, mat):
 		self.v = v
 		self.mat = mat
 		self.r = 0.0
+		self.p = [0.0, 0.0]
+		self.dyn = None
 	
 
 class Particle:
@@ -252,6 +256,14 @@ def stepMotion(w):
 		
 		w.momentum = w.momentum + v2_len(p.vel) * p.m
 
+	dm = m2_id()
+	for k in w.kinetics:
+		if (k.dyn != None):
+			dm = m2_trans(dm, v2_muls(k.dyn[0], w.dt))
+			dm = m2_rot(dm, k.dyn[1]*w.dt)
+			k.m = m2_mul(k.m, dm)
+			m2_orth(k.m)
+
 
 
 def stepCollidedMotion(w):
@@ -432,6 +444,7 @@ def draw_convex_col(p, v, ppm, col):
 	pyglet.graphics.draw(len(v), pyglet.gl.GL_LINE_LOOP, ('v2f', flatv), ('c3f', (col)*len(v)) )
 
 
+
 def draw_convex_r_col(p, v, r, ppm, col):
 	
 	if (r == 0.0):
@@ -467,6 +480,46 @@ def draw_convex_r_col(p, v, r, ppm, col):
 	lv = len(v)
 	for i in range(lv):
 		append_vertex(p, v, r, ppm, flatv, (lv-1-i))
+
+	vc = len(flatv)/2
+	pyglet.graphics.draw(vc, pyglet.gl.GL_LINE_LOOP, ('v2f', flatv), ('c3f', (col)*(vc))  )
+
+
+def draw_convex_r_col2(m, v, r, ppm, col):
+	
+	if (r == 0.0):
+		draw_convex_col(p, v, ppm, col)
+		return
+	if (len(v) == 1):
+		pv = v2_add(p, v[0])
+		draw_particle(pv[0]*ppm, pv[1]*ppm, r)
+
+	def append_vertex(m, v, r, ppm, flatv, i):
+
+		d1 = v2_sub(v[i], v[(i+lv-1)%lv])
+		d2 = v2_sub(v[(i+1)%lv], v[i])
+		n1 = v2_orth(v2_normalize(d1))
+		n2 = v2_orth(v2_normalize(d2))
+		
+		if v2_dot(n1, d2) > 0.0:
+			n1 = v2_neg(n1)
+			n2 = v2_neg(n2)
+
+		vcount = particle_vcount/2
+
+		l = 0.0
+		dl = 1.0/float(vcount)
+		for j in range(vcount+1):
+			dv = v2_add(v[i], v2_muls(v2_normalize(linComb([n1, n2], [l, 1.0-l])), r))
+			dv = m2_transp(m, dv)
+			l = l + dl
+			flatv.append(dv[0]*ppm)
+			flatv.append(dv[1]*ppm)
+
+	flatv = []
+	lv = len(v)
+	for i in range(lv):
+		append_vertex(m, v, r, ppm, flatv, (lv-1-i))
 
 	vc = len(flatv)/2
 	pyglet.graphics.draw(vc, pyglet.gl.GL_LINE_LOOP, ('v2f', flatv), ('c3f', (col)*(vc))  )
@@ -548,6 +601,13 @@ def fillWorldGJK1(w):
 	
 	fillWorldBox(w)
 
+	#cvxr4 = Convex([[0.0,0.0], [2.0,0.0], [2.0,2.0]], sharedMat)
+	#cvxr4.m = m2_tr([6.0, 6.0], 0.0)
+	#cvxr4.r = 1.0
+	#cvxr4.dyn = [v2_z(), 0.7]
+	#w.kinetics.append(cvxr4)	
+	#return 0
+
 	w.kinetics.append(Convex([[20.0,20.0], [24.0,20.0], [24.0,24.0], [20.0,24.0]], sharedMat))	
 	#w.kinetics.append(Convex([[0.0,0.0], [5.0,0.0], [5.0,5.0], [0.0,5.0]], sharedMat))	
 	#w.kinetics.append(Convex([[0.0,0.0], [2.0,0.0], [2.0,2.0], [0.0,2.0]], sharedMat))	
@@ -566,8 +626,6 @@ def fillWorldGJK1(w):
 	cvxr3.p = [10.0, 5.0]
 	cvxr3.r = 1.0
 	w.kinetics.append(cvxr3)	
-
-	#return 0
 
 	cvx1 = Convex([[0.0,-5.0], [5.0,-5.0], [5.0,5.0], [0.0,5.0]], sharedMat)
 	cvx1.p = [9.0, 10.0]
@@ -927,7 +985,10 @@ def on_draw():
 
 	for k in gWorld.kinetics:
 		#draw_convex(k.p, k.v, ppm)
-		draw_convex_r_col(k.p, k.v, k.r, ppm, [1.0, 1.0, 1.0])
+		if (k.m == None):
+			draw_convex_r_col(k.p, k.v, k.r, ppm, [1.0, 1.0, 1.0])
+		else:
+			draw_convex_r_col2(k.m, k.v, k.r, ppm, [1.0, 1.0, 1.0])
 	
 	for p in gWorld.particles:
 		draw_particle(p.pos[0] * ppm, p.pos[1] * ppm, p.radius * ppm)
