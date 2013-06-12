@@ -72,12 +72,10 @@ def m2_zero():
 def m2_id():
 	return Eye(3, 3)
 
-def m2_trans(m, off):
+def m2_tr(off, a):
+	m = Eye(3,3)
 	m[0][2] = off[0]
 	m[1][2] = off[1]
-	return m
-
-def m2_rot(m, a):
 	c = math.cos(a)
 	s = math.sin(a)
 	m[0][0] = c
@@ -86,9 +84,6 @@ def m2_rot(m, a):
 	m[1][1] = c
 	return m
 
-def m2_tr(off, a):
-	return m2_trans(m2_rot(Eye(3,3), a), off)
-
 def m2_mul(m1, m2):
 	p = Eye(3, 3)
 	for i in range(3):
@@ -96,13 +91,13 @@ def m2_mul(m1, m2):
 			p[i][j] = m1[i][0]*m2[0][j]+m1[i][1]*m2[1][j]+m1[i][2]*m2[2][j]
 	return p		
 
-def m2_transp(m, v):
+def m2_mulp(m, v):
 	p = [0.0, 0.0]
 	p[0] = m[0][0]*v[0]+m[0][1]*v[1]+m[0][2]
 	p[1] = m[1][0]*v[0]+m[1][1]*v[1]+m[1][2]
 	return p
 
-def m2_transv(m, v):
+def m2_mulv(m, v):
 	p = [0.0, 0.0]
 	p[0] = m[0][0]*v[0]+m[0][1]*v[1]
 	p[1] = m[1][0]*v[0]+m[1][1]*v[1]
@@ -113,7 +108,15 @@ def m2_orth(m):
 	m[1][0] = orth[0]
 	m[1][1] = orth[1]
 	return m
-	
+
+def m2_get_trans(m):
+	return [m[0][2], m[1][2]]
+
+def m2_set_trans(m, off):
+	m[0][2] = off[0] 
+	m[1][2] = off[1]
+
+
 def PrintM(inMatrix, inName):
 	rows = len(inMatrix)
 	print inName, '[',rows,'x',len(inMatrix[0]),']'
@@ -673,8 +676,13 @@ def linComb(v, l):
 	return vc	
 	
 
-def convexVertex(p, cvx, r, n, i):
+def convexVertexP(p, cvx, r, n, i):
 	v = v2_add(p, cvx[i])
+	v = v2_add(v, v2_muls(n, r))
+	return v
+
+def convexVertexM(m, cvx, r, n, i):
+	v = m2_mulp(m, cvx[i])
 	v = v2_add(v, v2_muls(n, r))
 	return v
 
@@ -722,13 +730,13 @@ class GJK_Context:
 	perms = [GJK_Perm_0(), GJK_Perm_1(), GJK_Perm_2()]
 
 
-def gjk_support_cvx(p, cvx, r, d, nd):
+def gjk_support_cvx(m, cvx, r, d, nd):
 
 	mi = 0
-	max = v2_dot( convexVertex(p, cvx, r, nd, 0), d)	
+	max = v2_dot( convexVertexM(m, cvx, r, nd, 0), d)	
 
 	for i in range(1, len(cvx)):
-		dot = v2_dot( convexVertex(p, cvx, r, nd, i), d)	
+		dot = v2_dot( convexVertexM(m, cvx, r, nd, i), d)	
 		if (dot > max):
 			max = dot
 			mi = i
@@ -736,16 +744,16 @@ def gjk_support_cvx(p, cvx, r, d, nd):
 
 
 
-def gjk_support_mink_cvx(p1, cvx1, r1, p2, cvx2, r2, d):
+def gjk_support_mink_cvx(m1, cvx1, r1, m2, cvx2, r2, d):
 
 	n = v2_normalize(d)
 
-	i1 = gjk_support_cvx(p1, cvx1, r1, d, n)
-	i2 = gjk_support_cvx(p2, cvx2, r2, v2_neg(d), v2_neg(n))
+	i1 = gjk_support_cvx(m1, cvx1, r1, d, n)
+	i2 = gjk_support_cvx(m2, cvx2, r2, v2_neg(d), v2_neg(n))
 
 	h = i1[0]+i2[0]
-	p1 = convexVertex(p1, cvx1, r1, n, i1[1])
-	p2 = convexVertex(p2, cvx2, r2, v2_neg(n), i2[1])
+	p1 = convexVertexM(m1, cvx1, r1, n, i1[1])
+	p2 = convexVertexM(m2, cvx2, r2, v2_neg(n), i2[1])
 	s = v2_sub(p1, p2)
 	return [ h, s, [p1, p2] ] # h, s, points
 
@@ -864,12 +872,12 @@ def gjk_subdist(ctx, Vk):
 	return gjk_subdist_fallback(ctx, Vk)
 
 
-def gjk_distance(p1, cvx1, r1, p2, cvx2, r2, eps=0.0000001, dbg = None):
+def gjk_distance(m1, cvx1, r1, m2, cvx2, r2, eps=0.0000001, dbg = None):
 
 	ctx = GJK_Context()
 
 	d = [-1.0, 0.0]
-	supp = gjk_support_mink_cvx(p1, cvx1, r1, p2, cvx2, r2, d) 
+	supp = gjk_support_mink_cvx(m1, cvx1, r1, m2, cvx2, r2, d) 
 	Vk = [ supp[1] ]
 	Pi = [ supp[2] ]
 
@@ -888,7 +896,7 @@ def gjk_distance(p1, cvx1, r1, p2, cvx2, r2, eps=0.0000001, dbg = None):
 
 		vk = subd[0]
 		nvk = v2_neg(vk)	
-		supp = gjk_support_mink_cvx(p1, cvx1, r1, p2, cvx2, r2, nvk) 
+		supp = gjk_support_mink_cvx(m1, cvx1, r1, m2, cvx2, r2, nvk) 
 		g = v2_dot(vk, vk) + supp[0]
 
 		if dbg != None:
@@ -928,9 +936,9 @@ def gjk_epa_closest_on_edge(ctx, v1, v2):
 	return [subd[0], subd[2]] # vert, lambdas
 
 
-def gjk_epa_distance(p1, cvx1, r1, p2, cvx2, r2, epa_eps, eps=0.0000001, dbg = None):
+def gjk_epa_distance(m1, cvx1, r1, m2, cvx2, r2, epa_eps, eps=0.0000001, dbg = None):
 
-	out = gjk_distance(p1, cvx1, r1, p2, cvx2, r2, eps, dbg) 
+	out = gjk_distance(m1, cvx1, r1, m2, cvx2, r2, eps, dbg) 
 	if (out[0] >= out[1]):
 		return out
 
@@ -940,16 +948,16 @@ def gjk_epa_distance(p1, cvx1, r1, p2, cvx2, r2, epa_eps, eps=0.0000001, dbg = N
 	Pi = out[5]
 	
 	if (len(Vk)==1):
-		supp = gjk_support_mink_cvx(p1, cvx1, r1, p2, cvx2, r2, [1.0, 0.0])
+		supp = gjk_support_mink_cvx(m1, cvx1, r1, m2, cvx2, r2, [1.0, 0.0])
 		Vk.append(supp[1])
 		Pi.append(supp[2])
 
 	if (len(Vk)==2):	
 		d = v2_sub(Vk[1], Vk[0])
-		supp = gjk_support_mink_cvx(p1, cvx1, r1, p2, cvx2, r2, [-d[1], d[0]])
+		supp = gjk_support_mink_cvx(m1, cvx1, r1, m2, cvx2, r2, [-d[1], d[0]])
 		Vk.append(supp[1])
 		Pi.append(supp[2])
-		supp = gjk_support_mink_cvx(p1, cvx1, r1, p2, cvx2, r2, [d[1], -d[0]])
+		supp = gjk_support_mink_cvx(m1, cvx1, r1, m2, cvx2, r2, [d[1], -d[0]])
 		Vk.insert(1, supp[1])
 		Pi.insert(1, supp[2])
 
@@ -976,7 +984,7 @@ def gjk_epa_distance(p1, cvx1, r1, p2, cvx2, r2, epa_eps, eps=0.0000001, dbg = N
 			if ((min_i < 0) or (Dk[i] < Dk[min_i])):
 				min_i = i
 
-		supp = gjk_support_mink_cvx(p1, cvx1, r1, p2, cvx2, r2, Ck[min_i])
+		supp = gjk_support_mink_cvx(m1, cvx1, r1, m2, cvx2, r2, Ck[min_i])
 		if ((v2_len(supp[1]) - v2_len(Ck[min_i]) < epa_eps) or (iter > max_iter)):
 
 			v1 = [0.0, 0.0]
