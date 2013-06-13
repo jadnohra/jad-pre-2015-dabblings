@@ -555,17 +555,12 @@ def fillWorldGJK1(w):
 	
 	fillWorldBox(w)
 
-	cvxr4 = Convex([[0.0,0.0], [2.0,0.0], [2.0,2.0]], sharedMat)
-	cvxr4.m = m2_tr([6.0, 6.0], 0.0)
-	cvxr4.r = 1.0
-	cvxr4.dyn = [v2_z(), 0.7]
-	w.kinetics.append(cvxr4)	
-	
-
 	w.kinetics.append(Convex([[20.0,20.0], [24.0,20.0], [24.0,24.0], [20.0,24.0]], sharedMat))	
 	#w.kinetics.append(Convex([[0.0,0.0], [5.0,0.0], [5.0,5.0], [0.0,5.0]], sharedMat))	
 	#w.kinetics.append(Convex([[0.0,0.0], [2.0,0.0], [2.0,2.0], [0.0,2.0]], sharedMat))	
 	#w.kinetics.append(Convex([[-1.0,-1.0], [1.0,-1.0], [1.0,1.0], [-1.0,1.0]], sharedMat))	
+
+	#return 0
 
 	cvxr1 = Convex([[0.0,0.0], [2.0,0.0], [2.0,2.0], [0.0,2.0]], sharedMat)
 	cvxr1.r = 0.5
@@ -575,6 +570,12 @@ def fillWorldGJK1(w):
 	cvxr2.m = m2_tr([5.0, 5.0], 0.0)
 	cvxr2.r = 1.5
 	w.kinetics.append(cvxr2)	
+
+	cvxr4 = Convex([[0.0,0.0], [2.0,0.0], [2.0,2.0]], sharedMat)
+	cvxr4.m = m2_tr([6.0, 6.0], 0.0)
+	cvxr4.r = 1.0
+	cvxr4.dyn = [v2_z(), 0.7]
+	w.kinetics.append(cvxr4)	
 
 	return 0
 
