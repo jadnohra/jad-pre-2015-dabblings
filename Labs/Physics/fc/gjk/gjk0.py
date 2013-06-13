@@ -1,14 +1,15 @@
 import math
 import time
 import pprint
-import os
+import os, inspect
 import random
 import pyglet
 
 def absPath(relPath):
-	return os.path.join(os.path.split(os.path.realpath(__file__))[0], relPath)
+	return os.path.join(os.path.split(os.path.realpath(inspect.getfile(inspect.currentframe())))[0], relPath)
 
 execfile(absPath('../../../gaussy/gaussy.py'))
+execfile(absPath('../../../gaussy/touchy.py'))
 
 
 
