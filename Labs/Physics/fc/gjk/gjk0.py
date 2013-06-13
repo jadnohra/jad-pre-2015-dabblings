@@ -14,6 +14,7 @@ execfile(absPath('../../../gaussy/touchy.py'))
 
 
 gTestEpa = True
+gTestManifold = True
 
 def test_gjk_distance(m1, cvx1, r1, m2, cvx2, r2):
 	global gTestEpa
@@ -560,16 +561,19 @@ def fillWorldGJK1(w):
 	
 	fillWorldBox(w)
 
-	w.kinetics.append(Convex([[20.0,20.0], [24.0,20.0], [24.0,24.0], [20.0,24.0]], sharedMat))	
+	cvx0 = Convex([[-2.0,-2.0], [2.0,-2.0], [2.0,2.0], [-2.0,2.0]], sharedMat)
+	cvx0.m = m2_tr([22.0, 22.0], 0.0)
+	w.kinetics.append(cvx0)	
 	#w.kinetics.append(Convex([[0.0,0.0], [5.0,0.0], [5.0,5.0], [0.0,5.0]], sharedMat))	
 	#w.kinetics.append(Convex([[0.0,0.0], [2.0,0.0], [2.0,2.0], [0.0,2.0]], sharedMat))	
 	#w.kinetics.append(Convex([[-1.0,-1.0], [1.0,-1.0], [1.0,1.0], [-1.0,1.0]], sharedMat))	
 
-	#return 0
-
+	
 	cvxr1 = Convex([[0.0,0.0], [2.0,0.0], [2.0,2.0], [0.0,2.0]], sharedMat)
 	cvxr1.r = 0.5
 	w.kinetics.append(cvxr1)	
+
+	return 0
 
 	cvxr2 = Convex([[0.0,0.0], [2.0,0.0], [2.0,2.0], [0.0,2.0]], sharedMat)
 	cvxr2.m = m2_tr([5.0, 5.0], 0.0)
@@ -1022,7 +1026,11 @@ def doHover(pos):
 			#draw_convex_col(k.p, k.v, ppm, [1.0, 0.0, 0.0])
 		else:
 			draw_line_col(dist[2][0]*ppm, dist[2][1]*ppm, dist[3][0]*ppm, dist[3][1]*ppm, [0.2, 0.2, 0.2])
-			
+			# mfold = pmfold_2d(k.m, k.v, k.r, m2_id(), [pos], 0.0, dist)
+			# for i in range(len(mfold)):
+			# 	draw_particle(mfold[i][0][0]*ppm, mfold[i][0][1]*ppm, 0.2*ppm)
+			# 	draw_particle(mfold[i][1][0]*ppm, mfold[i][1][1]*ppm, 0.2*ppm)
+
 
 
 def doPick(pos, startPos, init):
@@ -1049,6 +1057,7 @@ def handleKeyboard():
 	global gDoDelete
 	global gMousePickObj
 	global gMouseHoverObj
+	global gTestManifold
 
 	if gDoTest:
 		ks = gWorld.kinetics
@@ -1065,6 +1074,11 @@ def handleKeyboard():
 						draw_arrow_col(dist[2][0], dist[2][1], dist[3][0], dist[3][1], ppm, 12.0, [0.4, 0.4, 0.0])	
 				else:	
 					draw_line_col(dist[2][0]*ppm, dist[2][1]*ppm, dist[3][0]*ppm, dist[3][1]*ppm, [0.3, 0.3, 0.0])	
+					if (gTestManifold == True):
+						mfold = pmfold_2d(ks[i].m, ks[i].v, ks[i].r, ks[j].m, ks[j].v, ks[j].r, dist)
+						for i in range(len(mfold)):
+							draw_particle(mfold[i][0][0]*ppm, mfold[i][0][1]*ppm, 0.2*ppm)
+							draw_particle(mfold[i][1][0]*ppm, mfold[i][1][1]*ppm, 0.2*ppm)
 		
 	if gDoDelete:
 		if (gMousePickObj or gMouseHoverObj):
@@ -1108,6 +1122,7 @@ def on_key_press(symbol, modifiers):
 	global gDoTest
 	global gDoDelete
 	global gTestEpa
+	global gTestManifold
 
 	if symbol == pyglet.window.key.N:
 		nextWorld()
@@ -1134,6 +1149,9 @@ def on_key_press(symbol, modifiers):
 
 	if symbol == pyglet.window.key.E:
 		gTestEpa = not gTestEpa
+
+	if symbol == pyglet.window.key.M:
+		gTestManifold = not gTestManifold	
 
 	if symbol == pyglet.window.key.DELETE:
 		gDoDelete = True
