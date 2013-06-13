@@ -66,6 +66,12 @@ def v2_rot90(v1):
 def v2_rotm90(v1):
 	return [ v1[1], -v1[0] ]
 
+def v2_proj(v, a):
+	return v2_muls(a, v2_dot(v, a) / v2_dot(a, a))
+
+def v2_proj_rest(v, a):
+	return v2_sub(v, v2_proj(v, a))
+
 def m2_zero():
 	return Matrix(3, 3, 0.0)
 
@@ -115,6 +121,32 @@ def m2_get_trans(m):
 def m2_set_trans(m, off):
 	m[0][2] = off[0] 
 	m[1][2] = off[1]
+
+def la_inv_2(m):
+	d = m[0][0]*m[1][1]-m[0][1]*m[1][0]
+	if d == 0.0:
+		return None
+	id = 1.0 / d	
+	return [[m[1][1]*id, -m[1][0]*id], -m[0][1]*id, m[0][0]*id]	
+
+def la_mul_2(m1, m2):
+	p = Eye(2, 2)
+	for i in range(2):
+		for j in range(2):
+			p[i][j] = m1[i][0]*m2[0][j]+m1[i][1]*m2[1][j]
+	return p
+
+def la_mul_2v(m, v):
+	p = [0.0, 0.0]
+	p[0] = m[0][0]*v[0]+m[0][1]*v[1]
+	p[1] = m[1][0]*v[0]+m[1][1]*v[1]
+	return p
+
+def la_solve_2(m, b):
+	mi = la_inv_2(m)
+	if (mi == None):
+		return None
+	return la_mul_2v(mi, b)	
 
 
 def PrintM(inMatrix, inName):
@@ -954,12 +986,20 @@ def gjk_epa_distance(m1, cvx1, r1, m2, cvx2, r2, epa_eps, eps=0.0000001, dbg = N
 
 	if (len(Vk)==2):	
 		d = v2_sub(Vk[1], Vk[0])
-		supp = gjk_support_mink_cvx(m1, cvx1, r1, m2, cvx2, r2, [-d[1], d[0]])
-		Vk.append(supp[1])
-		Pi.append(supp[2])
-		supp = gjk_support_mink_cvx(m1, cvx1, r1, m2, cvx2, r2, [d[1], -d[0]])
-		Vk.insert(1, supp[1])
-		Pi.insert(1, supp[2])
+		supp1 = gjk_support_mink_cvx(m1, cvx1, r1, m2, cvx2, r2, [-d[1], d[0]])
+		supp2 = gjk_support_mink_cvx(m1, cvx1, r1, m2, cvx2, r2, [d[1], -d[0]])
+
+		dist1 = v2_lenSq(v2_proj_rest(supp1[1], d))
+		dist2 = v2_lenSq(v2_proj_rest(supp2[1], d))
+
+		if (dist1 != 0.0 and dist2 != 0.0):
+			supp = supp1
+			if (math.fabs(dist2) > math.fabs(dist1)):
+				supp = supp2
+
+			Vk.append(supp[1])
+			Pi.append(supp[2])
+		
 
 	Dk = [-1.0] * len(Vk)
 	Ck = [None] * len(Vk)
@@ -984,8 +1024,18 @@ def gjk_epa_distance(m1, cvx1, r1, m2, cvx2, r2, epa_eps, eps=0.0000001, dbg = N
 			if ((min_i < 0) or (Dk[i] < Dk[min_i])):
 				min_i = i
 
-		supp = gjk_support_mink_cvx(m1, cvx1, r1, m2, cvx2, r2, Ck[min_i])
-		if ((v2_len(supp[1]) - v2_len(Ck[min_i]) < epa_eps) or (iter > max_iter)):
+		n = v2_normalize(Ck[min_i])
+		if (v2_lenSq(Ck[min_i]) == 0.0):	# We can't use the closest point as a direction, use segment normal
+			v = Vk[min_i]
+			vp = Vk[(min_i-1+lV)%lV]
+			vn = Vk[(min_i+1)%lV]
+			n = v2_normalize(v2_orth(v2_sub(vn, v)))
+			t = v2_sub(v, vp)
+			if (v2_dot(n, t) < 0.0):
+				n = v2_neg(n)
+
+		supp = gjk_support_mink_cvx(m1, cvx1, r1, m2, cvx2, r2, n)
+		if ((v2_dot(n, supp[1]) - v2_dot(n, Ck[min_i]) < epa_eps) or (iter > max_iter)):
 
 			v1 = [0.0, 0.0]
 			v2 = [0.0, 0.0]
@@ -1173,11 +1223,29 @@ def TestEPA():
 
 def TestGJKr():
 
-	p1 = [0.0, 0.0]
-	p2 = [2.0, 0.0]
+	m1 = m2_tr([0.0, 0.0], 0.0)
+	m2 = m2_tr([0.0, 0.0], 0.0)
+	cvx1 = [[-1.0,-1.0], [1.0,-1.0], [1.0,1.0], [-1.0, 1.0] ]
+	cvx2 = [[0.0,-1.0]]
+	dist = gjk_epa_distance(m1, cvx1, 0.0, m2, cvx2, 0.0, 0.001)
+	print dist[0]
+	print dist[2]
+	print dist[3]
+
+	m1 = m2_tr([0.0, 0.0], 0.0)
+	m2 = m2_tr([0.0, 0.0], 0.0)
+	cvx1 = [[-1.0,-1.0], [1.0,-1.0], [1.0,1.0], [-1.0, 1.0] ]
+	cvx2 = [[0.0,1.0]]
+	dist = gjk_epa_distance(m1, cvx1, 0.0, m2, cvx2, 0.0, 0.001)
+	print dist[0]
+	print dist[2]
+	print dist[3]
+
+	m1 = m2_tr([0.0, 0.0], 0.0)
+	m2 = m2_tr([2.0, 0.0], 0.0)
 	cvx1 = [[-1.0,-1.0], [1.0,-1.0], [1.0,1.0], [-1.0, 1.0] ]
 	cvx2 = [[0.0,0.0]]
-	dist = gjk_epa_distance(p1, cvx1, 0.5, p2, cvx2, 0.0, 0.001)
+	dist = gjk_epa_distance(m1, cvx1, 0.5, m2, cvx2, 0.0, 0.001)
 	print dist[0]
 	print dist[2]
 	print dist[3]
