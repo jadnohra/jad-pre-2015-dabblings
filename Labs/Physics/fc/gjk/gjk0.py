@@ -5,8 +5,12 @@ import os
 import random
 import pyglet
 
-#execfile('../../../gaussy/gaussy.py')
-execfile('Z:/Personal/Lab/gaussy/gaussy.py')
+def absPath(relPath):
+	return os.path.join(os.path.split(os.path.realpath(__file__))[0], relPath)
+
+execfile(absPath('../../../gaussy/gaussy.py'))
+
+
 
 gTestEpa = True
 
