@@ -44,6 +44,7 @@ def randConvex(r, vc):
 #------------ GJK -----------------------------------------------------------
 #----------------------------------------------------------------------------
 
+gGJK_eps = 0.0000001
 
 class GJK_Perm_0:
 	count = 1
@@ -216,7 +217,7 @@ def gjk_subdist(ctx, Vk):
 	return gjk_subdist_fallback(ctx, Vk)
 
 
-def gjk_distance(m1, cvx1, r1, m2, cvx2, r2, eps=0.0000001, dbg = None):
+def gjk_distance(m1, cvx1, r1, m2, cvx2, r2, eps=gGJK_eps, dbg = None):
 
 	ctx = GJK_Context()
 
@@ -278,15 +279,18 @@ def gjk_distance(m1, cvx1, r1, m2, cvx2, r2, eps=0.0000001, dbg = None):
 #------------ EPA -----------------------------------------------------------
 #----------------------------------------------------------------------------
 
+gEPA_eps = 0.0001
+
 def gjk_epa_closest_on_edge(ctx, v1, v2):
 	Vk = [v1, v2]
 	subd = gjk_subdist(ctx, Vk)
 	return [subd[0], subd[2]] # vert, lambdas
 
 
-def gjk_epa_distance(m1, cvx1, r1, m2, cvx2, r2, epa_eps, eps=0.0000001, dbg = None):
+#only 2D
+def gjk_epa_distance(m1, cvx1, r1, m2, cvx2, r2, epa_eps=gEPA_eps, gjk_eps=gGJK_eps, dbg = None):
 
-	out = gjk_distance(m1, cvx1, r1, m2, cvx2, r2, eps, dbg) 
+	out = gjk_distance(m1, cvx1, r1, m2, cvx2, r2, gjk_eps, dbg) 
 	if (out[0] >= out[1]):
 		return out
 
@@ -372,6 +376,31 @@ def gjk_epa_distance(m1, cvx1, r1, m2, cvx2, r2, epa_eps, eps=0.0000001, dbg = N
 		Ck.insert(ii, None)
 		Li.insert(ii, None)
 
+
+#----------------------------------------------------------------------------
+#------------ Pertrubed Manifold --------------------------------------------
+#----------------------------------------------------------------------------
+
+def pmfold_2d(m1, cvx1, r1, m2, cvx2, r2, gjkOut, epa_eps=gEPA_eps, gjk_eps=gGJK_eps):
+	pert_count = 2
+	min_pert = 1.0* math.pi*0.05/180.0
+	max_pert = 1.0* math.pi*0.1/180.0
+
+	pairs = [None] * (pert_count+1)
+	pairs[0] = [gjkOut[2], gjkOut[3]]
+
+	for pi in range(pert_count):
+		pert_a = random.uniform(min_pert, max_pert)
+		if (pi%2==0):
+			pert_a = -pert_a
+		pert_m = m2_tr(v2_z(), pert_a)
+		pert_m1 = m2_mul(m1, pert_m)
+		pert_im1 = m2_inv(pert_m1)
+		ed = gjk_epa_distance(pert_m1, cvx1, r1, m2, cvx2, r2, epa_eps, gjk_eps)
+		#pairs[pi+1] = [m2_mulp(m1, m2_mulp(pert_im1, ed[2])), ed[3]]
+		pairs[pi+1] = [ed[2], ed[3]]
+
+	return pairs	
 
 
 #----------------------------------------------------------------------------
