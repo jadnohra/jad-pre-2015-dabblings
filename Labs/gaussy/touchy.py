@@ -383,8 +383,8 @@ def gjk_epa_distance(m1, cvx1, r1, m2, cvx2, r2, epa_eps=gEPA_eps, gjk_eps=gGJK_
 
 def pmfold_2d(m1, cvx1, r1, m2, cvx2, r2, gjkOut, epa_eps=gEPA_eps, gjk_eps=gGJK_eps):
 	pert_count = 2
-	min_pert = 1.0* math.pi*0.05/180.0
-	max_pert = 1.0* math.pi*0.1/180.0
+	min_pert = 1.0* math.pi*0.001/180.0
+	max_pert = 1.0* math.pi*0.002/180.0
 
 	pairs = [None] * (pert_count+1)
 	pairs[0] = [gjkOut[2], gjkOut[3]]
