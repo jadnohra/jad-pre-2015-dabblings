@@ -8,22 +8,23 @@ def absPath(relPath):
 execfile(absPath('./gaussy.py'))
 
 
+#----------------------------------------------------------------------------
+#------------ Convex --------------------------------------------------------
+#----------------------------------------------------------------------------
+
+
+def convexVertex(m, cvx, r, n, i):
+	v = m2_mulp(m, cvx[i])
+	v = v2_add(v, v2_muls(n, r))
+	return v
+
+
 def linComb(v, l):
 	vc = [0.0, 0.0]
 	for i in range(len(l)):
 		vc = v2_add( vc, v2_muls(v[i], l[i]) )
 	return vc	
-	
 
-def convexVertexP(p, cvx, r, n, i):
-	v = v2_add(p, cvx[i])
-	v = v2_add(v, v2_muls(n, r))
-	return v
-
-def convexVertexM(m, cvx, r, n, i):
-	v = m2_mulp(m, cvx[i])
-	v = v2_add(v, v2_muls(n, r))
-	return v
 
 def randConvex(r, vc):
 	v = [None] * vc
@@ -38,6 +39,10 @@ def randConvex(r, vc):
 
 	return v	
 
+
+#----------------------------------------------------------------------------
+#------------ GJK -----------------------------------------------------------
+#----------------------------------------------------------------------------
 
 
 class GJK_Perm_0:
@@ -72,10 +77,10 @@ class GJK_Context:
 def gjk_support_cvx(m, cvx, r, d, nd):
 
 	mi = 0
-	max = v2_dot( convexVertexM(m, cvx, r, nd, 0), d)	
+	max = v2_dot( convexVertex(m, cvx, r, nd, 0), d)	
 
 	for i in range(1, len(cvx)):
-		dot = v2_dot( convexVertexM(m, cvx, r, nd, i), d)	
+		dot = v2_dot( convexVertex(m, cvx, r, nd, i), d)	
 		if (dot > max):
 			max = dot
 			mi = i
@@ -91,8 +96,8 @@ def gjk_support_mink_cvx(m1, cvx1, r1, m2, cvx2, r2, d):
 	i2 = gjk_support_cvx(m2, cvx2, r2, v2_neg(d), v2_neg(n))
 
 	h = i1[0]+i2[0]
-	p1 = convexVertexM(m1, cvx1, r1, n, i1[1])
-	p2 = convexVertexM(m2, cvx2, r2, v2_neg(n), i2[1])
+	p1 = convexVertex(m1, cvx1, r1, n, i1[1])
+	p2 = convexVertex(m2, cvx2, r2, v2_neg(n), i2[1])
 	s = v2_sub(p1, p2)
 	return [ h, s, [p1, p2] ] # h, s, points
 
@@ -269,6 +274,10 @@ def gjk_distance(m1, cvx1, r1, m2, cvx2, r2, eps=0.0000001, dbg = None):
 				return None
 
 
+#----------------------------------------------------------------------------
+#------------ EPA -----------------------------------------------------------
+#----------------------------------------------------------------------------
+
 def gjk_epa_closest_on_edge(ctx, v1, v2):
 	Vk = [v1, v2]
 	subd = gjk_subdist(ctx, Vk)
@@ -363,6 +372,11 @@ def gjk_epa_distance(m1, cvx1, r1, m2, cvx2, r2, epa_eps, eps=0.0000001, dbg = N
 		Ck.insert(ii, None)
 		Li.insert(ii, None)
 
+
+
+#----------------------------------------------------------------------------
+#------------ Test ----------------------------------------------------------
+#----------------------------------------------------------------------------
 
 def TestGJK():
 
