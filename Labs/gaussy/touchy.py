@@ -383,11 +383,18 @@ def gjk_epa_distance(m1, cvx1, r1, m2, cvx2, r2, epa_eps=gEPA_eps, gjk_eps=gGJK_
 
 def pmfold_2d(m1, cvx1, r1, m2, cvx2, r2, gjkOut, epa_eps=gEPA_eps, gjk_eps=gGJK_eps):
 	pert_count = 2
-	min_pert = 1.0* math.pi*0.001/180.0
-	max_pert = 1.0* math.pi*0.002/180.0
+	sc = 1.0
+	if (gjkOut[0] < 0.0):
+		sc = 50.0
+	min_pert = sc* math.pi*0.0001/180.0
+	max_pert = sc* math.pi*0.0001/180.0
+	#todo: base on shape characteristics?
 
-	pairs = [None] * (pert_count+1)
-	pairs[0] = [gjkOut[2], gjkOut[3]]
+	points1 = [None] * (pert_count+1)
+	points2 = [None] * (pert_count+1)
+
+	points1[0] = gjkOut[2]
+	points2[0] = gjkOut[3]
 
 	for pi in range(pert_count):
 		pert_a = random.uniform(min_pert, max_pert)
@@ -395,12 +402,40 @@ def pmfold_2d(m1, cvx1, r1, m2, cvx2, r2, gjkOut, epa_eps=gEPA_eps, gjk_eps=gGJK
 			pert_a = -pert_a
 		pert_m = m2_tr(v2_z(), pert_a)
 		pert_m1 = m2_mul(m1, pert_m)
-		pert_im1 = m2_inv(pert_m1)
+		#pert_im1 = m2_inv(pert_m1)
 		ed = gjk_epa_distance(pert_m1, cvx1, r1, m2, cvx2, r2, epa_eps, gjk_eps)
-		#pairs[pi+1] = [m2_mulp(m1, m2_mulp(pert_im1, ed[2])), ed[3]]
-		pairs[pi+1] = [ed[2], ed[3]]
+		#points1[pi+1] = m2_mulp(m1, m2_mulp(pert_im1, ed[2]))
+		points1[1+pi] = ed[2]
+		points2[1+pi] = ed[3]
 
-	return pairs	
+	np = len(points1)	
+	sd = v2_z() 
+	i = 1
+	while (v2_lenSq(sd)==0.0 and i < np):
+		sd = v2_sub(points2[i], points2[0])
+		i = i+1
+	
+	ind = [i for i in range(np)]
+	def sort_dir(ix, iy):
+	 	diff = v2_dot(sd, points2[ix])-v2_dot(sd, points2[iy])
+	 	if diff < 0.0:
+	 		return -1
+	 	if diff > 0.0:
+	 		return 1
+	 	return 0	
+	ind = sorted(ind, cmp=sort_dir)
+
+	mfold1 = [points1[ind[0]], points1[ind[-1]]]
+	mfold2 = [points2[ind[0]], points2[ind[-1]]]
+
+	ext1 = points1[ind[0]]
+	ext2 = points1[ind[-1]]
+	if (v2_dist(ext1, ext2) <= 0.01):
+		mfold1.pop()
+		mfold2.pop()
+
+	return [mfold1, mfold2]	
+	#return [points1, points2]
 
 
 #----------------------------------------------------------------------------
