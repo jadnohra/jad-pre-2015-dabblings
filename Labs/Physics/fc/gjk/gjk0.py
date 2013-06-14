@@ -594,7 +594,7 @@ def fillWorldGJK1(w):
 	cvxr1.r = 0.5
 	w.kinetics.append(cvxr1)	
 
-	return 0
+	#return 0
 
 	cvxr2 = Convex([[0.0,0.0], [2.0,0.0], [2.0,2.0], [0.0,2.0]], sharedMat)
 	cvxr2.m = m2_tr([5.0, 5.0], 0.0)
@@ -1039,7 +1039,13 @@ def doHover(pos):
 	gMouseHoverObj = None
 	for k in gWorld.kinetics:
 		gjkOut = test_gjk_distance(k.m, k.v, k.r, m2_id(), [pos], 0.0)
+		
 		#print pos
+		#print k.m, k.v, k.r
+		# BUG HERE! FIX!!!!!!!!!!
+		#[16.6, 13.350000000000001]
+		#[[1.0, -0.0, 15.250000000000004], [0.0, 1.0, 13.350000000000001], [0.0, 0.0, 1.0]] [[0.0, 0.0], [2.0, 0.0], [2.0, 2.0], [0.0, 2.0]] 1.5
+
 		#print dist[0]
 		if (gjkOut[0] <= gjkOut[1]):
 			if (gjkOut[0] < 0.0):
@@ -1050,17 +1056,15 @@ def doHover(pos):
 		else:
 			vdraw_line_col(gjkOut[2], gjkOut[3], [0.2, 0.2, 0.2])
 		
-		featues = gjkOut[4]
-		if (featues != None):
+		features = gjkOut[4]
+		if (features != None):
 
-			if (featues[0] != None):
-				p1 = convexVertex(k.m, k.v, 0.0, v2_z(), featues[0][0])
-				if (len(featues[0]) == 1):
-					vdraw_circle_col(p1, 0.2, [0.4, 0.4, 0.0]) 
-				if (len(featues[0]) == 2):
-					p2 = convexVertex(k.m, k.v, 0.0, v2_z(), featues[0][1])
-					#vdraw_thick_line_col(p1, p2, 1.0, [0.4, 0.4, 0.0])
-					vdraw_line_col(p1, p2, [0.4, 0.4, 0.0])
+			if (features[0] != None):
+				vs = cfeature_vertices(k.m, k.v, k.r, 0, gjkOut)
+				if (len(vs) == 1):
+					vdraw_circle_col(vs[0], 0.2, [0.4, 0.4, 0.0]) 
+				if (len(vs) == 2):	
+					vdraw_line_col(vs[0], vs[1], [0.4, 0.4, 0.0])
 
 		# mfold = pmfold_2d(k.m, k.v, k.r, m2_id(), [pos], 0.0, gjkOut)
 		# for i in range(len(mfold)):
