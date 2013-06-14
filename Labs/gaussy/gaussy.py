@@ -67,8 +67,15 @@ def v2_rotm90(v1):
 def v2_proj(v, a):
 	return v2_muls(a, v2_dot(v, a) / v2_dot(a, a))
 
+def v2_points_proj(a, b, c):
+	return v2_proj(v2_sub(c, a), v2_sub(b, a))
+
 def v2_proj_rest(v, a):
 	return v2_sub(v, v2_proj(v, a))
+
+def v2_points_proj_rest(a, b, c):
+	return v2_proj_rest(v2_sub(c, a), v2_sub(b, a))
+
 
 def m2_zero():
 	return Matrix(3, 3, 0.0)
