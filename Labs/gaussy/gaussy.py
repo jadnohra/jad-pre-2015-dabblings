@@ -1,6 +1,5 @@
 import math
 
-
 def v2_z():
 	return [0.0, 0.0]
 
