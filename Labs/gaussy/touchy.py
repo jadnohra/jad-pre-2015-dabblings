@@ -306,7 +306,7 @@ def gjk_distance(m1, cvx1, r1, m2, cvx2, r2, eps=gGJK_eps, dbg = None):
 
 			features = 	gjk_find_features(m1, cvx1, r1, m2, cvx2, r2, li, IndI)
 			
-			return [dist, eps, v1, v2, features, Vk, Pi]
+			return [dist, eps, v1, v2, features, Vk, Pi, IndI]
 
 
 		#if (dist > last_dist):
@@ -352,12 +352,14 @@ def gjk_epa_distance(m1, cvx1, r1, m2, cvx2, r2, epa_eps=gEPA_eps, gjk_eps=gGJK_
 
 	Vk = gjkOut[5]
 	Pi = gjkOut[6]
+	IndI = gjkOut[7]
 	
 	# treat degenerate case
 	if (len(Vk)==1):
 		supp = gjk_support_mink_cvx(m1, cvx1, r1, m2, cvx2, r2, [1.0, 0.0])
 		Vk.append(supp[1])
 		Pi.append(supp[2])
+		IndI.append(supp[3])
 
 	# treat degenerate case
 	if (len(Vk)==2):	
@@ -375,6 +377,7 @@ def gjk_epa_distance(m1, cvx1, r1, m2, cvx2, r2, epa_eps=gEPA_eps, gjk_eps=gGJK_
 
 			Vk.append(supp[1])
 			Pi.append(supp[2])
+			IndI.append(supp[3])
 		
 
 	Dk = [-1.0] * len(Vk)
@@ -419,12 +422,16 @@ def gjk_epa_distance(m1, cvx1, r1, m2, cvx2, r2, epa_eps=gEPA_eps, gjk_eps=gGJK_
 				j = (min_i+i)%lV
 				v1 = v2_add(v1, v2_muls(Pi[j][0], Li[min_i][i]))
 				v2 = v2_add(v2, v2_muls(Pi[j][1], Li[min_i][i]))
+			
+			indI = [IndI[min_i], IndI[(min_i+1)%lV]]
+			features = 	gjk_find_features(m1, cvx1, r1, m2, cvx2, r2, Li[min_i], indI)	
 
-			return [-v2_len(Ck[min_i]), 0.0, v1, v2, [None, None]]
+			return [-v2_len(Ck[min_i]), 0.0, v1, v2, features]
 
 		ii = (min_i+1) % lV
 		Vk.insert(ii, supp[1])
 		Pi.insert(ii, supp[2])
+		IndI.insert(ii, supp[3])
 		Dk[min_i] = -1.0
 		Dk.insert(ii, -1.0)
 		Ck.insert(ii, None)
@@ -435,6 +442,39 @@ def gjk_epa_distance(m1, cvx1, r1, m2, cvx2, r2, epa_eps=gEPA_eps, gjk_eps=gGJK_
 #------------ GJK Output ----------------------------------------------------
 #----------------------------------------------------------------------------
 
+def cfeature_vertices(m, cvx, r, fi, gjkOut):
+	
+	feature = gjkOut[4][fi]
+	fj = (fi+1)%2
+	lf = len(feature)
+
+	if (lf not in [1,2]):
+		return None
+
+	p1 = convexVertex(m, cvx, 0.0, v2_z(), feature[0])
+
+	if (r <= 0.0):
+		if (lf == 1):
+			return [p1]
+		elif (lf == 2):
+			p2 = convexVertex(m, cvx, 0.0, v2_z(), feature[1])
+			return [p1, p2]
+	else:
+		n = v2_sub(gjkOut[2+fj], gjkOut[2+fi])
+		if (gjkOut[0] < 0.0):
+			n = v2_neg(n)
+		if (lf == 1):
+			if (v2_lenSq(n) == 0.0):
+				n = v2_sub(gjkOut[2+fi], p1)
+			return [v2_add(p1, v2_muls(v2_normalize(n), r))]
+		elif (lf == 2):
+			p2 = convexVertex(m, cvx, 0.0, v2_z(), feature[1])
+			n = v2_points_proj_rest(p1, p2, gjkOut[2+fi])
+			return [v2_add(p1, v2_muls(v2_normalize(n), r)), v2_add(p2, v2_muls(v2_normalize(n), r))]
+
+
+
+				
 
 
 #----------------------------------------------------------------------------
