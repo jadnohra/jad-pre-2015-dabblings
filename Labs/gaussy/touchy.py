@@ -19,6 +19,15 @@ def convexVertex(m, cvx, r, n, i):
 	return v
 
 
+def convexNormal(m, cvx, r, d, i):
+	p1 = convexVertex(m, cvx, 0.0, v2_z(), i)
+	p2 = convexVertex(m, cvx, 0.0, v2_z(), (i+1)%len(cvx))
+	n = v2_orth(v2_sub(p2, p1))
+	if (v2_dot(d, n) < 0.0):
+		n = v2_neg(n)
+	return n	
+
+
 def linComb(v, l):
 	vc = [0.0, 0.0]
 	for i in range(len(l)):
@@ -100,7 +109,7 @@ def gjk_support_mink_cvx(m1, cvx1, r1, m2, cvx2, r2, d):
 	p1 = convexVertex(m1, cvx1, r1, n, i1[1])
 	p2 = convexVertex(m2, cvx2, r2, v2_neg(n), i2[1])
 	s = v2_sub(p1, p2)
-	return [ h, s, [p1, p2] ] # h, s, points
+	return [ h, s, [p1, p2], [i1[1], i2[1]] ] # h, s, points, indices
 
 
 def gjk_subdist_fallback(ctx, Vk):
@@ -217,6 +226,42 @@ def gjk_subdist(ctx, Vk):
 	return gjk_subdist_fallback(ctx, Vk)
 
 
+def gjk_find_features(m1, cvx1, r1, m2, cvx2, r2, li, IndI):
+	
+	ui1 = []
+	ui2 = []
+	for i in range(len(li)):
+		if (li[i] != 0.0):
+			ui1.append(IndI[i][0])
+			ui2.append(IndI[i][1])
+
+	f1 = None
+	f2 = None
+
+	if (len(ui1) <= 2):
+		lv = len(cvx1)
+		lu = len(ui1)
+		ui1 = sorted(ui1)
+		f1 = [ui1[0]]
+		for i in range(len(ui1)):
+			if ((ui1[i]+1)%lv == ui1[(i+1)%lu]):
+				f1 = [ui1[i], (ui1[i]+1)%lv]
+				break
+
+	if (len(ui2) <= 2):
+		lv = len(cvx2)
+		lu = len(ui2)
+		ui2 = sorted(ui2)
+		f2 = [ui2[0]]
+		for i in range(len(ui2)):
+			if ((ui2[i]+1)%lv == ui2[(i+1)%lu]):
+				f2 = [ui2[i], (ui2[i]+1)%lv]
+				break
+	
+	return [f1, f2]
+
+
+#2d,3d in principle
 def gjk_distance(m1, cvx1, r1, m2, cvx2, r2, eps=gGJK_eps, dbg = None):
 
 	ctx = GJK_Context()
@@ -225,6 +270,8 @@ def gjk_distance(m1, cvx1, r1, m2, cvx2, r2, eps=gGJK_eps, dbg = None):
 	supp = gjk_support_mink_cvx(m1, cvx1, r1, m2, cvx2, r2, d) 
 	Vk = [ supp[1] ]
 	Pi = [ supp[2] ]
+	IndI = [ supp[3] ]
+	DirI = [ d ]
 
 	max_iter = 3 + (len(cvx1) + len(cvx2))*5
 	iter = 0
@@ -257,7 +304,9 @@ def gjk_distance(m1, cvx1, r1, m2, cvx2, r2, eps=gGJK_eps, dbg = None):
 				v1 = v2_add(v1, v2_muls(Pi[i][0], li[i]))
 				v2 = v2_add(v2, v2_muls(Pi[i][1], li[i]))
 
-			return [dist, eps, v1, v2, Vk, Pi]
+			features = 	gjk_find_features(m1, cvx1, r1, m2, cvx2, r2, li, IndI)
+			
+			return [dist, eps, v1, v2, features, Vk, Pi]
 
 
 		#if (dist > last_dist):
@@ -266,11 +315,16 @@ def gjk_distance(m1, cvx1, r1, m2, cvx2, r2, eps=gGJK_eps, dbg = None):
 		#last_dist = dist
 		Vk.append( supp[1] )
 		Pi.append( supp[2] )
+		IndI.append( supp[3] )
+		DirI.append( nvk )
 		if (len(Vk)>3):
 			nVi = subd[1]
 			if (len(nVi) > 0):
-				Vk.pop(nVi[0])
-				Pi.pop(nVi[0])
+				popi = nVi[0]
+				Vk.pop(popi)
+				Pi.pop(popi)
+				IndI.pop(popi)
+				DirI.pop(popi)
 			else:
 				return None
 
@@ -290,14 +344,14 @@ def gjk_epa_closest_on_edge(ctx, v1, v2):
 #only 2D
 def gjk_epa_distance(m1, cvx1, r1, m2, cvx2, r2, epa_eps=gEPA_eps, gjk_eps=gGJK_eps, dbg = None):
 
-	out = gjk_distance(m1, cvx1, r1, m2, cvx2, r2, gjk_eps, dbg) 
-	if (out[0] >= out[1]):
-		return out
+	gjkOut = gjk_distance(m1, cvx1, r1, m2, cvx2, r2, gjk_eps, dbg) 
+	if (gjkOut[0] >= gjkOut[1]):
+		return gjkOut
 
 	ctx = GJK_Context()
 
-	Vk = out[4]
-	Pi = out[5]
+	Vk = gjkOut[5]
+	Pi = gjkOut[6]
 	
 	# treat degenerate case
 	if (len(Vk)==1):
@@ -364,9 +418,9 @@ def gjk_epa_distance(m1, cvx1, r1, m2, cvx2, r2, epa_eps=gEPA_eps, gjk_eps=gGJK_
 			for i in range(2):
 				j = (min_i+i)%lV
 				v1 = v2_add(v1, v2_muls(Pi[j][0], Li[min_i][i]))
-				v2 = v2_add(v2, v2_muls(Pi[j][1], Li[min_i][i]))	
+				v2 = v2_add(v2, v2_muls(Pi[j][1], Li[min_i][i]))
 
-			return [-v2_len(Ck[min_i]), 0.0, v1, v2]
+			return [-v2_len(Ck[min_i]), 0.0, v1, v2, [None, None]]
 
 		ii = (min_i+1) % lV
 		Vk.insert(ii, supp[1])
@@ -378,7 +432,13 @@ def gjk_epa_distance(m1, cvx1, r1, m2, cvx2, r2, epa_eps=gEPA_eps, gjk_eps=gGJK_
 
 
 #----------------------------------------------------------------------------
-#------------ Pertrubed Manifold --------------------------------------------
+#------------ GJK Output ----------------------------------------------------
+#----------------------------------------------------------------------------
+
+
+
+#----------------------------------------------------------------------------
+#------------ GJK Output: Pertrubed Manifold --------------------------------
 #----------------------------------------------------------------------------
 
 def pmfold_2d(m1, cvx1, r1, m2, cvx2, r2, gjkOut, epa_eps=gEPA_eps, gjk_eps=gGJK_eps):
