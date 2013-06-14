@@ -488,6 +488,8 @@ def draw_convex_r_col(m, v, r, ppm, col):
 def draw_line(x1, y1, x2, y2):
 	pyglet.graphics.draw(2, pyglet.gl.GL_LINES, ('v2f', (x1, y1, x2, y2)))
 
+def vdraw_line(v1, v2):
+	draw_line(v1[0]*ppm, v1[1]*ppm, v2[0]*ppm, v2[1]*ppm)
 
 def draw_thick_line_col(x1, y1, x2, y2, ppm, w, col):
 	if (w <= 1):
@@ -525,6 +527,13 @@ def draw_arrow_col(x1, y1, x2, y2, ppm, w, col):
 def draw_cross(x, y, r):
 	pyglet.graphics.draw(4, pyglet.gl.GL_LINES, ('v2f', (x-r, y, x+r, y, x, y-r, x, y+r)))
 
+
+def draw_circle(v, r):
+	vertices = []
+	for sc in particle_sincos:
+		vertices.append(v[0]*ppm + r*sc[0])
+		vertices.append(v[1]*ppm + r*sc[1])
+	pyglet.graphics.draw(particle_vcount, pyglet.gl.GL_LINE_LOOP, ('v2f', vertices))
 
 def draw_particle(x, y, r):
 	vertices = []
@@ -573,7 +582,7 @@ def fillWorldGJK1(w):
 	cvxr1.r = 0.5
 	w.kinetics.append(cvxr1)	
 
-	return 0
+	#return 0
 
 	cvxr2 = Convex([[0.0,0.0], [2.0,0.0], [2.0,2.0], [0.0,2.0]], sharedMat)
 	cvxr2.m = m2_tr([5.0, 5.0], 0.0)
@@ -586,12 +595,14 @@ def fillWorldGJK1(w):
 	cvxr4.dyn = [v2_z(), 0.7]
 	w.kinetics.append(cvxr4)	
 
-	return 0
+	#return 0
 
 	cvxr3 = Convex([[0.0,0.0], [2.0,0.0], [2.0,2.0]], sharedMat)
 	cvxr3.m = m2_tr([10.0, 5.0], 0.0) 
 	cvxr3.r = 1.0
 	w.kinetics.append(cvxr3)	
+
+	return 0
 
 	cvx1 = Convex([[0.0,-5.0], [5.0,-5.0], [5.0,5.0], [0.0,5.0]], sharedMat)
 	cvx1.p = m2_tr([9.0, 10.0], 0.0)
@@ -1074,12 +1085,25 @@ def handleKeyboard():
 						draw_arrow_col(dist[2][0], dist[2][1], dist[3][0], dist[3][1], ppm, 12.0, [0.4, 0.4, 0.0])	
 				else:	
 					draw_line_col(dist[2][0]*ppm, dist[2][1]*ppm, dist[3][0]*ppm, dist[3][1]*ppm, [0.3, 0.3, 0.0])	
-					if (gTestManifold == True):
-						mfold = pmfold_2d(ks[i].m, ks[i].v, ks[i].r, ks[j].m, ks[j].v, ks[j].r, dist)
-						for i in range(len(mfold)):
-							draw_particle(mfold[i][0][0]*ppm, mfold[i][0][1]*ppm, 0.2*ppm)
-							draw_particle(mfold[i][1][0]*ppm, mfold[i][1][1]*ppm, 0.2*ppm)
-		
+
+				if (gTestManifold == True):
+					radius = 0.2
+					n = v2_normalize(v2_sub(dist[3], dist[2]))
+					mfold1, mfold2 = pmfold_2d(ks[i].m, ks[i].v, ks[i].r, ks[j].m, ks[j].v, ks[j].r, dist)
+					if len(mfold1) == 1:
+						draw_particle(mfold1[0][0]*ppm, mfold1[0][1]*ppm, radius*ppm)
+						draw_particle(mfold2[0][0]*ppm, mfold2[0][1]*ppm, radius*ppm)
+					else:	
+
+						if v2_lenSq(n) == 0.0 or len(mfold1) != 2:
+							for i in range(len(mfold1)):
+								draw_particle(mfold1[i][0]*ppm, mfold1[i][1]*ppm, radius*ppm)
+								draw_particle(mfold2[i][0]*ppm, mfold2[i][1]*ppm, radius*ppm)
+						else:
+							off = v2_muls(n, radius)
+							vdraw_line(v2_add(mfold1[0], off), v2_add(mfold1[1], off))
+							vdraw_line(v2_sub(mfold2[0], off), v2_sub(mfold2[1], off))
+
 	if gDoDelete:
 		if (gMousePickObj or gMouseHoverObj):
 			for i in range(len(gWorld.kinetics)):
