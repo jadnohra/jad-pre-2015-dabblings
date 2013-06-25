@@ -241,22 +241,29 @@ def gjk_find_features(m1, cvx1, r1, m2, cvx2, r2, li, IndI):
 	if (len(ui1) <= 2):
 		lv = len(cvx1)
 		lu = len(ui1)
-		ui1 = sorted(ui1)
-		f1 = [ui1[0]]
-		for i in range(len(ui1)):
-			if ((ui1[i]+1)%lv == ui1[(i+1)%lu]):
-				f1 = [ui1[i], (ui1[i]+1)%lv]
-				break
+		if (lv == 1):
+			f1 = [ui1[0]]
+		else:	
+			ui1 = sorted(ui1)
+			f1 = [ui1[0]]
+			for i in range(len(ui1)):
+				if ((ui1[i]+1)%lv == ui1[(i+1)%lu]):
+					f1 = [ui1[i], (ui1[i]+1)%lv]
+					break
+
 
 	if (len(ui2) <= 2):
 		lv = len(cvx2)
 		lu = len(ui2)
-		ui2 = sorted(ui2)
-		f2 = [ui2[0]]
-		for i in range(len(ui2)):
-			if ((ui2[i]+1)%lv == ui2[(i+1)%lu]):
-				f2 = [ui2[i], (ui2[i]+1)%lv]
-				break
+		if (lv == 1):
+			f2 = [ui2[0]]
+		else:	
+			ui2 = sorted(ui2)
+			f2 = [ui2[0]]
+			for i in range(len(ui2)):
+				if ((ui2[i]+1)%lv == ui2[(i+1)%lu]):
+					f2 = [ui2[i], (ui2[i]+1)%lv]
+					break
 	
 	return [f1, f2]
 
@@ -395,7 +402,13 @@ def gjk_epa_distance(m1, cvx1, r1, m2, cvx2, r2, epa_eps=gEPA_eps, gjk_eps=gGJK_
 		lV = len(Vk)
 		for i in range(lV):
 			if (Dk[i] < 0.0):
-				cl = gjk_epa_closest_on_edge(ctx, Vk[i], Vk[(i+1)%lV])
+				v1 = Vk[i]
+				v2 = Vk[(i+1)%lV]
+				cl = gjk_epa_closest_on_edge(ctx, v1, v2)
+
+				if (cl[1][0] > 0.0 and cl[1][0] < 1.0):	# get a better estimate (better numerics) of the vertex in the case it is not an extremity.
+					cl[0] = v2_points_proj(v1, v2, v2_z())
+
 				Ck[i] = cl[0]
 				Li[i] = cl[1]
 				Dk[i] = v2_lenSq(cl[0])
@@ -404,7 +417,9 @@ def gjk_epa_distance(m1, cvx1, r1, m2, cvx2, r2, epa_eps=gEPA_eps, gjk_eps=gGJK_
 				min_i = i
 
 		n = v2_normalize(Ck[min_i])
-		if (v2_lenSq(Ck[min_i]) == 0.0):	# We can't use the closest point as a direction, use segment normal
+		# The epsilon is needed because of the numerical accuracy of gjk_epa_closest_on_edge (REASON1) when used without 
+		if (v2_lenSq(Ck[min_i]) <= 0.00000001):	# We can't use the closest point as a direction, use segment normal. 
+		#if (v2_lenSq(Ck[min_i]) == 0.0):	# We can't use the closest point as a direction, use segment normal. The epsilon is needed because of the numerical accuracy of gjk_epa_closest_on_edge (REASON1)
 			v = Vk[min_i]
 			vp = Vk[(min_i-1+lV)%lV]
 			vn = Vk[(min_i+1)%lV]
@@ -466,10 +481,15 @@ def cfeature_vertices(m, cvx, r, fi, gjkOut):
 		if (lf == 1):
 			if (v2_lenSq(n) == 0.0):
 				n = v2_sub(gjkOut[2+fi], p1)
+			if (v2_lenSq(n) == 0.0):
+				n = None	
 			return [v2_add(p1, v2_muls(v2_normalize(n), r))]
 		elif (lf == 2):
 			p2 = convexVertex(m, cvx, 0.0, v2_z(), feature[1])
-			n = v2_points_proj_rest(p1, p2, gjkOut[2+fi])
+			if (v2_lenSq(n) == 0.0):
+				n = v2_points_proj_rest(p1, p2, gjkOut[2+fi])
+			if (v2_lenSq(n) == 0.0):
+				n = None	
 			return [v2_add(p1, v2_muls(v2_normalize(n), r)), v2_add(p2, v2_muls(v2_normalize(n), r))]
 
 
@@ -737,8 +757,20 @@ def TestGJKr():
 	print dist[2]
 	print dist[3]
 
+
+def TestGJKFeature():
+
+	# REASON1
+	cvx0v = [[0.0, 0.0], [2.0, 0.0], [2.0, 2.0], [0.0, 2.0]]
+	cvx0r = 1.5
+	cvx0m = [[1.0, -0.0, 15.250000000000004], [0.0, 1.0, 0.0], [0.0, 0.0, 1.0]]	
+	gjkOut = gjk_epa_distance(cvx0m, cvx0v, cvx0r, m2_id(), [[16.6, 0.0]], 0.0, 0.0001)
+	features = gjkOut[4]
+	vs = cfeature_vertices(cvx0m, cvx0v, cvx0r, 0, gjkOut)
+
 #TestGJK()
 #TestGJK1()
 #TestGJK2()
 #TestEPA()
 #TestGJKr()
+#TestGJKFeature()
