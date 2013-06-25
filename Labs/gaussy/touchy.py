@@ -96,30 +96,31 @@ def gjk_support_cvx(m, cvx, r, d, nd):
 			max = dot
 			mi = i
 
-	# ami = [mi]		
-	# j = (mi+1)%lv
-	# c = 0		
-	# while (c < lv):
-	# 	dot = v2_dot( convexVertex(m, cvx, r, nd, i), d)
-	# 	if (dot == max):
-	# 		ami.append(j)
-	# 	else:
-	# 		break
-	# 	j = (j+1)%lv
-	# 	c = c+1
+	# collect extra points (with the same dot product)		
+	ami = [mi]		
+	j = (mi+1)%lv
+	c = 0		
+	while (c < lv):
+		dot = v2_dot( convexVertex(m, cvx, r, nd, j), d)
+		if (dot == max):
+			ami.append(j)
+		else:
+			break
+		j = (j+1)%lv
+		c = c+1
 
-	# j = (mi+lv-1)%lv
-	# c = 0		
-	# while (c < lv):
-	# 	dot = v2_dot( convexVertex(m, cvx, r, nd, i), d)
-	# 	if (dot == max):
-	# 		ami.append(j)
-	# 	else:
-	# 		break
-	# 	j = (j+lv-1)%lv
-	# 	c = c+1
+	j = (mi+lv-1)%lv
+	c = 0		
+	while (c < lv):
+		dot = v2_dot( convexVertex(m, cvx, r, nd, j), d)
+		if (dot == max):
+			ami.append(j)
+		else:
+			break
+		j = (j+lv-1)%lv
+		c = c+1
 
-	return [max, mi]
+	return [max, ami]
 
 
 
@@ -131,8 +132,8 @@ def gjk_support_mink_cvx(m1, cvx1, r1, m2, cvx2, r2, d):
 	i2 = gjk_support_cvx(m2, cvx2, r2, v2_neg(d), v2_neg(n))
 
 	h = i1[0]+i2[0]
-	p1 = convexVertex(m1, cvx1, r1, n, i1[1])
-	p2 = convexVertex(m2, cvx2, r2, v2_neg(n), i2[1])
+	p1 = convexVertex(m1, cvx1, r1, n, i1[1][0])
+	p2 = convexVertex(m2, cvx2, r2, v2_neg(n), i2[1][0])
 	s = v2_sub(p1, p2)
 	return [ h, s, [p1, p2], [i1[1], i2[1]] ] # h, s, points, indices
 
@@ -257,38 +258,39 @@ def gjk_find_features(m1, cvx1, r1, m2, cvx2, r2, li, IndI):
 	ui2 = []
 	for i in range(len(li)):
 		if (li[i] != 0.0):
-			ui1.append(IndI[i][0])
-			ui2.append(IndI[i][1])
+			# consider all extra vertices
+			for ind in IndI[i][0]:	
+				ui1.append(ind)
+			for ind in IndI[i][1]:
+				ui2.append(ind)
 
 	f1 = None
 	f2 = None
 
-	if (len(ui1) <= 2):
-		lv = len(cvx1)
-		lu = len(ui1)
-		if (lv == 1):
-			f1 = [ui1[0]]
-		else:	
-			ui1 = sorted(ui1)
-			f1 = [ui1[0]]
-			for i in range(len(ui1)):
-				if ((ui1[i]+1)%lv == ui1[(i+1)%lu]):
-					f1 = [ui1[i], (ui1[i]+1)%lv]
-					break
+	lv = len(cvx1)
+	lu = len(ui1)
+	if (lv == 1):
+		f1 = [ui1[0]]
+	else:	
+		ui1 = sorted(ui1)
+		f1 = [ui1[0]]
+		for i in range(len(ui1)):
+			if ((ui1[i]+1)%lv == ui1[(i+1)%lu]):
+				f1 = [ui1[i], (ui1[i]+1)%lv]
+				break
 
 
-	if (len(ui2) <= 2):
-		lv = len(cvx2)
-		lu = len(ui2)
-		if (lv == 1):
-			f2 = [ui2[0]]
-		else:	
-			ui2 = sorted(ui2)
-			f2 = [ui2[0]]
-			for i in range(len(ui2)):
-				if ((ui2[i]+1)%lv == ui2[(i+1)%lu]):
-					f2 = [ui2[i], (ui2[i]+1)%lv]
-					break
+	lv = len(cvx2)
+	lu = len(ui2)
+	if (lv == 1):
+		f2 = [ui2[0]]
+	else:	
+		ui2 = sorted(ui2)
+		f2 = [ui2[0]]
+		for i in range(len(ui2)):
+			if ((ui2[i]+1)%lv == ui2[(i+1)%lu]):
+				f2 = [ui2[i], (ui2[i]+1)%lv]
+				break
 	
 	return [f1, f2]
 
