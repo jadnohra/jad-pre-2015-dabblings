@@ -14,7 +14,8 @@ execfile(absPath('../../../gaussy/touchy.py'))
 
 
 gTestEpa = True
-gTestManifold = True
+gTestManifold = False
+gManifoldType = 1
 
 def test_gjk_distance(m1, cvx1, r1, m2, cvx2, r2):
 	global gTestEpa
@@ -583,7 +584,7 @@ def fillWorldGJK1(w):
 	fillWorldBox(w)
 
 	cvx0 = Convex([[0.0, 0.0], [2.0, 0.0], [2.0, 2.0], [0.0, 2.0]], sharedMat)
-	cvx0.r = 4.0
+	cvx0.r = 1.0*4.0
 	cvx0.m = [[1.0, -0.0, 15.250000000000004], [0.0, 1.0, 13.350000000000001], [0.0, 0.0, 1.0]]
 	w.kinetics.append(cvx0)	
 	#[[1.0, -0.0, 15.250000000000004], [0.0, 1.0, 13.350000000000001], [0.0, 0.0, 1.0]] [[0.0, 0.0], [2.0, 0.0], [2.0, 2.0], [0.0, 2.0]] 1.5
@@ -1043,16 +1044,13 @@ def handleMouse():
 def doHover(pos):
 	global gMouseHoverObj
 
+	if len(gWorld.kinetics) == 2:
+		return 
+
 	gMouseHoverObj = None
 	for k in gWorld.kinetics:
 		gjkOut = test_gjk_distance(k.m, k.v, k.r, m2_id(), [pos], 0.0)
 		
-		#print pos
-		#print k.m, k.v, k.r
-		# BUG HERE! FIX!!!!!!!!!!
-		#[16.6, 13.350000000000001]
-		#[[1.0, -0.0, 15.250000000000004], [0.0, 1.0, 13.350000000000001], [0.0, 0.0, 1.0]] [[0.0, 0.0], [2.0, 0.0], [2.0, 2.0], [0.0, 2.0]] 1.5
-
 		#print dist[0]
 		if (gjkOut[0] <= gjkOut[1]):
 			if (gjkOut[0] < 0.0):
@@ -1068,10 +1066,10 @@ def doHover(pos):
 
 			if (features[0] != None):
 				vs = cfeature_vertices(k.m, k.v, k.r, 0, gjkOut)
-				if (len(vs) == 1):
-					vdraw_circle_col(vs[0], 0.2, [0.4, 0.4, 0.0]) 
-				if (len(vs) == 2):	
-					vdraw_line_col(vs[0], vs[1], [0.4, 0.4, 0.0])
+				if (len(vs[0]) == 1):
+					vdraw_circle_col(vs[0][0], 0.2, [0.4, 0.4, 0.0]) 
+				if (len(vs[0]) == 2):	
+					vdraw_line_col(vs[0][0], vs[0][1], [0.4, 0.4, 0.0])
 
 		# mfold = pmfold_2d(k.m, k.v, k.r, m2_id(), [pos], 0.0, gjkOut)
 		# for i in range(len(mfold)):
@@ -1119,30 +1117,63 @@ def handleKeyboard():
 					if (gjkOut[0] < 0.0):
 						#draw_line_col(gjkOut[2][0]*ppm, gjkOut[2][1]*ppm, gjkOut[3][0]*ppm, gjkOut[3][1]*ppm, [0.4, 0.4, 0.0])	
 						draw_arrow_col(gjkOut[2][0], gjkOut[2][1], gjkOut[3][0], gjkOut[3][1], ppm, 12.0, [0.4, 0.4, 0.0])	
-				#else:	
-					#vdraw_line_col(gjkOut[2], gjkOut[3], [0.3, 0.3, 0.0])	
+				else:	
+					vdraw_line_col(gjkOut[2], gjkOut[3], [0.3, 0.3, 0.0])	
 					#sc = 1.0
 					#if (sc > 0.2*gjkOut[0]):
 					#	sc = 0.2*gjkOut[0]
 					#vdraw_line_col(gjkOut[2], v2_add(gjkOut[2], v2_muls(gjkOut[4], sc)), [0.4, 0.0, 0.0])
 
 				if (gTestManifold == True):
-					radius = 0.2
-					n = v2_normalize(v2_sub(gjkOut[3], gjkOut[2]))
-					mfold1, mfold2 = pmfold_2d(ks[i].m, ks[i].v, ks[i].r, ks[j].m, ks[j].v, ks[j].r, gjkOut)
-					if len(mfold1) == 1:
-						draw_particle(mfold1[0][0]*ppm, mfold1[0][1]*ppm, radius*ppm)
-						draw_particle(mfold2[0][0]*ppm, mfold2[0][1]*ppm, radius*ppm)
-					else:	
+					if (gManifoldType == 0):
+						radius = 0.2
+						n = v2_normalize(v2_sub(gjkOut[3], gjkOut[2]))
+						mfold1, mfold2 = pmfold_2d(ks[i].m, ks[i].v, ks[i].r, ks[j].m, ks[j].v, ks[j].r, gjkOut)
+						if len(mfold1) == 1:
+							draw_particle(mfold1[0][0]*ppm, mfold1[0][1]*ppm, radius*ppm)
+							draw_particle(mfold2[0][0]*ppm, mfold2[0][1]*ppm, radius*ppm)
+						else:	
 
-						if v2_lenSq(n) == 0.0 or len(mfold1) != 2:
-							for i in range(len(mfold1)):
-								draw_particle(mfold1[i][0]*ppm, mfold1[i][1]*ppm, radius*ppm)
-								draw_particle(mfold2[i][0]*ppm, mfold2[i][1]*ppm, radius*ppm)
-						else:
-							off = v2_muls(n, radius)
-							vdraw_line(v2_add(mfold1[0], off), v2_add(mfold1[1], off))
-							vdraw_line(v2_sub(mfold2[0], off), v2_sub(mfold2[1], off))
+							if v2_lenSq(n) == 0.0 or len(mfold1) != 2:
+								for i in range(len(mfold1)):
+									draw_particle(mfold1[i][0]*ppm, mfold1[i][1]*ppm, radius*ppm)
+									draw_particle(mfold2[i][0]*ppm, mfold2[i][1]*ppm, radius*ppm)
+							else:
+								off = v2_muls(n, radius)
+								vdraw_line(v2_add(mfold1[0], off), v2_add(mfold1[1], off))
+								vdraw_line(v2_sub(mfold2[0], off), v2_sub(mfold2[1], off))
+					else:
+						radius = 0.2
+						f1 = cfeature_vertices(ks[i].m, ks[i].v, ks[i].r, 0, gjkOut)
+						f2 = cfeature_vertices(ks[j].m, ks[j].v, ks[j].r, 1, gjkOut)
+
+						if (False):
+							feature = gjkOut[4][0]
+							
+							if len(f1[0]) == 1:
+								vdraw_circle_col(f1[0][0], radius, [0.4, 0.4, 0.0])
+							else:	
+								off = v2_z()
+								vdraw_line_col(v2_add(f1[0][0], off), v2_add(f1[0][1], off), [0.4, 0.4, 0.0])
+
+							if len(f2[0]) == 1:
+								vdraw_circle_col(f2[0][0], radius, [0.4, 0.4, 0.0])
+							else:	
+								off = v2_z()
+								vdraw_line_col(v2_add(f2[0][0], off), v2_add(f2[0][1], off), [0.4, 0.4, 0.0])	
+
+						if (True):
+							mf1, mf2 = cfeature_mfold_2d(f1[0], f2[0])
+
+							if len(mf1) == 1:
+								vdraw_circle_col(mf1[0], radius, [0.4, 0.4, 0.0])
+								vdraw_circle_col(mf2[0], radius, [0.4, 0.4, 0.0])
+							else:	
+								off = v2_z()
+								vdraw_line_col(v2_add(mf1[0], off), v2_add(mf1[1], off), [0.4, 0.4, 0.0])
+								vdraw_line_col(v2_sub(mf2[0], off), v2_sub(mf2[1], off), [0.4, 0.4, 0.0])
+
+								
 
 	if gDoDelete:
 		if (gMousePickObj or gMouseHoverObj):
