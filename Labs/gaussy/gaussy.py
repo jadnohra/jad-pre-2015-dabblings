@@ -1,5 +1,22 @@
 import math
 
+def m_min(v1, v2):
+	if (v1 <= v2):
+		return v1
+	return v2
+
+def m_max(v1, v2):
+	if (v1 >= v2):
+		return v1
+	return v2
+
+def m_clamp(v, v1, v2):
+	if (v <= v1):
+		return v1
+	if (v >= v2):
+		return v2
+	return v		
+
 def v2_z():
 	return [0.0, 0.0]
 
@@ -64,8 +81,11 @@ def v2_rot90(v1):
 def v2_rotm90(v1):
 	return [ v1[1], -v1[0] ]
 
+def v2_projs(v, a):
+	return v2_dot(v, a) / v2_dot(a, a)
+
 def v2_proj(v, a):
-	return v2_muls(a, v2_dot(v, a) / v2_dot(a, a))
+	return v2_muls(a, v2_projs(v, a))
 
 def v2_points_proj(a, b, c):
 	return v2_add(a, v2_proj(v2_sub(c, a), v2_sub(b, a)))
