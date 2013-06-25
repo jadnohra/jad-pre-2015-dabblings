@@ -86,14 +86,39 @@ class GJK_Context:
 
 def gjk_support_cvx(m, cvx, r, d, nd):
 
+	lv = len(cvx)
 	mi = 0
 	max = v2_dot( convexVertex(m, cvx, r, nd, 0), d)	
 
-	for i in range(1, len(cvx)):
-		dot = v2_dot( convexVertex(m, cvx, r, nd, i), d)	
+	for i in range(1, lv):
+		dot = v2_dot( convexVertex(m, cvx, r, nd, i), d)
 		if (dot > max):
 			max = dot
 			mi = i
+
+	# ami = [mi]		
+	# j = (mi+1)%lv
+	# c = 0		
+	# while (c < lv):
+	# 	dot = v2_dot( convexVertex(m, cvx, r, nd, i), d)
+	# 	if (dot == max):
+	# 		ami.append(j)
+	# 	else:
+	# 		break
+	# 	j = (j+1)%lv
+	# 	c = c+1
+
+	# j = (mi+lv-1)%lv
+	# c = 0		
+	# while (c < lv):
+	# 	dot = v2_dot( convexVertex(m, cvx, r, nd, i), d)
+	# 	if (dot == max):
+	# 		ami.append(j)
+	# 	else:
+	# 		break
+	# 	j = (j+lv-1)%lv
+	# 	c = c+1
+
 	return [max, mi]
 
 
@@ -419,7 +444,7 @@ def gjk_epa_distance(m1, cvx1, r1, m2, cvx2, r2, epa_eps=gEPA_eps, gjk_eps=gGJK_
 		n = v2_normalize(Ck[min_i])
 		# The epsilon is needed because of the numerical accuracy of gjk_epa_closest_on_edge (REASON1) when used without 
 		if (v2_lenSq(Ck[min_i]) <= 0.00000001):	# We can't use the closest point as a direction, use segment normal. 
-		#if (v2_lenSq(Ck[min_i]) == 0.0):	# We can't use the closest point as a direction, use segment normal. The epsilon is needed because of the numerical accuracy of gjk_epa_closest_on_edge (REASON1)
+		#if (v2_lenSq(Ck[min_i]) == 0.0):	
 			v = Vk[min_i]
 			vp = Vk[(min_i-1+lV)%lV]
 			vn = Vk[(min_i+1)%lV]
@@ -467,13 +492,16 @@ def cfeature_vertices(m, cvx, r, fi, gjkOut):
 		return None
 
 	p1 = convexVertex(m, cvx, 0.0, v2_z(), feature[0])
+	vertices = None
+	n = None
 
+	# TODO: calculate normal
 	if (r <= 0.0):
 		if (lf == 1):
-			return [p1]
+			vertices = [p1]
 		elif (lf == 2):
 			p2 = convexVertex(m, cvx, 0.0, v2_z(), feature[1])
-			return [p1, p2]
+			vertices = [p1, p2]
 	else:
 		n = v2_sub(gjkOut[2+fj], gjkOut[2+fi])
 		if (gjkOut[0] < 0.0):
@@ -483,18 +511,55 @@ def cfeature_vertices(m, cvx, r, fi, gjkOut):
 				n = v2_sub(gjkOut[2+fi], p1)
 			if (v2_lenSq(n) == 0.0):
 				n = None	
-			return [v2_add(p1, v2_muls(v2_normalize(n), r))]
+			vertices = [v2_add(p1, v2_muls(v2_normalize(n), r))]
 		elif (lf == 2):
 			p2 = convexVertex(m, cvx, 0.0, v2_z(), feature[1])
 			if (v2_lenSq(n) == 0.0):
 				n = v2_points_proj_rest(p1, p2, gjkOut[2+fi])
 			if (v2_lenSq(n) == 0.0):
 				n = None	
-			return [v2_add(p1, v2_muls(v2_normalize(n), r)), v2_add(p2, v2_muls(v2_normalize(n), r))]
+			vertices = [v2_add(p1, v2_muls(v2_normalize(n), r)), v2_add(p2, v2_muls(v2_normalize(n), r))]
+
+	return [vertices, n]		
 
 
+def cfeature_mfold_2d(f1, f2):
 
-				
+	fl1 = len(f1)
+	fl2 = len(f2)
+
+	seg1 = v2_sub(f1[1%fl1], f1[0])
+	seg2 = v2_sub(f2[1%fl2], f2[0])
+	
+	def safe_projs(v, a):
+		if v2_lenSq(a) > 0.0:
+			return v2_projs(v, a)
+		return 0.0	
+
+	proj1 = sorted([ safe_projs(v2_sub(f2[0], f1[0]), seg1), safe_projs(v2_sub(f2[1%fl2], f1[0]), seg1) ])
+	proj2 = sorted([ safe_projs(v2_sub(f1[0], f2[0]), seg2), safe_projs(v2_sub(f1[1%fl1], f2[0]), seg2) ])
+
+	def interval_intersect(int):
+		if int[0] <= 0.0:
+			if int[1] <= 0.0:
+				return [0.0, 0.0]
+			else:
+				return [0.0, m_min(1.0, int[1])]
+		elif int[0] <= 1.0:	
+			return [int[0], m_min(1.0, int[1])]
+		return [1.0, 1.0]
+
+	proj1 = interval_intersect(proj1)
+	proj2 = interval_intersect(proj2)
+	
+	if (proj1[0] == proj1[1]):
+		mf1 = [ v2_add(f1[0], v2_muls(seg1, proj1[0])) ]
+		mf2 = [ v2_add(f2[0], v2_muls(seg2, proj2[0])) ]
+	else:	
+		mf1 = [ v2_add(f1[0], v2_muls(seg1, proj1[0])), v2_add(f1[0], v2_muls(seg1, proj1[1])) ]
+		mf2 = [ v2_add(f2[0], v2_muls(seg2, proj2[0])), v2_add(f2[0], v2_muls(seg2, proj2[1])) ]
+
+	return [mf1, mf2]
 
 
 #----------------------------------------------------------------------------
