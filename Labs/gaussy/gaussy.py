@@ -68,7 +68,7 @@ def v2_proj(v, a):
 	return v2_muls(a, v2_dot(v, a) / v2_dot(a, a))
 
 def v2_points_proj(a, b, c):
-	return v2_proj(v2_sub(c, a), v2_sub(b, a))
+	return v2_add(a, v2_proj(v2_sub(c, a), v2_sub(b, a)))
 
 def v2_proj_rest(v, a):
 	return v2_sub(v, v2_proj(v, a))
