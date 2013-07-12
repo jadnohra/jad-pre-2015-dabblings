@@ -8,54 +8,8 @@
 #pragma comment( lib, "glu32.lib")
 
 #include "lamby.h"
+#include "painty.h"
 
-
-/*
-def draw_convex_col(p, v, ppm, col):
-flatv = [0.0] * (len(v)*2)
-for i in range(len(v)):
-	flatv[2*i] = (p[0]+v[i][0]) * ppm
-	flatv[2*i+1] = (p[1]+v[i][1]) * ppm
-pyglet.graphics.draw(len(v), pyglet.gl.GL_LINE_LOOP, ('v2f', flatv), ('c3f', (col)*len(v)) )
-*/
-/*
-def draw_convex_r_col(m, v, r, ppm, col):
-	
-	if (len(v) == 1):
-		pv = v2_add(p, v[0])
-		draw_particle(pv[0]*ppm, pv[1]*ppm, r)
-
-	def append_vertex(m, v, r, ppm, flatv, i):
-
-		d1 = v2_sub(v[i], v[(i+lv-1)%lv])
-		d2 = v2_sub(v[(i+1)%lv], v[i])
-		n1 = v2_orth(v2_normalize(d1))
-		n2 = v2_orth(v2_normalize(d2))
-		
-		if v2_dot(n1, d2) > 0.0:
-			n1 = v2_neg(n1)
-			n2 = v2_neg(n2)
-
-		vcount = particle_vcount/2
-
-		l = 0.0
-		dl = 1.0/float(vcount)
-		for j in range(vcount+1):
-			dv = v2_add(v[i], v2_muls(v2_normalize(linComb([n1, n2], [l, 1.0-l])), r))
-			dv = m2_mulp(m, dv)
-			l = l + dl
-			flatv.append(dv[0]*ppm)
-			flatv.append(dv[1]*ppm)
-
-	flatv = []
-	lv = len(v)
-	for i in range(lv):
-		append_vertex(m, v, r, ppm, flatv, (lv-1-i))
-
-	vc = len(flatv)/2
-	pyglet.graphics.draw(vc, pyglet.gl.GL_LINE_LOOP, ('v2f', flatv), ('c3f', (col)*(vc))  )
-*/
-//void draw_convex(Vec2* v, 
 
 struct WindowData
 {
@@ -91,7 +45,6 @@ void display(GLFWwindow* window)
 		gluOrtho2D(-1.0*aspect, 1.0*aspect, -1.0, 1.0); // Set clipping area's left, right, bottom, top
 	}
 
-	// http://www.edm2.com/0603/opengl.html
     glClearColor( 0.0f, 0.0f, 0.0f, 0.0f ); 
     glClear( GL_COLOR_BUFFER_BIT| GL_DEPTH_BUFFER_BIT);
     glMatrixMode(GL_MODELVIEW); 
@@ -102,59 +55,78 @@ void display(GLFWwindow* window)
 		glTranslatef(aspect*(wd.transl[0]+wd.transl_moving[0])*2.0f/(float)width, (wd.transl[1]+wd.transl_moving[1])*2.0f/(float)height, 0.0f);
 		glScalef(wd.scale, wd.scale, 1.0f);
 
-		glBegin(GL_LINE_LOOP);         
-		  glColor3f(1.0f, 1.0f, 1.0f); 
-		  glVertex2f(-0.5f, -0.5f);     
-		  glVertex2f(-0.5f, 0.5f);     
-		  glVertex2f(0.5f, 0.5f);
-		  glVertex2f(0.5f, -0.5f);
-	   glEnd();
+		if (1)
+		{
+			Painty painty;
+			V2 v[] = { V2(-0.2f,-0.2f), V2(-0.2f,0.2f), V2(0.2f,0.2f), V2(0.2f,-0.2f) };
+			M3 m = rigid(V2(0.1f, 0.3f), m_rad(20.0f));
+			draw_convex(painty, m, v, 4, u_ijk());
+		}
 
-	   // CCW
-		glBegin(GL_QUADS);              
-		  glColor3f(1.0f, 0.0f, 0.0f); 
-		  glVertex2f(-0.8f, 0.1f);     
-		  glVertex2f(-0.2f, 0.1f);     
-		  glVertex2f(-0.2f, 0.7f);
-		  glVertex2f(-0.8f, 0.7f);
+		if (1)
+		{
+			Painty painty;
+			V2 v[] = { V2(-0.2f,-0.2f), V2(-0.23f,0.2f), V2(0.2f,0.25f), V2(0.2f,-0.2f) };
+			M3 m = rigid(V2(0.1f, 0.3f), m_rad(-30.0f));
+			draw_convex(painty, m, v, 4, Rl(0.2), u_ijk());
+		}
 
-		  glColor3f(0.0f, 1.0f, 0.0f); 
-		  glVertex2f(-0.7f, -0.6f);
-		  glVertex2f(-0.1f, -0.6f);
-		  glVertex2f(-0.1f,  0.0f);
-		  glVertex2f(-0.7f,  0.0f);
+		if (0)
+		{
+			glBegin(GL_LINE_LOOP);         
+			  glColor3f(1.0f, 1.0f, 1.0f); 
+			  glVertex2f(-0.5f, -0.5f);     
+			  glVertex2f(-0.5f, 0.5f);     
+			  glVertex2f(0.5f, 0.5f);
+			  glVertex2f(0.5f, -0.5f);
+		   glEnd();
 
-		  glColor3f(0.2f, 0.2f, 0.2f); 
-		  glVertex2f(-0.9f, -0.7f);
-		  glColor3f(1.0f, 1.0f, 1.0f);
-		  glVertex2f(-0.5f, -0.7f);
-		  glColor3f(0.2f, 0.2f, 0.2f); 
-		  glVertex2f(-0.5f, -0.3f);
-		  glColor3f(1.0f, 1.0f, 1.0f); 
-		  glVertex2f(-0.9f, -0.3f);
-		glEnd();
-		glBegin(GL_TRIANGLES);         
-		  glColor3f(0.0f, 0.0f, 1.0f); 
-		  glVertex2f(0.1f, -0.6f);
-		  glVertex2f(0.7f, -0.6f);
-		  glVertex2f(0.4f, -0.1f);
+		   // CCW
+			glBegin(GL_QUADS);              
+			  glColor3f(1.0f, 0.0f, 0.0f); 
+			  glVertex2f(-0.8f, 0.1f);     
+			  glVertex2f(-0.2f, 0.1f);     
+			  glVertex2f(-0.2f, 0.7f);
+			  glVertex2f(-0.8f, 0.7f);
 
-		  glColor3f(1.0f, 0.0f, 0.0f);
-		  glVertex2f(0.3f, -0.4f);
-		  glColor3f(0.0f, 1.0f, 0.0f); 
-		  glVertex2f(0.9f, -0.4f);
-		  glColor3f(0.0f, 0.0f, 1.0f); 
-		  glVertex2f(0.6f, -0.9f);
-		glEnd();
-		glBegin(GL_POLYGON);           
-		  glColor3f(1.0f, 1.0f, 0.0f); 
-		  glVertex2f(0.4f, 0.2f);
-		  glVertex2f(0.6f, 0.2f);
-		  glVertex2f(0.7f, 0.4f);
-		  glVertex2f(0.6f, 0.6f);
-		  glVertex2f(0.4f, 0.6f);
-		  glVertex2f(0.3f, 0.4f);
-		glEnd();
+			  glColor3f(0.0f, 1.0f, 0.0f); 
+			  glVertex2f(-0.7f, -0.6f);
+			  glVertex2f(-0.1f, -0.6f);
+			  glVertex2f(-0.1f,  0.0f);
+			  glVertex2f(-0.7f,  0.0f);
+
+			  glColor3f(0.2f, 0.2f, 0.2f); 
+			  glVertex2f(-0.9f, -0.7f);
+			  glColor3f(1.0f, 1.0f, 1.0f);
+			  glVertex2f(-0.5f, -0.7f);
+			  glColor3f(0.2f, 0.2f, 0.2f); 
+			  glVertex2f(-0.5f, -0.3f);
+			  glColor3f(1.0f, 1.0f, 1.0f); 
+			  glVertex2f(-0.9f, -0.3f);
+			glEnd();
+			glBegin(GL_TRIANGLES);         
+			  glColor3f(0.0f, 0.0f, 1.0f); 
+			  glVertex2f(0.1f, -0.6f);
+			  glVertex2f(0.7f, -0.6f);
+			  glVertex2f(0.4f, -0.1f);
+
+			  glColor3f(1.0f, 0.0f, 0.0f);
+			  glVertex2f(0.3f, -0.4f);
+			  glColor3f(0.0f, 1.0f, 0.0f); 
+			  glVertex2f(0.9f, -0.4f);
+			  glColor3f(0.0f, 0.0f, 1.0f); 
+			  glVertex2f(0.6f, -0.9f);
+			glEnd();
+			glBegin(GL_POLYGON);           
+			  glColor3f(1.0f, 1.0f, 0.0f); 
+			  glVertex2f(0.4f, 0.2f);
+			  glVertex2f(0.6f, 0.2f);
+			  glVertex2f(0.7f, 0.4f);
+			  glVertex2f(0.6f, 0.6f);
+			  glVertex2f(0.4f, 0.6f);
+			  glVertex2f(0.3f, 0.4f);
+			glEnd();
+		}
 	}
 
 	if (0)

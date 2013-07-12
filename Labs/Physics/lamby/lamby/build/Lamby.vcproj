@@ -178,6 +178,10 @@
 			RelativePath="..\lamby.h"
 			>
 		</File>
+		<File
+			RelativePath="..\painty.h"
+			>
+		</File>
 	</Files>
 	<Globals>
 	</Globals>

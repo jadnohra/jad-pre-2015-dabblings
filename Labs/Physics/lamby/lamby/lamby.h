@@ -3,4 +3,4 @@
 
 #include "gaussy.h"
 
-#endif
+#endif // LAMBY_H
