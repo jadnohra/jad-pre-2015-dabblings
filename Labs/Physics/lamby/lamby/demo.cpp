@@ -10,6 +10,7 @@
 #include "lamby.h"
 #include "painty.h"
 #include "thingy.h"
+#include "touchy.h"
 
 struct Scene
 {
@@ -71,8 +72,7 @@ void display(GLFWwindow* window)
 
 		Painty painty;
 
-		Thingies::ConvexIter it(thingies.convexes);
-		Convex* el;
+		Thingies::ConvexIter it(thingies.convexes); Convex* el; 
 		while(el = it.next()) 
 			draw_convex(painty, el->transf, el->v, el->count, el->r, u_ijk());
 	}

@@ -182,6 +182,14 @@
 			RelativePath="..\painty.h"
 			>
 		</File>
+		<File
+			RelativePath="..\thingy.h"
+			>
+		</File>
+		<File
+			RelativePath="..\touchy.h"
+			>
+		</File>
 	</Files>
 	<Globals>
 	</Globals>

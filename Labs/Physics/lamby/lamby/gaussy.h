@@ -66,8 +66,10 @@ V2 add(V2p v1, V2p v2)
 	{ return V2(v1.x[0]+v2.x[0], v1.x[1]+v2.x[1]); }
 V2 sub(V2p v1, V2p v2) 
 	{ return V2(v1.x[0]-v2.x[0], v1.x[1]-v2.x[1]); }
-V2 mul(V2p v1, Rlp s) 
+V2 muls(V2p v1, Rlp s) 
 	{ return V2(v1.x[0]*s, v1.x[1]*s); }
+V2 mul(V2p v1, Rlp s) 
+	{ return muls(v1, s); }
 V2 neg(V2p v1) 
 	{ return V2(-v1.x[0], -v1.x[1]); }
 Rl dot(V2p v1, V2p v2) 
