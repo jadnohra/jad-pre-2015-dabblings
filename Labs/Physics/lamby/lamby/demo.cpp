@@ -9,7 +9,12 @@
 
 #include "lamby.h"
 #include "painty.h"
+#include "thingy.h"
 
+struct Scene
+{
+	Thingies thingies;
+};
 
 struct WindowData
 {
@@ -18,6 +23,8 @@ struct WindowData
 	float transl_ref[2];
 	float transl_moving[2];
 	float transl[2];
+
+	Scene scene;
 
 	WindowData() : scale(1.0f) { translating = false; transl_moving[0]=0.0f; transl_moving[1]=0.0f; transl[0]=0.0f; transl[1]=0.0f; }
 };
@@ -54,7 +61,24 @@ void display(GLFWwindow* window)
 	{
 		glTranslatef(aspect*(wd.transl[0]+wd.transl_moving[0])*2.0f/(float)width, (wd.transl[1]+wd.transl_moving[1])*2.0f/(float)height, 0.0f);
 		glScalef(wd.scale, wd.scale, 1.0f);
+	}
 
+	Thingies thingies;
+	{
+		V2 v[] = { V2(-0.2f,-0.2f), V2(-0.2f,0.2f), V2(0.2f,0.2f), V2(0.2f,-0.2f) };
+		M3 m = rigid(V2(-0.1f, -0.3f), m_rad(20.0f));
+		thingies.addConvex(m, v, 4, Rl(0.1));
+
+		Painty painty;
+
+		Thingies::ConvexIter it(thingies.convexes);
+		Convex* el;
+		while(el = it.next()) 
+			draw_convex(painty, el->transf, el->v, el->count, el->r, u_ijk());
+	}
+
+	if (1)
+	{
 		if (1)
 		{
 			Painty painty;
@@ -70,92 +94,6 @@ void display(GLFWwindow* window)
 			M3 m = rigid(V2(0.1f, 0.3f), m_rad(-30.0f));
 			draw_convex(painty, m, v, 4, Rl(0.2), u_ijk());
 		}
-
-		if (0)
-		{
-			glBegin(GL_LINE_LOOP);         
-			  glColor3f(1.0f, 1.0f, 1.0f); 
-			  glVertex2f(-0.5f, -0.5f);     
-			  glVertex2f(-0.5f, 0.5f);     
-			  glVertex2f(0.5f, 0.5f);
-			  glVertex2f(0.5f, -0.5f);
-		   glEnd();
-
-		   // CCW
-			glBegin(GL_QUADS);              
-			  glColor3f(1.0f, 0.0f, 0.0f); 
-			  glVertex2f(-0.8f, 0.1f);     
-			  glVertex2f(-0.2f, 0.1f);     
-			  glVertex2f(-0.2f, 0.7f);
-			  glVertex2f(-0.8f, 0.7f);
-
-			  glColor3f(0.0f, 1.0f, 0.0f); 
-			  glVertex2f(-0.7f, -0.6f);
-			  glVertex2f(-0.1f, -0.6f);
-			  glVertex2f(-0.1f,  0.0f);
-			  glVertex2f(-0.7f,  0.0f);
-
-			  glColor3f(0.2f, 0.2f, 0.2f); 
-			  glVertex2f(-0.9f, -0.7f);
-			  glColor3f(1.0f, 1.0f, 1.0f);
-			  glVertex2f(-0.5f, -0.7f);
-			  glColor3f(0.2f, 0.2f, 0.2f); 
-			  glVertex2f(-0.5f, -0.3f);
-			  glColor3f(1.0f, 1.0f, 1.0f); 
-			  glVertex2f(-0.9f, -0.3f);
-			glEnd();
-			glBegin(GL_TRIANGLES);         
-			  glColor3f(0.0f, 0.0f, 1.0f); 
-			  glVertex2f(0.1f, -0.6f);
-			  glVertex2f(0.7f, -0.6f);
-			  glVertex2f(0.4f, -0.1f);
-
-			  glColor3f(1.0f, 0.0f, 0.0f);
-			  glVertex2f(0.3f, -0.4f);
-			  glColor3f(0.0f, 1.0f, 0.0f); 
-			  glVertex2f(0.9f, -0.4f);
-			  glColor3f(0.0f, 0.0f, 1.0f); 
-			  glVertex2f(0.6f, -0.9f);
-			glEnd();
-			glBegin(GL_POLYGON);           
-			  glColor3f(1.0f, 1.0f, 0.0f); 
-			  glVertex2f(0.4f, 0.2f);
-			  glVertex2f(0.6f, 0.2f);
-			  glVertex2f(0.7f, 0.4f);
-			  glVertex2f(0.6f, 0.6f);
-			  glVertex2f(0.4f, 0.6f);
-			  glVertex2f(0.3f, 0.4f);
-			glEnd();
-		}
-	}
-
-	if (0)
-	{
-		glBegin(GL_QUADS); //Begin quadrilateral coordinates
-		//Trapezoid
-		glVertex3f(-0.7f, -1.5f, -5.0f);
-		glVertex3f(0.7f, -1.5f, -5.0f);
-		glVertex3f(0.4f, -0.5f, -5.0f);
-		glVertex3f(-0.4f, -0.5f, -5.0f);
-		glEnd(); //End quadrilateral coordinates
-
-		glBegin(GL_TRIANGLES); //Begin triangle coordinates
-		//Pentagon
-		glVertex3f(0.5f, 0.5f, -5.0f);
-		glVertex3f(1.5f, 0.5f, -5.0f);
-		glVertex3f(0.5f, 1.0f, -5.0f);
-		glVertex3f(0.5f, 1.0f, -5.0f);
-		glVertex3f(1.5f, 0.5f, -5.0f);
-		glVertex3f(1.5f, 1.0f, -5.0f);
-		glVertex3f(0.5f, 1.0f, -5.0f);
-		glVertex3f(1.5f, 1.0f, -5.0f);
-		glVertex3f(1.0f, 1.5f, -5.0f);
-
-		//Triangle
-		glVertex3f(-0.5f, 0.5f, -5.0f);
-		glVertex3f(-1.0f, 1.5f, -5.0f);
-		glVertex3f(-1.5f, 0.5f, -5.0f);
-		glEnd(); //End triangle coordinates
 	}
 	glfwSwapBuffers(window);
 }
