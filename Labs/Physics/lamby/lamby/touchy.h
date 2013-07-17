@@ -10,6 +10,7 @@ namespace gjk
 	#define EL -1
 	struct GJK_PERM_0
 	{
+		static int dim()			{ return 1; }
 		static int count()			{ return 1; }
 		static int Di_count()		{ return 1; }
 		static int* Is()			{ static int l[] =	{0,EL,EL};		return (int*)l; }
@@ -19,6 +20,7 @@ namespace gjk
 	};
 	struct GJK_PERM_1
 	{
+		static int dim()			{ return 2; }
 		static int count()			{ return 3; }
 		static int Di_count()		{ return 4; }
 		static int* Is()			{ static int l[] =	{0,EL,1,EL,0,1,EL,EL};		return (int*)l; }
@@ -28,6 +30,7 @@ namespace gjk
 	};
 	struct GJK_PERM_2
 	{
+		static int dim()			{ return 3; }
 		static int count()			{ return 7; }
 		static int Di_count()		{ return 12; }
 		static int* Is()			{ static int l[] =	{0,EL,1,EL,2,EL,0,1,EL,0,2,EL,1,2,EL,0,1,2,EL};		return (int*)l; }
@@ -36,14 +39,9 @@ namespace gjk
 		static int* Union_index()	{ static int l[] =	{4,6,EL,3,8,EL,5,7,EL,11,EL,10,EL,9,EL};			return (int*)l; }
 	};
 	
-	struct CvxScratch
-	{
-		int* svi;
-		int lsvi;
-	};
-
 	struct Perm
 	{
+		int dim;
 		int count;
 		int Di_count;
 		int* Is;
@@ -53,38 +51,83 @@ namespace gjk
 
 		template<typename T> static Perm make()
 		{
-			Perm p; p.count=T::count(); p.Di_count=T::Di_count(); p.Is=T::Is(); p.Isp=T::Isp(); p.Di_index=T::Di_index(); p.Union_index=T::Union_index();
+			Perm p; p.dim=T::dim(); p.count=T::count(); p.Di_count=T::Di_count(); p.Is=T::Is(); p.Isp=T::Isp(); p.Di_index=T::Di_index(); p.Union_index=T::Union_index();
 			return p;
 		}
 	};
-	
+
+	struct CvxScratch
+	{
+		int* ami;
+		int lami;
+	};
+
+	struct V2Pair
+	{
+		V2 p1;
+		V2 p2;
+	};
+
 	struct GjkScratch
 	{
+		struct Simplex
+		{
+			struct amiPair
+			{
+				int* ami1;
+				int lami1;
+				int* ami2;
+				int lami2;
+			};
+
+			V2 Vk;
+			V2Pair Pi;
+			amiPair IndI;
+		};
+	
+
 		Perm perm[3];
 		
 		int max_v;
 		CvxScratch cvx1;
 		CvxScratch cvx2;
 		Rl* Di;
-		
-		
+		int lDi;
+		Rl* Li;
+		int lLi;
+		Simplex* simpl;
+		int lsimpl;
+
 		GjkScratch(int max_vertices) 
 		: max_v(max_vertices)
 		{
 			perm[0] = (Perm::make<GJK_PERM_0>());
 			perm[1] = (Perm::make<GJK_PERM_1>());
 			perm[2] = (Perm::make<GJK_PERM_2>());
-			cvx1.svi = (int*) malloc(max_vertices*sizeof(int));
-			cvx2.svi = (int*) malloc(max_vertices*sizeof(int));
-			Di = (Rl*) malloc(perm[2].Di_count*sizeof(Rl));
-
+			cvx1.ami = (int*) malloc(perm[2].dim*sizeof(int));
+			cvx2.ami = (int*) malloc(perm[2].dim*sizeof(int));
+			Di = (Rl*) malloc(perm[2].dim*sizeof(Rl));
+			Li = (Rl*) malloc(perm[2].dim*sizeof(Rl));
+			simpl = (Simplex*) malloc(perm[2].Di_count*sizeof(Simplex));
+			for (int i=0;i<perm[2].dim; ++i) 
+			{
+				simpl[i].IndI.ami1 = (int*) malloc(perm[2].dim*sizeof(int));
+				simpl[i].IndI.ami2 = (int*) malloc(perm[2].dim*sizeof(int));
+			}
 		}
 
 		~GjkScratch() 
 		{
-			free(cvx1.svi);
-			free(cvx2.svi);
+			free(cvx1.ami);
+			free(cvx2.ami);
 			free(Di);
+			free(Li);
+			for (int i=0;i<perm[2].dim; ++i) 
+			{
+				free(simpl[i].IndI.ami1); 
+				free(simpl[i].IndI.ami2); 
+			}
+			free(simpl);
 		}
 	};
 
@@ -105,15 +148,15 @@ namespace gjk
 		}
 
 		// Collect extra points (with the same dot product)
-		scr.svi[0] = mi;
-		scr.lsvi = 1;
+		scr.ami[0] = mi;
+		scr.lami = 1;
 		int j = (mi+1)%lv;
 		int c = 0;
 		while (c < lv)
 		{
 			Rl dp = dot( cvx_vertex(m, v, lv, r, nd, j), d);
 			if (dp == max)
-				scr.svi[scr.lsvi++] = j;
+				scr.ami[scr.lami++] = j;
 			else
 				break;
 			j = (j+1)%lv;
@@ -126,7 +169,7 @@ namespace gjk
 		{
 			Rl dp = dot( cvx_vertex(m, v, lv, r, nd, j), d);
 			if (dp == max)
-				scr.svi[scr.lsvi++] = j;
+				scr.ami[scr.lami++] = j;
 			else
 				break;
 			j = (j+lv-1)%lv;
@@ -136,46 +179,49 @@ namespace gjk
 		return max;
 	}
 
-	struct Out_support_mink_cvx
+	struct Out_gjk_support_mink_cvx
 	{
 		Rl h;
 		V2 s;
-		V2 p1;
-		V2 p2;
+		V2Pair p;
+		CvxScratch* cvx1;
+		CvxScratch* cvx2; 
 	};
 
-	Out_support_mink_cvx support_mink_cvx(GjkScratch& scr, M3p m1, V2pc v1, int lv1, Rl r1, M3p m2, V2pc v2, int lv2, Rl r2, V2p d)
+	void gjk_support_mink_cvx(Out_gjk_support_mink_cvx& out, GjkScratch& scr, M3p m1, V2pc v1, int lv1, Rl r1, M3p m2, V2pc v2, int lv2, Rl r2, V2p d)
 	{
-		Out_support_mink_cvx out;
-
 		V2 n = normalize(d);
 		Rl max1 = support_cvx(scr.cvx1, m1, v1, lv1, r1, d, n);
 		Rl max2 = support_cvx(scr.cvx1, m2, v2, lv2, r2, d, n);
 
-		out.h = max1+max2;
-		out.p1 = cvx_vertex(m1, v1, lv1, r1, n, scr.cvx1.svi[0]);
-		out.p2 = cvx_vertex(m2, v2, lv2, r2, n, scr.cvx1.svi[0]);
-		out.s = sub(out.p1, out.p2);
-		return out;
+		out.p.p1 = cvx_vertex(m1, v1, lv1, r1, n, scr.cvx1.ami[0]);
+		out.p.p2 = cvx_vertex(m2, v2, lv2, r2, n, scr.cvx2.ami[0]);
+		out.h = max1+max2; out.s = sub(out.p.p1, out.p.p2); out.cvx1 = &scr.cvx1; out.cvx2 = &scr.cvx2;
+		return;
 	}
 
-	void subdist(GjkScratch& scr, V2pc Vk, int lVk)
+	struct Out_gjk_subdist
+	{
+		V2 v;
+		int* Isp;
+		Rl* Li;
+		int lLi;
+	};
+
+	void gjk_subdist(Out_gjk_subdist& out, GjkScratch& scr, V2pc Vk, int lVk)
 	{
 		const Perm& perm = scr.perm[lVk-1];
-		Rl* Di = scr.Di;
+		Rl* Di = scr.Di; scr.lDi = perm.Di_count;
 		for (int i=0;i<perm.Di_count; ++i) Di[i]=Rl(1.0);
 
-		int i_Is = 0;
-		int i_Isp = 0;
-		int i_Union_index = 0;
+		int i_Is = 0; int i_Isp = 0; int i_Union_index = 0;
 		for (int pi=0; pi<perm.count; ++pi)
 		{
 			int d=0; { int i=i_Is; while(perm.Is[i++] != EL) d++; } 
 			int di_index = perm.Di_index[pi];
 
 			Rl D = Rl(0.0);
-			for (int i=0; i<d; ++i)
-				D = D + Di[di_index+i];
+			for (int i=0; i<d; ++i) D = D + Di[di_index+i];
 
 			int* Is = perm.Is + i_Is;
 			int* Isp = perm.Isp + i_Isp;
@@ -184,25 +230,53 @@ namespace gjk
 			bool cond3 = true;
 			for (int j=0; Isp[j] != EL; ++j)
 			{
-				Rl Dj = Rl(0.0);
-				for (int i=0; i<d; ++i)
-					Dj = Dj + (Di[di_index+1] * ( dot(Vk[Is[i]], sub(Vk[Is[0]], Vk[Isp[j]])) ) );
+				Rl Dj = Rl(0.0); for (int i=0; i<d; ++i) Dj = Dj + (Di[di_index+1] * ( dot(Vk[Is[i]], sub(Vk[Is[0]], Vk[Isp[j]])) ) );
 				Di[Union_index[j]] = Dj;
-				if (Dj > Rl(0.0))
-					cond3 = false;
+				if (Dj > Rl(0.0)) cond3 = false;
 			}
 
 			bool cond1 = D > Rl(0.0);
 			if (cond1)
 			{
-				// TODO
+				bool cond2 = true;
+				for (int i=0; i<d; ++i) if (Di[di_index+i] <= Rl(0.0)) { cond2 = false; break; }
+
+				if (cond2 && cond3)
+				{
+					V2 v = v2_z();
+					Rl* Li = scr.Li; scr.lLi = lVk;
+					Rl iD = Rl(1.0) / D;
+					for (int i=0; i<d; ++i)
+					{
+						Rl l = Di[di_index+i] * iD;
+						v = add(v, muls(Vk[Is[i]], l));
+						Li[Is[i]] = l;
+					}
+					out.v = v; out.Isp = Isp; out.Li = Li; out.lLi = scr.lLi; 
+					return;
+				}
 			}
 
-			while(perm.Is[i_Is++] != EL);
-			while(perm.Is[i_Isp++] != EL);
-			while(perm.Is[i_Union_index++] != EL);
+			while(perm.Is[i_Is++] != EL); while(perm.Is[i_Isp++] != EL); while(perm.Is[i_Union_index++] != EL);
 		}
 
+		// Add failure case support from original paper and from VanDenBergen 'A Fast and Robust GJK Implementation for Collision Detection of Convex Objects'
+		return;
+	}
+
+	void gjk_find_features() {}
+
+	void gjk_distance(GjkScratch& scr, M3p m1, V2pc v1, int lv1, Rl r1, M3p m2, V2pc v2, int lv2, Rl r2, Rl eps)
+	{
+		V2 d = V2(Rl(-1.0), Rl(0.0));
+		Out_gjk_support_mink_cvx supp; gjk_support_mink_cvx(supp, scr, m1, v1, lv1, r1, m2, v2, lv2, r2, d);  
+		GjkScratch::Simplex& simpl = scr.simpl[0]; scr.lsimpl = 0;
+		simpl.Vk = supp.s;
+		simpl.Pi = supp.p;
+		for (int i=0;i<supp.cvx1->lami; ++i) simpl.IndI.ami1[i] = supp.cvx1->ami[i]; simpl.IndI.lami1 = supp.cvx1->lami;
+		for (int i=0;i<supp.cvx2->lami; ++i) simpl.IndI.ami2[i] = supp.cvx2->ami[i]; simpl.IndI.lami2 = supp.cvx2->lami;
+	
+		// TODO
 	}
 
 
@@ -210,55 +284,72 @@ namespace gjk
 }
 
 /*
-def gjk_subdist(ctx, Vk):
 
-	perm = ctx.perms[len(Vk)-1]
-	Di = [1.0] * perm.Di_count;	
+def gjk_distance(m1, cvx1, r1, m2, cvx2, r2, eps=gGJK_eps, dbg = None):
 
-	for pi in range(perm.count):
+	ctx = GJK_Context()
 
-		d = len(perm.Is[pi])
-		di_index = perm.Di_index[pi]
+	d = [-1.0, 0.0]
+	supp = gjk_support_mink_cvx(m1, cvx1, r1, m2, cvx2, r2, d) 
+	Vk = [ supp[1] ]
+	Pi = [ supp[2] ]
+	IndI = [ supp[3] ]
+	DirI = [ d ]
 
-		D = 0.0
-		for i in range(d):
-			D = D + Di[di_index+i]
+	max_iter = 3 + (len(cvx1) + len(cvx2))*5
+	iter = 0
+	#last_dist = v2_len( Vk[0] )
+	#fallback = False
 
-		Is = perm.Is[pi]	
-		Isp = perm.Isp[pi]
+	while (True):
+		iter = iter + 1	
+		
+		#if (fallback):
+		#	subd = gjk_subdist_fallback(ctx, Vk)
+		#else:
+		subd = gjk_subdist(ctx, Vk)
 
-		cond3 = True	
-		for j in range(len(Isp)):
-			Dj = 0.0
-			for i in range(d):
-				Dj = Dj + ( Di[di_index+i] * ( v2_dot(Vk[Is[i]], v2_sub(Vk[Is[0]], Vk[Isp[j]]) )  ) )
-			Di[perm.Union_index[pi][j]] = Dj
-			if (Dj > 0.0):
-				cond3 = False
+		vk = subd[0]
+		nvk = v2_neg(vk)	
+		supp = gjk_support_mink_cvx(m1, cvx1, r1, m2, cvx2, r2, nvk) 
+		g = v2_dot(vk, vk) + supp[0]
 
-		cond1 = D > 0.0
-		if (cond1):
+		if dbg != None:
+			dbg.append( [copy.deepcopy(Vk), copy.deepcopy(vk), copy.deepcopy(d)] )
 
-			cond2 = True
-			for i in range(d):
-				if (Di[di_index+i] <= 0.0):
-					cond2 = False
-					break
+		dist = v2_len(vk)	
+		if ((math.fabs(g) < eps) or (iter > max_iter)):
+			
+			v1 = [0.0, 0.0]
+			v2 = [0.0, 0.0]
+			li = subd[2]
+			for i in range(len(li)):
+				v1 = v2_add(v1, v2_muls(Pi[i][0], li[i]))
+				v2 = v2_add(v2, v2_muls(Pi[i][1], li[i]))
 
-			if (cond2 and cond3):
+			features = 	gjk_find_features(m1, cvx1, r1, m2, cvx2, r2, li, IndI)
+			
+			return [dist, eps, v1, v2, features, Vk, Pi, IndI]
 
-				v = [0.0, 0.0]
-				Li = [0.0] * len(Vk)
-				iD = 1.0 / D
-				for i in range(d):
-					l = Di[di_index+i] * iD
-					v = v2_add(v, v2_muls(Vk[Is[i]], l))
-					Li[Is[i]] = l
 
-				return [v, Isp, Li]	# vertex, unused Vk's, lambdas
-					
-	# Add failure case support from original paper and from VanDenBergen 'A Fast and Robust GJK Implementation for Collision Detection of Convex Objects'
-	return gjk_subdist_fallback(ctx, Vk)
+		#if (dist > last_dist):
+		#	fallback = True
+
+		#last_dist = dist
+		Vk.append( supp[1] )
+		Pi.append( supp[2] )
+		IndI.append( supp[3] )
+		DirI.append( nvk )
+		if (len(Vk)>3):
+			nVi = subd[1]
+			if (len(nVi) > 0):
+				popi = nVi[0]
+				Vk.pop(popi)
+				Pi.pop(popi)
+				IndI.pop(popi)
+				DirI.pop(popi)
+			else:
+				return None
 */
 
 #endif
