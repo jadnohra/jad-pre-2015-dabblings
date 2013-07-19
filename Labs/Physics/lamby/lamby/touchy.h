@@ -68,24 +68,24 @@ namespace gjk
 		V2 p2;
 	};
 
+	struct GjkVert
+	{
+		struct amiPair
+		{
+			int* ami1;
+			int lami1;
+			int* ami2;
+			int lami2;
+		};
+
+		V2 Vk;
+		V2Pair Pi;
+		amiPair IndI;
+		V2 DirI;
+	};
+
 	struct GjkScratch
 	{
-		struct Simplex
-		{
-			struct amiPair
-			{
-				int* ami1;
-				int lami1;
-				int* ami2;
-				int lami2;
-			};
-
-			V2 Vk;
-			V2Pair Pi;
-			amiPair IndI;
-		};
-	
-
 		Perm perm[3];
 		
 		int max_v;
@@ -95,7 +95,7 @@ namespace gjk
 		int lDi;
 		Rl* Li;
 		int lLi;
-		Simplex* simpl;
+		GjkVert* simpl;
 		int lsimpl;
 
 		GjkScratch(int max_vertices) 
@@ -108,7 +108,7 @@ namespace gjk
 			cvx2.ami = (int*) malloc(perm[2].dim*sizeof(int));
 			Di = (Rl*) malloc(perm[2].dim*sizeof(Rl));
 			Li = (Rl*) malloc(perm[2].dim*sizeof(Rl));
-			simpl = (Simplex*) malloc(perm[2].Di_count*sizeof(Simplex));
+			simpl = (GjkVert*) malloc(perm[2].Di_count*sizeof(GjkVert));
 			for (int i=0;i<perm[2].dim; ++i) 
 			{
 				simpl[i].IndI.ami1 = (int*) malloc(perm[2].dim*sizeof(int));
@@ -208,7 +208,7 @@ namespace gjk
 		int lLi;
 	};
 
-	void gjk_subdist(Out_gjk_subdist& out, GjkScratch& scr, V2pc Vk, int lVk)
+	void gjk_subdist(Out_gjk_subdist& out, GjkScratch& scr, GjkVert* Vk, int lVk)
 	{
 		const Perm& perm = scr.perm[lVk-1];
 		Rl* Di = scr.Di; scr.lDi = perm.Di_count;
@@ -230,7 +230,7 @@ namespace gjk
 			bool cond3 = true;
 			for (int j=0; Isp[j] != EL; ++j)
 			{
-				Rl Dj = Rl(0.0); for (int i=0; i<d; ++i) Dj = Dj + (Di[di_index+1] * ( dot(Vk[Is[i]], sub(Vk[Is[0]], Vk[Isp[j]])) ) );
+				Rl Dj = Rl(0.0); for (int i=0; i<d; ++i) Dj = Dj + (Di[di_index+1] * ( dot(Vk[Is[i]].Vk, sub(Vk[Is[0]].Vk, Vk[Isp[j]].Vk)) ) );
 				Di[Union_index[j]] = Dj;
 				if (Dj > Rl(0.0)) cond3 = false;
 			}
@@ -249,7 +249,7 @@ namespace gjk
 					for (int i=0; i<d; ++i)
 					{
 						Rl l = Di[di_index+i] * iD;
-						v = add(v, muls(Vk[Is[i]], l));
+						v = add(v, muls(Vk[Is[i]].Vk, l));
 						Li[Is[i]] = l;
 					}
 					out.v = v; out.Isp = Isp; out.Li = Li; out.lLi = scr.lLi; 
@@ -266,17 +266,67 @@ namespace gjk
 
 	void gjk_find_features() {}
 
-	void gjk_distance(GjkScratch& scr, M3p m1, V2pc v1, int lv1, Rl r1, M3p m2, V2pc v2, int lv2, Rl r2, Rl eps)
+	struct Out_gjk_distance
+	{
+		Rl dist;
+		Rl eps;
+		V2 v1;
+		V2 v2;
+
+		Out_gjk_distance() {}
+		Out_gjk_distance(Rlp dist_, Rlp eps_, V2p v1_, V2p v2_) : dist(dist_), eps(eps_), v1(v1_), v2(v2_) {}
+	};
+
+	Out_gjk_distance gjk_distance(GjkScratch& scr, M3p m1, V2pc v1, int lv1, Rl r1, M3p m2, V2pc v2, int lv2, Rl r2, Rl eps)
 	{
 		V2 d = V2(Rl(-1.0), Rl(0.0));
-		Out_gjk_support_mink_cvx supp; gjk_support_mink_cvx(supp, scr, m1, v1, lv1, r1, m2, v2, lv2, r2, d);  
-		GjkScratch::Simplex& simpl = scr.simpl[0]; scr.lsimpl = 0;
-		simpl.Vk = supp.s;
-		simpl.Pi = supp.p;
-		for (int i=0;i<supp.cvx1->lami; ++i) simpl.IndI.ami1[i] = supp.cvx1->ami[i]; simpl.IndI.lami1 = supp.cvx1->lami;
-		for (int i=0;i<supp.cvx2->lami; ++i) simpl.IndI.ami2[i] = supp.cvx2->ami[i]; simpl.IndI.lami2 = supp.cvx2->lami;
+		int& lsimpl = scr.lsimpl; GjkVert* simpl = scr.simpl; 
+		{
+			Out_gjk_support_mink_cvx supp; gjk_support_mink_cvx(supp, scr, m1, v1, lv1, r1, m2, v2, lv2, r2, d);  
+			lsimpl = 1;
+			simpl[0].Vk = supp.s;
+			simpl[0].Pi = supp.p;
+			for (int i=0;i<supp.cvx1->lami; ++i) simpl[0].IndI.ami1[i] = supp.cvx1->ami[i]; simpl[0].IndI.lami1 = supp.cvx1->lami;
+			for (int i=0;i<supp.cvx2->lami; ++i) simpl[0].IndI.ami2[i] = supp.cvx2->ami[i]; simpl[0].IndI.lami2 = supp.cvx2->lami;
+			simpl[0].DirI = d;
+		}
 	
 		// TODO
+		int max_iter = 3 + (lv1+lv2)*5;
+		int iter = 0;
+
+		while(1)
+		{
+			iter = iter + 1;
+
+			//#if (fallback):
+			//#	subd = gjk_subdist_fallback(ctx, Vk)
+			//#else:
+			Out_gjk_subdist subd;
+			gjk_subdist(subd, scr, simpl, lsimpl);
+
+			V2 vk = subd.v;
+			V2 nvk = neg(vk);
+			Out_gjk_support_mink_cvx supp; gjk_support_mink_cvx(supp, scr, m1, v1, lv1, r1, m2, v2, lv2, r2, nvk);  
+			Rl g = dot(vk, vk) + supp.h;
+
+			Rl dist = len(vk);
+			if ( (m_abs(g) < eps) || (iter > max_iter))
+			{
+				V2 v1 = v2_z();
+				V2 v2 = v2_z();
+				Rl* li = subd.Li;
+				for (int i=0; i<subd.lLi; ++i)
+				{
+					v1 = add(v1, muls(simpl[i].Pi.p1, li[i]));
+					v2 = add(v2, muls(simpl[i].Pi.p2, li[i]));
+				}
+
+				//features = 	gjk_find_features(m1, cvx1, r1, m2, cvx2, r2, li, IndI)
+				//return [dist, eps, v1, v2, features, Vk, Pi, IndI]
+				return Out_gjk_distance(dist, eps, v1, v2);
+			}
+		}
 	}
 
 

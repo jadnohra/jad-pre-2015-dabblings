@@ -43,6 +43,8 @@ struct M3
 typedef const M3& M3p;
 
 Rl rl_pi() { return Rl(3.141592653589793238462643); }
+Rl m_abs(Rlp v) 
+	{ return v >= Rl(0) ? v : -v; }
 Rl m_min(Rlp v1, Rlp v2) 
 	{ return v1 <= v2 ? v1 : v2; }
 Rl m_max(Rlp v1, Rlp v2) 
