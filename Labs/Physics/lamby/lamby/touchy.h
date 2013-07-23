@@ -193,7 +193,7 @@ namespace gjk
 	{
 		V2 n = normalize(d);
 		Rl max1 = support_cvx(scr.cvx1, m1, v1, lv1, r1, d, n);
-		Rl max2 = support_cvx(scr.cvx2, m2, v2, lv2, r2, d, n);
+		Rl max2 = support_cvx(scr.cvx2, m2, v2, lv2, r2, neg(d), neg(n));
 
 		out.p.p1 = cvx_vertex(m1, v1, lv1, r1, n, scr.cvx1.ami[0]);
 		out.p.p2 = cvx_vertex(m2, v2, lv2, r2, n, scr.cvx2.ami[0]);
@@ -312,7 +312,8 @@ namespace gjk
 			Rl g = dot(vk, vk) + supp.h;
 
 			Rl dist = len(vk);
-			if ( (m_abs(g) < eps) || (iter > max_iter))
+			bool eps_cond = (lsimpl==3 && subd.Isp[0]==EL);
+			if ( (m_abs(g) < eps) || (iter > max_iter) || eps_cond)
 			{
 				V2 v1 = v2_z();
 				V2 v2 = v2_z();
@@ -325,7 +326,7 @@ namespace gjk
 
 				//features = 	gjk_find_features(m1, cvx1, r1, m2, cvx2, r2, li, IndI)
 				//return [dist, eps, v1, v2, features, Vk, Pi, IndI]
-				return Out_gjk_distance(true, dist, eps, v1, v2);
+				return Out_gjk_distance(true, dist, eps_cond ? dist : eps, v1, v2);
 			}
 
 			int nsi = lsimpl < 3 ? lsimpl : subd.Isp[0];
@@ -348,9 +349,79 @@ namespace gjk
 		int err = 0;
 		GjkScratch gjk;
 		
+		if (0)
 		{
 			V2 v1[] = { V2(0.0f, 1.0f), V2(0.0f, 2.0f), V2(-1.0f, 1.0f) };
 			V2 v2[] = { V2(0.0f, 1.5f) };
+			Out_gjk_distance dist = gjk_distance(gjk, m3_id(), v1, 3, Rl(0), m3_id(), v2, 1, Rl(0), 1.e-7f);
+
+			if (!dist.success || dist.dist > dist.eps) { err++; }
+		}
+
+		if (0)
+		{
+			V2 v1[] = { V2(0.0f, 1.0f), V2(0.0f, 2.0f), V2(-1.0f, 1.0f) };
+			V2 v2[] = { V2(0.0f, 1.5f) };
+
+			for (int x=0; x<512; x+=11) 
+				for (int y=0; y<512; y+=11)
+			{
+				Rl l[] = { Rl(x)/Rl(512), Rl(y)/Rl(512), Rl(0)};
+				l[2] = Rl(1) - l[0] - l[1];
+				if (l[2] >= Rl(0))
+				{
+					v2[0] = lin_comb(v1, l, 3);
+
+					Out_gjk_distance dist = gjk_distance(gjk, m3_id(), v1, 3, Rl(0), m3_id(), v2, 1, Rl(0), 1.e-7f);
+					if (!dist.success || dist.dist > dist.eps) 
+					{ 
+						err++; 
+					}
+				}
+
+			}
+		}
+
+		if (0)
+		{
+			V2 v1[] = { V2(0.0f, 1.0f), V2(0.0f, 2.0f), V2(-1.0f, 1.0f) };
+			V2 v2[] = { V2(0.0f, 1.5f) };
+
+			for (int x=0; x<512; x+=11) 
+				for (int y=0; y<512; y+=11)
+			{
+				Rl l[] = { Rl(x)/Rl(512), Rl(1.1) + Rl(y)/Rl(512), Rl(0)};
+				l[2] = Rl(1) - l[0] - l[1];
+				v2[0] = lin_comb(v1, l, 3);
+
+				Out_gjk_distance dist = gjk_distance(gjk, m3_id(), v1, 3, Rl(0), m3_id(), v2, 1, Rl(0), 1.e-7f);
+				if (!dist.success || dist.dist <= dist.eps) 
+				{ 
+					err++; 
+				}
+			}
+		}
+
+		if (1)
+		{
+			V2 v1[] = { V2(-1.0f, -5.0f), V2(4.0f, -5.0f), V2(4.0f, 5.0f), V2(-1.0f, 5.0f) };
+			V2 v2[] = { V2(0.0f, 0.0f), V2(-3.0f, 3.0f), V2(-3.0f, -3.0f) };
+			Out_gjk_distance dist = gjk_distance(gjk, m3_id(), v1, 4, Rl(0), m3_id(), v2, 3, Rl(0), 1.e-7f);
+
+			if (!dist.success || dist.dist > dist.eps) { err++; }
+		}
+		if (1)
+		{
+			V2 v1[] = { V2(1.0f, 0.0f), V2(3.0f, 3.0f), V2(0.0f, -5.0f) };
+			V2 v2[] = { V2(0.0f, 0.0f) };
+			Out_gjk_distance dist = gjk_distance(gjk, m3_id(), v1, 3, Rl(0), m3_id(), v2, 1, Rl(0), 1.e-7f);
+
+			if (!dist.success || dist.dist > 1.0f || dist.dist < 0.9f) { err++; }
+		}
+		if (1)
+		{
+			V2 v1[] = { V2(-1.0f, 0.0f), V2(3.0f, 3.0f), V2(0.0f, -5.0f) };
+			V2 v2[] = { V2(0.0f, 0.0f) };
 			Out_gjk_distance dist = gjk_distance(gjk, m3_id(), v1, 3, Rl(0), m3_id(), v2, 1, Rl(0), 1.e-7f);
 
 			if (!dist.success || dist.dist > dist.eps) { err++; }
