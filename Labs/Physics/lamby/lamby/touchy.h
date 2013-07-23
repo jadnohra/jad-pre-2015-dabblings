@@ -209,6 +209,68 @@ namespace gjk
 		int lLi;
 	};
 
+	void gjk_subdist_fallback(Out_gjk_subdist& out, GjkScratch& scr, GjkVert* Vk, int lVk)
+	{
+		const Perm& perm = scr.perm[lVk-1];
+		Rl* Di = scr.Di; scr.lDi = perm.Di_count;
+		for (int i=0;i<perm.Di_count; ++i) Di[i]=Rl(1.0);
+
+		int best = -1;
+		Rl bestDistSq;
+		
+		int i_Is = 0; int i_Isp = 0; int i_Union_index = 0;
+		for (int pi=0; pi<perm.count; ++pi)
+		{
+			int d=0; { int i=i_Is; while(perm.Is[i++] != EL) d++; } 
+			int di_index = perm.Di_index[pi];
+
+			Rl D = Rl(0.0);
+			for (int i=0; i<d; ++i) D = D + Di[di_index+i];
+
+			int* Is = perm.Is + i_Is;
+			int* Isp = perm.Isp + i_Isp;
+			int* Union_index = perm.Union_index + i_Union_index;
+
+			for (int j=0; Isp[j] != EL; ++j)
+			{
+				Rl Dj = Rl(0.0); for (int i=0; i<d; ++i) Dj = Dj + (Di[di_index+i] * ( dot(Vk[Is[i]].Vk, sub(Vk[Is[0]].Vk, Vk[Isp[j]].Vk)) ) );
+				Di[Union_index[j]] = Dj;
+			}
+
+			bool cond1 = D > Rl(0.0);
+			if (cond1)
+			{
+				bool cond2 = true;
+				for (int i=0; i<d; ++i) if (Di[di_index+i] <= Rl(0.0)) { cond2 = false; break; }
+
+				if (cond2)
+				{
+					V2 v = v2_z();
+					Rl* Li = scr.Li; scr.lLi = lVk;
+					Rl iD = Rl(1.0) / D;
+					for (int i=0; i<d; ++i)
+					{
+						Rl l = Di[di_index+i] * iD;
+						v = add(v, muls(Vk[Is[i]].Vk, l));
+						Li[Is[i]] = l;
+					}
+
+					Rl distSq = lenSq(v);
+					if (best < 0 || distSq < bestDistSq)
+					{
+						best = pi;
+						bestDistSq = distSq;
+						out.v = v; out.Isp = Isp; out.Li = Li; out.lLi = scr.lLi; 
+					}
+				}
+			}
+
+			while(perm.Is[i_Is++] != EL); while(perm.Isp[i_Isp++] != EL); while(perm.Union_index[i_Union_index++] != EL);
+		}
+
+		return;
+	}
+
 	void gjk_subdist(Out_gjk_subdist& out, GjkScratch& scr, GjkVert* Vk, int lVk)
 	{
 		const Perm& perm = scr.perm[lVk-1];
@@ -262,7 +324,7 @@ namespace gjk
 		}
 
 		// Add failure case support from original paper and from VanDenBergen 'A Fast and Robust GJK Implementation for Collision Detection of Convex Objects'
-		return;
+		return gjk_subdist_fallback(out, scr, Vk, lVk);
 	}
 
 	void gjk_find_features() {}
@@ -349,7 +411,7 @@ namespace gjk
 		int err = 0;
 		GjkScratch gjk;
 		
-		if (0)
+		if (1)
 		{
 			V2 v1[] = { V2(0.0f, 1.0f), V2(0.0f, 2.0f), V2(-1.0f, 1.0f) };
 			V2 v2[] = { V2(0.0f, 1.5f) };
@@ -358,7 +420,7 @@ namespace gjk
 			if (!dist.success || dist.dist > dist.eps) { err++; }
 		}
 
-		if (0)
+		if (1)
 		{
 			V2 v1[] = { V2(0.0f, 1.0f), V2(0.0f, 2.0f), V2(-1.0f, 1.0f) };
 			V2 v2[] = { V2(0.0f, 1.5f) };
@@ -382,7 +444,7 @@ namespace gjk
 			}
 		}
 
-		if (0)
+		if (1)
 		{
 			V2 v1[] = { V2(0.0f, 1.0f), V2(0.0f, 2.0f), V2(-1.0f, 1.0f) };
 			V2 v2[] = { V2(0.0f, 1.5f) };
