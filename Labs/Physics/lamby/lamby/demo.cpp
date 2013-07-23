@@ -162,6 +162,8 @@ namespace glfwHandler
 
 int main(void)
 {
+	gjk::gjk_tests();
+
     if (!glfwInit()) return -1;
 	
     GLFWwindow* window = glfwCreateWindow(640, 480, "Lamby", NULL, NULL);

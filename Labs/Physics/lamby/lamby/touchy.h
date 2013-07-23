@@ -88,7 +88,6 @@ namespace gjk
 	{
 		Perm perm[3];
 		
-		int max_v;
 		CvxScratch cvx1;
 		CvxScratch cvx2;
 		Rl* Di;
@@ -98,17 +97,16 @@ namespace gjk
 		GjkVert* simpl;
 		int lsimpl;
 
-		GjkScratch(int max_vertices) 
-		: max_v(max_vertices)
+		GjkScratch() 
 		{
 			perm[0] = (Perm::make<GJK_PERM_0>());
 			perm[1] = (Perm::make<GJK_PERM_1>());
 			perm[2] = (Perm::make<GJK_PERM_2>());
 			cvx1.ami = (int*) malloc(perm[2].dim*sizeof(int));
 			cvx2.ami = (int*) malloc(perm[2].dim*sizeof(int));
-			Di = (Rl*) malloc(perm[2].dim*sizeof(Rl));
+			Di = (Rl*) malloc(perm[2].Di_count*sizeof(Rl));
 			Li = (Rl*) malloc(perm[2].dim*sizeof(Rl));
-			simpl = (GjkVert*) malloc(perm[2].Di_count*sizeof(GjkVert));
+			simpl = (GjkVert*) malloc(perm[2].dim*sizeof(GjkVert));
 			for (int i=0;i<perm[2].dim; ++i) 
 			{
 				simpl[i].IndI.ami1 = (int*) malloc(perm[2].dim*sizeof(int));
@@ -141,39 +139,42 @@ namespace gjk
 		int mi=0;
 		Rl max = dot( cvx_vertex(m, v, lv, r, nd, 0), d);
 
-		for (int i=1;i<lv;++i)
+		if (lenSq(d) != Rl(0))
 		{
-			Rl dp = dot( cvx_vertex(m, v, lv, r, nd, i), d);
-			if (dp > max) { max = dp; mi = i; }
-		}
+			for (int i=1;i<lv;++i)
+			{
+				Rl dp = dot( cvx_vertex(m, v, lv, r, nd, i), d);
+				if (dp > max) { max = dp; mi = i; }
+			}
 
-		// Collect extra points (with the same dot product)
-		scr.ami[0] = mi;
-		scr.lami = 1;
-		int j = (mi+1)%lv;
-		int c = 0;
-		while (c < lv)
-		{
-			Rl dp = dot( cvx_vertex(m, v, lv, r, nd, j), d);
-			if (dp == max)
-				scr.ami[scr.lami++] = j;
-			else
-				break;
-			j = (j+1)%lv;
-			c = c+1;
-		}
+			// Collect extra points (with the same dot product)
+			scr.ami[0] = mi;
+			scr.lami = 1;
+			int j = (mi+1)%lv;
+			int c = 1;
+			while (c < lv)
+			{
+				Rl dp = dot( cvx_vertex(m, v, lv, r, nd, j), d);
+				if (dp == max)
+					scr.ami[scr.lami++] = j;
+				else
+					break;
+				j = (j+1)%lv;
+				c = c+1;
+			}
 
-		j = (mi+lv-1)%lv;
-		c = 0;
-		while (c < lv)
-		{
-			Rl dp = dot( cvx_vertex(m, v, lv, r, nd, j), d);
-			if (dp == max)
-				scr.ami[scr.lami++] = j;
-			else
-				break;
-			j = (j+lv-1)%lv;
-			c = c+1;
+			j = (mi+lv-1)%lv;
+			c = 1;
+			while (c < lv)
+			{
+				Rl dp = dot( cvx_vertex(m, v, lv, r, nd, j), d);
+				if (dp == max)
+					scr.ami[scr.lami++] = j;
+				else
+					break;
+				j = (j+lv-1)%lv;
+				c = c+1;
+			}
 		}
 
 		return max;
@@ -192,7 +193,7 @@ namespace gjk
 	{
 		V2 n = normalize(d);
 		Rl max1 = support_cvx(scr.cvx1, m1, v1, lv1, r1, d, n);
-		Rl max2 = support_cvx(scr.cvx1, m2, v2, lv2, r2, d, n);
+		Rl max2 = support_cvx(scr.cvx2, m2, v2, lv2, r2, d, n);
 
 		out.p.p1 = cvx_vertex(m1, v1, lv1, r1, n, scr.cvx1.ami[0]);
 		out.p.p2 = cvx_vertex(m2, v2, lv2, r2, n, scr.cvx2.ami[0]);
@@ -230,7 +231,7 @@ namespace gjk
 			bool cond3 = true;
 			for (int j=0; Isp[j] != EL; ++j)
 			{
-				Rl Dj = Rl(0.0); for (int i=0; i<d; ++i) Dj = Dj + (Di[di_index+1] * ( dot(Vk[Is[i]].Vk, sub(Vk[Is[0]].Vk, Vk[Isp[j]].Vk)) ) );
+				Rl Dj = Rl(0.0); for (int i=0; i<d; ++i) Dj = Dj + (Di[di_index+i] * ( dot(Vk[Is[i]].Vk, sub(Vk[Is[0]].Vk, Vk[Isp[j]].Vk)) ) );
 				Di[Union_index[j]] = Dj;
 				if (Dj > Rl(0.0)) cond3 = false;
 			}
@@ -257,7 +258,7 @@ namespace gjk
 				}
 			}
 
-			while(perm.Is[i_Is++] != EL); while(perm.Is[i_Isp++] != EL); while(perm.Is[i_Union_index++] != EL);
+			while(perm.Is[i_Is++] != EL); while(perm.Isp[i_Isp++] != EL); while(perm.Union_index[i_Union_index++] != EL);
 		}
 
 		// Add failure case support from original paper and from VanDenBergen 'A Fast and Robust GJK Implementation for Collision Detection of Convex Objects'
@@ -268,13 +269,14 @@ namespace gjk
 
 	struct Out_gjk_distance
 	{
+		bool success;
 		Rl dist;
 		Rl eps;
 		V2 v1;
 		V2 v2;
 
 		Out_gjk_distance() {}
-		Out_gjk_distance(Rlp dist_, Rlp eps_, V2p v1_, V2p v2_) : dist(dist_), eps(eps_), v1(v1_), v2(v2_) {}
+		Out_gjk_distance(bool success_, Rlp dist_, Rlp eps_, V2p v1_, V2p v2_) : success(success_), dist(dist_), eps(eps_), v1(v1_), v2(v2_) {}
 	};
 
 	Out_gjk_distance gjk_distance(GjkScratch& scr, M3p m1, V2pc v1, int lv1, Rl r1, M3p m2, V2pc v2, int lv2, Rl r2, Rl eps)
@@ -291,7 +293,6 @@ namespace gjk
 			simpl[0].DirI = d;
 		}
 	
-		// TODO
 		int max_iter = 3 + (lv1+lv2)*5;
 		int iter = 0;
 
@@ -324,82 +325,107 @@ namespace gjk
 
 				//features = 	gjk_find_features(m1, cvx1, r1, m2, cvx2, r2, li, IndI)
 				//return [dist, eps, v1, v2, features, Vk, Pi, IndI]
-				return Out_gjk_distance(dist, eps, v1, v2);
+				return Out_gjk_distance(true, dist, eps, v1, v2);
+			}
+
+			int nsi = lsimpl < 3 ? lsimpl : subd.Isp[0];
+			if (nsi == EL) return Out_gjk_distance(false, 0.0f, 0.0f, v2_z(), v2_z());
+			{
+				simpl[nsi].Vk = supp.s;
+				simpl[nsi].Pi = supp.p;
+				for (int i=0;i<supp.cvx1->lami; ++i) simpl[nsi].IndI.ami1[i] = supp.cvx1->ami[i]; simpl[nsi].IndI.lami1 = supp.cvx1->lami;
+				for (int i=0;i<supp.cvx2->lami; ++i) simpl[nsi].IndI.ami2[i] = supp.cvx2->ami[i]; simpl[nsi].IndI.lami2 = supp.cvx2->lami;
+				simpl[nsi].DirI = nvk;
+				lsimpl = m_tmin(3, lsimpl+1);
 			}
 		}
 	}
 
-
 	#undef EL
+
+	int gjk_test1()
+	{
+		int err = 0;
+		GjkScratch gjk;
+		
+		{
+			V2 v1[] = { V2(0.0f, 1.0f), V2(0.0f, 2.0f), V2(-1.0f, 1.0f) };
+			V2 v2[] = { V2(0.0f, 1.5f) };
+			Out_gjk_distance dist = gjk_distance(gjk, m3_id(), v1, 3, Rl(0), m3_id(), v2, 1, Rl(0), 1.e-7f);
+
+			if (!dist.success || dist.dist > dist.eps) { err++; }
+		}
+
+		return err;
+	}
+
+	int gjk_tests()
+	{
+		return 
+			gjk_test1();
+	}
+
 }
 
 /*
 
-def gjk_distance(m1, cvx1, r1, m2, cvx2, r2, eps=gGJK_eps, dbg = None):
+	def TestGJK():
 
-	ctx = GJK_Context()
+	p1 = [0.0, 0.0]
+	cvx1 = [[0.0,1.0], [0.0,2.0], [-1.0,1.0]]
+	p2 = [0.0, 0.0]
+	cvx2 = [[0.0,1.5]]
+	
+	cvx1 = [[0.0,1.0], [0.0,2.0], [-1.0,1.0]]
+	cvx2 = [[0.0,0.0]]
+	dist = gjk_distance(p1, cvx1, 0.0, p2, cvx2, 0.0)[0]
+	print dist
 
-	d = [-1.0, 0.0]
-	supp = gjk_support_mink_cvx(m1, cvx1, r1, m2, cvx2, r2, d) 
-	Vk = [ supp[1] ]
-	Pi = [ supp[2] ]
-	IndI = [ supp[3] ]
-	DirI = [ d ]
+	cvx1 = [[0.0,1.0], [0.0,2.0], [-1.0,1.0]]
+	cvx2 = [[0.0,1.5]]
+	dist = gjk_distance(p1, cvx1, 0.0, p2, cvx2, 0.0)[0]
+	print dist
 
-	max_iter = 3 + (len(cvx1) + len(cvx2))*5
-	iter = 0
-	#last_dist = v2_len( Vk[0] )
-	#fallback = False
+	cvx1 = [[0.0,1.0], [0.0,2.0], [-1.0,1.0]]
+	cvx2 = [[0.0,1.5]]
+	cvx2 = [linComb(cvx1, [1.0/256.0, 1.0/256.0, 1.0-(2.0/256.0)])]
+	dist = gjk_distance(p1, cvx1, 0.0, p2, cvx2, 0.0)[0]
+	print dist
 
-	while (True):
-		iter = iter + 1	
-		
-		#if (fallback):
-		#	subd = gjk_subdist_fallback(ctx, Vk)
-		#else:
-		subd = gjk_subdist(ctx, Vk)
+	cvx1 = [[0.0,1.0], [0.0,2.0], [-1.0,1.0]]
+	cvx2 = [[0.0,1.5]]
+	off = linComb(cvx1, [1.0/256.0, 1.0/256.0, 1.0-(2.0/256.0)])
+	cvx1.v = [ v2_sub(cvx1[0], off), v2_sub(cvx1[1], off), v2_sub(cvx1[2], off) ]
+	cvx2.v = [[0.0,0.0]]
+	dist = gjk_distance(p1, cvx1, 0.0, p2, cvx2, 0.0)[0]
+	print dist
+	
+	
+	# Test convex combinations inside cvx1
+	if (False):
+		cvx1 = [[0.0,1.0], [0.0,2.0], [-1.0,1.0]]
+		cvx2 = [[0.0,1.5]]
+		for x in range(512):
+			for y in range(512):
+				l = [x/512.0, y/512.0, 0.0]
+				l[2] = 1.0 - l[0] - l[1]
+				if (l[2] >= 0.0):
+					cvx2 = [linComb(cvx1, l)]
+					dd = gjk_distance(p1, cvx1, 0.0, p2, cvx2, 0.0)
+					if (dd[0] > dd[1]):
+						print 'Fail'
 
-		vk = subd[0]
-		nvk = v2_neg(vk)	
-		supp = gjk_support_mink_cvx(m1, cvx1, r1, m2, cvx2, r2, nvk) 
-		g = v2_dot(vk, vk) + supp[0]
+		# Test combinations outside cvx1
+		cvx1 = [[0.0,1.0], [0.0,2.0], [-1.0,1.0]]
+		cvx2 = [[0.0,1.5]]
+		for x in range(512):
+			l = [x/512.0, 1.1+x/512.0, 0.0]
+			cvx2 = [linComb(cvx1, l)]
+			dd = gjk_distance(p1, cvx1, 0.0, p2, cvx2, 0.0)
+			if (dd[0] == 0.0):
+				print 'Fail'		
 
-		if dbg != None:
-			dbg.append( [copy.deepcopy(Vk), copy.deepcopy(vk), copy.deepcopy(d)] )
-
-		dist = v2_len(vk)	
-		if ((math.fabs(g) < eps) or (iter > max_iter)):
-			
-			v1 = [0.0, 0.0]
-			v2 = [0.0, 0.0]
-			li = subd[2]
-			for i in range(len(li)):
-				v1 = v2_add(v1, v2_muls(Pi[i][0], li[i]))
-				v2 = v2_add(v2, v2_muls(Pi[i][1], li[i]))
-
-			features = 	gjk_find_features(m1, cvx1, r1, m2, cvx2, r2, li, IndI)
-			
-			return [dist, eps, v1, v2, features, Vk, Pi, IndI]
-
-
-		#if (dist > last_dist):
-		#	fallback = True
-
-		#last_dist = dist
-		Vk.append( supp[1] )
-		Pi.append( supp[2] )
-		IndI.append( supp[3] )
-		DirI.append( nvk )
-		if (len(Vk)>3):
-			nVi = subd[1]
-			if (len(nVi) > 0):
-				popi = nVi[0]
-				Vk.pop(popi)
-				Pi.pop(popi)
-				IndI.pop(popi)
-				DirI.pop(popi)
-			else:
-				return None
+	return 0
 */
 
 #endif
