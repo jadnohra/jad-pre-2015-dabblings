@@ -86,7 +86,9 @@ namespace gjk
 
 	struct GjkScratch
 	{
+		bool use_fallbacks;
 		Perm perm[3];
+		int maxdim;
 		
 		CvxScratch cvx1;
 		CvxScratch cvx2;
@@ -97,20 +99,22 @@ namespace gjk
 		GjkVert* simpl;
 		int lsimpl;
 
-		GjkScratch() 
+		GjkScratch(bool _use_fallbacks = true) 
 		{
+			use_fallbacks = _use_fallbacks;
 			perm[0] = (Perm::make<GJK_PERM_0>());
 			perm[1] = (Perm::make<GJK_PERM_1>());
 			perm[2] = (Perm::make<GJK_PERM_2>());
-			cvx1.ami = (int*) malloc(perm[2].dim*sizeof(int));
-			cvx2.ami = (int*) malloc(perm[2].dim*sizeof(int));
+			maxdim = perm[2].dim;
+			cvx1.ami = (int*) malloc(maxdim*sizeof(int));
+			cvx2.ami = (int*) malloc(maxdim*sizeof(int));
 			Di = (Rl*) malloc(perm[2].Di_count*sizeof(Rl));
-			Li = (Rl*) malloc(perm[2].dim*sizeof(Rl));
+			Li = (Rl*) malloc(maxdim*sizeof(Rl));
 			simpl = (GjkVert*) malloc(perm[2].dim*sizeof(GjkVert));
-			for (int i=0;i<perm[2].dim; ++i) 
+			for (int i=0;i<maxdim; ++i) 
 			{
-				simpl[i].IndI.ami1 = (int*) malloc(perm[2].dim*sizeof(int));
-				simpl[i].IndI.ami2 = (int*) malloc(perm[2].dim*sizeof(int));
+				simpl[i].IndI.ami1 = (int*) malloc(maxdim*sizeof(int));
+				simpl[i].IndI.ami2 = (int*) malloc(maxdim*sizeof(int));
 			}
 		}
 
@@ -120,7 +124,7 @@ namespace gjk
 			free(cvx2.ami);
 			free(Di);
 			free(Li);
-			for (int i=0;i<perm[2].dim; ++i) 
+			for (int i=0;i<maxdim; ++i) 
 			{
 				free(simpl[i].IndI.ami1); 
 				free(simpl[i].IndI.ami2); 
@@ -134,10 +138,11 @@ namespace gjk
 		return add(mulp(m, v[i]), muls(n, r));
 	}
 
-	Rl support_cvx(CvxScratch& scr, M3p m, V2pc v, int lv, Rl r, V2p d, V2p nd)
+	bool support_cvx(CvxScratch& scr, M3p m, V2pc v, int lv, Rl r, V2p d, V2p nd, int maxdim, Rl& out)
 	{
 		int mi=0;
-		Rl max = dot( cvx_vertex(m, v, lv, r, nd, 0), d);
+		Rl& max = out;
+		max = dot( cvx_vertex(m, v, lv, r, nd, 0), d);
 
 		if (lenSq(d) != Rl(0))
 		{
@@ -156,7 +161,10 @@ namespace gjk
 			{
 				Rl dp = dot( cvx_vertex(m, v, lv, r, nd, j), d);
 				if (dp == max)
+				{
+					if (scr.lami+1 == maxdim) return false;
 					scr.ami[scr.lami++] = j;
+				}
 				else
 					break;
 				j = (j+1)%lv;
@@ -169,7 +177,10 @@ namespace gjk
 			{
 				Rl dp = dot( cvx_vertex(m, v, lv, r, nd, j), d);
 				if (dp == max)
+				{
+					if (scr.lami+1 == maxdim) return false;
 					scr.ami[scr.lami++] = j;
+				}
 				else
 					break;
 				j = (j+lv-1)%lv;
@@ -177,7 +188,7 @@ namespace gjk
 			}
 		}
 
-		return max;
+		return true;
 	}
 
 	struct Out_gjk_support_mink_cvx
@@ -189,16 +200,16 @@ namespace gjk
 		CvxScratch* cvx2; 
 	};
 
-	void gjk_support_mink_cvx(Out_gjk_support_mink_cvx& out, GjkScratch& scr, M3p m1, V2pc v1, int lv1, Rl r1, M3p m2, V2pc v2, int lv2, Rl r2, V2p d)
+	bool gjk_support_mink_cvx(Out_gjk_support_mink_cvx& out, GjkScratch& scr, M3p m1, V2pc v1, int lv1, Rl r1, M3p m2, V2pc v2, int lv2, Rl r2, V2p d)
 	{
 		V2 n = normalize(d);
-		Rl max1 = support_cvx(scr.cvx1, m1, v1, lv1, r1, d, n);
-		Rl max2 = support_cvx(scr.cvx2, m2, v2, lv2, r2, neg(d), neg(n));
+		Rl max1; if (!support_cvx(scr.cvx1, m1, v1, lv1, r1, d, n, scr.maxdim, max1)) return false;
+		Rl max2; if (!support_cvx(scr.cvx2, m2, v2, lv2, r2, neg(d), neg(n), scr.maxdim, max2)) return false;
 
 		out.p.p1 = cvx_vertex(m1, v1, lv1, r1, n, scr.cvx1.ami[0]);
 		out.p.p2 = cvx_vertex(m2, v2, lv2, r2, n, scr.cvx2.ami[0]);
 		out.h = max1+max2; out.s = sub(out.p.p1, out.p.p2); out.cvx1 = &scr.cvx1; out.cvx2 = &scr.cvx2;
-		return;
+		return true;
 	}
 
 	struct Out_gjk_subdist
@@ -209,7 +220,7 @@ namespace gjk
 		int lLi;
 	};
 
-	void gjk_subdist_fallback(Out_gjk_subdist& out, GjkScratch& scr, GjkVert* Vk, int lVk)
+	bool gjk_subdist_fallback(Out_gjk_subdist& out, GjkScratch& scr, GjkVert* Vk, int lVk)
 	{
 		const Perm& perm = scr.perm[lVk-1];
 		Rl* Di = scr.Di; scr.lDi = perm.Di_count;
@@ -268,10 +279,10 @@ namespace gjk
 			while(perm.Is[i_Is++] != EL); while(perm.Isp[i_Isp++] != EL); while(perm.Union_index[i_Union_index++] != EL);
 		}
 
-		return;
+		return true;
 	}
 
-	void gjk_subdist(Out_gjk_subdist& out, GjkScratch& scr, GjkVert* Vk, int lVk)
+	bool gjk_subdist(Out_gjk_subdist& out, GjkScratch& scr, GjkVert* Vk, int lVk)
 	{
 		const Perm& perm = scr.perm[lVk-1];
 		Rl* Di = scr.Di; scr.lDi = perm.Di_count;
@@ -316,7 +327,7 @@ namespace gjk
 						Li[Is[i]] = l;
 					}
 					out.v = v; out.Isp = Isp; out.Li = Li; out.lLi = scr.lLi; 
-					return;
+					return true;
 				}
 			}
 
@@ -324,7 +335,7 @@ namespace gjk
 		}
 
 		// Add failure case support from original paper and from VanDenBergen 'A Fast and Robust GJK Implementation for Collision Detection of Convex Objects'
-		return gjk_subdist_fallback(out, scr, Vk, lVk);
+		return scr.use_fallbacks ? gjk_subdist_fallback(out, scr, Vk, lVk) : false;
 	}
 
 	void gjk_find_features() {}
@@ -346,7 +357,7 @@ namespace gjk
 		V2 d = V2(Rl(-1.0), Rl(0.0));
 		int& lsimpl = scr.lsimpl; GjkVert* simpl = scr.simpl; 
 		{
-			Out_gjk_support_mink_cvx supp; gjk_support_mink_cvx(supp, scr, m1, v1, lv1, r1, m2, v2, lv2, r2, d);  
+			Out_gjk_support_mink_cvx supp; if (!gjk_support_mink_cvx(supp, scr, m1, v1, lv1, r1, m2, v2, lv2, r2, d)) return Out_gjk_distance(false, 0.0f, 0.0f, v2_z(), v2_z());
 			lsimpl = 1;
 			simpl[0].Vk = supp.s;
 			simpl[0].Pi = supp.p;
@@ -366,11 +377,12 @@ namespace gjk
 			//#	subd = gjk_subdist_fallback(ctx, Vk)
 			//#else:
 			Out_gjk_subdist subd;
-			gjk_subdist(subd, scr, simpl, lsimpl);
+			if (!gjk_subdist(subd, scr, simpl, lsimpl)) return Out_gjk_distance(false, 0.0f, 0.0f, v2_z(), v2_z());
+
 
 			V2 vk = subd.v;
 			V2 nvk = neg(vk);
-			Out_gjk_support_mink_cvx supp; gjk_support_mink_cvx(supp, scr, m1, v1, lv1, r1, m2, v2, lv2, r2, nvk);  
+			Out_gjk_support_mink_cvx supp; if (!gjk_support_mink_cvx(supp, scr, m1, v1, lv1, r1, m2, v2, lv2, r2, nvk)) return Out_gjk_distance(false, 0.0f, 0.0f, v2_z(), v2_z());
 			Rl g = dot(vk, vk) + supp.h;
 
 			Rl dist = len(vk);

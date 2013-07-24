@@ -1,3 +1,4 @@
+#define NOMINMAX
 #include <windows.h>
 #include <GL/gl.h>
 #include <GL/glu.h>
@@ -7,10 +8,13 @@
 #pragma comment( lib, "opengl32.lib")
 #pragma comment( lib, "glu32.lib")
 
+#include "stdio.h"
+
 #include "lamby.h"
 #include "painty.h"
 #include "thingy.h"
 #include "touchy.h"
+#include "nics.h"
 
 struct Scene
 {
@@ -157,12 +161,22 @@ namespace glfwHandler
 			wd.transl_moving[0] = (float)(x)-wd.transl_ref[0];
 			wd.transl_moving[1] = -((float)(y)-wd.transl_ref[1]);
 		}
+		else
+		{
+		}
 	}
 }
 
 int main(void)
 {
-	gjk::gjk_tests();
+	{
+		gjk::gjk_tests();
+		printf("%f us.\n", double(nics::getGjkRunTime())*(1000.0*1000.0));
+		nics::Rrt_Rn<float, 4> rrt;
+		nics::flann_test1();
+		nics::flann_test2();
+	}
+
 
     if (!glfwInit()) return -1;
 	
