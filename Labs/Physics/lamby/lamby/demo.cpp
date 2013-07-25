@@ -171,10 +171,11 @@ int main(void)
 {
 	{
 		gjk::gjk_tests();
-		printf("%f us.\n", double(nics::getGjkRunTime())*(1000.0*1000.0));
+		printf("gjk: %f us.\n", double(nics::getGjkRunTime())*(1000.0*1000.0));
 		nics::Rrt_Rn<float, 4> rrt;
 		nics::flann_test1();
 		nics::flann_test2();
+		printf("rrt: %f us.\n", double(nics::rtt_test1())*(1000.0*1000.0));
 	}
 
 

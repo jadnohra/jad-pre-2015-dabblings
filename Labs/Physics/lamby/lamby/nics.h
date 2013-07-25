@@ -7,16 +7,25 @@
 #pragma warning( push )
 #pragma warning( disable : 4996 )
 #pragma warning( disable : 4003 )
-#pragma warning( disable : 4291 )	// Check if this is a real problem.
+#pragma warning( disable : 4291 )	
 #include "../flann/src/cpp/flann/flann.hpp"
-#pragma comment( lib, "../../flann/build/lib/Release/flann_cpp_s")
-#pragma warning( pop )
+#if 0
+//#pragma comment( lib, "../../flann/build/lib/Release/flann_cpp_s")
+#else
+#pragma comment( lib, "../../flann/build/lib/Debug/flann_cpp_s")
+#endif
 
 #include "../randomc/randomc.h"
 #pragma comment( lib, "../../randomc/randomc/release/randomc")
 
+#pragma warning( disable : 4996 )
+#pragma warning( disable : 4018 )
+#include "../lodepng/lodepng.h"
+
+
 #include "gaussy.h" 
 #include "touchy.h" // gjk
+#include "thingy.h" // array
 
 namespace nics
 {
@@ -46,11 +55,10 @@ namespace nics
 	{
 		using namespace gjk;
 
-		Timer timer;
-		
 		int test_count = 0;
 		GjkScratch gjk;
 		
+		Timer timer;
 		timer.start();
 		{
 			int err = 0;
@@ -111,8 +119,8 @@ namespace nics
 	{
 		typedef Vertex(*randConfFunc)(void* ctx);
 		typedef Vertex(*newConfFunc)(void* ctx, const Vertex& v, const DistT& dq);
-		typedef Vertex(*nearestFunc)(void* ctx, const Vertex& v, const Graph& G);
-		typedef void(*addFunc)(void* ctx, const Graph& G, const Vertex& from, const Vertex& to);
+		typedef Vertex(*nearestFunc)(void* ctx, const Vertex& v, Graph& G);
+		typedef void(*addFunc)(void* ctx, Graph& G, const Vertex& from, const Vertex& to);
 
 		static Vertex next(void* ctx, Graph& G, DistT dq, randConfFunc randConf, nearestFunc nearest, newConfFunc newConf, addFunc add)
 		{
@@ -134,12 +142,16 @@ namespace nics
 		typedef T* Vertex;
 		typedef Rrt<Index, Vertex, T> RrtImpl;
 
+		struct Point { T v[Dim]; };
+
 		Index* index;
 		T bound_min[Dim];
 		T bound_max[Dim];
 		T vertex_rand[Dim];
 		T vertex_new[Dim];
 		T dq;
+		typedef ThingiesArr<Point> Points;
+		Points points;
 
 		flann::Matrix<size_t> query_indices;
 		flann::Matrix<T> query_dists;
@@ -147,7 +159,7 @@ namespace nics
 
 		CRandomMersenne random;
 
-		Rrt_Rn() : index(0), random(0), query_indices(new size_t[1*Dim], 1, Dim), query_dists(new T[1*Dim], 1, Dim) {}
+		Rrt_Rn() : index(0), random(0), query_indices(new size_t[1*Dim], 1, Dim), query_dists(new T[1*Dim], 1, Dim), points(1024, 0) {}
 		~Rrt_Rn() { delete index; }
 
 		void setBound(int di, T min, T max) { bound_min[di] = min; bound_max[di] = max; }
@@ -158,10 +170,16 @@ namespace nics
 			dq = dq_;
 			setBounds(min, max);
 
-			flann::AutotunedIndexParams params;
+			//flann::AutotunedIndexParams params; // this causes problems with getPoint
+			//flann::KMeansIndexParams params;	// crashes in rtt_test1 at index 2560
+			flann::KDTreeIndexParams params;
+			//flann::LinearIndexParams params;
+			//flann::CompositeIndexParams params;
 			
-			for (int i=0; i<Dim; ++i) vertex_new[i] = bound_min[i] + T(0.5) * (bound_max[i]-bound_min[i]);
-			Matrix m(vertex_new, 1, Dim);
+			Points::Add add(points); Vertex v = add.add()->v;
+			for (int i=0; i<Dim; ++i) v[i] = bound_min[i] + T(0.5) * (bound_max[i]-bound_min[i]);
+			
+			Matrix m(v, 1, Dim);
 			index = new Index(m, params);
 			index->buildIndex();
 
@@ -173,42 +191,47 @@ namespace nics
 			return RrtImpl::next(this, *index, dq, sRandConf, sNearest, sNewConf, sAdd);
 		}
 
-		void _rand_0_1(Vertex v) { for (int i=0; i<Dim; ++i) v[i] = random.Random(); }
+		void _rand_0_1(Vertex v) { for (int i=0; i<Dim; ++i) v[i] = T(random.Random()); }
 		T lenSq(Vertex v) { T l=T(0); for (int i=0; i<Dim; ++i) l += v[i]*v[i]; return l; }
-		void rand_0_1(Vertex v) { do _rand_0_1(v) while(lenSq(v)==T(0)); }
+		void rand_0_1(Vertex v) { do _rand_0_1(v); while(lenSq(v)==T(0)); }
 		void rand_m1_1(Vertex v) { rand_0_1(v); for (int i=0; i<Dim; ++i) v[i] = T((random.IRandom(0,1)*2)-1) * v[i]; }
 		void rand_nv(Vertex v) { rand_m1_1(v); T in = Rl(1)/lenSq(v); for (int i=0; i<Dim; ++i) v[i] *= in; }
 		void copy(Vertex src, Vertex dest) {  for (int i=0; i<Dim; ++i) dest[i]=src[i]; }
 
 		Vertex randConf()
 		{
-			for (int i=0; i<Dim; ++i) vertex_rand[i] = bound_min[i] + random.Random() * (bound_max[i]-bound_min[i]);
+			for (int i=0; i<Dim; ++i) vertex_rand[i] = bound_min[i] + T(random.Random()) * (bound_max[i]-bound_min[i]);
 			return vertex_rand;	
 		}
 
 		Vertex newConf(const Vertex& v, const T& dq)
 		{
 			// TODO: should this not be clipped to the boundaries? check the paper.
-			T dv[Dim]; rand_nv(dv); for (int i=0; i<Dim; ++i) vertex_new[i] = v[i]*(dv[i]*dq); return vertex_new;
+			T dv[Dim]; rand_nv(dv); 
+			for (int i=0; i<Dim; ++i) 
+				vertex_new[i] = v[i]+(dv[i]*dq); 
+			return vertex_new;
 		}
 		
-		Vertex nearest(const Vertex& v, const Index& G)
+		Vertex nearest(const Vertex& v, Index& G)
 		{
 			Matrix query(v, 1, Dim);
-			index.knnSearch(query, query_indices, query_dists, Dim, query_params);
-			return G.getPoint(query_indices[0]);
+			index->knnSearch(query, query_indices, query_dists, Dim, query_params);
+			return G.getPoint(*query_indices[0]);
 		}
 
-		void add(const Index& G, const Vertex& from, const Vertex& to)
+		void add(Index& G, const Vertex& from, const Vertex& to)
 		{
-			Matrix m(to, 1, Dim);
+			Points::Add add(points); Vertex v = add.add()->v;
+			copy(to, v);
+			Matrix m(v, 1, Dim);
 			G.addPoints(m);
 		}
 
 		static Vertex sRandConf(void* ctx)  { return ((This*) ctx)->randConf(); }
 		static Vertex sNewConf(void* ctx, const Vertex& v, const T& dq) { return ((This*) ctx)->newConf(v, dq); }
-		static Vertex sNearest(void* ctx, const Vertex& v, const Index& G) { return ((This*) ctx)->nearest(v, G); }
-		static Vertex sAdd(void* ctx, const Vertex& v, const Index& G) { return ((This*) ctx)->add(v, G); }
+		static Vertex sNearest(void* ctx, const Vertex& v, Index& G) { return ((This*) ctx)->nearest(v, G); }
+		static void sAdd(void* ctx, Index& G, const Vertex& from, const Vertex& to) { return ((This*) ctx)->add(G, from, to); }
 	};
 
 	void flann_test1()
@@ -263,14 +286,14 @@ namespace nics
 		typedef flann::Index<DistAlgo> Index;
 		typedef Rrt<Index, void*, T> RrtImpl;
 
-		flann::AutotunedIndexParams params;
+		//flann::AutotunedIndexParams params;
+		flann::KDTreeIndexParams params;
 		T data[] = { 0.0f,0.0f, 5.0f,5.0f, 10.0f,10.0f, 20.0f,20.0f, 100.0f,100.0f };
 		Matrix m(data, 5, Dim);
 		Index index(m, params);
 		index.buildIndex();
 		
 		{
-			flann::AutotunedIndexParams params;
 			T data[] = { 101.0f,101.0f };
 			Matrix m(data, 1, Dim);
 			index.addPoints(m);
@@ -292,10 +315,57 @@ namespace nics
 			{
 				size_t qi = *indices[i];
 				T di = *dists[i];
+				T* v = index.getPoint(qi);
 				int x=0;x;
 			}
 		}
 	}
+
+	#ifdef LODEPNG_H
+	Time rtt_test1()
+	{
+		int pt_count = 1024*64;
+		typedef Rrt_Rn<float, 2> Rrt;
+		Rrt rrt;
+		float min=-1.0f; float max=1.0f;
+		rrt.init(min, max, 0.1f);
+
+		Timer timer;
+		timer.start();
+		if (1)
+		{
+			for (int i=0;i<pt_count; ++i) rrt.next();
+		} 
+		else
+		{
+			for (int i=0;i<pt_count; ++i) 
+			{
+				Rrt::Vertex v = rrt.randConf();
+				rrt.add(*rrt.index, 0, v);
+			}
+		}
+		Time dt = timer.stop() / Time(pt_count);
+
+
+		int w=641; int h=641;
+		float scalex = float(w);
+		float scaley = float(w);
+		unsigned char* image = (unsigned char*) malloc(w*h);;
+		for (int i=0;i<w*h; ++i) image[i] = 255;
+
+		for (int i=0;i<rrt.index->size(); ++i)
+		{
+			Rrt::Vertex v = rrt.index->getPoint(i);
+			float x = ((v[0]-min)/(max-min))*scalex;
+			float y = ((v[1]-min)/(max-min))*scaley;
+			x = m_clamp(x, 0.0f, float(w-1)); y = m_clamp(y, 0.0f, float(h-1));
+
+			image[int(x+0.5f)+int(y+0.5f)*(w)] = 0;
+		}
+
+ 		lodepng_encode_file("rtt_test1.png", image, w, h, LCT_GREY, 8);		return dt;	}
+	#endif
 }
+#pragma warning( pop )
 
 #endif // LAMBY_NICS_H

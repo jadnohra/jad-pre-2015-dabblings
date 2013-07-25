@@ -1,8 +1,6 @@
 #ifndef LAMBY_THINGY_H
 #define LAMBY_THINGY_H
 
-class Thingies;
-
 template<typename T>
 struct ThingiesArr
 {
@@ -11,35 +9,37 @@ struct ThingiesArr
 		T* el;
 		unsigned char* valid;
 		ChainEl* next;
+		int first_invalid;
 	};
 
-	static void _dtor(Thingies* th, ChainEl* cel, int size)
+	typedef void(*dtorFunc)(void* ctxt, T* el);
+
+	static void _dtor(void* ctxt, ChainEl* cel, int size, dtorFunc dtor)
 	{
 		if (cel)
 		{
-			if (cel->next) _dtor(th, cel->next, size);
+			if (cel->next) _dtor(ctxt, cel->next, size, dtor);
+			if (dtor) { for (int i=0;i<size;++i) if (cel->valid[i]) dtor(ctxt, cel->el+i); }
 
-			for (int i=0;i<size;++i)
-			{
-				if (cel->valid[i]) dtor(th, cel->el+i);
-			}
 			free(cel->el);
 			free(cel->valid);
 			free(cel);
 		}
 	}
 
-	Thingies* th;
+	void* ctxt;
 	ChainEl* cel;
 	int chain_count;
 	int chain_size;
+	dtorFunc dtor;
 	
-	ThingiesArr() : cel(0), chain_count(0), chain_size(32) {}
-	~ThingiesArr() { _dtor(th, cel, chain_size); }
+	ThingiesArr(int chain_size_ = 32,dtorFunc dtor_ = 0) : ctxt(0), cel(0), chain_count(0), chain_size(chain_size_), dtor(dtor_) {}
+	~ThingiesArr() { _dtor(ctxt, cel, chain_size, dtor); }
 
 	ChainEl* alloc()
 	{
 		ChainEl* cel = (ChainEl*) malloc(sizeof(ChainEl));
+		cel->first_invalid = 0;
 		cel->el = (T*) malloc(chain_size*sizeof(T));
 		cel->valid = (unsigned char*) malloc(chain_size*sizeof(unsigned char));
 		for (int i=0;i<chain_size;++i) cel->valid[i]=0;
@@ -54,25 +54,29 @@ struct ThingiesArr
 		int i;
 
 		Add(ThingiesArr& arr_)
-		: arr(arr_), cel(arr_.cel), i(-1) {}
+		: arr(arr_), cel(arr_.cel)
+		{
+			if (cel) while (cel->first_invalid >= arr.chain_size && cel->next) cel = cel->next;
+			i = (cel ? cel->first_invalid : -1);
+		}
 
 		T* add()
 		{
 			if (cel == 0)
 			{
-				cel = arr.cel = arr.alloc(); i=0; cel->valid[i]=1; return &cel->el[i++];
+				cel = arr.cel = arr.alloc(); i=0; cel->first_invalid = i+1; cel->valid[i]=1; return &cel->el[i++];
 			}
 			
 			while(1)
 			{
-				while(i<arr.chain_size && !cel->valid[i]) i++;
+				while(i<arr.chain_size && cel->valid[i]) i++;
 				if (i+1>=arr.chain_size)
 				{
-					cel = cel->next = arr.alloc(); i=0; cel->valid[i]=1; return &cel->el[i++];
+					cel->first_invalid = i+1; cel = cel->next = arr.alloc(); i=0; cel->valid[i]=1; cel->first_invalid = i+1; return &cel->el[i++];
 				}
 				else
 				{
-					cel->valid[i]=1; return &cel->el[i++];
+					cel->first_invalid = i+1; cel->valid[i]=1; return &cel->el[i++];
 				}
 			}
 		}
@@ -106,6 +110,7 @@ struct ThingiesArr
 	};
 };
 
+class Thingies;
 
 struct Convex
 {
@@ -115,7 +120,7 @@ struct Convex
 	Rl r;
 };
 Convex* ctor(Thingies* th, Convex* el, M3p transf, const V2* vs, int count, Rlp r)  { el->transf=transf; el->v=(V2*)malloc(count*sizeof(V2)); memcpy(el->v,vs,count*sizeof(V2)); el->count=count; el->r=r; return el; }
-void dtor(Thingies* th, Convex* el)  { free(el->v); }
+void dtor_convex(void* th, Convex* el)  { free(el->v); }
 
 class Thingies
 {
@@ -125,6 +130,8 @@ public:
 	typedef Convexes::Iter ConvexIter;
 	typedef Convexes::Add ConvexAdd;
 	Convexes convexes;
+
+	Thingies() : convexes(32, dtor_convex) {}
 
 	Convex* addConvex(Convexes::Add& add, M3p transf, const V2* vs, int count, Rlp r)
 	{
