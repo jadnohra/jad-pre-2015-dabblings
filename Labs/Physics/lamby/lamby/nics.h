@@ -12,6 +12,9 @@
 #pragma comment( lib, "../../flann/build/lib/Release/flann_cpp_s")
 #pragma warning( pop )
 
+#include "../randomc/randomc.h"
+#pragma comment( lib, "../../randomc/randomc/release/randomc")
+
 #include "gaussy.h" 
 #include "touchy.h" // gjk
 
@@ -135,33 +138,77 @@ namespace nics
 		T bound_min[Dim];
 		T bound_max[Dim];
 		T vertex_rand[Dim];
+		T vertex_new[Dim];
+		T dq;
 
-		Rrt_Rn() : index(0) {}
+		flann::Matrix<size_t> query_indices;
+		flann::Matrix<T> query_dists;
+		flann::SearchParams query_params;
 
+		CRandomMersenne random;
 
+		Rrt_Rn() : index(0), random(0), query_indices(new size_t[1*Dim], 1, Dim), query_dists(new T[1*Dim], 1, Dim) {}
 		~Rrt_Rn() { delete index; }
 
-		void setBound(int di, Rl min, Rl max)
+		void setBound(int di, T min, T max) { bound_min[di] = min; bound_max[di] = max; }
+		void setBounds(T min, T max) { for (int i=0;i<Dim;++i) setBound(i, min, max); }
+
+		Vertex init(T min, T max, T dq_)
 		{
-			bound_min[di] = min; bound_max[di] = max;
-		}
-		void rand(int di)
-		{
-			//http://www.agner.org/random/
+			dq = dq_;
+			setBounds(min, max);
+
+			flann::AutotunedIndexParams params;
+			
+			for (int i=0; i<Dim; ++i) vertex_new[i] = bound_min[i] + T(0.5) * (bound_max[i]-bound_min[i]);
+			Matrix m(vertex_new, 1, Dim);
+			index = new Index(m, params);
+			index->buildIndex();
+
+			return vertex_new;
 		}
 
-		static Vertex randConf(void* ctx)
+		Vertex next()
 		{
-			This* this = (This*) ctx;
-			return this->vertex_rand;
+			return RrtImpl::next(this, *index, dq, sRandConf, sNearest, sNewConf, sAdd);
 		}
 
-		//typedef Vertex(*newConfFunc)(const Vertex& v, const DistT& dq);
-		//typedef Vertex(*nearestFunc)(const Vertex& v, const Graph& G);
+		void _rand_0_1(Vertex v) { for (int i=0; i<Dim; ++i) v[i] = random.Random(); }
+		T lenSq(Vertex v) { T l=T(0); for (int i=0; i<Dim; ++i) l += v[i]*v[i]; return l; }
+		void rand_0_1(Vertex v) { do _rand_0_1(v) while(lenSq(v)==T(0)); }
+		void rand_m1_1(Vertex v) { rand_0_1(v); for (int i=0; i<Dim; ++i) v[i] = T((random.IRandom(0,1)*2)-1) * v[i]; }
+		void rand_nv(Vertex v) { rand_m1_1(v); T in = Rl(1)/lenSq(v); for (int i=0; i<Dim; ++i) v[i] *= in; }
+		void copy(Vertex src, Vertex dest) {  for (int i=0; i<Dim; ++i) dest[i]=src[i]; }
 
-// 		static Vertex next(Graph& G, DistT dq, randConfFunc randConf, nearestFunc nearest, newConfFunc newConf)
-// 		{
-// 		}
+		Vertex randConf()
+		{
+			for (int i=0; i<Dim; ++i) vertex_rand[i] = bound_min[i] + random.Random() * (bound_max[i]-bound_min[i]);
+			return vertex_rand;	
+		}
+
+		Vertex newConf(const Vertex& v, const T& dq)
+		{
+			// TODO: should this not be clipped to the boundaries? check the paper.
+			T dv[Dim]; rand_nv(dv); for (int i=0; i<Dim; ++i) vertex_new[i] = v[i]*(dv[i]*dq); return vertex_new;
+		}
+		
+		Vertex nearest(const Vertex& v, const Index& G)
+		{
+			Matrix query(v, 1, Dim);
+			index.knnSearch(query, query_indices, query_dists, Dim, query_params);
+			return G.getPoint(query_indices[0]);
+		}
+
+		void add(const Index& G, const Vertex& from, const Vertex& to)
+		{
+			Matrix m(to, 1, Dim);
+			G.addPoints(m);
+		}
+
+		static Vertex sRandConf(void* ctx)  { return ((This*) ctx)->randConf(); }
+		static Vertex sNewConf(void* ctx, const Vertex& v, const T& dq) { return ((This*) ctx)->newConf(v, dq); }
+		static Vertex sNearest(void* ctx, const Vertex& v, const Index& G) { return ((This*) ctx)->nearest(v, G); }
+		static Vertex sAdd(void* ctx, const Vertex& v, const Index& G) { return ((This*) ctx)->add(v, G); }
 	};
 
 	void flann_test1()
