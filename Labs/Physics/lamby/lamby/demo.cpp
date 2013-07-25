@@ -175,10 +175,12 @@ int main(void)
 		nics::Rrt_Rn<float, 4> rrt;
 		nics::flann_test1();
 		nics::flann_test2();
-		printf("rrt: %f us.\n", double(nics::rtt_test1())*(1000.0*1000.0));
+		//printf("rrt: %f us.\n", double(nics::rtt_test1())*(1000.0*1000.0));
+		printf("rrt: %f us.\n", double(nics::rtt_test2())*(1000.0*1000.0));
+	
+		//return 0;
 	}
-
-
+	
     if (!glfwInit()) return -1;
 	
     GLFWwindow* window = glfwCreateWindow(640, 480, "Lamby", NULL, NULL);

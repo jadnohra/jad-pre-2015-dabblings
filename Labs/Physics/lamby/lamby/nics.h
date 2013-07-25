@@ -365,6 +365,89 @@ namespace nics
 
  		lodepng_encode_file("rtt_test1.png", image, w, h, LCT_GREY, 8);		return dt;	}
 	#endif
+
+	Time rtt_test2()
+	{
+		int pt_count = 1024*64;
+		typedef Rrt_Rn<float, 8> Rrt;
+		Rrt rrt;
+		float min=-1.0f; float max=1.0f;
+		rrt.init(min, max, 0.1f);
+
+		using namespace gjk;
+		GjkScratch gjk(false); // true crashes! fix.
+		int err = 0;
+
+		typedef ThingiesArr<int> Ints;
+		Ints failures;
+
+		Timer timer;
+		timer.start();
+		Rl eps = 1.e-7f;
+		#if 0
+		{
+			for (int i=0;i<pt_count; ++i) 
+			{
+				Rrt::Vertex v = rrt.next();
+
+				Out_gjk_distance dist = gjk_distance(gjk, m3_id(), (V2*) v, 3, Rl(0), m3_id(), ((V2*) v)+3, 1, Rl(0), eps);
+				if (!dist.success) 
+				{ 
+					err++; 
+					Ints::Add add(failures); *add.add() = i;
+				}
+			}
+			err;
+		} 
+		#else
+		{
+			for (int i=0;i<pt_count; ++i) 
+			{
+				Rrt::Vertex v = rrt.randConf();
+				rrt.add(*rrt.index, 0, v);
+
+				Out_gjk_distance dist = gjk_distance(gjk, m3_id(), (V2*) v, 3, Rl(0), m3_id(), ((V2*) v)+3, 1, Rl(0), eps);
+				if (!dist.success) 
+				{ 
+					err++; 
+					Ints::Add add(failures); *add.add() = i;
+				}
+				err;
+			}
+		}
+		#endif
+		Time dt = timer.stop() / Time(pt_count);
+		printf("err: %d\n", err);
+
+		int w=641; int h=641;
+		float scalex = float(w);
+		float scaley = float(w);
+		unsigned char* image = (unsigned char*) malloc(w*h*3);
+		for (int i=0;i<w*h*3; ++i) image[i] = 255;
+
+		Ints::Iter fit(failures); int* fi = fit.next();
+		for (int i=0;i<rrt.index->size(); ++i)
+		{
+			Rrt::Vertex v = rrt.index->getPoint(i);
+			float x = ((v[0]-min)/(max-min))*scalex;
+			float y = ((v[1]-min)/(max-min))*scaley;
+			x = m_clamp(x, 0.0f, float(w-1)); y = m_clamp(y, 0.0f, float(h-1));
+
+			unsigned char r,g,b; r=0;b=0;g=0;
+
+			if (fi && (*fi == i))
+			{
+				r = 255;
+				fi = fit.next();
+			}
+
+			int ii = int(x+0.5f)+int(y+0.5f)*(w);
+			image[ii*3+0] = r;
+			image[ii*3+1] = g;
+			image[ii*3+2] = b;
+		}
+
+ 		lodepng_encode_file("rtt_test1.png", (unsigned char*) image, w, h, LCT_RGB, 8);		return dt;	}
 }
 #pragma warning( pop )
 

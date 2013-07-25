@@ -36,7 +36,7 @@ namespace gjk
 		static int* Is()			{ static int l[] =	{0,EL,1,EL,2,EL,0,1,EL,0,2,EL,1,2,EL,0,1,2,EL};		return (int*)l; }
 		static int* Isp()			{ static int l[] =	{1,2,EL,0,2,EL,0,1,EL,2,EL,1,EL,0,EL,EL};			return (int*)l; }
 		static int* Di_index()		{ static int l[] =	{0,1,2,3,5,7,9,EL};									return (int*)l; }
-		static int* Union_index()	{ static int l[] =	{4,6,EL,3,8,EL,5,7,EL,11,EL,10,EL,9,EL};			return (int*)l; }
+		static int* Union_index()	{ static int l[] =	{4,6,EL,3,8,EL,5,7,EL,11,EL,10,EL,9,EL,EL};			return (int*)l; }
 	};
 	
 	struct Perm
