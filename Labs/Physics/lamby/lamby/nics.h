@@ -368,16 +368,24 @@ namespace nics
 
 	Time rtt_test2()
 	{
-		int pt_count = 1024*64;
+		int pt_count = 1024*256;
+		float min=-1.0f; float max=1.0f;
+		bool enable_gjk_fallback = false;
+		
+// 		pt_count = 1024*1024*4;
+// 		min=-1000.0f; max=1000.0f;
+		
+//		enable_gjk_fallback = true;
+		
 		typedef Rrt_Rn<float, 8> Rrt;
 		Rrt rrt;
-		float min=-1.0f; float max=1.0f;
 		rrt.init(min, max, 0.1f);
 
 		using namespace gjk;
-		GjkScratch gjk(false); // true crashes! fix.
-		int err = 0;
+		
+		GjkScratch gjk(enable_gjk_fallback); 
 
+		int err = 0;
 		typedef ThingiesArr<int> Ints;
 		Ints failures;
 
@@ -385,6 +393,7 @@ namespace nics
 		timer.start();
 		Rl eps = 1.e-7f;
 		#if 0
+		const char* fname = "rtt_test1_rrt.png";
 		{
 			for (int i=0;i<pt_count; ++i) 
 			{
@@ -400,6 +409,7 @@ namespace nics
 			err;
 		} 
 		#else
+		const char* fname = "rtt_test1_rnd.png";
 		{
 			for (int i=0;i<pt_count; ++i) 
 			{
@@ -447,7 +457,7 @@ namespace nics
 			image[ii*3+2] = b;
 		}
 
- 		lodepng_encode_file("rtt_test1.png", (unsigned char*) image, w, h, LCT_RGB, 8);		return dt;	}
+ 		lodepng_encode_file(fname, (unsigned char*) image, w, h, LCT_RGB, 8);		return dt;	}
 }
 #pragma warning( pop )
 
