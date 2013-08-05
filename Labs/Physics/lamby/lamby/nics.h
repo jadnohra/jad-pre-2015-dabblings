@@ -372,10 +372,10 @@ namespace nics
 		float min=-1.0f; float max=1.0f;
 		bool enable_gjk_fallback = false;
 		
-// 		pt_count = 1024*1024*4;
-// 		min=-1000.0f; max=1000.0f;
+ 		pt_count = 1024*1024*4;
+ 		min=-1000.0f; max=1000.0f;
 		
-//		enable_gjk_fallback = true;
+		enable_gjk_fallback = true;
 		
 		typedef Rrt_Rn<float, 8> Rrt;
 		Rrt rrt;
@@ -392,7 +392,7 @@ namespace nics
 		Timer timer;
 		timer.start();
 		Rl eps = 1.e-7f;
-		#if 0
+		#if 1
 		const char* fname = "rtt_test1_rrt.png";
 		{
 			for (int i=0;i<pt_count; ++i) 
