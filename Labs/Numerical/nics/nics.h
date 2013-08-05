@@ -144,9 +144,43 @@ namespace nics
 		};
 	};
 
+	struct CubeNd
+	{
+		template <typename T, int Dim, int Di>
+		struct Impl
+		{
+			static void build_cube_rec(T* cube, int& index)
+			{
+				int i;
+				
+				i= index;
+				Impl<T, Dim, Di+1>::build_cube_rec(cube, index);
+				while(i < index) cube[(i++)*Dim+Di] = -1.0f;
+
+				i= index;
+				Impl<T, Dim, Di+1>::build_cube_rec(cube, index);
+				while(i < index) cube[(i++)*Dim+Di] = 1.0f;
+			}
+		};
+		template <typename T, int Dim>
+		struct Impl<T, Dim, Dim>
+		{
+			static void build_cube_rec(T* cube, int& index) { index++; }
+		};
+
+		template <typename T, int Dim>
+		static void build_cube(T* cube)
+		{
+			int index = 0;
+			Impl<T, Dim, 0>::build_cube_rec(cube, index);
+		}
+	};
+
 	template<typename T, int Dim>
 	struct Rrt_Rn
 	{
+		enum { D = Dim };
+		typedef T Type;
 		typedef Rrt_Rn<T, Dim> This;
 		typedef flann::Matrix<T> Matrix;
 		typedef flann::L2<T> DistAlgo;
@@ -249,6 +283,9 @@ namespace nics
 		static Vertex sNewConf(void* ctx, const Vertex& v, const T& dq) { return ((This*) ctx)->newConf(v, dq); }
 		static Vertex sNearest(void* ctx, const Vertex& v, Index& G) { return ((This*) ctx)->nearest(v, G); }
 		static void sAdd(void* ctx, Index& G, const Vertex& from, const Vertex& to) { return ((This*) ctx)->add(G, from, to); }
+
+
+		static void build_cube(T* cube)	{ CubeNd::build_cube<Type, D>(cube); }
 	};
 
 	void flann_test1()
