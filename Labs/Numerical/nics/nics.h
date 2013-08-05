@@ -149,30 +149,66 @@ namespace nics
 		template <typename T, int Dim, int Di>
 		struct Impl
 		{
-			static void build_cube_rec(T* cube, int& index)
+			static void build_cube_rec(T* cube, T radius, int& index)
 			{
 				int i;
 				
 				i= index;
-				Impl<T, Dim, Di+1>::build_cube_rec(cube, index);
-				while(i < index) cube[(i++)*Dim+Di] = -1.0f;
+				Impl<T, Dim, Di+1>::build_cube_rec(cube, radius, index);
+				while(i < index) cube[(i++)*Dim+Di] = -radius;
 
 				i= index;
-				Impl<T, Dim, Di+1>::build_cube_rec(cube, index);
-				while(i < index) cube[(i++)*Dim+Di] = 1.0f;
+				Impl<T, Dim, Di+1>::build_cube_rec(cube, radius, index);
+				while(i < index) cube[(i++)*Dim+Di] = radius;
 			}
 		};
 		template <typename T, int Dim>
 		struct Impl<T, Dim, Dim>
 		{
-			static void build_cube_rec(T* cube, int& index) { index++; }
+			static void build_cube_rec(T* cube, T radius, int& index) { index++; }
 		};
 
 		template <typename T, int Dim>
-		static void build_cube(T* cube)
+		static void build_cube(T* cube, T radius)
 		{
 			int index = 0;
-			Impl<T, Dim, 0>::build_cube_rec(cube, index);
+			Impl<T, Dim, 0>::build_cube_rec(cube, radius, index);
+		}
+	};
+
+	struct ChoiceNd
+	{
+		template <int Dim, int Di>
+		struct Impl
+		{
+			static void build_choices_rec(int* cube, int& index)
+			{
+				int i;
+				
+				i= index;
+				Impl<Dim, Di+1>::build_choices_rec(cube, index);
+				while(i < index) cube[(i++)*Dim+Di] = -1;
+
+				i= index;
+				Impl<Dim, Di+1>::build_choices_rec(cube, index);
+				while(i < index) cube[(i++)*Dim+Di] = 0;
+
+				i= index;
+				Impl<Dim, Di+1>::build_choices_rec(cube, index);
+				while(i < index) cube[(i++)*Dim+Di] = 1;
+			}
+		};
+		template <int Dim>
+		struct Impl<Dim, Dim>
+		{
+			static void build_choices_rec(int* cube, int& index) { index++; }
+		};
+
+		template <int Dim>
+		static void build_choices(int* cube)
+		{
+			int index = 0;
+			Impl<Dim, 0>::build_choices_rec(cube, index);
 		}
 	};
 
@@ -181,6 +217,7 @@ namespace nics
 	{
 		enum { D = Dim };
 		typedef T Type;
+		typedef T Scalar;
 		typedef Rrt_Rn<T, Dim> This;
 		typedef flann::Matrix<T> Matrix;
 		typedef flann::L2<T> DistAlgo;
@@ -242,12 +279,15 @@ namespace nics
 			Vertex v = randConf(); add(*index, 0, v); return v;
 		}
 
+		static T lenSq(Vertex v) { T l=T(0); for (int i=0; i<Dim; ++i) l += v[i]*v[i]; return l; }
+		static void copy(Vertex src, Vertex dest) {  for (int i=0; i<Dim; ++i) dest[i]=src[i]; }
+		static void add(Vertex a, Vertex b, Vertex c) {  for (int i=0; i<Dim; ++i) c[i]=a[i]+b[i]; }
+
 		void _rand_0_1(Vertex v) { for (int i=0; i<Dim; ++i) v[i] = T(random.Random()); }
-		T lenSq(Vertex v) { T l=T(0); for (int i=0; i<Dim; ++i) l += v[i]*v[i]; return l; }
 		void rand_0_1(Vertex v) { do _rand_0_1(v); while(lenSq(v)==T(0)); }
 		void rand_m1_1(Vertex v) { rand_0_1(v); for (int i=0; i<Dim; ++i) v[i] = T((random.IRandom(0,1)*2)-1) * v[i]; }
 		void rand_nv(Vertex v) { rand_m1_1(v); T in = T(1)/lenSq(v); for (int i=0; i<Dim; ++i) v[i] *= in; }
-		void copy(Vertex src, Vertex dest) {  for (int i=0; i<Dim; ++i) dest[i]=src[i]; }
+		
 
 		Vertex randConf()
 		{
@@ -285,7 +325,8 @@ namespace nics
 		static void sAdd(void* ctx, Index& G, const Vertex& from, const Vertex& to) { return ((This*) ctx)->add(G, from, to); }
 
 
-		static void build_cube(T* cube)	{ CubeNd::build_cube<Type, D>(cube); }
+		static void build_cube(T* cube, T radius)	{ CubeNd::build_cube<Type, D>(cube, radius); }
+		static void build_choices(int* cube)		{ ChoiceNd::build_choices<D>(cube); }
 	};
 
 	void flann_test1()
@@ -377,5 +418,115 @@ namespace nics
 
 }
 #pragma warning( pop )
+
+namespace nics
+{
+	
+	namespace fp754
+	{
+		enum
+		{
+			FLTMASK_SGN		= 0x80000000,
+			FLTMASK_EXP		= 0x7F800000,
+			FLTMASK_MANT	= 0x007FFFFF,
+			FLTSHIFT_EXP	= 23,
+			FLTCT_EXPm23	= 0x34000000,
+			FLTCT_EXPm24	= 0x33800000,
+			FLTCT_MANTLP	= 0x00000001,
+			FLTCT_EXP127	= 0x7F000000,
+			FLTCT_EXPm126	= 0x00800000,
+			FLTCT_EXP0		= 0x3F800000,
+			FLTCT_NAN		= 0xFFFFFFFF,
+			FLTCT_pINF		= 0x7F800000,
+			FLTCT_nINF		= 0xFF800000,
+		};
+
+		float hexToFloat(unsigned int hex) { float f; *((unsigned int*) ((void*) &f)) = hex; return f; }
+		unsigned int floatToHex(float f) { unsigned int hex = *((unsigned int*) ((void*) &f)); return hex; }
+
+		float nextFloat(float f)
+		{
+			const unsigned int hex = floatToHex(f);
+			const unsigned int sgn = (hex & FLTMASK_SGN);
+			const unsigned int exp = (hex & FLTMASK_EXP);
+			const unsigned int mant = (hex & FLTMASK_MANT);
+			if (hex == 0) return hexToFloat(0 | FLTCT_EXPm126 | (0) );
+			if (mant != FLTMASK_MANT) return hexToFloat(sgn | exp | (mant+1) );
+			if (exp < FLTCT_EXP127) return hexToFloat(sgn | (exp+ (1<<FLTSHIFT_EXP) ) | (0) );
+			return f;
+		}
+
+		float prevFloat(float f)
+		{
+			const unsigned int hex = floatToHex(f);
+			const unsigned int sgn = (hex & FLTMASK_SGN);
+			const unsigned int exp = (hex & FLTMASK_EXP);
+			const unsigned int mant = (hex & FLTMASK_MANT);
+			if (hex == 0) return hexToFloat( (unsigned int) ( FLTMASK_SGN | FLTCT_EXPm126 | 0 ) );
+			if (mant != 0) return hexToFloat(sgn | exp | (mant-1) );
+			if (exp != 0) return hexToFloat(sgn | (exp- (1<<FLTSHIFT_EXP)) | (FLTMASK_MANT) );
+			return f;
+		}
+
+		float prevFloats(float f, int cnt)
+		{
+			float x = f;
+			for (int i=0;i<cnt;++i)	 x = prevFloat(x);
+			return x;
+		}
+
+		float nextFloats(float f, int cnt)
+		{
+			float x = f;
+			for (int i=0;i<cnt;++i)	
+				x = nextFloat(x);
+			return x;
+		}
+
+		float walkFloats(float f, int cnt)
+		{
+			if (cnt > 0) return nextFloats(f, cnt);
+			return prevFloats(f, -cnt);
+		}
+
+		float floatMachineEps()
+		{
+			return 0.5f * hexToFloat(FLTCT_EXPm23);
+		}
+
+		bool isDenorm(float f)
+		{
+			unsigned int hex = floatToHex(f);
+			return (hex & FLTMASK_EXP) == 0;
+		}
+
+		bool isNegBitSet(float f)
+		{
+			unsigned int hex = floatToHex(f);
+			return (hex & FLTMASK_SGN) == FLTMASK_SGN;
+		}
+
+	#ifdef HK_MATH_VECTOR4_H
+		void setVector4Hex(hkVector4& vec,unsigned int a, unsigned int  b, unsigned int  c, unsigned int d)
+		{
+			vec.set( hexToFloat(a), hexToFloat(b), hexToFloat(c), hexToFloat(d) );
+		}
+	#endif
+
+	// 	#include <float.h>
+	// 	void getX87Precision()
+	// 	{
+	// 		unsigned int fp87 = _control87( 0, 0 );
+	// 		if ( (fp87 & _MCW_PC) == _PC_64)
+	// 			return 64;
+	// 		if ( (fp87 & _MCW_PC) == _PC_53)
+	// 			return 53;
+	// 		if ( (fp87 & _MCW_PC) == _PC_24)
+	// 			return 24;
+	// 
+	// 		return 0;
+	// 	}
+	}
+}
 
 #endif // NICS_H

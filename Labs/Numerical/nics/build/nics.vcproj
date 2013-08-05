@@ -132,6 +132,7 @@
 			/>
 			<Tool
 				Name="VCLinkerTool"
+				GenerateDebugInformation="true"
 			/>
 			<Tool
 				Name="VCALinkTool"

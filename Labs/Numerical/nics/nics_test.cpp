@@ -1,4 +1,5 @@
 #include "nics.h"
+#include "stdio.h"
 
 using namespace nics;
 
@@ -39,16 +40,143 @@ int nics_test1()
 			double vd = (double) det_2d<double>(double(v[0]), double(v[1]), double(v[2]), double(v[3]));
 			return vd-vf;
 		}
+
+		static double descend(Rrt::Vertex v, Rrt::Scalar* cube)
+		{
+			Rrt::Scalar center[Rrt::D];
+			Rrt::copy(v, center);
+
+			
+			double diffs[16];
+			double center_diff;
+			
+			int max_diff = 0;
+			int descend_count = 0;
+
+			center_diff = m_abs(diff(center));
+			
+			while(1) 
+			{
+				for (int i=0; i<16; ++i)
+				{
+					Rrt::Scalar corner[Rrt::D];
+					Rrt::add(cube+(i*Rrt::D), center, corner);
+					diffs[i] = m_abs(diff(corner));
+
+					if (diffs[i] > diffs[max_diff])
+					{
+						max_diff = i;
+					}
+				}
+
+				descend_count++;
+				double diff_inc = diffs[max_diff] - center_diff;
+				if (diff_inc > 0.0)
+				{
+					Rrt::Scalar corner[Rrt::D];
+					Rrt::add(cube+(max_diff*Rrt::D), center, corner);
+					Rrt::copy(corner, center);
+					center_diff = m_abs(diff(center));
+				}
+				else
+				{
+					return center_diff;
+				}
+			} 
+		}
+
+		static double descend(Rrt::Vertex v, int* choices)
+		{
+			Rrt::Scalar center[Rrt::D];
+			Rrt::copy(v, center);
+			
+			double diffs[81];
+			double center_diff;
+			
+			int max_diff = 0;
+			int descend_count = 0;
+
+			center_diff = m_abs(diff(center));
+			
+			while(1) 
+			{
+				for (int i=0; i<81; ++i)
+				{
+					Rrt::Scalar corner[Rrt::D];
+					int* v_choices = choices+(i*Rrt::D);
+					for (int j=0;j<Rrt::D; ++j) corner[j] = fp754::walkFloats(center[j], v_choices[j]);
+					diffs[i] = m_abs(diff(corner));
+
+					if (diffs[i] > diffs[max_diff])
+					{
+						max_diff = i;
+					}
+				}
+
+				descend_count++;
+				double diff_inc = diffs[max_diff] - center_diff;
+				if (diff_inc > 0.0)
+				{
+					Rrt::Scalar corner[Rrt::D];
+					int* v_choices = choices+(max_diff*Rrt::D);
+					for (int j=0;j<Rrt::D; ++j) corner[j] = fp754::walkFloats(center[j], v_choices[j]);
+					Rrt::copy(corner, center);
+					center_diff = m_abs(diff(center));
+				}
+				else
+				{
+					return center_diff;
+				}
+			} 
+		}
 	};
 
 	
 	Rrt rrt;
-	rrt.init(-100.0f, 100.0f, 0.01f);
+	rrt.init(-1000.0f, 1000.0f, 0.01f);
 	Rrt::Vertex v = rrt.nextRand();
 	double d = m_abs(Instrum::diff(v));
 
-	Rrt::Type cube[16*4];
-	Rrt::build_cube(cube);
+	Rrt::Scalar cube[16*4];
+	Rrt::build_cube(cube, 1.e-2f);
+	Instrum::descend(v, cube);
+
+	{
+		Rrt::Scalar cube[16*4];
+		Rrt::build_cube(cube, 1.e-4f);
+
+		int choices[81*4];
+		Rrt::build_choices(choices);
+
+		double largest_diff1 = 0.0;
+		double largest_diff2 = 0.0;
+		double largest_diff3 = 0.0;
+
+		int pt_count = 1024*64;
+		for (int i=0;i<pt_count; ++i) 
+		{
+			Rrt::Vertex v;
+			if (1) 
+				v = rrt.next();
+			else
+				v = rrt.nextRand();
+
+			double d1, d2, d3;
+			d1 = m_abs(Instrum::diff(v));
+			d2 = Instrum::descend(v, cube);
+			d3 = Instrum::descend(v, choices);
+			
+			if (d1 > largest_diff1)
+				largest_diff1 = d1;
+			if (d2 > largest_diff2)
+				largest_diff2 = d2;
+			if (d3 > largest_diff3)
+				largest_diff3 = d3;
+		}
+		// eps is at least half of largest_diff.
+		printf("%f,%f,%f\n", float(largest_diff1), float(largest_diff2), float(largest_diff3));
+	}
+	
 
 	return 0;
 }
