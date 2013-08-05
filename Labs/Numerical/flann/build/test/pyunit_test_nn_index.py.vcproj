@@ -1,0 +1,275 @@
+<?xml version="1.0" encoding = "Windows-1252"?>
+<VisualStudioProject
+	ProjectType="Visual C++"
+	Version="9.00"
+	Name="pyunit_test_nn_index.py"
+	ProjectGUID="{C1517570-7C3C-42F9-8461-3F9DDE9616E7}"
+	Keyword="Win32Proj">
+	<Platforms>
+		<Platform
+			Name="Win32"/>
+	</Platforms>
+	<Configurations>
+		<Configuration
+			Name="Debug|Win32"
+			OutputDirectory="Debug"
+			IntermediateDirectory="pyunit_test_nn_index.py.dir\Debug"
+			ConfigurationType="10"
+			UseOfMFC="0"
+			ATLMinimizesCRunTimeLibraryUsage="FALSE"
+			CharacterSet="2">
+			<Tool
+				Name="VCCLCompilerTool"
+				AdditionalOptions=" /bigobj"
+				AdditionalIncludeDirectories="Z:\Personal\Lab\Physics\lamby\flann\src\cpp;"
+				ExceptionHandling="0"
+				WarningLevel="1"
+				PreprocessorDefinitions="_CRT_SECURE_NO_WARNINGS;_SCL_SECURE_NO_WARNINGS;CMAKE_INTDIR=\&quot;Debug\&quot;"
+				AssemblerListingLocation="Debug"
+				ObjectFile="$(IntDir)\"
+/>
+			<Tool
+				Name="VCCustomBuildTool"/>
+			<Tool
+				Name="VCResourceCompilerTool"
+				AdditionalIncludeDirectories="Z:\Personal\Lab\Physics\lamby\flann\src\cpp;"
+				PreprocessorDefinitions="_CRT_SECURE_NO_WARNINGS;_SCL_SECURE_NO_WARNINGS;CMAKE_INTDIR=\&quot;Debug\&quot;"/>
+			<Tool
+				Name="VCMIDLTool"
+				AdditionalIncludeDirectories="Z:\Personal\Lab\Physics\lamby\flann\src\cpp;"
+				MkTypLibCompatible="FALSE"
+				TargetEnvironment="1"
+				GenerateStublessProxies="TRUE"
+				TypeLibraryName="$(InputName).tlb"
+				OutputDirectory="$(IntDir)"
+				HeaderFileName="$(InputName).h"
+				DLLDataFileName=""
+				InterfaceIdentifierFileName="$(InputName)_i.c"
+				ProxyFileName="$(InputName)_p.c"/>
+			<Tool
+				Name="VCPreBuildEventTool"/>
+			<Tool
+				Name="VCPreLinkEventTool"/>
+			<Tool
+				Name="VCPostBuildEventTool"/>
+		</Configuration>
+		<Configuration
+			Name="Release|Win32"
+			OutputDirectory="Release"
+			IntermediateDirectory="pyunit_test_nn_index.py.dir\Release"
+			ConfigurationType="10"
+			UseOfMFC="0"
+			ATLMinimizesCRunTimeLibraryUsage="FALSE"
+			CharacterSet="2">
+			<Tool
+				Name="VCCLCompilerTool"
+				AdditionalOptions=" /bigobj"
+				AdditionalIncludeDirectories="Z:\Personal\Lab\Physics\lamby\flann\src\cpp;"
+				ExceptionHandling="0"
+				WarningLevel="1"
+				PreprocessorDefinitions="_CRT_SECURE_NO_WARNINGS;_SCL_SECURE_NO_WARNINGS;CMAKE_INTDIR=\&quot;Release\&quot;"
+				AssemblerListingLocation="Release"
+				ObjectFile="$(IntDir)\"
+/>
+			<Tool
+				Name="VCCustomBuildTool"/>
+			<Tool
+				Name="VCResourceCompilerTool"
+				AdditionalIncludeDirectories="Z:\Personal\Lab\Physics\lamby\flann\src\cpp;"
+				PreprocessorDefinitions="_CRT_SECURE_NO_WARNINGS;_SCL_SECURE_NO_WARNINGS;CMAKE_INTDIR=\&quot;Release\&quot;"/>
+			<Tool
+				Name="VCMIDLTool"
+				AdditionalIncludeDirectories="Z:\Personal\Lab\Physics\lamby\flann\src\cpp;"
+				MkTypLibCompatible="FALSE"
+				TargetEnvironment="1"
+				GenerateStublessProxies="TRUE"
+				TypeLibraryName="$(InputName).tlb"
+				OutputDirectory="$(IntDir)"
+				HeaderFileName="$(InputName).h"
+				DLLDataFileName=""
+				InterfaceIdentifierFileName="$(InputName)_i.c"
+				ProxyFileName="$(InputName)_p.c"/>
+			<Tool
+				Name="VCPreBuildEventTool"/>
+			<Tool
+				Name="VCPreLinkEventTool"/>
+			<Tool
+				Name="VCPostBuildEventTool"/>
+		</Configuration>
+		<Configuration
+			Name="MinSizeRel|Win32"
+			OutputDirectory="MinSizeRel"
+			IntermediateDirectory="pyunit_test_nn_index.py.dir\MinSizeRel"
+			ConfigurationType="10"
+			UseOfMFC="0"
+			ATLMinimizesCRunTimeLibraryUsage="FALSE"
+			CharacterSet="2">
+			<Tool
+				Name="VCCLCompilerTool"
+				AdditionalOptions=" /bigobj"
+				AdditionalIncludeDirectories="Z:\Personal\Lab\Physics\lamby\flann\src\cpp;"
+				ExceptionHandling="0"
+				WarningLevel="1"
+				PreprocessorDefinitions="_CRT_SECURE_NO_WARNINGS;_SCL_SECURE_NO_WARNINGS;CMAKE_INTDIR=\&quot;MinSizeRel\&quot;"
+				AssemblerListingLocation="MinSizeRel"
+				ObjectFile="$(IntDir)\"
+/>
+			<Tool
+				Name="VCCustomBuildTool"/>
+			<Tool
+				Name="VCResourceCompilerTool"
+				AdditionalIncludeDirectories="Z:\Personal\Lab\Physics\lamby\flann\src\cpp;"
+				PreprocessorDefinitions="_CRT_SECURE_NO_WARNINGS;_SCL_SECURE_NO_WARNINGS;CMAKE_INTDIR=\&quot;MinSizeRel\&quot;"/>
+			<Tool
+				Name="VCMIDLTool"
+				AdditionalIncludeDirectories="Z:\Personal\Lab\Physics\lamby\flann\src\cpp;"
+				MkTypLibCompatible="FALSE"
+				TargetEnvironment="1"
+				GenerateStublessProxies="TRUE"
+				TypeLibraryName="$(InputName).tlb"
+				OutputDirectory="$(IntDir)"
+				HeaderFileName="$(InputName).h"
+				DLLDataFileName=""
+				InterfaceIdentifierFileName="$(InputName)_i.c"
+				ProxyFileName="$(InputName)_p.c"/>
+			<Tool
+				Name="VCPreBuildEventTool"/>
+			<Tool
+				Name="VCPreLinkEventTool"/>
+			<Tool
+				Name="VCPostBuildEventTool"/>
+		</Configuration>
+		<Configuration
+			Name="RelWithDebInfo|Win32"
+			OutputDirectory="RelWithDebInfo"
+			IntermediateDirectory="pyunit_test_nn_index.py.dir\RelWithDebInfo"
+			ConfigurationType="10"
+			UseOfMFC="0"
+			ATLMinimizesCRunTimeLibraryUsage="FALSE"
+			CharacterSet="2">
+			<Tool
+				Name="VCCLCompilerTool"
+				AdditionalOptions=" /bigobj"
+				AdditionalIncludeDirectories="Z:\Personal\Lab\Physics\lamby\flann\src\cpp;"
+				ExceptionHandling="0"
+				WarningLevel="1"
+				PreprocessorDefinitions="_CRT_SECURE_NO_WARNINGS;_SCL_SECURE_NO_WARNINGS;CMAKE_INTDIR=\&quot;RelWithDebInfo\&quot;"
+				AssemblerListingLocation="RelWithDebInfo"
+				ObjectFile="$(IntDir)\"
+/>
+			<Tool
+				Name="VCCustomBuildTool"/>
+			<Tool
+				Name="VCResourceCompilerTool"
+				AdditionalIncludeDirectories="Z:\Personal\Lab\Physics\lamby\flann\src\cpp;"
+				PreprocessorDefinitions="_CRT_SECURE_NO_WARNINGS;_SCL_SECURE_NO_WARNINGS;CMAKE_INTDIR=\&quot;RelWithDebInfo\&quot;"/>
+			<Tool
+				Name="VCMIDLTool"
+				AdditionalIncludeDirectories="Z:\Personal\Lab\Physics\lamby\flann\src\cpp;"
+				MkTypLibCompatible="FALSE"
+				TargetEnvironment="1"
+				GenerateStublessProxies="TRUE"
+				TypeLibraryName="$(InputName).tlb"
+				OutputDirectory="$(IntDir)"
+				HeaderFileName="$(InputName).h"
+				DLLDataFileName=""
+				InterfaceIdentifierFileName="$(InputName)_i.c"
+				ProxyFileName="$(InputName)_p.c"/>
+			<Tool
+				Name="VCPreBuildEventTool"/>
+			<Tool
+				Name="VCPreLinkEventTool"/>
+			<Tool
+				Name="VCPostBuildEventTool"/>
+		</Configuration>
+	</Configurations>
+	<Files>
+			<File
+				RelativePath="Z:\Personal\Lab\Physics\lamby\flann\build\test\CMakeFiles\pyunit_test_nn_index.py">
+			</File>
+			<File
+				RelativePath="Z:\Personal\Lab\Physics\lamby\flann\test\CMakeLists.txt">
+				<FileConfiguration
+					Name="Debug|Win32">
+					<Tool
+					Name="VCCustomBuildTool"
+					Description="Building Custom Rule Z:/Personal/Lab/Physics/lamby/flann/test/CMakeLists.txt"
+					CommandLine="D:\jad2\Progs\cmake-2.8.11.2-win32-x86\bin\cmake.exe -HZ:/Personal/Lab/Physics/lamby/flann -BZ:/Personal/Lab/Physics/lamby/flann/build --check-stamp-file Z:\Personal\Lab\Physics\lamby\flann\build\test\CMakeFiles\generate.stamp&#x0D;&#x0A;if errorlevel 1 goto :VCReportError"
+					AdditionalDependencies="Z:\Personal\Lab\Physics\lamby\flann\test\CMakeLists.txt;Z:\Personal\Lab\Physics\lamby\flann\test\CMakeLists.txt;"
+					Outputs="Z:\Personal\Lab\Physics\lamby\flann\build\test\CMakeFiles\generate.stamp"/>
+				</FileConfiguration>
+				<FileConfiguration
+					Name="Release|Win32">
+					<Tool
+					Name="VCCustomBuildTool"
+					Description="Building Custom Rule Z:/Personal/Lab/Physics/lamby/flann/test/CMakeLists.txt"
+					CommandLine="D:\jad2\Progs\cmake-2.8.11.2-win32-x86\bin\cmake.exe -HZ:/Personal/Lab/Physics/lamby/flann -BZ:/Personal/Lab/Physics/lamby/flann/build --check-stamp-file Z:\Personal\Lab\Physics\lamby\flann\build\test\CMakeFiles\generate.stamp&#x0D;&#x0A;if errorlevel 1 goto :VCReportError"
+					AdditionalDependencies="Z:\Personal\Lab\Physics\lamby\flann\test\CMakeLists.txt;Z:\Personal\Lab\Physics\lamby\flann\test\CMakeLists.txt;"
+					Outputs="Z:\Personal\Lab\Physics\lamby\flann\build\test\CMakeFiles\generate.stamp"/>
+				</FileConfiguration>
+				<FileConfiguration
+					Name="MinSizeRel|Win32">
+					<Tool
+					Name="VCCustomBuildTool"
+					Description="Building Custom Rule Z:/Personal/Lab/Physics/lamby/flann/test/CMakeLists.txt"
+					CommandLine="D:\jad2\Progs\cmake-2.8.11.2-win32-x86\bin\cmake.exe -HZ:/Personal/Lab/Physics/lamby/flann -BZ:/Personal/Lab/Physics/lamby/flann/build --check-stamp-file Z:\Personal\Lab\Physics\lamby\flann\build\test\CMakeFiles\generate.stamp&#x0D;&#x0A;if errorlevel 1 goto :VCReportError"
+					AdditionalDependencies="Z:\Personal\Lab\Physics\lamby\flann\test\CMakeLists.txt;Z:\Personal\Lab\Physics\lamby\flann\test\CMakeLists.txt;"
+					Outputs="Z:\Personal\Lab\Physics\lamby\flann\build\test\CMakeFiles\generate.stamp"/>
+				</FileConfiguration>
+				<FileConfiguration
+					Name="RelWithDebInfo|Win32">
+					<Tool
+					Name="VCCustomBuildTool"
+					Description="Building Custom Rule Z:/Personal/Lab/Physics/lamby/flann/test/CMakeLists.txt"
+					CommandLine="D:\jad2\Progs\cmake-2.8.11.2-win32-x86\bin\cmake.exe -HZ:/Personal/Lab/Physics/lamby/flann -BZ:/Personal/Lab/Physics/lamby/flann/build --check-stamp-file Z:\Personal\Lab\Physics\lamby\flann\build\test\CMakeFiles\generate.stamp&#x0D;&#x0A;if errorlevel 1 goto :VCReportError"
+					AdditionalDependencies="Z:\Personal\Lab\Physics\lamby\flann\test\CMakeLists.txt;Z:\Personal\Lab\Physics\lamby\flann\test\CMakeLists.txt;"
+					Outputs="Z:\Personal\Lab\Physics\lamby\flann\build\test\CMakeFiles\generate.stamp"/>
+				</FileConfiguration>
+			</File>
+		<Filter
+			Name="CMake Rules"
+			Filter="">
+			<File
+				RelativePath="Z:\Personal\Lab\Physics\lamby\flann\build\test\CMakeFiles\pyunit_test_nn_index.py.rule">
+				<FileConfiguration
+					Name="Debug|Win32">
+					<Tool
+					Name="VCCustomBuildTool"
+					Description="Running pyunit test(s) test_nn_index.py"
+					CommandLine="cd Z:\Personal\Lab\Physics\lamby\flann\test&#x0D;&#x0A;if errorlevel 1 goto :VCReportError&#x0D;&#x0A;Z:&#x0D;&#x0A;if errorlevel 1 goto :VCReportError&#x0D;&#x0A;c:\Python27\python.exe Z:/Personal/Lab/Physics/lamby/flann/bin/run_test.py Z:/Personal/Lab/Physics/lamby/flann/test/test_nn_index.py&#x0D;&#x0A;if errorlevel 1 goto :VCReportError"
+					AdditionalDependencies="Z:\Personal\Lab\Physics\lamby\flann\test\test_nn_index.py;"
+					Outputs="Z:\Personal\Lab\Physics\lamby\flann\build\test\CMakeFiles\pyunit_test_nn_index.py"/>
+				</FileConfiguration>
+				<FileConfiguration
+					Name="Release|Win32">
+					<Tool
+					Name="VCCustomBuildTool"
+					Description="Running pyunit test(s) test_nn_index.py"
+					CommandLine="cd Z:\Personal\Lab\Physics\lamby\flann\test&#x0D;&#x0A;if errorlevel 1 goto :VCReportError&#x0D;&#x0A;Z:&#x0D;&#x0A;if errorlevel 1 goto :VCReportError&#x0D;&#x0A;c:\Python27\python.exe Z:/Personal/Lab/Physics/lamby/flann/bin/run_test.py Z:/Personal/Lab/Physics/lamby/flann/test/test_nn_index.py&#x0D;&#x0A;if errorlevel 1 goto :VCReportError"
+					AdditionalDependencies="Z:\Personal\Lab\Physics\lamby\flann\test\test_nn_index.py;"
+					Outputs="Z:\Personal\Lab\Physics\lamby\flann\build\test\CMakeFiles\pyunit_test_nn_index.py"/>
+				</FileConfiguration>
+				<FileConfiguration
+					Name="MinSizeRel|Win32">
+					<Tool
+					Name="VCCustomBuildTool"
+					Description="Running pyunit test(s) test_nn_index.py"
+					CommandLine="cd Z:\Personal\Lab\Physics\lamby\flann\test&#x0D;&#x0A;if errorlevel 1 goto :VCReportError&#x0D;&#x0A;Z:&#x0D;&#x0A;if errorlevel 1 goto :VCReportError&#x0D;&#x0A;c:\Python27\python.exe Z:/Personal/Lab/Physics/lamby/flann/bin/run_test.py Z:/Personal/Lab/Physics/lamby/flann/test/test_nn_index.py&#x0D;&#x0A;if errorlevel 1 goto :VCReportError"
+					AdditionalDependencies="Z:\Personal\Lab\Physics\lamby\flann\test\test_nn_index.py;"
+					Outputs="Z:\Personal\Lab\Physics\lamby\flann\build\test\CMakeFiles\pyunit_test_nn_index.py"/>
+				</FileConfiguration>
+				<FileConfiguration
+					Name="RelWithDebInfo|Win32">
+					<Tool
+					Name="VCCustomBuildTool"
+					Description="Running pyunit test(s) test_nn_index.py"
+					CommandLine="cd Z:\Personal\Lab\Physics\lamby\flann\test&#x0D;&#x0A;if errorlevel 1 goto :VCReportError&#x0D;&#x0A;Z:&#x0D;&#x0A;if errorlevel 1 goto :VCReportError&#x0D;&#x0A;c:\Python27\python.exe Z:/Personal/Lab/Physics/lamby/flann/bin/run_test.py Z:/Personal/Lab/Physics/lamby/flann/test/test_nn_index.py&#x0D;&#x0A;if errorlevel 1 goto :VCReportError"
+					AdditionalDependencies="Z:\Personal\Lab\Physics\lamby\flann\test\test_nn_index.py;"
+					Outputs="Z:\Personal\Lab\Physics\lamby\flann\build\test\CMakeFiles\pyunit_test_nn_index.py"/>
+				</FileConfiguration>
+			</File>
+		</Filter>
+	</Files>
+	<Globals>
+	</Globals>
+</VisualStudioProject>
