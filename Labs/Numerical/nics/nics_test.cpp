@@ -174,6 +174,7 @@ int nics_test1()
 				largest_diff3 = d3;
 		}
 		// eps is at least half of largest_diff.
+		// Is it true that eps must go down with less prec unconditionally? Then we can get upp. Bound
 		printf("%f,%f,%f\n", float(largest_diff1), float(largest_diff2), float(largest_diff3));
 	}
 	
