@@ -133,13 +133,23 @@ int nics_test1()
 
 	
 	Rrt rrt;
-	rrt.init(-1000.0f, 1000.0f, 0.01f);
+	float test_radius = 1000.0f;
+	rrt.init(-test_radius, test_radius, 0.01f);
 	Rrt::Vertex v = rrt.nextRand();
 	double d = m_abs(Instrum::diff(v));
 
 	Rrt::Scalar cube[16*4];
 	Rrt::build_cube(cube, 1.e-2f);
 	Instrum::descend(v, cube);
+
+	{
+		float gamma4 = (4.0f * fp754::floatMachineEps() / ( 1.0f -  4.0f * fp754::floatMachineEps()));
+		// This is assuming the four values are inexact, fix this to obtain a tighter bound.
+		//float abse = (fabs(ax*by)+fabs(bx*ay)) * gamma4; // what is the maximum of abse given the range?
+
+		float max_abse = (fabs(test_radius*test_radius)+fabs(test_radius*test_radius)) * gamma4;
+		printf("test_radius:%f, max_abse: %f\n", test_radius, float(max_abse));
+	}
 
 	{
 		Rrt::Scalar cube[16*4];
@@ -174,10 +184,9 @@ int nics_test1()
 				largest_diff3 = d3;
 		}
 		// eps is at least half of largest_diff.
-		// Is it true that eps must go down with less prec unconditionally? Then we can get upp. Bound
+		// Is it true that eps must go down with less prec unconditionally? Then we can get upp. Bound.
 		printf("%f,%f,%f\n", float(largest_diff1), float(largest_diff2), float(largest_diff3));
 	}
-	
 
 	return 0;
 }
