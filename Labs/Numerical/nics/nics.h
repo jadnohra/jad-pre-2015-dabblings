@@ -441,30 +441,30 @@ namespace nics
 			FLTCT_nINF		= 0xFF800000,
 		};
 
-		float hexToFloat(unsigned int hex) { float f; *((unsigned int*) ((void*) &f)) = hex; return f; }
-		unsigned int floatToHex(float f) { unsigned int hex = *((unsigned int*) ((void*) &f)); return hex; }
+		float h2f(unsigned int hex) { float f; *((unsigned int*) ((void*) &f)) = hex; return f; }
+		unsigned int f2h(float f) { unsigned int hex = *((unsigned int*) ((void*) &f)); return hex; }
 
 		float nextFloat(float f)
 		{
-			const unsigned int hex = floatToHex(f);
+			const unsigned int hex = f2h(f);
 			const unsigned int sgn = (hex & FLTMASK_SGN);
 			const unsigned int exp = (hex & FLTMASK_EXP);
 			const unsigned int mant = (hex & FLTMASK_MANT);
-			if (hex == 0) return hexToFloat(0 | FLTCT_EXPm126 | (0) );
-			if (mant != FLTMASK_MANT) return hexToFloat(sgn | exp | (mant+1) );
-			if (exp < FLTCT_EXP127) return hexToFloat(sgn | (exp+ (1<<FLTSHIFT_EXP) ) | (0) );
+			if (hex == 0) return h2f(0 | FLTCT_EXPm126 | (0) );
+			if (mant != FLTMASK_MANT) return h2f(sgn | exp | (mant+1) );
+			if (exp < FLTCT_EXP127) return h2f(sgn | (exp+ (1<<FLTSHIFT_EXP) ) | (0) );
 			return f;
 		}
 
 		float prevFloat(float f)
 		{
-			const unsigned int hex = floatToHex(f);
+			const unsigned int hex = f2h(f);
 			const unsigned int sgn = (hex & FLTMASK_SGN);
 			const unsigned int exp = (hex & FLTMASK_EXP);
 			const unsigned int mant = (hex & FLTMASK_MANT);
-			if (hex == 0) return hexToFloat( (unsigned int) ( FLTMASK_SGN | FLTCT_EXPm126 | 0 ) );
-			if (mant != 0) return hexToFloat(sgn | exp | (mant-1) );
-			if (exp != 0) return hexToFloat(sgn | (exp- (1<<FLTSHIFT_EXP)) | (FLTMASK_MANT) );
+			if (hex == 0) return h2f( (unsigned int) ( FLTMASK_SGN | FLTCT_EXPm126 | 0 ) );
+			if (mant != 0) return h2f(sgn | exp | (mant-1) );
+			if (exp != 0) return h2f(sgn | (exp- (1<<FLTSHIFT_EXP)) | (FLTMASK_MANT) );
 			return f;
 		}
 
@@ -491,25 +491,30 @@ namespace nics
 
 		float floatMachineEps()
 		{
-			return 0.5f * hexToFloat(FLTCT_EXPm23);
+			return 0.5f * h2f(FLTCT_EXPm23);
 		}
 
 		bool isDenorm(float f)
 		{
-			unsigned int hex = floatToHex(f);
+			unsigned int hex = f2h(f);
 			return (hex & FLTMASK_EXP) == 0;
 		}
 
 		bool isNegBitSet(float f)
 		{
-			unsigned int hex = floatToHex(f);
+			unsigned int hex = f2h(f);
 			return (hex & FLTMASK_SGN) == FLTMASK_SGN;
+		}
+
+		float negBitf(float f)
+		{
+			return isNegBitSet(f) ? -1.0f : 1.0f;
 		}
 
 	#ifdef HK_MATH_VECTOR4_H
 		void setVector4Hex(hkVector4& vec,unsigned int a, unsigned int  b, unsigned int  c, unsigned int d)
 		{
-			vec.set( hexToFloat(a), hexToFloat(b), hexToFloat(c), hexToFloat(d) );
+			vec.set( h2f(a), h2f(b), h2f(c), h2f(d) );
 		}
 	#endif
 
