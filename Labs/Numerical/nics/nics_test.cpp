@@ -203,7 +203,7 @@ struct Instrum
 
 int nics_test1()
 {
-	float test_radius = 10.0f;
+	float test_radius = 1000.0f;
 	int test_pt_count = 1024*32;
 	
 	if (0)
