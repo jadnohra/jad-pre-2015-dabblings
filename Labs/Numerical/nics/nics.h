@@ -421,7 +421,6 @@ namespace nics
 
 namespace nics
 {
-	
 	namespace fp754
 	{
 		enum
@@ -511,13 +510,6 @@ namespace nics
 			return isNegBitSet(f) ? -1.0f : 1.0f;
 		}
 
-	#ifdef HK_MATH_VECTOR4_H
-		void setVector4Hex(hkVector4& vec,unsigned int a, unsigned int  b, unsigned int  c, unsigned int d)
-		{
-			vec.set( h2f(a), h2f(b), h2f(c), h2f(d) );
-		}
-	#endif
-
 	// 	#include <float.h>
 	// 	void getX87Precision()
 	// 	{
@@ -531,7 +523,139 @@ namespace nics
 	// 
 	// 		return 0;
 	// 	}
+
 	}
+
+	namespace fp754
+	{
+		template<int MantissaBits>
+		struct float_reduce_chop
+		{
+			enum { Mask = (unsigned int(-1))<< (23-MantissaBits) };
+			static float reduce(float f) 
+			{ 
+				static int guard[(23-MantissaBits)+1];
+
+				using namespace fp754;
+				return h2f(f2h(f)&Mask); 
+			}
+		};
+
+		template<int MantissaBits>
+		struct float_reduce_round
+		{
+			enum { Mask = (unsigned int(-1))<< (23-MantissaBits) };
+			enum { RoundEps = (unsigned int(1))<< (23-MantissaBits) };
+			
+			static float reduce(float f) 
+			{ 
+				using namespace fp754;
+				
+				static int guard[(23-MantissaBits)-1];
+
+				if (f < 0.0f) return -reduce(-f);
+				float rnd_mul = h2f(FLTCT_EXP0 | (RoundEps>>1));
+				float r = h2f(f2h(f * rnd_mul) & Mask); 
+				return r;
+			}
+		};
+
+		template<typename Reduce>
+		struct float_reduce
+		{
+			float v;
+
+			static float reduce(float f) { return Reduce::reduce(f); }
+
+			float_reduce() {}
+			float_reduce(const float f) { v = reduce(f); }
+
+			//operator float() { return v; }
+			operator double() { return double(v); }
+
+			float_reduce operator-() { return float_reduce(-v); }
+ 			float_reduce operator+(const float_reduce& v1) { float o = reduce(v+v1.v); return float_reduce(o); }
+ 			float_reduce operator-(const float_reduce& v1) { float o = reduce(v-v1.v); return float_reduce(o); }
+ 			float_reduce operator*(const float_reduce& v1) { float o = reduce(v*v1.v); return float_reduce(o); }
+			float_reduce operator/(const float_reduce& v1) { float o = reduce(v/v1.v); return float_reduce(o); }
+
+			float_reduce& operator*=(const float_reduce& v1) { v = reduce(v*v1.v); return *this; }
+			float_reduce& operator+=(const float_reduce& v1) { v = reduce(v+v1.v); return *this; }
+			float_reduce& operator/=(const float_reduce& v1) { v = reduce(v/v1.v); return *this; }
+			
+			bool operator==(const float_reduce& v1) const { return v >= v1.v; }
+			bool operator>=(const float_reduce& v1) const { return v >= v1.v; }
+			bool operator>(const float_reduce& v1) const { return v > v1.v; }
+			bool operator<(const float_reduce& v1) const { return v < v1.v; }
+		};
+		template<typename Reduce>
+		float_reduce<Reduce> abs(float_reduce<Reduce> v) { return v.0 >= 0.0f ? v : -v; }
+	}
+
+	template<typename T> T m_abs(T v) { return v >= T(0) ? v : -v; }
+	template<typename T> T m_max(T v1, T v2) { return v1 >= v2 ? v1 : v2; }
+	template<typename T> T m_min(T v1, T v2) { return v1 >= v2 ? v1 : v2; }
+
+	struct bint
+	{
+		typedef unsigned int ui;
+
+		ui m_sign;
+		ui m_1;
+
+		unsigned int size() const { return 1; }
+		void setSize(unsigned int s) {}
+		
+		ui& sign() { return m_sign; }
+		const ui& sign() const { return m_sign; }
+		ui& part(unsigned int i) { return m_1; }
+		ui& epart(unsigned int i) { i >= size() ? 0 : m_1; }
+		const ui& part(unsigned int i) const { return m_1; }
+		const ui& epart(unsigned int i) const { i >= size() ? 0 : m_1; }
+
+		void add(const bint& a, const bint& b)
+		{
+			if (a.sign() == b.sign())
+			{
+				bool al = a.size() <= b.size();
+				const bint& sl = al ? a : b;
+				const bint& sg = al ? b : a;
+
+				unsigned int ms = m_max(a.size(), b.size());
+				setSize(ms);
+
+				ui carry = 0;
+				sign() = a.sign();
+				for (unsigned int i=0; i<ms; ++i)
+				{
+					ui ai = sl.epart(i); ui bi = sg.part(i);
+					ui s = ai+bi+carry;
+					carry = s >= ai ? 1 : 0;
+					part(i) = s;
+				}
+			}
+			else
+			{
+
+			}
+		}
+
+		void sub_pos_gl(const bint& g, const bint& l)
+		{
+			unsigned int ms = g.size();
+			setSize(ms);
+			
+			ui carry = 0;
+			sign() = 1;
+			for (unsigned int i=0; i<ms; ++i)
+			{
+				ui ai = l.epart(i); ui bi = g.part(i);
+				ui s = (bi-(ai+carry));
+				carry = s >= bi ? 1 : 0;
+				part(i) = s;
+			}
+		}
+	};
 }
 
 #endif // NICS_H

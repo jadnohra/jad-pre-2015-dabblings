@@ -3,6 +3,7 @@
 #include "conio.h"
 
 using namespace nics;
+using namespace nics::fp754;
 
 void rtt_test1()
 {
@@ -22,79 +23,11 @@ void rtt_test1()
 	}
 }
 
-template<int MantissaBits>
-struct float_reduce_chop
-{
-	enum { Mask = (unsigned int(-1))<< (23-MantissaBits) };
-	static float reduce(float f) 
-	{ 
-		static int guard[(23-MantissaBits)+1];
-
-		using namespace fp754;
-		return h2f(f2h(f)&Mask); 
-	}
-};
-
-template<int MantissaBits>
-struct float_reduce_round
-{
-	enum { Mask = (unsigned int(-1))<< (23-MantissaBits) };
-	enum { RoundEps = (unsigned int(1))<< (23-MantissaBits) };
-	
-	static float reduce(float f) 
-	{ 
-		using namespace fp754;
-		
-		static int guard[(23-MantissaBits)-1];
-
-		if (f < 0.0f) return -reduce(-f);
-		float rnd_mul = h2f(FLTCT_EXP0 | (RoundEps>>1));
-		float r = h2f(f2h(f * rnd_mul) & Mask); 
-		return r;
-	}
-};
-
-template<typename Reduce>
-struct float_reduce
-{
-	float v;
-
-	static float reduce(float f) { return Reduce::reduce(f); }
-
-	float_reduce() {}
-	float_reduce(const float f) { v = reduce(f); }
-
-	//operator float() { return v; }
-	operator double() { return double(v); }
-
-	float_reduce operator-() { return float_reduce(-v); }
- 	float_reduce operator+(const float_reduce& v1) { float o = reduce(v+v1.v); return float_reduce(o); }
- 	float_reduce operator-(const float_reduce& v1) { float o = reduce(v-v1.v); return float_reduce(o); }
- 	float_reduce operator*(const float_reduce& v1) { float o = reduce(v*v1.v); return float_reduce(o); }
-	float_reduce operator/(const float_reduce& v1) { float o = reduce(v/v1.v); return float_reduce(o); }
-
-	float_reduce& operator*=(const float_reduce& v1) { v = reduce(v*v1.v); return *this; }
-	float_reduce& operator+=(const float_reduce& v1) { v = reduce(v+v1.v); return *this; }
-	float_reduce& operator/=(const float_reduce& v1) { v = reduce(v/v1.v); return *this; }
-	
-	bool operator==(const float_reduce& v1) const { return v >= v1.v; }
-	bool operator>=(const float_reduce& v1) const { return v >= v1.v; }
-	bool operator>(const float_reduce& v1) const { return v > v1.v; }
-	bool operator<(const float_reduce& v1) const { return v < v1.v; }
-};
-template<typename Reduce>
-float_reduce<Reduce> abs(float_reduce<Reduce> v) { return v.0 >= 0.0f ? v : -v; }
-
-
 template<typename T>
 T det_2d(T a, T b, T c, T d) 
 { 
 	return a*d-b*c; 
 }
-
-template<typename T>
-T m_abs(T v) { return v >= T(0) ? v : -v; }
-
 
 
 template<typename Rrt, typename T>
