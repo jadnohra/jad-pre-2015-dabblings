@@ -295,6 +295,10 @@ int nics_test1()
 
 int main()
 {
+	bint a(1);
+	bint b(-5);
+	bint c; c.add(a, b);
+
 	nics_test1();
 
 	printf("done..."); _getch();

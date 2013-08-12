@@ -600,18 +600,21 @@ namespace nics
 	{
 		typedef unsigned int ui;
 
-		ui m_sign;
-		ui m_1;
-
-		unsigned int size() const { return 1; }
-		void setSize(unsigned int s) {}
+		ui m_1[4];
+		int m_sign;
+		unsigned int m_size;
+				
+		unsigned int size() const { return m_size; }
+		void setSize(unsigned int s) { m_size = s; }
 		
-		ui& sign() { return m_sign; }
-		const ui& sign() const { return m_sign; }
-		ui& part(unsigned int i) { return m_1; }
-		ui& epart(unsigned int i) { i >= size() ? 0 : m_1; }
-		const ui& part(unsigned int i) const { return m_1; }
-		const ui& epart(unsigned int i) const { i >= size() ? 0 : m_1; }
+		int& sign() { return m_sign; }
+		const int& sign() const { return m_sign; }
+		ui& part(unsigned int i) { return m_1[i]; }
+		const ui& part(unsigned int i) const { return m_1[i]; }
+		ui epart(unsigned int i) const { return i >= size() ? 0 : m_1[i]; }
+
+		bint() : m_size(0) {}
+		bint(int i) : m_size(1) { part(0) = m_abs(i); sign() = i > 0 ? 1 : -1; }
 
 		void add(const bint& a, const bint& b)
 		{
@@ -636,11 +639,34 @@ namespace nics
 			}
 			else
 			{
+				ui ap = a.sign();
+				const bint& sp = ap ? a : b;
+				const bint& sn = ap ? b : a;
 
+				if (abs_gte(sp, sn))
+				{
+					sub_abs_gl(sp, sn);
+				}
+				else
+				{
+					sub_abs_gl(sn, sp);
+					sign() = -1;
+				}
 			}
 		}
 
-		void sub_pos_gl(const bint& g, const bint& l)
+		bool abs_gte(const bint& a, const bint& b)
+		{
+			unsigned int ms = m_max(a.size(), b.size());
+			for (unsigned int i=ms-1, j=0; j<ms; --i, ++j)
+			{
+				ui ai = a.epart(i); ui bi = b.epart(i); 
+				if (ai > bi) return true; else if (ai < bi) return false;
+			}
+			return true;
+		}
+
+		void sub_abs_gl(const bint& g, const bint& l)
 		{
 			unsigned int ms = g.size();
 			setSize(ms);
