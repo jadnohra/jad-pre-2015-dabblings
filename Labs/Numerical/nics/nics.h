@@ -596,9 +596,15 @@ namespace nics
 	template<typename T> T m_max(T v1, T v2) { return v1 >= v2 ? v1 : v2; }
 	template<typename T> T m_min(T v1, T v2) { return v1 >= v2 ? v1 : v2; }
 
-	struct bint
+	template<typename T> struct UnsignedType {};
+	template<> struct UnsignedType<int> { typedef unsigned int UT; };
+	template<> struct UnsignedType<char> { typedef unsigned char UT; };
+	template<> struct UnsignedType<short> { typedef unsigned short UT; };
+
+	template<typename T, typename UT = UnsignedType<T>::UT >	// T must be unsigned
+	struct tbint
 	{
-		typedef unsigned int ui;
+		typedef UT ui;
 
 		ui m_1[4];
 		int m_sign;
@@ -613,19 +619,56 @@ namespace nics
 		const ui& part(unsigned int i) const { return m_1[i]; }
 		ui epart(unsigned int i) const { return i >= size() ? 0 : m_1[i]; }
 
-		bint() : m_size(0) {}
-		bint(int i) : m_size(1) { part(0) = m_abs(i); sign() = i > 0 ? 1 : -1; }
-
-		void add(const bint& a, const bint& b)
+		tbint() : m_size(0) {}
+		tbint(UT i, int sgn=1) : m_size(1) { part(0) = i; sign() = sgn; }
+	
+		template<typename J>
+		void setu(const J j, int sgn=1)
 		{
-			if (a.sign() == b.sign())
+			sign()=sgn;
+			setSize(sizeof(J)/sizeof(UT));
+
+			const UT* jp=(const UT*)&j;
+			for (unsigned int i=0;i<m_size;++i) part(i)=jp[i];
+			trim();
+		}
+
+		template<typename J, typename JU>
+		void set(const J j)
+		{
+			if (j>=0) 
+				setu((JU) j, 1);
+			else 
+				setu((JU) -j, -1);
+		}
+
+		void trim()
+		{
+			int zc = 0;
+			for (unsigned int i=0, j=m_size-1; i<m_size && part(j)==0; ++i, --j) zc++;
+			setSize(m_size-zc);
+		}
+		
+		void add(const tbint& a, const tbint& b)
+		{
+			add(a, b, b.sign());
+		}
+
+		void subtract(const tbint& a, const tbint& b)
+		{
+			add(a, b, -1*b.sign());
+		}
+
+		void add(const tbint& a, const tbint& b, int bsign)
+		{
+			if (a.sign() == bsign)
 			{
-				bool al = a.size() <= b.size();
-				const bint& sl = al ? a : b;
-				const bint& sg = al ? b : a;
+				bool al = (a.size() <= b.size());
+				const tbint& sl = al ? a : b;
+				const tbint& sg = al ? b : a;
 
 				unsigned int ms = m_max(a.size(), b.size());
-				setSize(ms);
+				setSize(a.size() == b.size() ? ms+1 : ms);
 
 				ui carry = 0;
 				sign() = a.sign();
@@ -633,15 +676,16 @@ namespace nics
 				{
 					ui ai = sl.epart(i); ui bi = sg.part(i);
 					ui s = ai+bi+carry;
-					carry = s >= ai ? 1 : 0;
+					carry = s >= ai ? 0 : 1;
 					part(i) = s;
 				}
+				if (carry) part(ms) = carry;
 			}
 			else
 			{
 				ui ap = a.sign();
-				const bint& sp = ap ? a : b;
-				const bint& sn = ap ? b : a;
+				const tbint& sp = ap ? a : b;
+				const tbint& sn = ap ? b : a;
 
 				if (abs_gte(sp, sn))
 				{
@@ -655,7 +699,7 @@ namespace nics
 			}
 		}
 
-		bool abs_gte(const bint& a, const bint& b)
+		bool abs_gte(const tbint& a, const tbint& b)
 		{
 			unsigned int ms = m_max(a.size(), b.size());
 			for (unsigned int i=ms-1, j=0; j<ms; --i, ++j)
@@ -666,22 +710,27 @@ namespace nics
 			return true;
 		}
 
-		void sub_abs_gl(const bint& g, const bint& l)
+		void sub_abs_gl(const tbint& g, const tbint& l)
 		{
 			unsigned int ms = g.size();
 			setSize(ms);
 			
 			ui carry = 0;
 			sign() = 1;
+			int zc = 0;
 			for (unsigned int i=0; i<ms; ++i)
 			{
 				ui ai = l.epart(i); ui bi = g.part(i);
-				ui s = (bi-(ai+carry));
+				ui s = (bi-carry)-ai;
 				carry = s >= bi ? 1 : 0;
 				part(i) = s;
 			}
+			trim();
 		}
 	};
+	typedef tbint<int> bint;
+	typedef tbint<char> bint8;
+	typedef tbint<short> bint16;
 }
 
 #endif // NICS_H

@@ -295,9 +295,29 @@ int nics_test1()
 
 int main()
 {
-	bint a(1);
-	bint b(-5);
-	bint c; c.add(a, b);
+	{
+		bint8 a(1);
+		bint8 b(-5);
+		bint8 c; c.add(a, b);
+
+		int x=0;x;
+	}
+
+	{
+		bint8 a(200);
+		bint8 b(199);
+		bint8 c; c.add(a, b);
+
+		bint8 d; d.subtract(c, bint8(1));
+		
+		bint8 e1; e1.add(bint8(200), bint8(100));
+		bint8 e; e.subtract(c, e1);
+
+		bint8 f; f.set<int, unsigned int>(399);
+		bint8 g; g.set<int, unsigned int>(-399);
+
+		int x=0;x;
+	}
 
 	nics_test1();
 
