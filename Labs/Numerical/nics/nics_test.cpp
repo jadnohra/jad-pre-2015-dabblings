@@ -295,6 +295,7 @@ int nics_test1()
 
 int main()
 {
+	int err = 0;
 	{
 		bint8 a(1);
 		bint8 b(-5);
@@ -308,19 +309,50 @@ int main()
 		bint8 b(199);
 		bint8 c; c.add(a, b);
 
-		bint8 d; d.subtract(c, bint8(1));
+		bint8 d; d.sub(c, bint8(1));
 		
 		bint8 e1; e1.add(bint8(200), bint8(100));
-		bint8 e; e.subtract(c, e1);
+		bint8 e; e.sub(c, e1);
 
-		bint8 f; f.set<int, unsigned int>(399);
-		bint8 g; g.set<int, unsigned int>(-399);
+		bint8 f; f.set<int>(399);
+		bint8 g; g.set<int>(-399);
+
+		int ff; f.get<int>(ff);
+		int gg; g.get<int>(gg);
+
+		
+		for (int i=0; i<1000; ++i)
+		{
+			int f = (rand()%255) * (rand()%2?-1:1);
+			int g = (rand()%255) * (rand()%2?-1:1);
+
+			bint8 ff; ff.set<int>(f);
+			bint8 gg; gg.set<int>(g);
+
+			bint8 hadd1; hadd1.add(ff, gg);
+			if (hadd1.get<int>() != f+g)
+				++err;
+
+			bint8 hadd2; hadd2.add(gg, ff);
+			if (hadd2.get<int>() != g+f)
+				++err;
+
+			bint8 hsub1; hsub1.sub(ff, gg);
+			if (hsub1.get<int>() != f-g)
+				++err;
+
+			bint8 hsub2; hsub2.sub(gg, ff);
+			if (hsub2.get<int>() != g-f)
+				++err;
+		}
+
+		// t
 
 		int x=0;x;
 	}
 
-	nics_test1();
+	if (0) nics_test1();
 
-	printf("done..."); _getch();
+	printf("done(%d) ...", err); _getch();
 	return 0;
 }

@@ -622,24 +622,48 @@ namespace nics
 		tbint() : m_size(0) {}
 		tbint(UT i, int sgn=1) : m_size(1) { part(0) = i; sign() = sgn; }
 	
-		template<typename J>
-		void setu(const J j, int sgn=1)
+		template<typename UJ>
+		void setu(UJ j, int sgn=1)
 		{
 			sign()=sgn;
-			setSize(sizeof(J)/sizeof(UT));
+			setSize(sizeof(UJ)/sizeof(UT));
 
-			const UT* jp=(const UT*)&j;
-			for (unsigned int i=0;i<m_size;++i) part(i)=jp[i];
+			const UJ mask = (UJ) UT(-1);
+			for (unsigned int i=0;i<m_size;++i) { part(i)=j&mask; j >>= (sizeof(UT)*8); }
 			trim();
 		}
 
-		template<typename J, typename JU>
+		template<typename J>
 		void set(const J j)
 		{
+			typedef UnsignedType<J>::UT UJ;
+
 			if (j>=0) 
-				setu((JU) j, 1);
+				setu((UJ) j, 1);
 			else 
-				setu((JU) -j, -1);
+				setu((UJ) -j, -1);
+		}
+
+		template<typename UJ>
+		void getu(UJ& j)
+		{
+			j = 0;
+			for (unsigned int i=0;i<m_size;++i) { j |= (UJ(part(i)) << (i*sizeof(UT)*8)); }
+		}
+
+		template<typename J>
+		void get(J& j)
+		{
+			typedef UnsignedType<J>::UT UJ;
+
+			UJ uj; getu(uj);
+			j = sign() * J(uj);
+		}
+
+		template<typename J>
+		J get()
+		{
+			J j; get(j); return j;
 		}
 
 		void trim()
@@ -654,7 +678,7 @@ namespace nics
 			add(a, b, b.sign());
 		}
 
-		void subtract(const tbint& a, const tbint& b)
+		void sub(const tbint& a, const tbint& b)
 		{
 			add(a, b, -1*b.sign());
 		}
@@ -668,7 +692,13 @@ namespace nics
 				const tbint& sg = al ? b : a;
 
 				unsigned int ms = m_max(a.size(), b.size());
-				setSize(a.size() == b.size() ? ms+1 : ms);
+				if (a.size() == b.size())
+				{
+					setSize(ms+1);
+					part(ms) = 0;
+				}
+				else
+					setSize(ms);
 
 				ui carry = 0;
 				sign() = a.sign();
@@ -683,7 +713,7 @@ namespace nics
 			}
 			else
 			{
-				ui ap = a.sign();
+				ui ap = (a.sign() >= 0);
 				const tbint& sp = ap ? a : b;
 				const tbint& sn = ap ? b : a;
 
