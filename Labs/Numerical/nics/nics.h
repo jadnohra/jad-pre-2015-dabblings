@@ -717,19 +717,19 @@ namespace nics
 				const tbint& sp = ap ? a : b;
 				const tbint& sn = ap ? b : a;
 
-				if (abs_gte(sp, sn))
+				if (_abs_gte(sp, sn))
 				{
-					sub_abs_gl(sp, sn);
+					_sub_abs_gl(sp, sn);
 				}
 				else
 				{
-					sub_abs_gl(sn, sp);
+					_sub_abs_gl(sn, sp);
 					sign() = -1;
 				}
 			}
 		}
 
-		bool abs_gte(const tbint& a, const tbint& b)
+		bool _abs_gte(const tbint& a, const tbint& b)
 		{
 			unsigned int ms = m_max(a.size(), b.size());
 			for (unsigned int i=ms-1, j=0; j<ms; --i, ++j)
@@ -740,7 +740,7 @@ namespace nics
 			return true;
 		}
 
-		void sub_abs_gl(const tbint& g, const tbint& l)
+		void _sub_abs_gl(const tbint& g, const tbint& l)
 		{
 			unsigned int ms = g.size();
 			setSize(ms);
@@ -756,6 +756,78 @@ namespace nics
 				part(i) = s;
 			}
 			trim();
+		}
+
+		void zeroParts()
+		{
+			for (unsigned int i=0;i<m_size; ++i) part(i) = 0;
+		}
+
+		void mul(const tbint& a, const tbint& b)
+		{
+			sign() = a.sign()*b.sign();
+			
+			unsigned int ms = 2*m_max(a.size(), b.size());
+			setSize(ms); zeroParts();
+			
+			struct Internal
+			{
+				ui low;
+				ui high;
+				Internal()
+				{
+					low = 0;
+					for (int i=0;i<sizeof(ui)*8/2;++i) low |= 1<<i;
+					high = ~(low);
+				}
+
+				static void add(tbint& self, const ui& v, ui pc)
+				{
+					ui sum = (self.part(pc) + v);
+
+					if (sum >= self.part(pc))
+					{
+						self.part(pc) = sum;
+					}
+					else
+					{
+						self.part(pc) = sum;
+						self.part(pc+1) = self.part(pc+1) + 1;
+					}
+				}
+
+				static void addhi(tbint& self, const ui& v, ui pc)
+				{
+					add(self,  (v << sizeof(ui)*8/2), pc);
+				}
+			};
+			static const Internal impl;
+
+			for (unsigned int i=0; i<b.size(); ++i)
+			{
+				ui bi = b.part(i);
+				ui bil = bi & impl.low;
+				ui bih = bi & impl.high;
+
+				for (unsigned int j=0; j<a.size(); ++j)
+				{
+					ui ai = a.part(j); 
+					ui ail = ai & impl.low;
+					ui aih = ai & impl.high;
+
+					ui p1 = bil*ail;
+					ui p2 = bil*aih;
+					ui p3 = bih*ail;
+					ui p4 = bih*aih;
+				
+					//split p1, p2 ... into p1l, p1h, ... and add those
+
+					Internal::add(*this, p1, i+j);
+					Internal::addhi(*this, p2, i+j);
+					Internal::addhi(*this, p3, i+j);
+					Internal::add(*this, p3, i+j+1);
+				}
+			}
 		}
 	};
 	typedef tbint<int> bint;

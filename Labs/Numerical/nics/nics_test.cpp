@@ -344,6 +344,14 @@ int main()
 			bint8 hsub2; hsub2.sub(gg, ff);
 			if (hsub2.get<int>() != g-f)
 				++err;
+
+			bint8 hmul1; hmul1.mul(ff, gg);
+			if (hmul1.get<int>() != f*g)
+				++err;
+
+			bint8 hmul2; hmul2.mul(gg, ff);
+			if (hmul2.get<int>() != g*f)
+				++err;
 		}
 
 		// t
