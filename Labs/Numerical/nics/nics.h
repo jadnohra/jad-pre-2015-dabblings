@@ -651,6 +651,15 @@ namespace nics
 			for (unsigned int i=0;i<m_size;++i) { j |= (UJ(part(i)) << (i*sizeof(UT)*8)); }
 		}
 
+		template<typename UJ>
+		void overflowsu()
+		{
+			int zc = 0;
+			for (unsigned int i=0, j=m_size-1; i<m_size && part(j)==0; ++i, --j) zc++;
+
+			return (m_size-zc)*sizeof(UT) > sizeof(UJ);
+		}
+
 		template<typename J>
 		void get(J& j)
 		{
@@ -835,10 +844,124 @@ namespace nics
 				}
 			}
 		}
+
+		int cmp(const tbint& b_) const
+		{
+			const tbint& a_ = *this;
+			if (a_.sign() == b_.sign())
+			{
+				unsigned int ms = m_max(a_.size(), b_.size());
+				bool al = (a_.size() <= b_.size());
+				const tbint& a = al ? a_ : b_;
+				const tbint& b = al ? b_ : a_;
+
+				int result = 0;
+				for (unsigned int i=0; i<ms && result==0; ++i)
+				{
+					ui ai = a.epart(i); ui bi = b.part(i);
+
+					if (ai > bi)
+						result = a.sign();
+					else if (ai > bi)
+						result = -a.sign();
+				}
+
+				return result;
+			}
+			else
+			{
+				// TODO: zero case!
+				return (a_.sign() > b_.sign() ? 1 : -1);
+			}
+		}
+
+		bool isZero() const
+		{
+			int zc = 0;
+			for (unsigned int i=0, j=m_size-1; i<m_size && part(j)==0; ++i, --j) zc++;
+			return (m_size-zc == 0);
+		}
+
+		bool isOne() const
+		{
+			int zc = 0;
+			for (unsigned int i=0, j=m_size-1; i<m_size && part(j)==0; ++i, --j) zc++;
+			return (m_size-zc == 1 && part(0)==1);
+		}
+
+		bool isMinusOne() const
+		{
+			int zc = 0;
+			for (unsigned int i=0, j=m_size-1; i<m_size && part(j)==0; ++i, --j) zc++;
+			return (m_size-zc == 1 && part(0)==1 && sign()==-1);
+		}
+
+		void copy(const tbint& a)
+		{
+			setSize(a.size());
+			for (unsigned int i=0; i<size(); ++i) part(i) = a.part(i);
+			sign() = a.sign();
+		}
+
+		void gdc(const tbint& a_, const tbint& b_)
+		{
+			int rel = a_.cmp(b_);
+			if (rel == 0) 
+			{
+				copy(a_);
+			}
+			else
+			{
+				tbint a, b;
+				tbint diff;
+				a.copy(a_); a.sign() = 1;
+				b.copy(b_); b.sign() = 1;
+				diff.sub(a, b); 
+				
+				while(!diff.isOne() && !diff.isMinusOne() && !diff.isZero())
+				{
+					if (diff.sign() >= 0)
+						a.copy(diff);
+					else
+						b.copy(diff);
+					diff.sub(a, b); 
+				}
+
+				if (diff.isZero())
+				{
+					copy(a);
+				}
+				else 
+				{
+					copy(diff);
+					sign() = 1;
+				}
+			}
+		}
 	};
 	typedef tbint<int> bint;
 	typedef tbint<char> bint8;
 	typedef tbint<short> bint16;
+
+
+	template<typename BINT>
+	struct trational
+	{
+		BINT num, denom;
+
+		void add(const trational& a, const trational& b)
+		{
+			BINT num1; num1.mul(a.num, b.denom);
+			BINT num2; num2.mul(a.denom, b.num);
+			num.add(num1, num2);
+			denom.mul(a.denom, b.denom);
+			reduce();
+		}
+
+		void reduce()
+		{
+		}
+	};
 }
 
 #endif // NICS_H

@@ -359,6 +359,24 @@ int main()
 		int x=0;x;
 	}
 
+	{
+		{
+			bint8 a(200);
+			bint8 b(199);
+			bint8 c; c.gdc(a, b);
+			if (!c.isOne())
+				++err;
+		}
+
+		{
+			bint8 a(6);
+			bint8 b(3);
+			bint8 c; c.gdc(a, b);
+			if (!c.cmp(b) == 0)
+				++err;
+		}
+	}
+
 	if (0) nics_test1();
 
 	printf("done(%d) ...", err); _getch();
