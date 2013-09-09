@@ -770,62 +770,68 @@ namespace nics
 			unsigned int ms = 2*m_max(a.size(), b.size());
 			setSize(ms); zeroParts();
 			
-			struct Internal
+			struct Impl
 			{
 				ui low;
 				ui high;
-				Internal()
+				ui shift;
+
+				Impl()
 				{
 					low = 0;
 					for (int i=0;i<sizeof(ui)*8/2;++i) low |= 1<<i;
 					high = ~(low);
+					shift = sizeof(ui)*8/2;
 				}
 
-				static void add(tbint& self, const ui& v, ui pc)
+				static void add(tbint& self, const ui& v, ui pc, ui carry = 0)
 				{
-					ui sum = (self.part(pc) + v);
-
-					if (sum >= self.part(pc))
+					unsigned int i = pc;
+					do
 					{
-						self.part(pc) = sum;
+						ui s = self.part(i) + v + carry;
+						carry = (s >= self.part(i) ? 0 : 1);
+						self.part(i) = s;
+						++i;
 					}
-					else
-					{
-						self.part(pc) = sum;
-						self.part(pc+1) = self.part(pc+1) + 1;
-					}
+					while(i < self.size() && carry);
 				}
 
-				static void addhi(tbint& self, const ui& v, ui pc)
+				static void addhi(const Impl& impl, tbint& self, const ui& v, ui pc)
 				{
-					add(self,  (v << sizeof(ui)*8/2), pc);
+					const ui vl = v & impl.low;
+					const ui vh = v & impl.high;
+					
+					ui s = self.part(pc) + (vl << impl.shift);
+					ui carry = (s >= self.part(pc) ? 0 : 1);
+					self.part(pc) = s;
+
+					add(self, vh >> impl.shift, pc+1, carry);
 				}
 			};
-			static const Internal impl;
+			static const Impl impl;
 
 			for (unsigned int i=0; i<b.size(); ++i)
 			{
 				ui bi = b.part(i);
 				ui bil = bi & impl.low;
-				ui bih = bi & impl.high;
+				ui bih = (bi & impl.high) >> impl.shift;
 
 				for (unsigned int j=0; j<a.size(); ++j)
 				{
 					ui ai = a.part(j); 
 					ui ail = ai & impl.low;
-					ui aih = ai & impl.high;
+					ui aih = (ai & impl.high) >> impl.shift;
 
 					ui p1 = bil*ail;
 					ui p2 = bil*aih;
 					ui p3 = bih*ail;
 					ui p4 = bih*aih;
 				
-					//split p1, p2 ... into p1l, p1h, ... and add those
-
-					Internal::add(*this, p1, i+j);
-					Internal::addhi(*this, p2, i+j);
-					Internal::addhi(*this, p3, i+j);
-					Internal::add(*this, p3, i+j+1);
+					Impl::add(*this, p1, i+j);
+					Impl::addhi(impl, *this, p2, i+j);
+					Impl::addhi(impl, *this, p3, i+j);
+					Impl::add(*this, p4, i+j+1);
 				}
 			}
 		}
