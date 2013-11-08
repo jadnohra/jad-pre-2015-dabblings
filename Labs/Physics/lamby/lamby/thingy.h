@@ -112,6 +112,9 @@ struct ThingiesArr
 
 class Thingies;
 
+//
+//
+//
 struct Convex
 {
 	M3 transf;
@@ -122,6 +125,10 @@ struct Convex
 Convex* ctor(Thingies* th, Convex* el, M3p transf, const V2* vs, int count, Rlp r)  { el->transf=transf; el->v=(V2*)malloc(count*sizeof(V2)); memcpy(el->v,vs,count*sizeof(V2)); el->count=count; el->r=r; return el; }
 void dtor_convex(void* th, Convex* el)  { free(el->v); }
 
+
+//
+//
+//
 class Thingies
 {
 public:

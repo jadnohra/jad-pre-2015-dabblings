@@ -130,6 +130,11 @@ V3 u_jk()
 V3 u_ijk()
 	{ return V3(1, 1, 1); }
 
+V3 add(V3p v1, V3p v2) 
+	{ return V3(v1.x[0]+v2.x[0], v1.x[1]+v2.x[1], v1.x[2]+v2.x[2]); }
+V3 muls(V3p v1, Rlp s) 
+	{ return V3(v1.x[0]*s, v1.x[1]*s, v1.x[2]*s); }
+
 M3 m3_z()
 	{ static M3 mz = M3(v_z(), v_z(), v_z()); return mz; }
 M3 m3_id()

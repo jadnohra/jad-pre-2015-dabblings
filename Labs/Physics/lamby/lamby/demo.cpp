@@ -169,6 +169,7 @@ namespace glfwHandler
 
 int main(void)
 {
+	if (0)
 	{
 		gjk::gjk_tests();
 		printf("gjk: %f us.\n", double(nics::getGjkRunTime())*(1000.0*1000.0));

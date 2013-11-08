@@ -190,6 +190,10 @@
 			>
 		</File>
 		<File
+			RelativePath="..\rbody.h"
+			>
+		</File>
+		<File
 			RelativePath="..\thingy.h"
 			>
 		</File>
