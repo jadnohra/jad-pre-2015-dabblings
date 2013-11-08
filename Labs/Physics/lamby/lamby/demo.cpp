@@ -93,8 +93,8 @@ struct WindowData
 	void initPhysWorld()
 	{
 		scale = 1.0f/10.0f;
-		scene.physWorld.addRBody( v_z(), u_k(), 1 );
-		scene.physWorld.addRBody( muls(u_ij(), 2.0f) , muls(u_i(), 0.2f), 3 );
+		scene.physWorld.addRBody( v_z(), u_k(), 2 );
+		scene.physWorld.addRBody( muls(u_ij(), 2.0f) , muls(u_i(), 0.2f), 5 );
 	}
 };
 
@@ -111,7 +111,7 @@ void drawScene(Scene& scene)
 		if (dt)
 		{
 			//w.applyGravity();
-			w.step(dt);
+			w.step(1.0f*dt);
 		}
 
 		PhysWorld::RBodyIter it(w.rbodies); RBody* el; 
@@ -132,7 +132,7 @@ void drawScene(Scene& scene)
 			const RShape& shape1 = w.rshapes[b1->shape];
 			const RShape& shape2 = w.rshapes[b2->shape];
 
-			gjk::Out_gjk_distance out = gjk::gjk_distance(w.gjk, m1, shape1.v, shape1.count, shape1.r, m2, shape2.v, shape2.count, shape2.r, 0.0000001f);
+			gjk::Out_gjk_distance out = gjk::gjk_distance(w.gjk, m1, shape1.v, shape1.count, shape1.r, m2, shape2.v, shape2.count, shape2.r, 1.e-7f);
 
 			if (out.success)
 			{

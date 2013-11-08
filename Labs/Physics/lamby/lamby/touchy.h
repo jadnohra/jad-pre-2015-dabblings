@@ -207,7 +207,7 @@ namespace gjk
 		Rl max2; if (!support_cvx(scr.cvx2, m2, v2, lv2, r2, neg(d), neg(n), scr.maxdim, max2)) return false;
 
 		out.p.p1 = cvx_vertex(m1, v1, lv1, r1, n, scr.cvx1.ami[0]);
-		out.p.p2 = cvx_vertex(m2, v2, lv2, r2, n, scr.cvx2.ami[0]);
+		out.p.p2 = cvx_vertex(m2, v2, lv2, r2, neg(n), scr.cvx2.ami[0]);
 		out.h = max1+max2; out.s = sub(out.p.p1, out.p.p2); out.cvx1 = &scr.cvx1; out.cvx2 = &scr.cvx2;
 		return true;
 	}
@@ -225,6 +225,7 @@ namespace gjk
 		const Perm& perm = scr.perm[lVk-1];
 		Rl* Di = scr.Di; scr.lDi = perm.Di_count;
 		for (int i=0;i<perm.Di_count; ++i) Di[i]=Rl(1.0);
+		for (int i=0;i<lVk; ++i)  scr.Li[i]=Rl(0.0);
 
 		int best = -1;
 		Rl bestDistSq;
@@ -287,6 +288,7 @@ namespace gjk
 		const Perm& perm = scr.perm[lVk-1];
 		Rl* Di = scr.Di; scr.lDi = perm.Di_count;
 		for (int i=0;i<perm.Di_count; ++i) Di[i]=Rl(1.0);
+		for (int i=0;i<lVk; ++i)  scr.Li[i]=Rl(0.0);
 
 		int i_Is = 0; int i_Isp = 0; int i_Union_index = 0;
 		for (int pi=0; pi<perm.count; ++pi)

@@ -53,6 +53,11 @@ public:
 		int si=0;
 		rshapes[si].v[0] = v2_z();
 		rshapes[si].count = 1;
+		rshapes[si].r = 0.0f;
+		si++;
+
+		rshapes[si].v[0] = v2_z();
+		rshapes[si].count = 1;
 		rshapes[si].r = 0.5f;
 		si++;
 
@@ -67,7 +72,7 @@ public:
 		rshapes[si].v[1] = V2(0.5f, 0.0f);
 		rshapes[si].v[2] = V2(0.0f, 0.5f);
 		rshapes[si].count = 3;
-		rshapes[si].r = 0.05f;
+		rshapes[si].r = 0.15f;
 		si++;
 
 		rshapes[si].v[0] = V2(-0.5f, -0.5f);
@@ -83,7 +88,7 @@ public:
 		rshapes[si].v[2] = V2(0.5f, 0.5f);
 		rshapes[si].v[3] = V2(0.5f, -0.5f);
 		rshapes[si].count = 4;
-		rshapes[si].r = 0.05f;
+		rshapes[si].r = 0.15f;
 		si++;
 	}
 
