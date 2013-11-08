@@ -10,15 +10,18 @@
 
 #include "stdio.h"
 
+#include "nics.h"
 #include "lamby.h"
 #include "painty.h"
 #include "thingy.h"
 #include "touchy.h"
-#include "nics.h"
+#include "rbody.h"
+
 
 struct Scene
 {
 	Thingies thingies;
+	PhysWorld physWorld;
 };
 
 struct WindowData
@@ -31,7 +34,14 @@ struct WindowData
 
 	Scene scene;
 
-	WindowData() : scale(1.0f) { translating = false; transl_moving[0]=0.0f; transl_moving[1]=0.0f; transl[0]=0.0f; transl[1]=0.0f; }
+	WindowData() : scale(1.0f) { translating = false; transl_moving[0]=0.0f; transl_moving[1]=0.0f; transl[0]=0.0f; transl[1]=0.0f; initPhysWorld(); }
+	
+	void initPhysWorld()
+	{
+		scale = 1.0f/10.0f;
+		scene.physWorld.addRBody( v_z(), u_k(), 1 );
+		scene.physWorld.addRBody( muls(u_ij(), 2.0f) , u_i(), 4 );
+	}
 };
 
 void display(GLFWwindow* window)
@@ -68,8 +78,26 @@ void display(GLFWwindow* window)
 		glScalef(wd.scale, wd.scale, 1.0f);
 	}
 
-	Thingies thingies;
+	if (1)
 	{
+		Painty painty;
+		PhysWorld& w = wd.scene.physWorld;
+
+		PhysWorld::RBodyIter it(w.rbodies); RBody* el; 
+		while(el = it.next()) 
+		{
+			const RShape& shape = w.rshapes[el->shape];
+			draw_convex(painty, rigid(asV2(el->q), el->q(2)), shape.v, shape.count, shape.r, u_ijk());
+		}
+
+		//w.applyGravity();
+		w.step(0.001f);
+	}
+
+	if (0)
+	{
+		Thingies thingies;
+
 		V2 v[] = { V2(-0.2f,-0.2f), V2(-0.2f,0.2f), V2(0.2f,0.2f), V2(0.2f,-0.2f) };
 		M3 m = rigid(V2(-0.1f, -0.3f), m_rad(20.0f));
 		thingies.addConvex(m, v, 4, Rl(0.1));
@@ -81,7 +109,7 @@ void display(GLFWwindow* window)
 			draw_convex(painty, el->transf, el->v, el->count, el->r, u_ijk());
 	}
 
-	if (1)
+	if (0)
 	{
 		if (1)
 		{
