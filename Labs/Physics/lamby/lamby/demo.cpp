@@ -18,11 +18,59 @@
 #include "rbody.h"
 
 
+struct TimerGlfw
+{
+	TimerGlfw()
+	{
+		init(1.0f/30.0f);
+	}
+
+	void init(float deltaT)
+	{
+		 timeOrigin = -1.0;
+		 totalFrames = 0;
+		 dt = deltaT;
+	}
+
+	void update()
+	{
+		double clockTime = glfwGetTime();
+
+		if (timeOrigin < 0.0)
+		{
+			timeOrigin = clockTime;
+			lastTime = 0.0;
+			time = 0.0;
+			elapsedFrames = 0;
+			elapsedTime = 0.0f;
+		}
+		else
+		{
+			clockTime = clockTime - timeOrigin;
+			float elaps = (float)(clockTime - time);
+			elapsedFrames = (int)((elaps / dt)+0.5f);
+			lastTime = time;
+			elapsedTime = float(elapsedFrames) * dt;
+			time += elapsedTime;
+		}
+	}
+
+	float dt;
+	double timeOrigin;
+	double lastTime;
+	double time;
+	unsigned long totalFrames;
+	int elapsedFrames;
+	float elapsedTime;
+};
+
 struct Scene
 {
 	Thingies thingies;
 	PhysWorld physWorld;
+	TimerGlfw clock;
 };
+
 
 struct WindowData
 {
@@ -33,55 +81,37 @@ struct WindowData
 	float transl[2];
 
 	Scene scene;
+	double lastTime;
 
-	WindowData() : scale(1.0f) { translating = false; transl_moving[0]=0.0f; transl_moving[1]=0.0f; transl[0]=0.0f; transl[1]=0.0f; initPhysWorld(); }
+	WindowData() : scale(1.0f), lastTime(0.0) 
+	{ 
+		translating = false; transl_moving[0]=0.0f; transl_moving[1]=0.0f; transl[0]=0.0f; transl[1]=0.0f; 
+		initPhysWorld(); 
+	}
 	
 	void initPhysWorld()
 	{
 		scale = 1.0f/10.0f;
 		scene.physWorld.addRBody( v_z(), u_k(), 1 );
-		scene.physWorld.addRBody( muls(u_ij(), 2.0f) , u_i(), 4 );
+		scene.physWorld.addRBody( muls(u_ij(), 2.0f) , muls(u_i(), 0.2f), 4 );
 	}
 };
 
-void display(GLFWwindow* window)
+void drawScene(Scene& scene)
 {
-	WindowData& wd = *(WindowData*) glfwGetWindowUserPointer(window);
-
-	int width,height; 
-	glfwGetWindowSize(window, &width, &height);
-	glViewport( 0, 0, width, height );
-	
-	float aspect = (float)width/(float)height;
-	if (0)
-	{
-		glMatrixMode( GL_PROJECTION ); 
-		glLoadIdentity(); 
-		gluPerspective(45.0f, (GLfloat)width/(GLfloat)height, 1.0f, 100.0f );
-		glEnable(GL_DEPTH_TEST);
-	}
-	else
-	{
-		glMatrixMode(GL_PROJECTION);      
-		glLoadIdentity();                 
-		gluOrtho2D(-1.0*aspect, 1.0*aspect, -1.0, 1.0); // Set clipping area's left, right, bottom, top
-	}
-
-    glClearColor( 0.0f, 0.0f, 0.0f, 0.0f ); 
-    glClear( GL_COLOR_BUFFER_BIT| GL_DEPTH_BUFFER_BIT);
-    glMatrixMode(GL_MODELVIEW); 
-    glLoadIdentity(); 
-
-	if (1)
-	{
-		glTranslatef(aspect*(wd.transl[0]+wd.transl_moving[0])*2.0f/(float)width, (wd.transl[1]+wd.transl_moving[1])*2.0f/(float)height, 0.0f);
-		glScalef(wd.scale, wd.scale, 1.0f);
-	}
+	scene.clock.update();
+	float dt = scene.clock.elapsedTime;
 
 	if (1)
 	{
 		Painty painty;
-		PhysWorld& w = wd.scene.physWorld;
+		PhysWorld& w = scene.physWorld;
+
+		if (dt)
+		{
+			//w.applyGravity();
+			w.step(dt);
+		}
 
 		PhysWorld::RBodyIter it(w.rbodies); RBody* el; 
 		while(el = it.next()) 
@@ -89,9 +119,6 @@ void display(GLFWwindow* window)
 			const RShape& shape = w.rshapes[el->shape];
 			draw_convex(painty, rigid(asV2(el->q), el->q(2)), shape.v, shape.count, shape.r, u_ijk());
 		}
-
-		//w.applyGravity();
-		w.step(0.001f);
 	}
 
 	if (0)
@@ -127,6 +154,45 @@ void display(GLFWwindow* window)
 			draw_convex(painty, m, v, 4, Rl(0.2), u_ijk());
 		}
 	}
+}
+
+void display(GLFWwindow* window)
+{
+	WindowData& wd = *(WindowData*) glfwGetWindowUserPointer(window);
+
+	int width,height; 
+	glfwGetWindowSize(window, &width, &height);
+	glViewport( 0, 0, width, height );
+	
+	float aspect = (float)width/(float)height;
+	if (0)
+	{
+		glMatrixMode( GL_PROJECTION ); 
+		glLoadIdentity(); 
+		gluPerspective(45.0f, (GLfloat)width/(GLfloat)height, 1.0f, 100.0f );
+		glEnable(GL_DEPTH_TEST);
+	}
+	else
+	{
+		glMatrixMode(GL_PROJECTION);      
+		glLoadIdentity();                 
+		gluOrtho2D(-1.0*aspect, 1.0*aspect, -1.0, 1.0); // Set clipping area's left, right, bottom, top
+	}
+
+    glClearColor( 0.0f, 0.0f, 0.0f, 0.0f ); 
+    glClear( GL_COLOR_BUFFER_BIT| GL_DEPTH_BUFFER_BIT);
+    glMatrixMode(GL_MODELVIEW); 
+    glLoadIdentity(); 
+
+	if (1)
+	{
+		glTranslatef(aspect*(wd.transl[0]+wd.transl_moving[0])*2.0f/(float)width, (wd.transl[1]+wd.transl_moving[1])*2.0f/(float)height, 0.0f);
+		glScalef(wd.scale, wd.scale, 1.0f);
+	}
+
+	double t = glfwGetTime();
+	drawScene(wd.scene);
+
 	glfwSwapBuffers(window);
 }
 
