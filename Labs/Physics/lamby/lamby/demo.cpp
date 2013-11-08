@@ -69,6 +69,7 @@ struct Scene
 	Thingies thingies;
 	PhysWorld physWorld;
 	TimerGlfw clock;
+	Painty painty;
 };
 
 
@@ -93,7 +94,7 @@ struct WindowData
 	{
 		scale = 1.0f/10.0f;
 		scene.physWorld.addRBody( v_z(), u_k(), 1 );
-		scene.physWorld.addRBody( muls(u_ij(), 2.0f) , muls(u_i(), 0.2f), 4 );
+		scene.physWorld.addRBody( muls(u_ij(), 2.0f) , muls(u_i(), 0.2f), 3 );
 	}
 };
 
@@ -101,12 +102,12 @@ void drawScene(Scene& scene)
 {
 	scene.clock.update();
 	float dt = scene.clock.elapsedTime;
-
+	Painty& painty = scene.painty;
+	
 	if (1)
 	{
-		Painty painty;
 		PhysWorld& w = scene.physWorld;
-
+		
 		if (dt)
 		{
 			//w.applyGravity();
@@ -119,6 +120,26 @@ void drawScene(Scene& scene)
 			const RShape& shape = w.rshapes[el->shape];
 			draw_convex(painty, rigid(asV2(el->q), el->q(2)), shape.v, shape.count, shape.r, u_ijk());
 		}
+
+		if (w.rbodies.size >= 2)
+		{
+			RBody* b1 = w.rbodies.at(0);
+			RBody* b2 = w.rbodies.at(1);
+
+			M3 m1 = rigid(asV2(b1->q), b1->q(2));
+			M3 m2 = rigid(asV2(b2->q), b2->q(2));
+
+			const RShape& shape1 = w.rshapes[b1->shape];
+			const RShape& shape2 = w.rshapes[b2->shape];
+
+			gjk::Out_gjk_distance out = gjk::gjk_distance(w.gjk, m1, shape1.v, shape1.count, shape1.r, m2, shape2.v, shape2.count, shape2.r, 0.0000001f);
+
+			if (out.success)
+			{
+				V2 v[] = { out.v1, out.v2 };
+				draw_convex(painty, m3_id(), v, 2, 0.0f, u_j());
+			}
+		}
 	}
 
 	if (0)
@@ -129,8 +150,6 @@ void drawScene(Scene& scene)
 		M3 m = rigid(V2(-0.1f, -0.3f), m_rad(20.0f));
 		thingies.addConvex(m, v, 4, Rl(0.1));
 
-		Painty painty;
-
 		Thingies::ConvexIter it(thingies.convexes); Convex* el; 
 		while(el = it.next()) 
 			draw_convex(painty, el->transf, el->v, el->count, el->r, u_ijk());
@@ -140,7 +159,6 @@ void drawScene(Scene& scene)
 	{
 		if (1)
 		{
-			Painty painty;
 			V2 v[] = { V2(-0.2f,-0.2f), V2(-0.2f,0.2f), V2(0.2f,0.2f), V2(0.2f,-0.2f) };
 			M3 m = rigid(V2(0.1f, 0.3f), m_rad(20.0f));
 			draw_convex(painty, m, v, 4, u_ijk());
@@ -148,7 +166,6 @@ void drawScene(Scene& scene)
 
 		if (1)
 		{
-			Painty painty;
 			V2 v[] = { V2(-0.2f,-0.2f), V2(-0.23f,0.2f), V2(0.2f,0.25f), V2(0.2f,-0.2f) };
 			M3 m = rigid(V2(0.1f, 0.3f), m_rad(-30.0f));
 			draw_convex(painty, m, v, 4, Rl(0.2), u_ijk());

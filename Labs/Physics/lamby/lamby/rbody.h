@@ -2,6 +2,7 @@
 #define LAMBY_RBODY_H
 
 #include "gaussy.h"
+#include "touchy.h"
 
 class Thingies;
 class PhysWorld;
@@ -38,6 +39,8 @@ public:
 	RBodies rbodies;
 
 	RShape rshapes[128];
+
+	gjk::GjkScratch gjk;
 
 	Rl dt;
 	V3 g;

@@ -31,9 +31,10 @@ struct ThingiesArr
 	ChainEl* cel;
 	int chain_count;
 	int chain_size;
+	int size;
 	dtorFunc dtor;
 	
-	ThingiesArr(int chain_size_ = 32,dtorFunc dtor_ = 0) : ctxt(0), cel(0), chain_count(0), chain_size(chain_size_), dtor(dtor_) {}
+	ThingiesArr(int chain_size_ = 32,dtorFunc dtor_ = 0) : ctxt(0), cel(0), chain_count(0), chain_size(chain_size_), size(0), dtor(dtor_) {}
 	~ThingiesArr() { _dtor(ctxt, cel, chain_size, dtor); }
 
 	ChainEl* alloc()
@@ -45,6 +46,27 @@ struct ThingiesArr
 		for (int i=0;i<chain_size;++i) cel->valid[i]=0;
 		cel->next = 0;
 		return cel;
+	}
+
+	T* at(int index)
+	{
+		ChainEl* bl = cel;
+		int ci = 0;
+		while( bl )
+		{
+			for (int bi=0; bi<chain_size; ++bi)
+			{
+				if (bl->valid[bi])
+				{
+					if (ci == index)
+						return &(bl->el[bi]);
+					ci++;
+				}
+			}
+
+			bl = bl->next;
+		}
+		return 0;
 	}
 
 	struct Add
@@ -62,6 +84,8 @@ struct ThingiesArr
 
 		T* add()
 		{
+			arr.size++;
+
 			if (cel == 0)
 			{
 				cel = arr.cel = arr.alloc(); i=0; cel->first_invalid = i+1; cel->valid[i]=1; return &cel->el[i++];
