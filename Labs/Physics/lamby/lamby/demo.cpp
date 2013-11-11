@@ -100,6 +100,7 @@ struct WindowData
 
 void drawScene(Scene& scene)
 {
+	glfwSwapInterval(1);	//vsync on.
 	scene.clock.update();
 	float dt = scene.clock.elapsedTime;
 	Painty& painty = scene.painty;
@@ -121,23 +122,30 @@ void drawScene(Scene& scene)
 			draw_convex(painty, rigid(asV2(el->q), el->q(2)), shape.v, shape.count, shape.r, u_ijk());
 		}
 
-		if (w.rbodies.size >= 2)
+		//if (dt)
 		{
-			RBody* b1 = w.rbodies.at(0);
-			RBody* b2 = w.rbodies.at(1);
-
-			M3 m1 = rigid(asV2(b1->q), b1->q(2));
-			M3 m2 = rigid(asV2(b2->q), b2->q(2));
-
-			const RShape& shape1 = w.rshapes[b1->shape];
-			const RShape& shape2 = w.rshapes[b2->shape];
-
-			gjk::Out_gjk_distance out = gjk::gjk_distance(w.gjk, m1, shape1.v, shape1.count, shape1.r, m2, shape2.v, shape2.count, shape2.r, 1.e-7f);
-
-			if (out.success)
+			if (w.rbodies.size >= 2)
 			{
-				V2 v[] = { out.v1, out.v2 };
-				draw_convex(painty, m3_id(), v, 2, 0.0f, u_j());
+				RBody* b1 = w.rbodies.at(0);
+				RBody* b2 = w.rbodies.at(1);
+
+				M3 m1 = rigid(asV2(b1->q), b1->q(2));
+				M3 m2 = rigid(asV2(b2->q), b2->q(2));
+
+				const RShape& shape1 = w.rshapes[b1->shape];
+				const RShape& shape2 = w.rshapes[b2->shape];
+
+				gjk::Out_gjk_distance out = gjk::gjk_distance(w.gjk, m1, shape1.v, shape1.count, shape1.r, m2, shape2.v, shape2.count, shape2.r, 1.e-7f);
+
+				if (out.success)
+				{
+					V2 v[] = { out.v1, out.v2 };
+					draw_convex(painty, m3_id(), v, 2, 0.0f, u_j());
+				}
+				else
+				{
+					printf("failed\n");
+				}
 			}
 		}
 	}

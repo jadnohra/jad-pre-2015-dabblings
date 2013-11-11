@@ -215,7 +215,7 @@ namespace gjk
 	struct Out_gjk_subdist
 	{
 		V2 v;
-		int* Isp;
+		const int* Isp;
 		Rl* Li;
 		int lLi;
 	};
@@ -225,7 +225,6 @@ namespace gjk
 		const Perm& perm = scr.perm[lVk-1];
 		Rl* Di = scr.Di; scr.lDi = perm.Di_count;
 		for (int i=0;i<perm.Di_count; ++i) Di[i]=Rl(1.0);
-		for (int i=0;i<lVk; ++i)  scr.Li[i]=Rl(0.0);
 
 		int best = -1;
 		Rl bestDistSq;
@@ -239,9 +238,9 @@ namespace gjk
 			Rl D = Rl(0.0);
 			for (int i=0; i<d; ++i) D = D + Di[di_index+i];
 
-			int* Is = perm.Is + i_Is;
-			int* Isp = perm.Isp + i_Isp;
-			int* Union_index = perm.Union_index + i_Union_index;
+			const int* Is = perm.Is + i_Is;
+			const int* Isp = perm.Isp + i_Isp;
+			const int* Union_index = perm.Union_index + i_Union_index;
 
 			for (int j=0; Isp[j] != EL; ++j)
 			{
@@ -260,6 +259,7 @@ namespace gjk
 					V2 v = v2_z();
 					Rl* Li = scr.Li; scr.lLi = lVk;
 					Rl iD = Rl(1.0) / D;
+					for (int j=0; Isp[j] != EL; ++j) Li[Isp[j]] = Rl(0);
 					for (int i=0; i<d; ++i)
 					{
 						Rl l = Di[di_index+i] * iD;
@@ -288,7 +288,6 @@ namespace gjk
 		const Perm& perm = scr.perm[lVk-1];
 		Rl* Di = scr.Di; scr.lDi = perm.Di_count;
 		for (int i=0;i<perm.Di_count; ++i) Di[i]=Rl(1.0);
-		for (int i=0;i<lVk; ++i)  scr.Li[i]=Rl(0.0);
 
 		int i_Is = 0; int i_Isp = 0; int i_Union_index = 0;
 		for (int pi=0; pi<perm.count; ++pi)
@@ -299,9 +298,9 @@ namespace gjk
 			Rl D = Rl(0.0);
 			for (int i=0; i<d; ++i) D = D + Di[di_index+i];
 
-			int* Is = perm.Is + i_Is;
-			int* Isp = perm.Isp + i_Isp;
-			int* Union_index = perm.Union_index + i_Union_index;
+			const int* Is = perm.Is + i_Is;
+			const int* Isp = perm.Isp + i_Isp;
+			const int* Union_index = perm.Union_index + i_Union_index;
 
 			bool cond3 = true;
 			for (int j=0; Isp[j] != EL; ++j)
@@ -322,12 +321,14 @@ namespace gjk
 					V2 v = v2_z();
 					Rl* Li = scr.Li; scr.lLi = lVk;
 					Rl iD = Rl(1.0) / D;
+					for (int j=0; Isp[j] != EL; ++j) Li[Isp[j]] = Rl(0);
 					for (int i=0; i<d; ++i)
 					{
 						Rl l = Di[di_index+i] * iD;
 						v = add(v, muls(Vk[Is[i]].Vk, l));
 						Li[Is[i]] = l;
 					}
+		
 					out.v = v; out.Isp = Isp; out.Li = Li; out.lLi = scr.lLi; 
 					return true;
 				}
@@ -356,6 +357,13 @@ namespace gjk
 
 	Out_gjk_distance gjk_distance(GjkScratch& scr, M3p m1, V2pc v1, int lv1, Rl r1, M3p m2, V2pc v2, int lv2, Rl r2, Rl eps)
 	{
+		static int cnt=0;
+		cnt++;
+		if (cnt==60)
+		{
+			int x=0;x;
+		}
+
 		V2 d = V2(Rl(-1.0), Rl(0.0));
 		int& lsimpl = scr.lsimpl; GjkVert* simpl = scr.simpl; 
 		{
@@ -381,6 +389,12 @@ namespace gjk
 			Out_gjk_subdist subd;
 			if (!gjk_subdist(subd, scr, simpl, lsimpl)) return Out_gjk_distance(false, 0.0f, 0.0f, v2_z(), v2_z());
 
+			if (0)
+			{
+				Rl lisum = Rl(0); for (int i=0; i<subd.lLi; ++i) { lisum += subd.Li[i]; }
+				if (lisum < 0.95f || lisum > 1.05f)
+					return Out_gjk_distance(false, 0.0f, 0.0f, v2_z(), v2_z());
+			}
 
 			V2 vk = subd.v;
 			V2 nvk = neg(vk);
@@ -399,7 +413,7 @@ namespace gjk
 					v1 = add(v1, muls(simpl[i].Pi.p1, li[i]));
 					v2 = add(v2, muls(simpl[i].Pi.p2, li[i]));
 				}
-
+			
 				//features = 	gjk_find_features(m1, cvx1, r1, m2, cvx2, r2, li, IndI)
 				//return [dist, eps, v1, v2, features, Vk, Pi, IndI]
 				return Out_gjk_distance(true, dist, eps_cond ? dist : eps, v1, v2);
