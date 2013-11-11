@@ -13,6 +13,7 @@ struct Painty
 	float* vs;
 	int count;
 	int subdiv;
+	GLuint listName;
 
 	float* getBuffer(int count_)
 	{
@@ -25,8 +26,35 @@ struct Painty
 		return vs;
 	}
 
-	Painty() : vs(0), count(0), subdiv(6) { getBuffer(64); glEnableClientState(GL_VERTEX_ARRAY); }
-	~Painty() { free(vs); vs = 0; }
+	Painty() : vs(0), count(0), subdiv(6) 
+	{ 
+		getBuffer(64); 
+		glEnableClientState(GL_VERTEX_ARRAY); 
+		listName = glGenLists(1);
+	}
+
+	~Painty() 
+	{ 
+		free(vs); 
+		vs = 0; 
+		glDeleteLists(listName, 1);
+	}
+
+	void begin()
+	{
+		glNewList(listName, GL_COMPILE);
+	}
+
+	void end()
+	{
+		glEndList();
+	}
+
+	void draw()
+	{
+		glCallList(listName);
+	}
+	
 };
 
 void draw_convex(Painty& ctx, M3p m, const V2* v, int count, V3p col)

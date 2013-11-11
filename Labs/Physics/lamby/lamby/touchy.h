@@ -389,7 +389,7 @@ namespace gjk
 			Out_gjk_subdist subd;
 			if (!gjk_subdist(subd, scr, simpl, lsimpl)) return Out_gjk_distance(false, 0.0f, 0.0f, v2_z(), v2_z());
 
-			if (0)
+			if (1)
 			{
 				Rl lisum = Rl(0); for (int i=0; i<subd.lLi; ++i) { lisum += subd.Li[i]; }
 				if (lisum < 0.95f || lisum > 1.05f)

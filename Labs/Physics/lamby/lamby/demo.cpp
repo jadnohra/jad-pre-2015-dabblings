@@ -105,11 +105,14 @@ void drawScene(Scene& scene)
 	float dt = scene.clock.elapsedTime;
 	Painty& painty = scene.painty;
 	
-	if (1)
+	if (dt)
+		painty.begin();
+
+	if (dt)
 	{
 		PhysWorld& w = scene.physWorld;
 		
-		if (dt)
+		//if (dt)
 		{
 			//w.applyGravity();
 			w.step(1.0f*dt);
@@ -179,6 +182,11 @@ void drawScene(Scene& scene)
 			draw_convex(painty, m, v, 4, Rl(0.2), u_ijk());
 		}
 	}
+
+	if (dt)
+		painty.end();
+
+	painty.draw();
 }
 
 void display(GLFWwindow* window)
@@ -303,7 +311,7 @@ int main(void)
 	
     if (!glfwInit()) return -1;
 	
-    GLFWwindow* window = glfwCreateWindow(640, 480, "Lamby", NULL, NULL);
+    GLFWwindow* window = glfwCreateWindow(800, 600, "Lamby", NULL, NULL);
     if (!window) { glfwTerminate(); return -1; }
     glfwMakeContextCurrent(window);
 
