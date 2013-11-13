@@ -93,8 +93,16 @@ struct WindowData
 	void initPhysWorld()
 	{
 		scale = 1.0f/10.0f;
-		scene.physWorld.addRBody( v_z(), u_k(), 2 );
-		scene.physWorld.addRBody( muls(u_ij(), 2.0f) , muls(u_i(), 0.2f), 5 );
+		if (0)
+		{
+			scene.physWorld.addRBody( v_z(), u_k(), 2 );
+			scene.physWorld.addRBody( muls(u_ij(), 2.0f) , muls(u_i(), 0.2f), 5 );
+		}
+		if (1)
+		{
+			scene.physWorld.addRBody( v_z(), v_z(), 2 );
+			scene.physWorld.addRBody( v_z(), v_z(), 6 );
+		}
 	}
 };
 
@@ -138,16 +146,30 @@ void drawScene(Scene& scene)
 				const RShape& shape1 = w.rshapes[b1->shape];
 				const RShape& shape2 = w.rshapes[b2->shape];
 
-				gjk::Out_gjk_distance out = gjk::gjk_distance(w.gjk, m1, shape1.v, shape1.count, shape1.r, m2, shape2.v, shape2.count, shape2.r, 1.e-7f);
-
-				if (out.success)
+				if (0)
 				{
-					V2 v[] = { out.v1, out.v2 };
-					draw_convex(painty, m3_id(), v, 2, 0.0f, u_j());
+					gjk::Out_gjk_distance out = gjk::gjk_distance(w.gjk, m1, shape1.v, shape1.count, shape1.r, m2, shape2.v, shape2.count, shape2.r, 1.e-5f);
+
+					if (out.success)
+					{
+						V2 v[] = { out.v1, out.v2 };
+						draw_convex(painty, m3_id(), v, 2, 0.0f, u_j());
+					}
+					else
+						printf("failed\n");
 				}
 				else
 				{
-					printf("failed\n");
+					gjk::Out_epa_distance out; 
+					gjk::epa_distance(out, w.epa, m1, shape1.v, shape1.count, shape1.r, m2, shape2.v, shape2.count, shape2.r, 1.e-3f, 1.e-5f);
+
+					if (out.success)
+					{
+						V2 v[] = { out.v1, out.v2 };
+						draw_convex(painty, m3_id(), v, 2, 0.0f, out.dist > out.gjk.eps ? u_j() : u_i());
+					}
+					else
+						printf("failed\n");
 				}
 			}
 		}

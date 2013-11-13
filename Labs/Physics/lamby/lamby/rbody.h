@@ -41,11 +41,14 @@ public:
 	RShape rshapes[128];
 
 	gjk::GjkScratch gjk;
+	gjk::EpaScratch epa;
 
 	Rl dt;
 	V3 g;
 	
-	PhysWorld() : rbodies(32, dtor_rbody) 
+	PhysWorld() 
+	:	rbodies(32, dtor_rbody) 
+	,	epa(16)
 	{
 		dt = 1.0f/30.0f;
 		g = muls(u_j(), -9.8f);
@@ -89,6 +92,14 @@ public:
 		rshapes[si].v[3] = V2(0.5f, -0.5f);
 		rshapes[si].count = 4;
 		rshapes[si].r = 0.15f;
+		si++;
+
+		rshapes[si].v[0] = V2(-1.5f, -1.5f);
+		rshapes[si].v[1] = V2(-1.5f, 1.5f);
+		rshapes[si].v[2] = V2(1.5f, 1.5f);
+		rshapes[si].v[3] = V2(1.5f, -1.5f);
+		rshapes[si].count = 4;
+		rshapes[si].r = 0.0f;
 		si++;
 	}
 

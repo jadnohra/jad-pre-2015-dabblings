@@ -78,7 +78,7 @@ namespace gjk
 			int lami2;
 		};
 
-		V2 Vk;
+		V2 v;
 		V2Pair Pi;
 		amiPair IndI;
 		V2 DirI;
@@ -193,6 +193,7 @@ namespace gjk
 
 	struct Out_gjk_support_mink_cvx
 	{
+		V2 d;
 		Rl h;
 		V2 s;
 		V2Pair p;
@@ -206,6 +207,7 @@ namespace gjk
 		Rl max1; if (!support_cvx(scr.cvx1, m1, v1, lv1, r1, d, n, scr.maxdim, max1)) return false;
 		Rl max2; if (!support_cvx(scr.cvx2, m2, v2, lv2, r2, neg(d), neg(n), scr.maxdim, max2)) return false;
 
+		out.d = n;
 		out.p.p1 = cvx_vertex(m1, v1, lv1, r1, n, scr.cvx1.ami[0]);
 		out.p.p2 = cvx_vertex(m2, v2, lv2, r2, neg(n), scr.cvx2.ami[0]);
 		out.h = max1+max2; out.s = sub(out.p.p1, out.p.p2); out.cvx1 = &scr.cvx1; out.cvx2 = &scr.cvx2;
@@ -220,7 +222,8 @@ namespace gjk
 		int lLi;
 	};
 
-	bool gjk_subdist_fallback(Out_gjk_subdist& out, GjkScratch& scr, GjkVert* Vk, int lVk)
+	template<typename Vert>
+	bool gjk_subdist_fallback(Out_gjk_subdist& out, GjkScratch& scr, const Vert& Vk, int lVk)
 	{
 		const Perm& perm = scr.perm[lVk-1];
 		Rl* Di = scr.Di; scr.lDi = perm.Di_count;
@@ -244,7 +247,7 @@ namespace gjk
 
 			for (int j=0; Isp[j] != EL; ++j)
 			{
-				Rl Dj = Rl(0.0); for (int i=0; i<d; ++i) Dj = Dj + (Di[di_index+i] * ( dot(Vk[Is[i]].Vk, sub(Vk[Is[0]].Vk, Vk[Isp[j]].Vk)) ) );
+				Rl Dj = Rl(0.0); for (int i=0; i<d; ++i) Dj = Dj + (Di[di_index+i] * ( dot(Vk[Is[i]].v, sub(Vk[Is[0]].v, Vk[Isp[j]].v)) ) );
 				Di[Union_index[j]] = Dj;
 			}
 
@@ -263,7 +266,7 @@ namespace gjk
 					for (int i=0; i<d; ++i)
 					{
 						Rl l = Di[di_index+i] * iD;
-						v = add(v, muls(Vk[Is[i]].Vk, l));
+						v = add(v, muls(Vk[Is[i]].v, l));
 						Li[Is[i]] = l;
 					}
 
@@ -283,7 +286,8 @@ namespace gjk
 		return true;
 	}
 
-	bool gjk_subdist(Out_gjk_subdist& out, GjkScratch& scr, GjkVert* Vk, int lVk)
+	template<typename Vert>
+	bool gjk_subdist(Out_gjk_subdist& out, GjkScratch& scr, const Vert& Vk, int lVk)
 	{
 		const Perm& perm = scr.perm[lVk-1];
 		Rl* Di = scr.Di; scr.lDi = perm.Di_count;
@@ -305,7 +309,7 @@ namespace gjk
 			bool cond3 = true;
 			for (int j=0; Isp[j] != EL; ++j)
 			{
-				Rl Dj = Rl(0.0); for (int i=0; i<d; ++i) Dj = Dj + (Di[di_index+i] * ( dot(Vk[Is[i]].Vk, sub(Vk[Is[0]].Vk, Vk[Isp[j]].Vk)) ) );
+				Rl Dj = Rl(0.0); for (int i=0; i<d; ++i) Dj = Dj + (Di[di_index+i] * ( dot(Vk[Is[i]].v, sub(Vk[Is[0]].v, Vk[Isp[j]].v)) ) );
 				Di[Union_index[j]] = Dj;
 				if (Dj > Rl(0.0)) cond3 = false;
 			}
@@ -325,7 +329,7 @@ namespace gjk
 					for (int i=0; i<d; ++i)
 					{
 						Rl l = Di[di_index+i] * iD;
-						v = add(v, muls(Vk[Is[i]].Vk, l));
+						v = add(v, muls(Vk[Is[i]].v, l));
 						Li[Is[i]] = l;
 					}
 		
@@ -355,25 +359,23 @@ namespace gjk
 		Out_gjk_distance(bool success_, Rlp dist_, Rlp eps_, V2p v1_, V2p v2_) : success(success_), dist(dist_), eps(eps_), v1(v1_), v2(v2_) {}
 	};
 
+	void gjk_copy_vert(const Out_gjk_support_mink_cvx& supp, GjkVert& simpl)
+	{
+		simpl.v = supp.s;
+		simpl.Pi = supp.p;
+		for (int i=0;i<supp.cvx1->lami; ++i) simpl.IndI.ami1[i] = supp.cvx1->ami[i]; simpl.IndI.lami1 = supp.cvx1->lami;
+		for (int i=0;i<supp.cvx2->lami; ++i) simpl.IndI.ami2[i] = supp.cvx2->ami[i]; simpl.IndI.lami2 = supp.cvx2->lami;
+		simpl.DirI = supp.d;
+	}
+
 	Out_gjk_distance gjk_distance(GjkScratch& scr, M3p m1, V2pc v1, int lv1, Rl r1, M3p m2, V2pc v2, int lv2, Rl r2, Rl eps)
 	{
-		static int cnt=0;
-		cnt++;
-		if (cnt==60)
-		{
-			int x=0;x;
-		}
-
 		V2 d = V2(Rl(-1.0), Rl(0.0));
 		int& lsimpl = scr.lsimpl; GjkVert* simpl = scr.simpl; 
 		{
 			Out_gjk_support_mink_cvx supp; if (!gjk_support_mink_cvx(supp, scr, m1, v1, lv1, r1, m2, v2, lv2, r2, d)) return Out_gjk_distance(false, 0.0f, 0.0f, v2_z(), v2_z());
 			lsimpl = 1;
-			simpl[0].Vk = supp.s;
-			simpl[0].Pi = supp.p;
-			for (int i=0;i<supp.cvx1->lami; ++i) simpl[0].IndI.ami1[i] = supp.cvx1->ami[i]; simpl[0].IndI.lami1 = supp.cvx1->lami;
-			for (int i=0;i<supp.cvx2->lami; ++i) simpl[0].IndI.ami2[i] = supp.cvx2->ami[i]; simpl[0].IndI.lami2 = supp.cvx2->lami;
-			simpl[0].DirI = d;
+			gjk_copy_vert(supp, simpl[0]);
 		}
 	
 		int max_iter = 3 + (lv1+lv2)*5;
@@ -422,16 +424,369 @@ namespace gjk
 			int nsi = lsimpl < 3 ? lsimpl : subd.Isp[0];
 			if (nsi == EL) return Out_gjk_distance(false, 0.0f, 0.0f, v2_z(), v2_z());
 			{
-				simpl[nsi].Vk = supp.s;
-				simpl[nsi].Pi = supp.p;
-				for (int i=0;i<supp.cvx1->lami; ++i) simpl[nsi].IndI.ami1[i] = supp.cvx1->ami[i]; simpl[nsi].IndI.lami1 = supp.cvx1->lami;
-				for (int i=0;i<supp.cvx2->lami; ++i) simpl[nsi].IndI.ami2[i] = supp.cvx2->ami[i]; simpl[nsi].IndI.lami2 = supp.cvx2->lami;
-				simpl[nsi].DirI = nvk;
+				gjk_copy_vert(supp, simpl[nsi]);
 				lsimpl = m_tmin(3, lsimpl+1);
 			}
 		}
 	}
 
+	bool epa_closest_on_edge(Out_gjk_subdist& out, GjkScratch& scr, const GjkVert& v1, const GjkVert& v2 )
+	{
+		struct GetVert
+		{
+			const GjkVert** Vk;
+			GetVert(const GjkVert** _Vk) : Vk(_Vk) {}
+
+			const GjkVert& operator[](int i) const { return *Vk[i]; }
+		};
+
+		const GjkVert* Vk[] = { &v1, &v2 };
+		return gjk_subdist(out, scr, GetVert(Vk), 2);
+	}
+
+	struct EpaScratch
+	{
+		GjkScratch gjk;
+		int maxdim;
+		int maxV;
+		GjkVert* simpl;
+		int lsimpl;
+
+		struct LiPair
+		{
+			Rl i1;
+			Rl i2;
+		};
+
+		Rl* Dk;
+		V2* Ck;
+		LiPair* Li;
+
+		EpaScratch(int maxVertices, bool _use_fallbacks = true) 
+		: gjk(_use_fallbacks)
+		{
+			maxV = maxVertices;
+			Dk = (Rl*) malloc(maxVertices*sizeof(Rl));
+			Ck = (V2*) malloc(maxVertices*sizeof(V2));
+			Li = (LiPair*) malloc(maxVertices*sizeof(LiPair));
+
+			maxdim = gjk.perm[2].dim;
+			simpl = (GjkVert*) malloc(maxVertices*sizeof(GjkVert));
+			for (int i=0;i<maxVertices; ++i) 
+			{
+				simpl[i].IndI.ami1 = (int*) malloc(maxdim*sizeof(int));
+				simpl[i].IndI.ami2 = (int*) malloc(maxdim*sizeof(int));
+			}
+		}
+
+		~EpaScratch()
+		{
+			free(Dk);
+			free(Ck);
+			free(Li);
+
+			for (int i=0;i<maxdim; ++i) 
+			{
+				free(simpl[i].IndI.ami1); 
+				free(simpl[i].IndI.ami2); 
+			}
+			free(simpl);
+		}
+	};
+
+	struct Out_epa_distance
+	{
+		Out_gjk_distance gjk;
+		Rl dist;
+		V2 v1;
+		V2 v2;
+		bool success;
+	};
+
+	bool epa_copy_vert(const Out_gjk_support_mink_cvx& supp, GjkVert& simpl, int maxdim)
+	{
+		if (supp.cvx1->lami > maxdim || supp.cvx2->lami > maxdim) return false;
+
+		simpl.v = supp.s;
+		simpl.Pi = supp.p;
+		for (int i=0;i<supp.cvx1->lami; ++i) simpl.IndI.ami1[i] = supp.cvx1->ami[i]; simpl.IndI.lami1 = supp.cvx1->lami;
+		for (int i=0;i<supp.cvx2->lami; ++i) simpl.IndI.ami2[i] = supp.cvx2->ami[i]; simpl.IndI.lami2 = supp.cvx2->lami;
+		simpl.DirI = supp.d;
+
+		return true;
+	}
+
+	bool epa_copy_vert(const GjkVert& src, GjkVert& simpl, int maxdim)
+	{
+		if (src.IndI.lami1 > maxdim || src.IndI.lami2 > maxdim) return false;
+
+		simpl.v = src.v;
+		simpl.Pi = src.Pi;
+		for (int i=0;i<src.IndI.lami1; ++i) simpl.IndI.ami1[i] = simpl.IndI.ami1[i]; simpl.IndI.lami1 = src.IndI.lami1;
+		for (int i=0;i<src.IndI.lami2; ++i) simpl.IndI.ami2[i] = simpl.IndI.ami2[i]; simpl.IndI.lami2 = src.IndI.lami2;
+		simpl.DirI = src.DirI;
+
+		return true;
+	}
+
+	bool epa_insert(EpaScratch& scr, int lV, int min_i, const Out_gjk_support_mink_cvx& supp)
+	{
+		if (scr.lsimpl == scr.maxV) return false; 
+
+		int ii = (min_i+1) % lV;
+		for (int i=ii+1, j=lV-1; i<lV; ++i, j--)
+		{
+			epa_copy_vert(scr.simpl[j], scr.simpl[j+1], scr.maxdim);
+			scr.Dk[j+1] = scr.Dk[j];
+			scr.Ck[j+1] = scr.Ck[j];
+			scr.Li[j+1] = scr.Li[j];
+		}
+
+		epa_copy_vert(supp, scr.simpl[ii], scr.maxdim);
+		scr.Dk[ii] = Rl(-1.0);
+		scr.Dk[min_i] = Rl(-1.0);
+		scr.lsimpl++;
+
+		return true;
+	}
+
+	bool epa_distance(Out_epa_distance& out, EpaScratch& scr, M3p m1, V2pc v1, int lv1, Rl r1, M3p m2, V2pc v2, int lv2, Rl r2, Rl epsEpa, Rl epsGjk)
+	{
+		out.success = false;
+		out.gjk = gjk_distance(scr.gjk, m1, v1, lv1, r1, m2, v2, lv2, r2, epsGjk);
+		if (!out.gjk.success) 
+			return false;	
+		if (out.gjk.dist > out.gjk.eps) 
+		{
+			out.success = true;
+			out.dist = out.gjk.dist;
+			out.v1 = out.gjk.v1;
+			out.v2 = out.gjk.v2;
+			return true; 
+		}
+
+		GjkVert* simpl = scr.simpl;
+		int& lsimpl = scr.lsimpl;
+
+		lsimpl = 0;
+		for (int i=0; i<scr.gjk.lsimpl; ++i) 
+		{
+			if (!epa_copy_vert(scr.gjk.simpl[i], simpl[i], scr.maxdim)) return false;
+			scr.Dk[i] = Rl(-1.0);
+			lsimpl++;
+		}
+
+		// Treat degenerate case
+		if (lsimpl == 1)
+		{
+			V2 d(Rl(1.0), Rl(0.0));
+			Out_gjk_support_mink_cvx supp; if (!gjk_support_mink_cvx(supp, scr.gjk, m1, v1, lv1, r1, m2, v2, lv2, r2, d)) return false;
+			
+			if (!epa_copy_vert(supp, simpl[lsimpl], scr.maxdim)) return false; lsimpl++;
+		}
+
+		// Treat degenerate case
+		if (lsimpl == 2)
+		{
+			V2 d = sub(simpl[1].v, simpl[0].v);
+			Out_gjk_support_mink_cvx supp1; if (!gjk_support_mink_cvx(supp1, scr.gjk, m1, v1, lv1, r1, m2, v2, lv2, r2, rot90(d))) return false;
+			Out_gjk_support_mink_cvx supp2; if (!gjk_support_mink_cvx(supp2, scr.gjk, m1, v1, lv1, r1, m2, v2, lv2, r2, rotm90(d))) return false;
+
+			Rl dist1 = lenSq( proj_rest(supp1.s, d));
+			Rl dist2 = lenSq( proj_rest(supp2.s, d));
+
+			if (m_isnz(dist1) && m_isnz(dist2))
+			{
+				Out_gjk_support_mink_cvx* supp = m_abs(dist2) > m_abs(dist1) ? &supp2 : &supp1;
+				if (!epa_copy_vert(*supp, simpl[lsimpl], scr.maxdim)) return false; lsimpl++;
+			}
+		}
+
+		const int max_iter = 3 + (lv1+lv2)*5;
+		int iter = 0;
+
+		while (true)
+		{
+			iter++;
+			int min_i = -1;
+
+			const int& lV = lsimpl;
+
+			for (int i=0; i<lV; ++i)
+			{
+				if (scr.Dk[i] < Rl(0))
+				{
+					GjkVert& v1 = simpl[i];
+					GjkVert& v2 = simpl[(i+1)%lV];
+					Out_gjk_subdist cl; if (!epa_closest_on_edge(cl, scr.gjk, v1, v2)) return false;
+
+					if (cl.Li[0] > Rl(0) && cl.Li[0] < Rl(1)) // get a better estimate (better numerics) of the vertex in the case it is not an extremity.
+						cl.v = proj_points(v1.v, v2.v, v2_z() ); 
+					
+					scr.Ck[i] = cl.v;
+					scr.Li[i].i1 = cl.Li[0];
+					scr.Li[i].i2 = cl.Li[1];
+					scr.Dk[i] = lenSq(cl.v);
+
+					if ((min_i < 0) || (scr.Dk[i] < scr.Dk[min_i]))
+						min_i = i;
+				}
+
+				V2 n = normalize(scr.Ck[min_i]);
+				// The epsilon is needed because of the numerical accuracy of gjk_epa_closest_on_edge (REASON1) when used without 
+				if (lenSq(scr.Ck[min_i]) <= Rl(1.e-5f)) // We can't use the closest point as a direction, use segment normal. 
+				{
+					V2 v = simpl[min_i].v;
+					V2 vp = simpl[(min_i-1+lV)%lV].v;
+					V2 vn = simpl[(min_i+1)%lV].v;
+					V2 n = normalize(orth(sub(vn, v)));
+					V2 t = sub(v, vp);
+					if (dot(n, t) < Rl(0))
+						n = neg(n);
+				}
+
+				Out_gjk_support_mink_cvx supp; if (!gjk_support_mink_cvx(supp, scr.gjk, m1, v1, lv1, r1, m2, v2, lv2, r2, n)) return false;
+				if ((dot(n, supp.s) - dot(n, scr.Ck[min_i]) < epsEpa) || (iter >= max_iter) || (lV == scr.maxV) )
+				{
+					V2 v1 = v2_z();
+					V2 v2 = v2_z();
+
+					for (int i=0; i<2; ++i)
+					{
+						int j = (min_i+i)%lV;
+						v1 = add(v1, muls(simpl[j].Pi.p1, scr.Li[j].i1));
+						v2 = add(v2, muls(simpl[j].Pi.p2, scr.Li[j].i2));
+					}
+
+					out.success = true;
+					out.v1 = v1;
+					out.v2 = v2;
+					out.dist = -len(scr.Ck[min_i]);
+
+					return true;
+				}
+			
+				if (!epa_insert(scr, lV, min_i, supp)) return false;
+			}
+		}
+
+		return true;
+	}
+	
+
+/*
+	gEPA_eps = 0.0001
+
+def gjk_epa_closest_on_edge(ctx, v1, v2):
+	Vk = [v1, v2]
+	subd = gjk_subdist(ctx, Vk)
+	return [subd[0], subd[2]] # vert, lambdas
+
+
+#only 2D
+def gjk_epa_distance(m1, cvx1, r1, m2, cvx2, r2, epa_eps=gEPA_eps, gjk_eps=gGJK_eps, dbg = None):
+
+	gjkOut = gjk_distance(m1, cvx1, r1, m2, cvx2, r2, gjk_eps, dbg) 
+	if (gjkOut[0] >= gjkOut[1]):
+		return gjkOut
+
+	ctx = GJK_Context()
+
+	Vk = gjkOut[5]
+	Pi = gjkOut[6]
+	IndI = gjkOut[7]
+	
+	# treat degenerate case
+	if (len(Vk)==1):
+		supp = gjk_support_mink_cvx(m1, cvx1, r1, m2, cvx2, r2, [1.0, 0.0])
+		Vk.append(supp[1])
+		Pi.append(supp[2])
+		IndI.append(supp[3])
+
+	# treat degenerate case
+	if (len(Vk)==2):	
+		d = v2_sub(Vk[1], Vk[0])
+		supp1 = gjk_support_mink_cvx(m1, cvx1, r1, m2, cvx2, r2, [-d[1], d[0]])
+		supp2 = gjk_support_mink_cvx(m1, cvx1, r1, m2, cvx2, r2, [d[1], -d[0]])
+
+		dist1 = v2_lenSq(v2_proj_rest(supp1[1], d))
+		dist2 = v2_lenSq(v2_proj_rest(supp2[1], d))
+
+		if (dist1 != 0.0 and dist2 != 0.0):
+			supp = supp1
+			if (math.fabs(dist2) > math.fabs(dist1)):
+				supp = supp2
+
+			Vk.append(supp[1])
+			Pi.append(supp[2])
+			IndI.append(supp[3])
+		
+
+	Dk = [-1.0] * len(Vk)
+	Ck = [None] * len(Vk)
+	Li = [None] * len(Vk)
+
+	max_iter = 3 + (len(cvx1) + len(cvx2))*5
+	iter = 0
+
+	while (True):
+		iter = iter+1
+
+		min_i = -1
+
+		lV = len(Vk)
+		for i in range(lV):
+			if (Dk[i] < 0.0):
+				v1 = Vk[i]
+				v2 = Vk[(i+1)%lV]
+				cl = gjk_epa_closest_on_edge(ctx, v1, v2)
+
+				if (cl[1][0] > 0.0 and cl[1][0] < 1.0):	# get a better estimate (better numerics) of the vertex in the case it is not an extremity.
+					cl[0] = v2_points_proj(v1, v2, v2_z())
+
+				Ck[i] = cl[0]
+				Li[i] = cl[1]
+				Dk[i] = v2_lenSq(cl[0])
+
+			if ((min_i < 0) or (Dk[i] < Dk[min_i])):
+				min_i = i
+
+		n = v2_normalize(Ck[min_i])
+		# The epsilon is needed because of the numerical accuracy of gjk_epa_closest_on_edge (REASON1) when used without 
+		if (v2_lenSq(Ck[min_i]) <= 0.00000001):	# We can't use the closest point as a direction, use segment normal. 
+		#if (v2_lenSq(Ck[min_i]) == 0.0):	
+			v = Vk[min_i]
+			vp = Vk[(min_i-1+lV)%lV]
+			vn = Vk[(min_i+1)%lV]
+			n = v2_normalize(v2_orth(v2_sub(vn, v)))
+			t = v2_sub(v, vp)
+			if (v2_dot(n, t) < 0.0):
+				n = v2_neg(n)
+
+		supp = gjk_support_mink_cvx(m1, cvx1, r1, m2, cvx2, r2, n)
+		if ((v2_dot(n, supp[1]) - v2_dot(n, Ck[min_i]) < epa_eps) or (iter > max_iter)):
+
+			v1 = [0.0, 0.0]
+			v2 = [0.0, 0.0]
+			for i in range(2):
+				j = (min_i+i)%lV
+				v1 = v2_add(v1, v2_muls(Pi[j][0], Li[min_i][i]))
+				v2 = v2_add(v2, v2_muls(Pi[j][1], Li[min_i][i]))
+			
+			indI = [IndI[min_i], IndI[(min_i+1)%lV]]
+			features = 	gjk_find_features(m1, cvx1, r1, m2, cvx2, r2, Li[min_i], indI)	
+
+			return [-v2_len(Ck[min_i]), 0.0, v1, v2, features]
+
+		ii = (min_i+1) % lV
+		Vk.insert(ii, supp[1])
+		Pi.insert(ii, supp[2])
+		IndI.insert(ii, supp[3])
+		Dk[min_i] = -1.0
+		Dk.insert(ii, -1.0)
+		Ck.insert(ii, None)
+		Li.insert(ii, None)
+*/
 	#undef EL
 
 	int gjk_test1()
