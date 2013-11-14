@@ -631,43 +631,43 @@ namespace gjk
 					if ((min_i < 0) || (scr.Dk[i] < scr.Dk[min_i]))
 						min_i = i;
 				}
-
-				V2 n = normalize(scr.Ck[min_i]);
-				// The epsilon is needed because of the numerical accuracy of gjk_epa_closest_on_edge (REASON1) when used without 
-				if (lenSq(scr.Ck[min_i]) <= Rl(1.e-5f)) // We can't use the closest point as a direction, use segment normal. 
-				{
-					V2 v = simpl[min_i].v;
-					V2 vp = simpl[(min_i-1+lV)%lV].v;
-					V2 vn = simpl[(min_i+1)%lV].v;
-					V2 n = normalize(orth(sub(vn, v)));
-					V2 t = sub(v, vp);
-					if (dot(n, t) < Rl(0))
-						n = neg(n);
-				}
-
-				Out_gjk_support_mink_cvx supp; if (!gjk_support_mink_cvx(supp, scr.gjk, m1, v1, lv1, r1, m2, v2, lv2, r2, n)) return false;
-				if ((dot(n, supp.s) - dot(n, scr.Ck[min_i]) < epsEpa) || (iter >= max_iter) || (lV == scr.maxV) )
-				{
-					V2 v1 = v2_z();
-					V2 v2 = v2_z();
-
-					for (int i=0; i<2; ++i)
-					{
-						int j = (min_i+i)%lV;
-						v1 = add(v1, muls(simpl[j].Pi.p1, scr.Li[j].i1));
-						v2 = add(v2, muls(simpl[j].Pi.p2, scr.Li[j].i2));
-					}
-
-					out.success = true;
-					out.v1 = v1;
-					out.v2 = v2;
-					out.dist = -len(scr.Ck[min_i]);
-
-					return true;
-				}
-			
-				if (!epa_insert(scr, lV, min_i, supp)) return false;
 			}
+
+			V2 n = normalize(scr.Ck[min_i]);
+			// The epsilon is needed because of the numerical accuracy of gjk_epa_closest_on_edge (REASON1) when used without 
+			if (lenSq(scr.Ck[min_i]) <= Rl(1.e-5f)) // We can't use the closest point as a direction, use segment normal. 
+			{
+				V2 v = simpl[min_i].v;
+				V2 vp = simpl[(min_i-1+lV)%lV].v;
+				V2 vn = simpl[(min_i+1)%lV].v;
+				n = normalize(orth(sub(vn, v)));
+				V2 t = sub(v, vp);
+				if (dot(n, t) < Rl(0))
+					n = neg(n);
+			}
+
+			Out_gjk_support_mink_cvx supp; if (!gjk_support_mink_cvx(supp, scr.gjk, m1, v1, lv1, r1, m2, v2, lv2, r2, n)) return false;
+			if ((dot(n, supp.s) - dot(n, scr.Ck[min_i]) < epsEpa) || (iter >= max_iter) || (lV == scr.maxV) )
+			{
+				V2 v1 = v2_z();
+				V2 v2 = v2_z();
+
+				for (int i=0; i<2; ++i)
+				{
+					int j = (min_i+i)%lV;
+					v1 = add(v1, muls(simpl[j].Pi.p1, scr.Li[j].i1));
+					v2 = add(v2, muls(simpl[j].Pi.p2, scr.Li[j].i2));
+				}
+
+				out.success = true;
+				out.v1 = v1;
+				out.v2 = v2;
+				out.dist = -len(scr.Ck[min_i]);
+
+				return true;
+			}
+		
+			if (!epa_insert(scr, lV, min_i, supp)) return false;
 		}
 
 		return true;

@@ -101,7 +101,7 @@ struct WindowData
 		if (1)
 		{
 			scene.physWorld.addRBody( v_z(), v_z(), 2 );
-			scene.physWorld.addRBody( v_z(), v_z(), 6 );
+			scene.physWorld.addRBody( v_z(), v_z(), 1*6 );
 		}
 	}
 };
