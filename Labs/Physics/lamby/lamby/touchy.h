@@ -536,7 +536,7 @@ namespace gjk
 		if (scr.lsimpl == scr.maxV) return false; 
 
 		int ii = (min_i+1) % lV;
-		for (int i=ii+1, j=lV-1; i<lV; ++i, j--)
+		for (int i=ii+1, j=lV-1; i<=lV; ++i, j--)
 		{
 			epa_copy_vert(scr.simpl[j], scr.simpl[j+1], scr.maxdim);
 			scr.Dk[j+1] = scr.Dk[j];

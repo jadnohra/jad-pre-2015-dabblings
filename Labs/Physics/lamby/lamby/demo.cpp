@@ -102,7 +102,7 @@ struct WindowData
 		if (1)
 		{
 			scene.physWorld.addRBody( v_z(), v_z(), 1*6 );
-			scene.physWorld.addRBody( v_z(), v_z(), 2 );
+		//	scene.physWorld.addRBody( v_z(), v_z(), 2 );
 		}
 	}
 };
@@ -144,10 +144,11 @@ void drawScene(WindowData& wd, Scene& scene)
 				M3 m1 = rigid(asV2(b1->q), b1->q(2));
 				//M3 m2 = rigid(asV2(b2->q), b2->q(2));
 				M3 m2 = rigid(wd.cursor, Rl(0));
-				//M3 m2 = rigid(V2(h2f(0x3f333333), h2f(0xbebbbbbc)), Rl(0));
-				//M3 m2 = rigid(V2(h2f(0x40244444), h2f(0x3f955555)), Rl(0));
+				//m2 = rigid(V2(h2f(0x3f333333), h2f(0xbebbbbbc)), Rl(0));
+				//m2 = rigid(V2(h2f(0x40244444), h2f(0x3f955555)), Rl(0));
+				m2 = rigid(V2(h2f(0x3f3bbbbc), h2f(0x3e6eeeef)), Rl(0));
 				
-				//printf("0x%x,0x%x\n", f2h(wd.cursor(0)), f2h(wd.cursor(1)));
+				printf("0x%x,0x%x\n", f2h(wd.cursor(0)), f2h(wd.cursor(1)));
 
 				const RShape& shape1 = w.rshapes[b1->shape];
 				const RShape& shape2 = w.rshapes[0];
