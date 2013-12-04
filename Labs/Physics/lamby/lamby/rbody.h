@@ -101,6 +101,13 @@ public:
 		rshapes[si].count = 4;
 		rshapes[si].r = 0.0f;
 		si++;
+
+		rshapes[si].v[0] = V2(10.0f*-0.5f, 0.0f);
+		rshapes[si].v[1] = V2(10.0f*0.5f, 0.0f);
+		rshapes[si].v[2] = V2(0.0f, 10.0f*0.5f);
+		rshapes[si].count = 3;
+		rshapes[si].r = 0.0f;
+		si++;
 	}
 
 	RBody* addRBody(const V3& q, const V3& v, int shape = 0)

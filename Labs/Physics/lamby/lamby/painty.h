@@ -11,8 +11,11 @@
 struct Painty
 {
 	float* vs;
+	float* angles;
+	V2* sincos;
 	int count;
 	int subdiv;
+	int angle_subdiv;
 	GLuint listName;
 
 	float* getBuffer(int count_)
@@ -26,16 +29,29 @@ struct Painty
 		return vs;
 	}
 
-	Painty() : vs(0), count(0), subdiv(6) 
+	Painty() : vs(0), count(0), subdiv(6), angle_subdiv(0)
 	{ 
 		getBuffer(64); 
 		glEnableClientState(GL_VERTEX_ARRAY); 
 		listName = glGenLists(1);
+
+		angle_subdiv = subdiv * 4;
+		angles = (float*) malloc( subdiv * 4 * sizeof(float));
+		sincos = (V2*) malloc( subdiv * 4 * sizeof(V2));
+
+		for (int i=0; i<angle_subdiv; ++i)
+		{
+			angles[i] = 2.0f*rl_pi()*float(i)/float(angle_subdiv);
+			sincos[i].x[0] = m_sin(angles[i]);
+			sincos[i].x[1] = m_cos(angles[i]);
+		}
 	}
 
 	~Painty() 
 	{ 
 		free(vs); 
+		free(angles);
+		free(sincos);
 		vs = 0; 
 		glDeleteLists(listName, 1);
 	}
@@ -54,8 +70,20 @@ struct Painty
 	{
 		glCallList(listName);
 	}
-	
 };
+
+void draw_circle(Painty& ctx, V2 v, Rl r, V3p col)
+{
+	float* vs = ctx.getBuffer(2*ctx.angle_subdiv);
+	for (int i=0,j=0;i<ctx.angle_subdiv;i++,j+=2)
+	{
+		V2 cv = add(v, muls(ctx.sincos[i], r));
+		vs[j]=cv(0); vs[j+1]=cv(1);
+	}
+	glColor3f(col(0), col(1), col(2)); 
+	glVertexPointer( 2, GL_FLOAT, 0, vs ); 
+	glDrawArrays( GL_LINE_LOOP, 0, ctx.angle_subdiv );    
+}
 
 void draw_convex(Painty& ctx, M3p m, const V2* v, int count, V3p col)
 {
@@ -76,7 +104,10 @@ void draw_convex(Painty& ctx, M3p m, const V2* v, int count, Rl r, V3p col)
 		draw_convex(ctx, m, v, count, col);
 
 	if (count == 1)
+	{
+		draw_circle(ctx, mulv(m, v[0]), r, col);
 		return;
+	}
 
 	struct Local
 	{
@@ -117,6 +148,29 @@ void draw_convex(Painty& ctx, M3p m, const V2* v, int count, Rl r, V3p col)
 	glColor3f(col(0), col(1), col(2)); 
 	glVertexPointer( 2, GL_FLOAT, 0, vs ); 
 	glDrawArrays( GL_LINE_LOOP, 0, vsi/2 );   
+}
+
+
+void window_unproject(int inX, int inY, float& x, float& y)
+{
+	GLint viewport[4];
+	GLdouble modelview[16];
+	GLdouble projection[16];
+	GLfloat winX, winY, winZ;
+	GLdouble posX, posY, posZ;
+ 
+	glGetDoublev( GL_MODELVIEW_MATRIX, modelview );
+	glGetDoublev( GL_PROJECTION_MATRIX, projection );
+	glGetIntegerv( GL_VIEWPORT, viewport );
+ 
+	winX = (float)inX;
+	winY = (float)viewport[3] - (float)inY;
+	glReadPixels( inX, int(winY), 1, 1, GL_DEPTH_COMPONENT, GL_FLOAT, &winZ );
+ 
+	gluUnProject( winX, winY, winZ, modelview, projection, viewport, &posX, &posY, &posZ);
+
+	x = (float)posX;
+	y = (float)posY;
 }
 
 #endif // LAMBY_PAINTY_H

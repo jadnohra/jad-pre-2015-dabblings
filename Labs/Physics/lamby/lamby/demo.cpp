@@ -80,6 +80,7 @@ struct WindowData
 	float transl_ref[2];
 	float transl_moving[2];
 	float transl[2];
+	V2 cursor;
 
 	Scene scene;
 	double lastTime;
@@ -100,13 +101,13 @@ struct WindowData
 		}
 		if (1)
 		{
-			scene.physWorld.addRBody( v_z(), v_z(), 2 );
 			scene.physWorld.addRBody( v_z(), v_z(), 1*6 );
+			scene.physWorld.addRBody( v_z(), v_z(), 2 );
 		}
 	}
 };
 
-void drawScene(Scene& scene)
+void drawScene(WindowData& wd, Scene& scene)
 {
 	glfwSwapInterval(1);	//vsync on.
 	scene.clock.update();
@@ -135,7 +136,52 @@ void drawScene(Scene& scene)
 
 		//if (dt)
 		{
-			if (w.rbodies.size >= 2)
+			if (true)
+			{
+				RBody* b1 = w.rbodies.at(0);
+				RBody* b2 = w.rbodies.at(1);
+
+				M3 m1 = rigid(asV2(b1->q), b1->q(2));
+				//M3 m2 = rigid(asV2(b2->q), b2->q(2));
+				M3 m2 = rigid(wd.cursor, Rl(0));
+				//M3 m2 = rigid(V2(h2f(0x3f333333), h2f(0xbebbbbbc)), Rl(0));
+				//M3 m2 = rigid(V2(h2f(0x40244444), h2f(0x3f955555)), Rl(0));
+				
+				//printf("0x%x,0x%x\n", f2h(wd.cursor(0)), f2h(wd.cursor(1)));
+
+				const RShape& shape1 = w.rshapes[b1->shape];
+				const RShape& shape2 = w.rshapes[0];
+				//const RShape& shape2 = w.rshapes[b2->shape];
+
+				draw_circle(painty, wd.cursor, Rl(0.2), u_ijk());
+				if (0)
+				{
+					gjk::Out_gjk_distance out = gjk::gjk_distance(w.gjk, m1, shape1.v, shape1.count, shape1.r, m2, shape2.v, shape2.count, shape2.r, 1.e-5f);
+
+					if (out.success)
+					{
+						V2 v[] = { out.v1, out.v2 };
+						draw_convex(painty, m3_id(), v, 2, 0.0f, u_j());
+					}
+					else
+						printf("failed\n");
+				}
+				else
+				{
+					gjk::Out_epa_distance out; 
+					gjk::epa_distance(out, w.epa, m1, shape1.v, shape1.count, shape1.r, m2, shape2.v, shape2.count, shape2.r, 1.e-3f, 1.e-5f);
+
+					if (out.success)
+					{
+						V2 v[] = { out.v1, out.v2 };
+						draw_convex(painty, m3_id(), v, 2, 0.0f, out.dist > out.gjk.eps ? u_j() : u_i());
+					}
+					else
+						printf("failed\n");
+				}
+			}
+
+			if (false && w.rbodies.size >= 2)
 			{
 				RBody* b1 = w.rbodies.at(0);
 				RBody* b2 = w.rbodies.at(1);
@@ -215,6 +261,7 @@ void display(GLFWwindow* window)
 {
 	WindowData& wd = *(WindowData*) glfwGetWindowUserPointer(window);
 
+
 	int width,height; 
 	glfwGetWindowSize(window, &width, &height);
 	glViewport( 0, 0, width, height );
@@ -245,8 +292,16 @@ void display(GLFWwindow* window)
 		glScalef(wd.scale, wd.scale, 1.0f);
 	}
 
-	double t = glfwGetTime();
-	drawScene(wd.scene);
+	{
+		double xd,yd;
+		glfwGetCursorPos(window, &xd, &yd);
+		window_unproject((int) xd, (int) yd, wd.cursor.x[0], wd.cursor.x[1]);
+	}
+
+
+	{
+		drawScene(wd, wd.scene);
+	}
 
 	glfwSwapBuffers(window);
 }

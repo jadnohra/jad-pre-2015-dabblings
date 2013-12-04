@@ -140,6 +140,8 @@ V3 muls(V3p v1, Rlp s)
 	{ return V3(v1.x[0]*s, v1.x[1]*s, v1.x[2]*s); }
 V2p asV2(V3p v)
 	{ return *((V2*)((void*) &v)); }
+V2p asV2(Rl* x)
+	{ return *((V2*)((void*) x)); }
 
 M3 m3_z()
 	{ static M3 mz = M3(v_z(), v_z(), v_z()); return mz; }
@@ -177,5 +179,8 @@ M3 rigid(V2p transl, Rl a)
 	}
 
 
+
+float h2f(unsigned int hex) { float f; *((unsigned int*) ((void*) &f)) = hex; return f; }
+unsigned int f2h(float f) { unsigned int hex = *((unsigned int*) ((void*) &f)); return hex; }
 
 #endif // LAMBY_GUASSY_H

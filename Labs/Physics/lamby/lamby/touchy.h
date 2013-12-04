@@ -456,6 +456,8 @@ namespace gjk
 		{
 			Rl i1;
 			Rl i2;
+
+			Rl& operator[](int i) { return i==0?i1:i2; }
 		};
 
 		Rl* Dk;
@@ -655,8 +657,8 @@ namespace gjk
 				for (int i=0; i<2; ++i)
 				{
 					int j = (min_i+i)%lV;
-					v1 = add(v1, muls(simpl[j].Pi.p1, scr.Li[j].i1));
-					v2 = add(v2, muls(simpl[j].Pi.p2, scr.Li[j].i2));
+					v1 = add(v1, muls(simpl[j].Pi.p1, scr.Li[min_i][i]));
+					v2 = add(v2, muls(simpl[j].Pi.p2, scr.Li[min_i][i]));
 				}
 
 				out.success = true;
