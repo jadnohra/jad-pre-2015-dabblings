@@ -584,7 +584,7 @@ namespace gjk
 			V2 d(Rl(1.0), Rl(0.0));
 			Out_gjk_support_mink_cvx supp; if (!gjk_support_mink_cvx(supp, scr.gjk, m1, v1, lv1, r1, m2, v2, lv2, r2, d)) return false;
 			
-			if (!epa_copy_vert(supp, simpl[lsimpl], scr.maxdim)) return false; lsimpl++;
+			if (!epa_copy_vert(supp, simpl[lsimpl], scr.maxdim)) return false; scr.Dk[lsimpl] = Rl(-1.0); lsimpl++;
 		}
 
 		// Treat degenerate case
@@ -600,19 +600,18 @@ namespace gjk
 			if (m_isnz(dist1) && m_isnz(dist2))
 			{
 				Out_gjk_support_mink_cvx* supp = m_abs(dist2) > m_abs(dist1) ? &supp2 : &supp1;
-				if (!epa_copy_vert(*supp, simpl[lsimpl], scr.maxdim)) return false; lsimpl++;
+				if (!epa_copy_vert(*supp, simpl[lsimpl], scr.maxdim)) return false; scr.Dk[lsimpl] = Rl(-1.0); lsimpl++;
 			}
 		}
 
 		const int max_iter = 3 + (lv1+lv2)*5;
 		int iter = 0;
-
+		
 		while (true)
 		{
 			iter++;
-			int min_i = -1;
-
 			const int& lV = lsimpl;
+			int min_i = -1;
 
 			for (int i=0; i<lV; ++i)
 			{
@@ -629,10 +628,10 @@ namespace gjk
 					scr.Li[i].i1 = cl.Li[0];
 					scr.Li[i].i2 = cl.Li[1];
 					scr.Dk[i] = lenSq(cl.v);
-
-					if ((min_i < 0) || (scr.Dk[i] < scr.Dk[min_i]))
-						min_i = i;
 				}
+
+				if ((min_i < 0) || (scr.Dk[i] < scr.Dk[min_i]))
+					min_i = i;
 			}
 
 			V2 n = normalize(scr.Ck[min_i]);
