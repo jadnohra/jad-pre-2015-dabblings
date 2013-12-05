@@ -65,8 +65,8 @@ public:
 		si++;
 
 		rshapes[si].v[0] = V2(-0.5f, 0.0f);
-		rshapes[si].v[1] = V2(0.5f, 0.0f);
-		rshapes[si].v[2] = V2(0.0f, 0.5f);
+		rshapes[si].v[1] = V2(0.0f, 0.5f);
+		rshapes[si].v[2] = V2(0.5f, 0.0f);
 		rshapes[si].count = 3;
 		rshapes[si].r = 0.0f;
 		si++;

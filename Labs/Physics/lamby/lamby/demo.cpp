@@ -103,6 +103,8 @@ struct WindowData
 		{
 			scene.physWorld.addRBody( v_z(), v_z(), 1*6 );
 			scene.physWorld.addRBody( v_z(), v_z(), 2 );
+			//scene.physWorld.addRBody( v_z(), muls(u_i(), 0.2f), 0 );
+			
 		}
 	}
 };
