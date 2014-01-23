@@ -217,15 +217,17 @@ namespace window2d
 	{
 	public:
 
-		virtual bool shouldRender(const WindowData& wd);
-		virtual bool shouldWaitVSync(const WindowData& wd);
-		virtual void render(const WindowData& wd);
+		virtual void init(WindowData& wd);
+		virtual bool shouldRender(WindowData& wd);
+		virtual bool shouldWaitVSync(WindowData& wd);
+		virtual void render(WindowData& wd);
 	};
 
 	struct WindowData
 	{
 		int width,height; 
 		float scale;
+		float init_scale;
 		bool translating;
 		float transl_ref[2];
 		float transl_moving[2];
@@ -236,7 +238,7 @@ namespace window2d
 		WindowClient sClient;
 		WindowClient* client;
 
-		WindowData() : width(1), height(1), scale(1.0f)
+		WindowData() : width(1), height(1), scale(1.0f), init_scale(1.0f)
 		{ 
 			client = &sClient;
 			translating = false; transl_moving[0]=0.0f; transl_moving[1]=0.0f; transl[0]=0.0f; transl[1]=0.0f; 
@@ -251,169 +253,16 @@ namespace window2d
 	
 
 	
-	bool WindowClient::shouldWaitVSync(const WindowData& wd) { return true; }
-	bool WindowClient::shouldRender(const WindowData& wd) { return true; }
-	void WindowClient::render(const WindowData& wd) 
+	void WindowClient::init(WindowData& wd) { }
+	bool WindowClient::shouldWaitVSync(WindowData& wd) { return true; }
+	bool WindowClient::shouldRender(WindowData& wd) { return true; }
+	void WindowClient::render(WindowData& wd) 
 	{ 
-		draw_circle( wd.dc, wd.cursor, from_pixels(wd, Sc(8)*wd.scale), u_ijk() ); 
+		draw_circle( wd.dc, wd.cursor, from_pixels(wd, Sc(8)*(wd.scale/wd.init_scale)), u_ijk() ); 
 		draw_circle( wd.dc, wd.cursor, from_pixels(wd, 8), u_ijk() ); 
 	}
 
-	/*
-	void drawScene(WindowData& wd, Scene& scene)
-	{
-		glfwSwapInterval(1);	//vsync on.
-		scene.clock.update();
-		float dt = scene.clock.elapsedTime;
-		Painty& painty = scene.painty;
-
-		if (dt)
-			painty.begin();
-
-		if (dt)
-		{
-			PhysWorld& w = scene.physWorld;
-
-			//if (dt)
-			{
-				//w.applyGravity();
-				w.step(1.0f*dt);
-			}
-
-			PhysWorld::RBodyIter it(w.rbodies); RBody* el; 
-			while(el = it.next()) 
-			{
-				const RShape& shape = w.rshapes[el->shape];
-				draw_convex(painty, rigid(asV2(el->q), el->q(2)), shape.v, shape.count, shape.r, u_ijk());
-			}
-
-			//if (dt)
-			{
-				if (true)
-				{
-					RBody* b1 = w.rbodies.at(0);
-					//RBody* b2 = w.rbodies.at(1);
-
-					M3 m1 = rigid(asV2(b1->q), b1->q(2));
-					//M3 m2 = rigid(asV2(b2->q), b2->q(2));
-					M3 m2 = rigid(wd.cursor, Sc(0));
-					//m2 = rigid(V2(h2f(0x3f333333), h2f(0xbebbbbbc)), Sc(0));
-					//m2 = rigid(V2(h2f(0x40244444), h2f(0x3f955555)), Sc(0));
-					//m2 = rigid(V2(h2f(0x3f3bbbbc), h2f(0x3e6eeeef)), Sc(0));
-
-					//printf("0x%x,0x%x\n", f2h(wd.cursor(0)), f2h(wd.cursor(1)));
-
-					const RShape& shape1 = w.rshapes[b1->shape];
-					const RShape& shape2 = w.rshapes[11];
-					//const RShape& shape2 = w.rshapes[b2->shape];
-
-					//draw_circle(painty, wd.cursor, Sc(0.2), u_ijk());
-					draw_convex(painty, m2, shape2.v, shape2.count, shape2.r, u_ijk());
-
-					if (0)
-					{
-						gjk::Out_gjk_distance out = gjk::gjk_distance(w.gjk, m1, shape1.v, shape1.count, shape1.r, m2, shape2.v, shape2.count, shape2.r, 1.e-5f);
-
-						if (out.success)
-						{
-							V2 v[] = { out.v1, out.v2 };
-							draw_convex(painty, m3_id(), v, 2, 0.0f, u_j());
-						}
-						else
-							printf("failed\n");
-					}
-					else
-					{
-						gjk::Out_epa_distance out; 
-						gjk::epa_distance(out, w.epa, m1, shape1.v, shape1.count, shape1.r, m2, shape2.v, shape2.count, shape2.r, 1.e-3f, 1.e-5f);
-
-						if (out.success)
-						{
-							V2 v[] = { out.v1, out.v2 };
-							draw_convex(painty, m3_id(), v, 2, 0.0f, out.dist > out.gjk.eps ? u_j() : u_i());
-						}
-						else
-							printf("failed\n");
-					}
-				}
-
-				if (false && w.rbodies.size >= 2)
-				{
-					RBody* b1 = w.rbodies.at(0);
-					RBody* b2 = w.rbodies.at(1);
-
-					M3 m1 = rigid(asV2(b1->q), b1->q(2));
-					M3 m2 = rigid(asV2(b2->q), b2->q(2));
-
-					const RShape& shape1 = w.rshapes[b1->shape];
-					const RShape& shape2 = w.rshapes[b2->shape];
-
-					if (0)
-					{
-						gjk::Out_gjk_distance out = gjk::gjk_distance(w.gjk, m1, shape1.v, shape1.count, shape1.r, m2, shape2.v, shape2.count, shape2.r, 1.e-5f);
-
-						if (out.success)
-						{
-							V2 v[] = { out.v1, out.v2 };
-							draw_convex(painty, m3_id(), v, 2, 0.0f, u_j());
-						}
-						else
-							printf("failed\n");
-					}
-					else
-					{
-						gjk::Out_epa_distance out; 
-						gjk::epa_distance(out, w.epa, m1, shape1.v, shape1.count, shape1.r, m2, shape2.v, shape2.count, shape2.r, 1.e-3f, 1.e-5f);
-
-						if (out.success)
-						{
-							V2 v[] = { out.v1, out.v2 };
-							draw_convex(painty, m3_id(), v, 2, 0.0f, out.dist > out.gjk.eps ? u_j() : u_i());
-						}
-						else
-							printf("failed\n");
-					}
-				}
-			}
-		}
-
-		if (0)
-		{
-			Thingies thingies;
-
-			V2 v[] = { V2(-0.2f,-0.2f), V2(-0.2f,0.2f), V2(0.2f,0.2f), V2(0.2f,-0.2f) };
-			M3 m = rigid(V2(-0.1f, -0.3f), m_rad(20.0f));
-			thingies.addConvex(m, v, 4, Sc(0.1));
-
-			Thingies::ConvexIter it(thingies.convexes); Convex* el; 
-			while(el = it.next()) 
-				draw_convex(painty, el->transf, el->v, el->count, el->r, u_ijk());
-		}
-
-		if (0)
-		{
-			if (1)
-			{
-				V2 v[] = { V2(-0.2f,-0.2f), V2(-0.2f,0.2f), V2(0.2f,0.2f), V2(0.2f,-0.2f) };
-				M3 m = rigid(V2(0.1f, 0.3f), m_rad(20.0f));
-				draw_convex(painty, m, v, 4, u_ijk());
-			}
-
-			if (1)
-			{
-				V2 v[] = { V2(-0.2f,-0.2f), V2(-0.23f,0.2f), V2(0.2f,0.25f), V2(0.2f,-0.2f) };
-				M3 m = rigid(V2(0.1f, 0.3f), m_rad(-30.0f));
-				draw_convex(painty, m, v, 4, Sc(0.2), u_ijk());
-			}
-		}
-
-		if (dt)
-			painty.end();
-
-		painty.draw();
-	}
-	*/
-
+	
 	void window_unproject(int inX, int inY, float& x, float& y)
 	{
 		GLint viewport[4];
@@ -560,7 +409,7 @@ namespace window2d
 		glfwMakeContextCurrent(window);
 
 		WindowData wd;
-		if (client) wd.client = client;
+		if (client) { wd.client = client; wd.client->init(wd); wd.init_scale = wd.scale; }
 		glfwSetWindowUserPointer(window, &wd);
 
 		int w,h; glfwGetWindowSize(window, &w, &h); glfwHandler::resize(window, w, h);

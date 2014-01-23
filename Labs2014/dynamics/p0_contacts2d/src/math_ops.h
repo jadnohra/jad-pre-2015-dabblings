@@ -1,5 +1,5 @@
 #ifndef LAB_MATH_OPS_H
-#define LAB_
+#define LAB_MATH_OPS_H
 
 #include <math.h>
 

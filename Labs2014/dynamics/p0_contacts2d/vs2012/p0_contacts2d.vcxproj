@@ -80,6 +80,9 @@
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\src\math_ops.h" />
+    <ClInclude Include="..\src\scenes.h" />
+    <ClInclude Include="..\src\spatial2d.h" />
+    <ClInclude Include="..\src\simul2d.h" />
     <ClInclude Include="..\src\window2d.h" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
