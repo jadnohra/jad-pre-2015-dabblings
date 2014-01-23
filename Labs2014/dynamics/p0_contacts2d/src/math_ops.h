@@ -16,6 +16,7 @@ struct V2
 	const Sc& operator()(int i) const { return x[i]; }
 };
 typedef const V2& V2p;
+typedef const V2* V2ptr;
 
 struct V3 
 {
@@ -74,14 +75,18 @@ V2 v2_z()
 	{ return V2(0, 0); }
 V2 add(V2p v1, V2p v2) 
 	{ return V2(v1.x[0]+v2.x[0], v1.x[1]+v2.x[1]); }
+V2 operator+(V2p v1, V2p v2) { return add(v1, v2); }
 V2 sub(V2p v1, V2p v2) 
 	{ return V2(v1.x[0]-v2.x[0], v1.x[1]-v2.x[1]); }
+V2 operator-(V2p v1, V2p v2) { return sub(v1, v2); }
 V2 muls(V2p v1, Scp s) 
 	{ return V2(v1.x[0]*s, v1.x[1]*s); }
+V2 operator*(V2p v1, Scp s) { return muls(v1, s); }
 V2 mul(V2p v1, Scp s) 
 	{ return muls(v1, s); }
 V2 neg(V2p v1) 
 	{ return V2(-v1.x[0], -v1.x[1]); }
+V2 operator-(V2p v1) { return neg(v1); }
 Sc dot(V2p v1, V2p v2) 
 	{ return v1.x[0]*v2.x[0] + v1.x[1]*v2.x[1]; }
 Sc lenSq(V2p v1) 
@@ -149,10 +154,13 @@ M3 m3_id()
 	{ static M3 mid = M3(u_i(), u_j(), u_k()); return mid; }
 M3 mul(M3p m1, M3p m2)
 	{ M3 m; for(int i=0;i<3;++i)for(int j=0;j<3;++j) m(i,j)=m1(i,0)*m2(0,j)+m1(i,1)*m2(1,j)+m1(i,2)*m2(2,j); return m; }
+M3 operator*(M3p m1, M3p m2) { return mul(m1, m2); }
 V3 mul(M3p m, V3p v)
 	{ V3 o; for(int i=0;i<3;++i) o(i)=m(i,0)*v(0)+m(i,1)*v(1)+m(i,2)*v(2); return o; }
+V3 operator*(M3p m, V3p v) { return mul(m, v); }
 V2 mulp(M3p m, V2p v)
 	{ V2 o; for(int i=0;i<2;++i) o(i)=m(i,0)*v(0)+m(i,1)*v(1)+m(i,2); return o; }
+V2 operator*(M3p m, V2p v) { return mulp(m, v); }
 V2 mulv(M3p m, V2p v)
 	{ V2 o; for(int i=0;i<2;++i) o(i)=m(i,0)*v(0)+m(i,1)*v(1); return o; }
 M3 rigid_inv(M3p m)
