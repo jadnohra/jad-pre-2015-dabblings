@@ -233,12 +233,14 @@ namespace window2d
 		float transl_moving[2];
 		float transl[2];
 		V2 cursor;
+		bool cursor_pressed;
+		bool cursor_released;
 		mutable DrawContext dc;
 	
 		WindowClient sClient;
 		WindowClient* client;
 
-		WindowData() : width(1), height(1), scale(1.0f), init_scale(1.0f)
+		WindowData() : width(1), height(1), scale(1.0f), init_scale(1.0f), cursor_pressed(false), cursor_released(false)
 		{ 
 			client = &sClient;
 			translating = false; transl_moving[0]=0.0f; transl_moving[1]=0.0f; transl[0]=0.0f; transl[1]=0.0f; 
@@ -364,6 +366,19 @@ namespace window2d
 		{
 			WindowData& wd = *(WindowData*) glfwGetWindowUserPointer(window);
 
+			if (button == GLFW_MOUSE_BUTTON_1)
+			{
+				if (action == GLFW_PRESS)
+				{
+					wd.cursor_pressed = true;
+					wd.cursor_released = false;
+				}
+				else if (action == GLFW_RELEASE)
+				{
+					wd.cursor_pressed = false;
+					wd.cursor_released = true;
+				}
+			}
 			if (button == GLFW_MOUSE_BUTTON_2)
 			{
 				if (action == GLFW_PRESS)

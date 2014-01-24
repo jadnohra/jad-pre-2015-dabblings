@@ -2,6 +2,7 @@
 #define LAB_SCENES_H
 
 #include "simul2d.h"
+#include "spatial2d.h"
 
 void shapeCircle(ConvexShape2d& s, Sc r)
 {
@@ -45,6 +46,8 @@ void shapeConvex(ConvexShape2d& s, const V2* v, int cnt, Sc r)
 	s.r = r;
 }
 
+
+
 void createScene0(Simul2d& s)
 {
 	ConvexShape2d shape;
@@ -53,6 +56,48 @@ void createScene0(Simul2d& s)
 	shapeConvex(shape, V2(-0.5f, 0.0f), V2(0.0f, 1.0f), V2(0.5f, 0.0f), 0.0f); s.shapes.push_back(shape);
 	shapeConvex(shape, V2(-0.5f, -0.5f), V2(-0.5f, 0.5f), V2(0.5f, 0.5f), V2(0.5f, -0.5f), 0.0f); s.shapes.push_back(shape);
 	shapeConvex(shape, V2(-0.5f, -0.5f), V2(-0.5f, 0.5f), V2(0.5f, 0.5f), V2(0.5f, -0.5f), 0.2f); s.shapes.push_back(shape);
+}
+
+void updateScene1(window2d::WindowData& wd, WindowSimul2d& simul)
+{
+	using namespace sat;
+	
+	ConvexShape2d testShape; testShape.v.push_back(wd.cursor);
+
+	if (wd.cursor_pressed)
+	{
+		int x=0;x;
+	}
+
+	for (auto & shape : simul.simul.shapes)
+	{
+		HyperplaneSep2d sep;
+		V3 col = v3_z();
+
+		if (dist(m3_id(), shape, m3_id(), testShape, sep))
+		{
+			if (sep.dist <= 0.0f) 
+				col = u_j();
+			else
+				col = v3_z();
+		}
+		else
+		{
+			col = u_i();
+		}
+
+		if (col != v3_z())
+			draw_convex( wd.dc, m3_id(), shape.vp(), shape.vl(), shape.r, col );
+	}
+}
+
+void createScene1(Simul2d& s)
+{
+	ConvexShape2d shape;
+
+	shapeCircle(shape, 1.5f); s.shapes.push_back(shape);
+	shapeConvex(shape, V2(-0.5f, 0.0f), V2(0.0f, 1.0f), V2(0.5f, 0.0f), 0.0f); s.shapes.push_back(shape);
+	shapeConvex(shape, V2(-0.5f, -0.5f), V2(-0.5f, 0.5f), V2(0.5f, 0.5f), V2(0.5f, -0.5f), 0.0f); s.shapes.push_back(shape);
 }
 
 #endif

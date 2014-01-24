@@ -71,6 +71,9 @@ Sc m_sin(Scp x)
 Sc m_rad(Scp d)
 	{ return d*rl_pi()/Sc(180); }
 
+template <typename T> void m_swap(T& v1, T& v2) 
+	{ T t = v2; v2 = v1; v1 = t; }
+
 V2 v2_z() 
 	{ return V2(0, 0); }
 V2 add(V2p v1, V2p v2) 
@@ -122,6 +125,13 @@ V2 proj_points_rest(V2p a, V2p b, V2p c)
 V2 lin_comb(const V2* v, Sc* l, int c)
 	{ V2 lc=v2_z(); for(int i=0;i<c;++i) lc=add(lc, mul(v[i], l[i])); return lc; }
 
+bool operator==(V2p v1, V2p v2)
+{ return v1.x[0]==v2.x[0] && v1.x[1]==v2.x[1]; }
+bool operator!=(V2p v1, V2p v2)
+{ return v1.x[0]!=v2.x[0] || v1.x[1]!=v2.x[1]; }
+
+V3 v3_z() 
+	{ return V3(0, 0, 0); }
 V3 v_z() 
 	{ return V3(0, 0, 0); }
 V3 u_i()
@@ -138,6 +148,11 @@ V3 u_jk()
 	{ return V3(0, 1, 1); }
 V3 u_ijk()
 	{ return V3(1, 1, 1); }
+
+bool operator==(V3p v1, V3p v2)
+	{ return v1.x[0]==v2.x[0] && v1.x[1]==v2.x[1] && v1.x[2]==v2.x[2]; }
+bool operator!=(V3p v1, V3p v2)
+	{ return v1.x[0]!=v2.x[0] || v1.x[1]!=v2.x[1] || v1.x[2]!=v2.x[2]; }
 
 V3 add(V3p v1, V3p v2) 
 	{ return V3(v1.x[0]+v2.x[0], v1.x[1]+v2.x[1], v1.x[2]+v2.x[2]); }

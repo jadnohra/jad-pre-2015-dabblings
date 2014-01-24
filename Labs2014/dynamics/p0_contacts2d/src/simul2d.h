@@ -9,12 +9,19 @@ struct Simul2d
 	std::vector<ConvexShape2d> shapes;
 };
 
+class WindowSimul2d;
+typedef void (*sceneSpdateFunc1)(Simul2d& simul);
+typedef void (*sceneSpdateFunc2)(window2d::WindowData& wd, WindowSimul2d& simul);
 
 class WindowSimul2d : public window2d::WindowClient
 {
 public:
 
 	Simul2d simul;
+	sceneSpdateFunc1 updateFunc1;
+	sceneSpdateFunc2 updateFunc2;
+
+	WindowSimul2d() : updateFunc1(0), updateFunc2(0) {}
 
 	virtual void init(window2d::WindowData& wd)
 	{
@@ -24,13 +31,15 @@ public:
 	virtual void render(window2d::WindowData& wd)
 	{
 		using namespace window2d;
-		 WindowClient::render(wd);
+		WindowClient::render(wd);
 
-		for (size_t i=0; i<simul.shapes.size(); ++i)
+		for (auto & s : simul.shapes)
 		{
-			const ConvexShape2d& s = simul.shapes[i];
-			draw_convex( wd.dc, m3_id(), s.vp(), s.v.size(), s.r, u_ij() );
+			draw_convex( wd.dc, m3_id(), s.vp(), s.v.size(), s.r, u_ijk() );
 		}
+
+		if (updateFunc1) (*updateFunc1)(simul);
+		if (updateFunc2) (*updateFunc2)(wd, *this);
 	}
 };
 

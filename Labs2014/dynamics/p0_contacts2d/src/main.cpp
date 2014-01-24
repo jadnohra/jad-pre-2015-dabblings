@@ -5,7 +5,8 @@
 int main(void)
 {
 	WindowSimul2d ws;
-	createScene0(ws.simul);
+	createScene1(ws.simul);
+	ws.updateFunc2 = updateScene1;
 
 	window2d::loop(&ws);
 
