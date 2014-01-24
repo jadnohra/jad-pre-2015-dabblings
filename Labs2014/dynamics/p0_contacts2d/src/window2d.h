@@ -105,6 +105,12 @@ namespace window2d
 		glDrawArrays( GL_LINE_LOOP, 0, count );    
 	}
 
+	void draw_line(DrawContext& ctx, M3p m, V2p v1, V2p v2, V3p col)
+	{
+		V2 v[] = {v1, v2};
+		draw_convex(ctx, m, v, 2, col);
+	}
+
 	void draw_convex(DrawContext& ctx, M3p m, const V2* v, int count, Sc r, V3p col)
 	{
 		if (r == Sc(0))

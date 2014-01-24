@@ -63,14 +63,30 @@ void updateScene1(window2d::WindowData& wd, WindowSimul2d& simul)
 	using namespace sat;
 	
 	ConvexShape2d testShape; testShape.v.push_back(v2_z());
-	M3 testMatix = m3_id();
+	M3 testMatix = rigid(wd.cursor, 0.0f);
+	if (1)
+	{
+		Sc scale = 0.4f;
+		shapeConvex(testShape, scale*V2(-0.5f, 0.0f), scale*V2(0.5f, 0.0f), 0.0f);
+		testMatix = rigid(wd.cursor, 0.0f * Sc(simul.clock.time));
+		draw_convex( wd.dc, testMatix, testShape.vp(), testShape.vl(), testShape.r, u_k() );
+	}
+	if (0)
 	{
 		Sc scale = 0.4f;
 		shapeConvex(testShape, scale*V2(-0.5f, 0.0f), scale*V2(0.0f, 1.0f), scale*V2(0.5f, 0.0f), 0.0f);
-		testMatix = rigid(wd.cursor, 1.0f * Sc(simul.clock.time));
+		testMatix = rigid(wd.cursor, 0.0f * Sc(simul.clock.time));
+		draw_convex( wd.dc, testMatix, testShape.vp(), testShape.vl(), testShape.r, u_k() );
 	}
-	draw_convex( wd.dc, testMatix, testShape.vp(), testShape.vl(), testShape.r, u_k() );
-
+	if (0)
+	{
+		Sc scale = 0.4f;
+		shapeConvex(testShape, scale*V2(-0.5f, -0.5f), scale*V2(-0.5f, 0.5f), scale*V2(0.5f, 0.5f), scale*V2(0.5f, -0.5f), 0.0f);
+		testMatix = rigid(wd.cursor, 0.0f * Sc(simul.clock.time));
+		draw_convex( wd.dc, testMatix, testShape.vp(), testShape.vl(), testShape.r, u_k() );
+	}
+	
+	
 	if (wd.cursor_pressed)
 	{
 		int x=0;x;
@@ -78,23 +94,32 @@ void updateScene1(window2d::WindowData& wd, WindowSimul2d& simul)
 
 	for (auto & shape : simul.simul.shapes)
 	{
+		M3 shapeMatrix = m3_id();
 		HyperplaneSep2d sep;
 		V3 col = v3_z();
 
-		if (dist(m3_id(), shape, testMatix, testShape, sep))
+		if (dist(shapeMatrix, shape, testMatix, testShape, sep))
 		{
 			if (sep.dist <= 0.0f) 
-				col = u_j();
+			{
+				dist(shapeMatrix, shape, testMatix, testShape, sep);
+				draw_convex( wd.dc, shapeMatrix, shape.vp(), shape.vl(), shape.r, u_j() );
+
+				const FeatureRef2D& fr = sep.nearestFeature[0];
+				if (fr.dim == 1)
+				{
+					draw_line( wd.dc, shapeMatrix, shape.v[fr.index[0]], shape.v[fr.index[1]], u_ik() );
+				}
+			}
 			else
-				col = v3_z();
+			{
+				int x=0;x;
+			}
 		}
 		else
 		{
-			col = u_i();
+			draw_convex( wd.dc, shapeMatrix, shape.vp(), shape.vl(), shape.r, u_i() );
 		}
-
-		if (col != v3_z())
-			draw_convex( wd.dc, m3_id(), shape.vp(), shape.vl(), shape.r, col );
 	}
 }
 

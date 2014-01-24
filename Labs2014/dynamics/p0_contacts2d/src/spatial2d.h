@@ -53,7 +53,7 @@ namespace sat
 				if (dp == max)
 				{
 					if (featureDimOut+1 == maxdim) return false;
-					featureOut[featureDimOut++] = j;
+					featureOut[++featureDimOut] = j;
 				}
 				else
 					break;
@@ -63,13 +63,13 @@ namespace sat
 
 			j = (mi+lv-1)%lv;
 			c = 1;
-			while (c < lv)
+			while (c < lv && lv>2) // lv>2 : Segments are not closed.
 			{
 				Sc dp = dot( cvx_vertex(m, v, r, d, j), d);
 				if (dp == max)
 				{
 					if (featureDimOut+1 == maxdim) return false;
-					featureOut[featureDimOut++] = j;
+					featureOut[++featureDimOut] = j;
 				}
 				else
 					break;
@@ -91,6 +91,7 @@ namespace sat
 	{
 		FeatureRef2D minFeature[2];
 		FeatureRef2D maxFeature[2];
+		FeatureRef2D nearestFeature[2];
 		Sc dist;
 	};
 
@@ -119,26 +120,41 @@ namespace sat
 		}
 
 		// Find shape order
-		int shape1 = projMin[0] <= projMin[1] ? 0 : 1;
+		int shape1 = (projMin[0] <= projMin[1] ? 0 : 1);
 		int shape2 = 1-shape1;
 
-		// Determin configuration
+		// Determine configuration
 		if (projMin[shape2] > projMax[shape1])
 		{
+			out.nearestFeature[shape1] = out.maxFeature[shape1];
+			out.nearestFeature[shape2] = out.minFeature[shape2];
 			out.dist = projMin[shape2] - projMax[shape1];
 		}
 		else
 		{
 			if (projMax[shape2] > projMax[shape1])
 			{
-				out.dist = projMin[shape1] - projMax[shape2];
+				out.nearestFeature[shape1] = out.maxFeature[shape1];
+				out.nearestFeature[shape2] = out.minFeature[shape2];
+				out.dist = projMin[shape2] - projMax[shape1];
 			}
 			else
 			{
 				Sc dleft = projMax[shape2] - projMin[shape1];
 				Sc dright = projMax[shape1] - projMin[shape2];
 
-				out.dist = -m_min(dleft, dright);
+				if (dleft < dright)
+				{
+					out.nearestFeature[shape1] = out.minFeature[shape1];
+					out.nearestFeature[shape2] = out.maxFeature[shape2];
+					out.dist = -dleft;
+				}
+				else
+				{
+					out.nearestFeature[shape1] = out.maxFeature[shape1];
+					out.nearestFeature[shape2] = out.minFeature[shape2];
+					out.dist = -dright;
+				}
 			}
 		}
 
@@ -175,6 +191,7 @@ namespace sat
 		const M3* m[2] = {&m1, &m2};
 		V2ptr v[2] = {v1, v2};
 		int lv[2] = {lv1, lv2};
+		Sc r[2] = {r1, r2};
 
 		for (int si=0; si<2; ++si)
 		{
@@ -185,89 +202,62 @@ namespace sat
 			V2 dv0, dv1;
 			dv1 = cvx_vertex(ms, vs, 0);
 
-			for (int i=0; i<lvs; ++i)
+			if (lvs>1)
 			{
-				int ni = (i+1)%lvs;
+				for (int i=0; i<lvs && (lvs>1); ++i)
+				{
+					int ni = (i+1)%lvs;
 
-				dv0 = dv1;
-				dv1 = cvx_vertex(ms, vs, ni);
-				V2 d = rot90(normalize(dv1-dv0));
+					dv0 = dv1;
+					dv1 = cvx_vertex(ms, vs, ni);
+					V2 d = rot90(normalize(dv1-dv0));
 
-				HyperplaneSep2d sep;
-				if (!hyperplane_separation2d(m1, v1, lv1, r1, m2, v2, lv2, r2, d, sep)) return false;
+					HyperplaneSep2d sep;
+					if (!hyperplane_separation2d(m1, v1, lv1, r1, m2, v2, lv2, r2, d, sep)) return false;
 
-				poly_dist_chooseBestSep(hasBestSep, bestSep, sep);
+					poly_dist_chooseBestSep(hasBestSep, bestSep, sep);
+				}
+			}
+			else
+			{
+				if (r[si] > 0.0f)
+				{
+					V2 center = cvx_vertex(ms, vs, 0);
+
+					const M3& pms = *m[1-si];
+					V2ptr pvs = v[1-si];
+					int plvs = lv[1-si];
+
+					int closest = 0;
+					Sc closest_distSq = lenSq( cvx_vertex(pms, pvs, 0) - center );
+
+					for (int i=1; i<plvs; ++i)
+					{
+						Sc distSq = lenSq( cvx_vertex(pms, pvs, i) - center );
+						if (distSq < closest_distSq)
+						{
+							closest_distSq = distSq;
+							closest = i;
+						}
+					}
+
+					V2 cd = cvx_vertex(pms, pvs, closest) - center;
+					V2 d = (cd == v2_z() ? V2(1.0f, 0.0f) : normalize(cd));
+
+					HyperplaneSep2d sep;
+					if (!hyperplane_separation2d(m1, v1, lv1, r1, m2, v2, lv2, r2, d, sep)) return false;
+
+					poly_dist_chooseBestSep(hasBestSep, bestSep, sep);
+				}
 			}
 		}
 		
 		return true;
 	}
-
-	bool poly_circle_dist(M3p m1, V2ptr v1, int lv1, Sc r1, M3p m2, V2ptr v2, int lv2, Sc r2, HyperplaneSep2d& sepOut)
-	{
-		HyperplaneSep2d& bestSep = sepOut;
-		bool hasBestSep = false;
-
-		const M3* m[2] = {&m1, &m2};
-		V2ptr v[2] = {v1, v2};
-		int lv[2] = {lv1, lv2};
-		Sc r[2] = {r1, r2};
-
-		int poly = lv1 > 1 ? 0 : 1;
-		int circle = 1-poly;
-
-		const M3& ms = *m[poly];
-		V2ptr vs = v[poly];
-		int lvs = lv[poly];
-
-		V2 center = cvx_vertex(*m[circle], v[circle], 0);
-		Sc radius = r[circle];
-		
-		for (int i=0; i<lvs; ++i)
-		{
-			// TODO tangents (correct features).
-			V2 v = cvx_vertex(ms, vs, i);
-			Sc dist = len(v-center)-radius;
-
-			if (!hasBestSep || dist < bestSep.dist)
-			{
-				hasBestSep = true;
-				bestSep.dist = dist;
-				bestSep.minFeature[poly].index[0] = i;
-			}
-		}
-
-		sepOut.minFeature[poly].dim = 0;
-		sepOut.minFeature[circle].dim = 0;
-		sepOut.minFeature[circle].index[0] = 0;
-		
-		return true;
-	}
-
-	bool circle_dist(M3p m1, V2ptr v1, int lv1, Sc r1, M3p m2, V2ptr v2, int lv2, Sc r2, HyperplaneSep2d& sepOut)
-	{
-		V2 cd = cvx_vertex(m1, v1, 0) - cvx_vertex(m2, v2, 0);
-		V2 d = (cd == v2_z() ? V2(1.0f, 0.0f) : normalize(cd));
-		if (!hyperplane_separation2d(m1, v1, lv1, r1, m2, v2, lv2, r2, d, sepOut)) return false;
-
-		return true;
-	}
-
 
 	bool dist(M3p m1, const ConvexShape2d& s1, M3p m2, const ConvexShape2d& s2, HyperplaneSep2d& sepOut)
 	{
-		if (s1.vl()>1 && s2.vl()>1)
-		{
-			return poly_dist(m1, s1.vp(), s1.vl(), s1.r, m2, s2.vp(), s2.vl(), s2.r, sepOut);
-		}
-		else if (s1.vl()>1 || s2.vl()>1)
-		{
-			return poly_circle_dist(m1, s1.vp(), s1.vl(), s1.r, m2, s2.vp(), s2.vl(), s2.r, sepOut);
-		}
-		else
-		{
-			return circle_dist(m1, s1.vp(), s1.vl(), s1.r, m2, s2.vp(), s2.vl(), s2.r, sepOut);
-		}
+		return poly_dist(m1, s1.vp(), s1.vl(), s1.r, m2, s2.vp(), s2.vl(), s2.r, sepOut);
 	}
 
 }
