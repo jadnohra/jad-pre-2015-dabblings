@@ -64,7 +64,7 @@ void updateScene1(window2d::WindowData& wd, WindowSimul2d& simul)
 	
 	ConvexShape2d testShape; testShape.v.push_back(v2_z());
 	M3 testMatix = rigid(wd.cursor, 0.0f);
-	if (1)
+	if (0)
 	{
 		Sc scale = 0.4f;
 		shapeConvex(testShape, scale*V2(-0.5f, 0.0f), scale*V2(0.5f, 0.0f), 0.0f);
@@ -78,11 +78,11 @@ void updateScene1(window2d::WindowData& wd, WindowSimul2d& simul)
 		testMatix = rigid(wd.cursor, 0.0f * Sc(simul.clock.time));
 		draw_convex( wd.dc, testMatix, testShape.vp(), testShape.vl(), testShape.r, u_k() );
 	}
-	if (0)
+	if (1)
 	{
-		Sc scale = 0.4f;
+		Sc scale = 0.25f;
 		shapeConvex(testShape, scale*V2(-0.5f, -0.5f), scale*V2(-0.5f, 0.5f), scale*V2(0.5f, 0.5f), scale*V2(0.5f, -0.5f), 0.0f);
-		testMatix = rigid(wd.cursor, 0.0f * Sc(simul.clock.time));
+		testMatix = rigid(wd.cursor, 1.0f * Sc(simul.clock.time));
 		draw_convex( wd.dc, testMatix, testShape.vp(), testShape.vl(), testShape.r, u_k() );
 	}
 	
