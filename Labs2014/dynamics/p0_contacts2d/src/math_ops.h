@@ -85,6 +85,7 @@ V2 operator-(V2p v1, V2p v2) { return sub(v1, v2); }
 V2 muls(V2p v1, Scp s) 
 	{ return V2(v1.x[0]*s, v1.x[1]*s); }
 V2 operator*(V2p v1, Scp s) { return muls(v1, s); }
+V2 operator*(Scp s, V2p v1) { return muls(v1, s); }
 V2 mul(V2p v1, Scp s) 
 	{ return muls(v1, s); }
 V2 neg(V2p v1) 

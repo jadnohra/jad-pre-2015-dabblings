@@ -145,72 +145,129 @@ namespace sat
 		return true;
 	}
 
-	bool dist(M3p m1, V2ptr v1, int lv1, Sc r1, M3p m2, V2ptr v2, int lv2, Sc r2, HyperplaneSep2d& sepOut)
+	void poly_dist_chooseBestSep(bool& hasBestSep, HyperplaneSep2d& bestSep, const HyperplaneSep2d& sep)
 	{
-		if (lv1>1 || lv2>1)
+		if (!hasBestSep)
 		{
-			HyperplaneSep2d& bestSep = sepOut;
-
-			const M3* m[2] = {&m1, &m2};
-			V2ptr v[2] = {v1, v2};
-			int lv[2] = {lv1, lv2};
-
-			for (int si=0; si<2; ++si)
-			{
-				const M3& ms = *m[si];
-				V2ptr vs = v[si];
-				int lvs = lv[si];
-
-				V2 dv0;
-				V2 dv1;
-
-				dv1 = cvx_vertex(ms, vs, 0);
-
-				for (int i=0; i<lvs && (lvs > 1); ++i)
-				{
-					int ni = (i+1)%lvs;
-
-					dv0 = dv1;
-					dv1 = cvx_vertex(ms, vs, ni);
-					V2 d = rot90(normalize(dv1-dv0));
-
-					HyperplaneSep2d sep;
-					if (!hyperplane_separation2d(m1, v1, lv1, r1, m2, v2, lv2, r2, d, sep)) return false;
-
-					if (si+i == 0)
-					{
-						bestSep = sep;
-					}
-					else
-					{
-						if (bestSep.dist > 0.0f)
-						{
-							if (sep.dist > 0.0f && sep.dist < bestSep.dist)
-								bestSep = sep;
-						}
-						else
-						{
-							if (sep.dist > bestSep.dist)
-								bestSep = sep;
-						}
-					}
-				}
-			}
+			bestSep = sep;
+			hasBestSep = true;
 		}
 		else
 		{
+			if (bestSep.dist > 0.0f)
+			{
+				if (sep.dist > 0.0f && sep.dist < bestSep.dist)
+					bestSep = sep;
+			}
+			else
+			{
+				if (sep.dist > bestSep.dist)
+					bestSep = sep;
+			}
+		}
+	}
 
-			V2 cd = cvx_vertex(m1, v1, 0) - cvx_vertex(m2, v2, 0);
-			V2 d = (cd == v2_z() ? V2(1.0f, 0.0f) : normalize(cd));
-			if (!hyperplane_separation2d(m1, v1, lv1, r1, m2, v2, lv2, r2, d, sepOut)) return false;
+	bool poly_dist(M3p m1, V2ptr v1, int lv1, Sc r1, M3p m2, V2ptr v2, int lv2, Sc r2, HyperplaneSep2d& sepOut)
+	{
+		HyperplaneSep2d& bestSep = sepOut;
+		bool hasBestSep = false;
+
+		const M3* m[2] = {&m1, &m2};
+		V2ptr v[2] = {v1, v2};
+		int lv[2] = {lv1, lv2};
+
+		for (int si=0; si<2; ++si)
+		{
+			const M3& ms = *m[si];
+			V2ptr vs = v[si];
+			int lvs = lv[si];
+
+			V2 dv0, dv1;
+			dv1 = cvx_vertex(ms, vs, 0);
+
+			for (int i=0; i<lvs; ++i)
+			{
+				int ni = (i+1)%lvs;
+
+				dv0 = dv1;
+				dv1 = cvx_vertex(ms, vs, ni);
+				V2 d = rot90(normalize(dv1-dv0));
+
+				HyperplaneSep2d sep;
+				if (!hyperplane_separation2d(m1, v1, lv1, r1, m2, v2, lv2, r2, d, sep)) return false;
+
+				poly_dist_chooseBestSep(hasBestSep, bestSep, sep);
+			}
 		}
 		
 		return true;
 	}
 
+	bool poly_circle_dist(M3p m1, V2ptr v1, int lv1, Sc r1, M3p m2, V2ptr v2, int lv2, Sc r2, HyperplaneSep2d& sepOut)
+	{
+		HyperplaneSep2d& bestSep = sepOut;
+		bool hasBestSep = false;
+
+		const M3* m[2] = {&m1, &m2};
+		V2ptr v[2] = {v1, v2};
+		int lv[2] = {lv1, lv2};
+		Sc r[2] = {r1, r2};
+
+		int poly = lv1 > 1 ? 0 : 1;
+		int circle = 1-poly;
+
+		const M3& ms = *m[poly];
+		V2ptr vs = v[poly];
+		int lvs = lv[poly];
+
+		V2 center = cvx_vertex(*m[circle], v[circle], 0);
+		Sc radius = r[circle];
+		
+		for (int i=0; i<lvs; ++i)
+		{
+			// TODO tangents (correct features).
+			V2 v = cvx_vertex(ms, vs, i);
+			Sc dist = len(v-center)-radius;
+
+			if (!hasBestSep || dist < bestSep.dist)
+			{
+				hasBestSep = true;
+				bestSep.dist = dist;
+				bestSep.minFeature[poly].index[0] = i;
+			}
+		}
+
+		sepOut.minFeature[poly].dim = 0;
+		sepOut.minFeature[circle].dim = 0;
+		sepOut.minFeature[circle].index[0] = 0;
+		
+		return true;
+	}
+
+	bool circle_dist(M3p m1, V2ptr v1, int lv1, Sc r1, M3p m2, V2ptr v2, int lv2, Sc r2, HyperplaneSep2d& sepOut)
+	{
+		V2 cd = cvx_vertex(m1, v1, 0) - cvx_vertex(m2, v2, 0);
+		V2 d = (cd == v2_z() ? V2(1.0f, 0.0f) : normalize(cd));
+		if (!hyperplane_separation2d(m1, v1, lv1, r1, m2, v2, lv2, r2, d, sepOut)) return false;
+
+		return true;
+	}
+
+
 	bool dist(M3p m1, const ConvexShape2d& s1, M3p m2, const ConvexShape2d& s2, HyperplaneSep2d& sepOut)
 	{
-		return dist(m1, s1.vp(), s1.vl(), s1.r, m2, s2.vp(), s2.vl(), s2.r, sepOut);
+		if (s1.vl()>1 && s2.vl()>1)
+		{
+			return poly_dist(m1, s1.vp(), s1.vl(), s1.r, m2, s2.vp(), s2.vl(), s2.r, sepOut);
+		}
+		else if (s1.vl()>1 || s2.vl()>1)
+		{
+			return poly_circle_dist(m1, s1.vp(), s1.vl(), s1.r, m2, s2.vp(), s2.vl(), s2.r, sepOut);
+		}
+		else
+		{
+			return circle_dist(m1, s1.vp(), s1.vl(), s1.r, m2, s2.vp(), s2.vl(), s2.r, sepOut);
+		}
 	}
 
 }

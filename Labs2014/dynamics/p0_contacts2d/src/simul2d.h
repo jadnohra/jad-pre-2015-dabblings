@@ -18,6 +18,7 @@ class WindowSimul2d : public window2d::WindowClient
 public:
 
 	Simul2d simul;
+	window2d::TimerGlfw clock;
 	sceneSpdateFunc1 updateFunc1;
 	sceneSpdateFunc2 updateFunc2;
 
@@ -30,6 +31,8 @@ public:
 
 	virtual void render(window2d::WindowData& wd)
 	{
+		clock.update();
+
 		using namespace window2d;
 		WindowClient::render(wd);
 

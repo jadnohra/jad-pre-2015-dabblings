@@ -62,7 +62,14 @@ void updateScene1(window2d::WindowData& wd, WindowSimul2d& simul)
 {
 	using namespace sat;
 	
-	ConvexShape2d testShape; testShape.v.push_back(wd.cursor);
+	ConvexShape2d testShape; testShape.v.push_back(v2_z());
+	M3 testMatix = m3_id();
+	{
+		Sc scale = 0.4f;
+		shapeConvex(testShape, scale*V2(-0.5f, 0.0f), scale*V2(0.0f, 1.0f), scale*V2(0.5f, 0.0f), 0.0f);
+		testMatix = rigid(wd.cursor, 1.0f * Sc(simul.clock.time));
+	}
+	draw_convex( wd.dc, testMatix, testShape.vp(), testShape.vl(), testShape.r, u_k() );
 
 	if (wd.cursor_pressed)
 	{
@@ -74,7 +81,7 @@ void updateScene1(window2d::WindowData& wd, WindowSimul2d& simul)
 		HyperplaneSep2d sep;
 		V3 col = v3_z();
 
-		if (dist(m3_id(), shape, m3_id(), testShape, sep))
+		if (dist(m3_id(), shape, testMatix, testShape, sep))
 		{
 			if (sep.dist <= 0.0f) 
 				col = u_j();
