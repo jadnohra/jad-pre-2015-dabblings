@@ -58,32 +58,44 @@ void createScene0(Simul2d& s)
 	shapeConvex(shape, V2(-0.5f, -0.5f), V2(-0.5f, 0.5f), V2(0.5f, 0.5f), V2(0.5f, -0.5f), 0.2f); s.shapes.push_back(shape);
 }
 
+void draw_feature(window2d::DrawContext& dc, M3p mat, const ConvexShape2d& shape, const sat::FeatureRef2D& fr, V3p col)
+{
+	if (fr.dim == 1)
+	{
+		draw_line( dc, mat, shape.v[fr.index[0]], shape.v[fr.index[1]], col );
+	}
+	else
+	{
+		draw_circle( dc, mat, shape.v[fr.index[0]], 0.05f, col );
+	}
+}
+
 void updateScene1(window2d::WindowData& wd, WindowSimul2d& simul)
 {
 	using namespace sat;
 	
 	ConvexShape2d testShape; testShape.v.push_back(v2_z());
-	M3 testMatix = rigid(wd.cursor, 0.0f);
-	if (0)
+	M3 testMatrix = rigid(wd.cursor, 0.0f);
+	if (0) // Segment
 	{
 		Sc scale = 0.4f;
 		shapeConvex(testShape, scale*V2(-0.5f, 0.0f), scale*V2(0.5f, 0.0f), 0.0f);
-		testMatix = rigid(wd.cursor, 0.0f * Sc(simul.clock.time));
-		draw_convex( wd.dc, testMatix, testShape.vp(), testShape.vl(), testShape.r, u_k() );
+		testMatrix = rigid(wd.cursor, 0.0f * Sc(simul.clock.time));
+		draw_convex( wd.dc, testMatrix, testShape.vp(), testShape.vl(), testShape.r, u_k() );
 	}
-	if (0)
+	if (0) // Triangle
 	{
 		Sc scale = 0.4f;
 		shapeConvex(testShape, scale*V2(-0.5f, 0.0f), scale*V2(0.0f, 1.0f), scale*V2(0.5f, 0.0f), 0.0f);
-		testMatix = rigid(wd.cursor, 0.0f * Sc(simul.clock.time));
-		draw_convex( wd.dc, testMatix, testShape.vp(), testShape.vl(), testShape.r, u_k() );
+		testMatrix = rigid(wd.cursor, 0.0f * Sc(simul.clock.time));
+		draw_convex( wd.dc, testMatrix, testShape.vp(), testShape.vl(), testShape.r, u_k() );
 	}
-	if (1)
+	if (1) // Square
 	{
 		Sc scale = 0.25f;
 		shapeConvex(testShape, scale*V2(-0.5f, -0.5f), scale*V2(-0.5f, 0.5f), scale*V2(0.5f, 0.5f), scale*V2(0.5f, -0.5f), 0.0f);
-		testMatix = rigid(wd.cursor, 1.0f * Sc(simul.clock.time));
-		draw_convex( wd.dc, testMatix, testShape.vp(), testShape.vl(), testShape.r, u_k() );
+		testMatrix = rigid(wd.cursor, 0.0f * Sc(simul.clock.time));
+		draw_convex( wd.dc, testMatrix, testShape.vp(), testShape.vl(), testShape.r, u_k() );
 	}
 	
 	
@@ -98,18 +110,15 @@ void updateScene1(window2d::WindowData& wd, WindowSimul2d& simul)
 		HyperplaneSep2d sep;
 		V3 col = v3_z();
 
-		if (dist(shapeMatrix, shape, testMatix, testShape, sep))
+		if (dist(shapeMatrix, shape, testMatrix, testShape, sep))
 		{
 			if (sep.dist <= 0.0f) 
 			{
-				dist(shapeMatrix, shape, testMatix, testShape, sep);
+				dist(shapeMatrix, shape, testMatrix, testShape, sep);
 				draw_convex( wd.dc, shapeMatrix, shape.vp(), shape.vl(), shape.r, u_j() );
 
-				const FeatureRef2D& fr = sep.nearestFeature[0];
-				if (fr.dim == 1)
-				{
-					draw_line( wd.dc, shapeMatrix, shape.v[fr.index[0]], shape.v[fr.index[1]], u_ik() );
-				}
+				draw_feature( wd.dc, shapeMatrix, shape, sep.nearestFeature[0], u_ij() );
+				draw_feature( wd.dc, testMatrix, testShape, sep.nearestFeature[1], u_ij() );
 			}
 			else
 			{
@@ -127,8 +136,8 @@ void createScene1(Simul2d& s)
 {
 	ConvexShape2d shape;
 
-	shapeCircle(shape, 1.5f); s.shapes.push_back(shape);
-	shapeConvex(shape, V2(-0.5f, 0.0f), V2(0.0f, 1.0f), V2(0.5f, 0.0f), 0.0f); s.shapes.push_back(shape);
+	//shapeCircle(shape, 1.5f); s.shapes.push_back(shape);
+	//shapeConvex(shape, V2(-0.5f, 0.0f), V2(0.0f, 1.0f), V2(0.5f, 0.0f), 0.0f); s.shapes.push_back(shape);
 	shapeConvex(shape, V2(-0.5f, -0.5f), V2(-0.5f, 0.5f), V2(0.5f, 0.5f), V2(0.5f, -0.5f), 0.0f); s.shapes.push_back(shape);
 }
 

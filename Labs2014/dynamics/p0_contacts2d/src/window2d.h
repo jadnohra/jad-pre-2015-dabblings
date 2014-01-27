@@ -92,6 +92,11 @@ namespace window2d
 		glDrawArrays( GL_LINE_LOOP, 0, ctx.angle_subdiv );    
 	}
 
+	void draw_circle(DrawContext& ctx, M3p m, V2 v, Sc r, V3p col)
+	{
+		return draw_circle(ctx, m * v, r, col);
+	}
+
 	void draw_convex(DrawContext& ctx, M3p m, const V2* v, int count, V3p col)
 	{
 		float* vs = ctx.getBuffer(2*count);
