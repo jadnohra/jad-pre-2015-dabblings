@@ -129,9 +129,12 @@ void updateScene1(window2d::WindowData& wd, WindowSimul2d& simul)
 				dist(shapeMatrix, shape, testMatrix, testShape, sep);
 				draw_convex( wd.dc, shapeMatrix, shape.vp(), shape.vl(), shape.r, u_j() );
 
-				draw_feature( wd.dc, shapeMatrix, shape, sep.nearestFeature[0], u_ij() );
-				draw_feature( wd.dc, testMatrix, testShape, sep.nearestFeature[1], u_ij() );
-
+				if (0)
+				{
+					draw_feature( wd.dc, shapeMatrix, shape, sep.nearestFeature[0], u_ij() );
+					draw_feature( wd.dc, testMatrix, testShape, sep.nearestFeature[1], u_ij() );
+				}
+				
 				ContactProjection proj;
 				contact_projection(shapeMatrix, shape, testMatrix, testShape, sep, proj);
 				draw_feature( wd.dc, 0, proj, u_ik() );
