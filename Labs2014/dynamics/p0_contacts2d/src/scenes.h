@@ -70,6 +70,18 @@ void draw_feature(window2d::DrawContext& dc, M3p mat, const ConvexShape2d& shape
 	}
 }
 
+void draw_feature(window2d::DrawContext& dc, int shapeIndex, const sat::ContactProjection& proj, V3p col)
+{
+	if (proj.vertexCount[shapeIndex] == 2)
+	{
+		draw_line( dc, m3_id(), proj.vertices[shapeIndex][0], proj.vertices[shapeIndex][1], col );
+	}
+	else
+	{
+		draw_circle( dc, m3_id(), proj.vertices[shapeIndex][0], 0.05f, col );
+	}
+}
+
 void updateScene1(window2d::WindowData& wd, WindowSimul2d& simul)
 {
 	using namespace sat;
@@ -119,6 +131,10 @@ void updateScene1(window2d::WindowData& wd, WindowSimul2d& simul)
 
 				draw_feature( wd.dc, shapeMatrix, shape, sep.nearestFeature[0], u_ij() );
 				draw_feature( wd.dc, testMatrix, testShape, sep.nearestFeature[1], u_ij() );
+
+				ContactProjection proj;
+				contact_projection(shapeMatrix, shape, testMatrix, testShape, sep, proj);
+				draw_feature( wd.dc, 0, proj, u_ik() );
 			}
 			else
 			{

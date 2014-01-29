@@ -260,6 +260,104 @@ namespace sat
 		return poly_dist(m1, s1.vp(), s1.vl(), s1.r, m2, s2.vp(), s2.vl(), s2.r, sepOut);
 	}
 
+	struct ContactProjection
+	{
+		int indices[2][2]; // [shape][vertex index]
+		V2 vertices[2][2]; // [shape][vertex]
+		int vertexCount[2];
+	};
+
+	bool contact_projection(M3p m1, const ConvexShape2d& s1, M3p m2, const ConvexShape2d& s2, const HyperplaneSep2d& sep, ContactProjection& proj)
+	{
+		const M3* m[2] = {&m1, &m2};
+		V2ptr v[2] = {s1.vp(), s2.vp()};
+
+		for (int si=0;si<2;++si) 
+		{
+			for (int i=0;i<2;++i) { proj.indices[si][i] = sep.nearestFeature[si].index[i]; proj.vertices[si][i] = cvx_vertex(*m[si], v[si], proj.indices[si][i]); }
+			proj.vertexCount[si] = sep.nearestFeature[si].dim+1;
+		}
+		
+		for (int si=0;si<2;++si) 
+		{
+			if ( proj.vertexCount[si] == 2)
+			{
+				if ( proj.vertexCount[1-si] == 2)
+				{
+					V2 d = proj.vertices[si][1] - proj.vertices[si][0];
+
+					if (d == v2_z()) return false;
+			
+					Sc selfMin = dot(proj.vertices[si][0], d);
+					Sc selfMax = dot(proj.vertices[si][1], d);
+
+					if (selfMax < selfMin) {  d = -d; selfMin = -selfMin; selfMax = -selfMax; }
+
+					int otherVertMinIndex = proj.indices[1-si][0];
+					int otherVertMaxIndex = proj.indices[1-si][1];
+					V2 otherVertMin = proj.vertices[1-si][0];
+					V2 otherVertMax = proj.vertices[1-si][1];
+					Sc otherMin = dot(otherVertMin, d);
+					Sc otherMax = dot(otherVertMax, d);
+
+					if (otherMax < otherMin) { m_swap(otherMin, otherMax); m_swap(otherVertMin, otherVertMax); m_swap(otherVertMinIndex, otherVertMaxIndex); }
+
+					// Determine configuration
+					if (otherMin >= selfMax)
+					{
+						proj.vertexCount[si]=1;
+						proj.indices[si][0] = proj.indices[si][1];
+						proj.vertices[si][0] = proj.vertices[si][1];
+					}
+					else
+					{
+						if (otherMin >= selfMin)
+						{
+							if (otherMax >= selfMax)
+							{
+								proj.vertexCount[si]= (otherMin<selfMax ? 2 : 1);
+								proj.indices[si][0] = otherVertMinIndex;
+								proj.vertices[si][0] = proj_points(proj.vertices[si][0], proj.vertices[si][1], otherVertMin);
+							}
+							else
+							{
+								proj.vertexCount[si]= (otherMin == otherMax ? 1 : 2);
+								proj.indices[si][0] = otherVertMinIndex;
+								proj.vertices[si][0] = proj_points(proj.vertices[si][0], proj.vertices[si][1], otherVertMin);
+								proj.indices[si][1] = otherVertMaxIndex;
+								proj.vertices[si][1] = proj_points(proj.vertices[si][0], proj.vertices[si][1], otherVertMax);
+							}
+						}
+						else
+						{
+							if (otherMax >= selfMax)
+							{
+						
+							}
+							else if (otherMax >= selfMin)
+							{
+								proj.vertexCount[si]= (otherMax>selfMin ? 2 : 1);
+								proj.indices[si][1] = otherVertMaxIndex;
+								proj.vertices[si][1] = proj_points(proj.vertices[si][0], proj.vertices[si][1], otherVertMax);
+							}
+							else
+							{
+								proj.vertexCount[si]=1;
+							}
+						}
+					}
+				}
+				else
+				{
+					proj.vertexCount[si]= 1;
+					proj.indices[si][0] = proj.indices[1-si][0];
+					proj.vertices[si][0] = proj_points(proj.vertices[si][0], proj.vertices[si][1], proj.vertices[1-si][0]);
+				}
+			}
+		}
+
+		return true;
+	}
 }
 
 #endif
