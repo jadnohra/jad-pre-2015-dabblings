@@ -98,6 +98,7 @@ def bkpStartSession(dbPath, bootstrap = False):
 	
 	if bootstrap:
 		conn.execute('CREATE TABLE file_infos(fid text, bla text)')
+		conn.execute("INSERT INTO file_infos VALUES ('e46206bf128a6b466bab92c350a39671bb7b803fec8e364d49c212c29eda8b33','hey')")
 		conn.commit()
 
 	session = BackupSession(dbPath, conn)
