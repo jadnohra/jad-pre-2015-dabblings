@@ -29,32 +29,51 @@ for (key,tag) in tags.iteritems():
 			print key,tag
 
 #####################################
-def printMountPoints():
+def printDiskInfo():
 	print subprocess.Popen(['diskutil', 'list'], stdout=subprocess.PIPE).stdout.read()
 
-def findMountPoints(points):
+def getMountPath(mount):
+	info = subprocess.Popen(['mount'], stdout=subprocess.PIPE).stdout.read()
+	for line in iter(info.splitlines()):
+		data = line.split()
+		if data[0] == mount:
+			return data[2]
+	return None	
+
+
+def findMountedSources(filters):
 	found = []
 	ret = []
 	out = subprocess.Popen(['diskutil', 'list'], stdout=subprocess.PIPE).stdout.read()
-	mount_path = ''
+	disk_name = ''
 	for line in iter(out.splitlines()):
 		if line.startswith('/'):
-			mount_path = line
-		for i in range(len(points)):
-			if (points[i].name in line):
-				if i in found:
-					print 'Duplicate mount points!'
-					return []
-				found.append(i)
-				ret.append([i, points[i], mount_path])
+			disk_name = line
+		else:
+			for i in range(len(filters)):
+				if (filters[i].enabled and (filters[i].name in line)):
+					if i in found:
+						print 'Duplicate mount points!'
+						return []
+					data = line.split()
+					mount_name = '/dev/' + data[-1]
+					mount_path = getMountPath(mount_name)
+					found.append(i)
+					ret.append(MountPoint(i, filters[i], disk_name, mount_name, mount_path))
 	return ret
 
-MountPoint = namedtuple('MountPoint', 'id descr serial name size')
-mount_points = [ MountPoint('-1', 'Canon', '0', 'EOS_DIGITAL', '16'), MountPoint('-2', 'Panasonic', '0', 'CAM_SD', '32')  ]
+MountPointFilter = namedtuple('MountPointFilter', 'enabled id descr serial name size')
+source_filters = [ 
+					MountPointFilter(True, '-1', 'Canon', '0', 'EOS_DIGITAL', '16'), 
+					MountPointFilter(True, '-2', 'Panasonic', '0', 'CAM_SD', '32'),
+					MountPointFilter(False, '-3', 'Apple_HFS', '0', 'Mac', '790'), 
+				]
+MountPoint = namedtuple('MountPoint', 'filter_index filter disk mount path')
 
 
-found_mount_points = findMountPoints(mount_points)
-print found_mount_points
+found_sources = findMountedSources(source_filters)
+found_sources.insert(0, MountPoint(0, source_filters[0], 'dummy', 'dummy', self_dir))
+print found_sources
 
 ################################
 def genFileMD5(fname):
@@ -70,6 +89,12 @@ def genFileCrc32(fileName):
 BackupSession = namedtuple('BackupSession', 'dbPath dbConn')
 BackupFileInfo = namedtuple('BackupFileInfo', 'fid')
 
+media_extensions = ['jpg']
+def bkpIsMediaFile(name):
+	global media_extensions
+	return (name.split('.')[-1].lower() in media_extensions)
+
+
 def bkpGenFileId(fname):
 	return str(genFileMD5(fname))
 
@@ -81,9 +106,9 @@ def bkpFindFileId(session, fid):
 		return None
 	return BackupFileInfo(fid)
 
-def bkpIsFileNew(session, fname):
+def bkpExistsFile(session, fname):
 	fid = bkpGenFileId(fname)
-	return bkpFindFileId(session, fid) is None
+	return bkpFindFileId(session, fid) is not None
 
 def bkpStartSession(dbPath, bootstrap = False):
 	if (bootstrap):
@@ -97,8 +122,10 @@ def bkpStartSession(dbPath, bootstrap = False):
 		return None
 	
 	if bootstrap:
+		self_test_image_md5 = genFileMD5(self_test_image)
+		t = (self_test_image_md5, 'hey',)
 		conn.execute('CREATE TABLE file_infos(fid text, bla text)')
-		conn.execute("INSERT INTO file_infos VALUES ('e46206bf128a6b466bab92c350a39671bb7b803fec8e364d49c212c29eda8b33','hey')")
+		conn.execute("INSERT INTO file_infos VALUES (?,?)",t)
 		conn.commit()
 
 	session = BackupSession(dbPath, conn)
@@ -110,12 +137,35 @@ def bkpEndSession(session):
 	if (session.dbConn is not None):
 		session.dbConn.close()
 
+def bkpDumpDb(session, fp):
+	with open(fp, 'w') as f:
+		for line in session.dbConn.iterdump():
+			f.write('%s\n' % line)
+
+def bkpFindNewFiles(session, mount):
+	for subdir, dirs, files in os.walk(mount.path):
+		for file in files:
+			if (bkpIsMediaFile(file)):
+				#print subdir+'/'+file
+				fp = os.path.join(subdir,file)
+				print fp, not bkpExistsFile(session, fp)
+			
+	return 0
+
+
 print genFileMD5(self_test_image)
 print genFileCrc32(self_test_image)
 print genFileMD5(self_test_image2)
 print genFileCrc32(self_test_image2)
 
 session = bkpStartSession(self_test_db, True)
-print bkpIsFileNew(session, self_test_image)
+print bkpExistsFile(session, self_test_image)
+print bkpExistsFile(session, self_test_image2)
+bkpDumpDb(session, self_test_db+'.sql')
+
+if (len(found_sources) > 0):
+	bkpFindNewFiles(session, found_sources[0])
+
+
 bkpEndSession(session)
 
