@@ -5,6 +5,8 @@ import subprocess
 import hashlib
 import zlib
 import sqlite3
+import uuid
+import time
 
 self_path = os.path.realpath(__file__)
 self_dir = os.path.dirname(self_path)
@@ -122,12 +124,27 @@ def bkpStartSession(dbPath, bootstrap = False):
 		return None
 	
 	if bootstrap:
-		self_test_image_md5 = genFileMD5(self_test_image)
-		t = (self_test_image_md5, 'hey',)
-		conn.execute('CREATE TABLE file_infos(fid text, bla text)')
-		conn.execute("INSERT INTO file_infos VALUES (?,?)",t)
+		conn.execute('CREATE TABLE file_infos(fid text PRIMARY KEY, bla text)')
+	
+		perf_test = False
+		if perf_test:
+			start = time.time()
+			for i in range(1000*1000):
+				t = (str(uuid.uuid4()), str(uuid.uuid4()),)
+				conn.execute("INSERT INTO file_infos VALUES (?,?)",t)
+			conn.commit()
+			print time.time()-start	
+			
+		conn.execute("INSERT INTO file_infos VALUES (?,?)", ( bkpGenFileId(self_test_image), 'hey',))
 		conn.commit()
 
+		if perf_test:
+			session = BackupSession(dbPath, conn)
+			start = time.time()
+			for i in range(1000):
+				bkpFindFileId(session, str(uuid.uuid4()))		
+			print time.time()-start		
+		
 	session = BackupSession(dbPath, conn)
 	return session
 
