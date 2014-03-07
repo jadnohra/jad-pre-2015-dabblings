@@ -90,6 +90,7 @@ def genFileCrc32(fileName):
 
 BackupSession = namedtuple('BackupSession', 'dbPath dbConn')
 BackupFileInfo = namedtuple('BackupFileInfo', 'fid')
+NewFileInfo = namedtuple('NewFileInfo', 'fpath fid')
 
 media_extensions = ['jpg']
 def bkpIsMediaFile(name):
@@ -110,6 +111,9 @@ def bkpFindFileId(session, fid):
 
 def bkpExistsFile(session, fname):
 	fid = bkpGenFileId(fname)
+	return bkpFindFileId(session, fid) is not None
+
+def bkpExistsFileId(session, fid):
 	return bkpFindFileId(session, fid) is not None
 
 def bkpStartSession(dbPath, bootstrap = False):
@@ -159,15 +163,26 @@ def bkpDumpDb(session, fp):
 		for line in session.dbConn.iterdump():
 			f.write('%s\n' % line)
 
-def bkpFindNewFiles(session, mount):
+def bkpFindNewFileInfos(session, mount):
+	ret = []
 	for subdir, dirs, files in os.walk(mount.path):
 		for file in files:
 			if (bkpIsMediaFile(file)):
 				#print subdir+'/'+file
 				fp = os.path.join(subdir,file)
-				print fp, not bkpExistsFile(session, fp)
-			
-	return 0
+				fid = bkpGenFileId(fp)
+				bkpinfo = bkpExistsFileId(session, fid)
+				#print fp, not exists
+				if not bkpinfo:
+					ret.append(NewFileInfo(fp, fid))
+	return ret
+
+def bkpBackupNewFileInfos(session, finfos):
+	for finfo in finfos:
+		session.dbConn.execute("INSERT INTO file_infos VALUES (?,?)", ( finfo.fid, finfo.fpath,))
+		session.dbConn.commit()
+
+
 
 
 print genFileMD5(self_test_image)
@@ -181,7 +196,10 @@ print bkpExistsFile(session, self_test_image2)
 bkpDumpDb(session, self_test_db+'.sql')
 
 if (len(found_sources) > 0):
-	bkpFindNewFiles(session, found_sources[0])
+	nfi = bkpFindNewFileInfos(session, found_sources[0])
+	print nfi
+	bkpBackupNewFileInfos(session, nfi)
+	print bkpFindNewFileInfos(session, found_sources[0])
 
 
 bkpEndSession(session)
