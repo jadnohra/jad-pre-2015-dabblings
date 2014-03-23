@@ -7,6 +7,8 @@ import zlib
 import sqlite3
 import uuid
 import time
+import ftplib
+import tarfile
 
 self_path = os.path.realpath(__file__)
 self_dir = os.path.dirname(self_path)
@@ -14,6 +16,8 @@ self_module_dir = os.path.join(self_dir, 'modules')
 self_test_image2 = os.path.join(self_dir, 'photo_swing.jpg')
 self_test_image = os.path.join(self_dir, 'IMG_2733.JPG')
 self_test_db = os.path.join(self_dir, 'test.db')
+self_test_out = os.path.join(self_dir, 'test/out')
+self_test_in = os.path.join(self_dir, 'test/in')
 
 ######################################
 sys.path.append(os.path.join(self_module_dir, 'exif-py'))
@@ -25,16 +29,17 @@ tags = exifread.process_file(f)
 
 fields = ['date', 'model', 'manufacturer']
 
-for (key,tag) in tags.iteritems():
-	for field in fields:
-		if field in key.lower():
-			print key,tag
+if False:
+	for (key,tag) in tags.iteritems():
+		for field in fields:
+			if field in key.lower():
+				print key,tag
 
 #####################################
 def printDiskInfo():
 	print subprocess.Popen(['diskutil', 'list'], stdout=subprocess.PIPE).stdout.read()
 
-def getMountPath(mount):
+def getFsMountPath(mount):
 	info = subprocess.Popen(['mount'], stdout=subprocess.PIPE).stdout.read()
 	for line in iter(info.splitlines()):
 		data = line.split()
@@ -43,7 +48,7 @@ def getMountPath(mount):
 	return None	
 
 
-def findMountedSources(filters):
+def findFsMountedSources(filters):
 	found = []
 	ret = []
 	out = subprocess.Popen(['diskutil', 'list'], stdout=subprocess.PIPE).stdout.read()
@@ -64,18 +69,46 @@ def findMountedSources(filters):
 					ret.append(MountPoint(i, filters[i], disk_name, mount_name, mount_path))
 	return ret
 
-MountPointFilter = namedtuple('MountPointFilter', 'enabled id descr serial name size')
-source_filters = [ 
-					MountPointFilter(True, '-1', 'Canon', '0', 'EOS_DIGITAL', '16'), 
-					MountPointFilter(True, '-2', 'Panasonic', '0', 'CAM_SD', '32'),
-					MountPointFilter(False, '-3', 'Apple_HFS', '0', 'Mac', '790'), 
+FsMountPointFilter = namedtuple('FsMountPointFilter', 'enabled id descr serial name size')
+fs_source_filters = [ 
+					FsMountPointFilter(True, '-1', 'Canon', '0', 'EOS_DIGITAL', '16'), 
+					FsMountPointFilter(True, '-2', 'Panasonic', '0', 'CAM_SD', '32'),
+					FsMountPointFilter(False, '-3', 'Apple_HFS', '0', 'Mac', '790'), 
 				]
-MountPoint = namedtuple('MountPoint', 'filter_index filter disk mount path')
+FsMountPoint = namedtuple('FsMountPoint', 'filter_index filter disk mount path')
 
 
-found_sources = findMountedSources(source_filters)
-found_sources.insert(0, MountPoint(0, source_filters[0], 'dummy', 'dummy', self_dir))
-print found_sources
+fs_sources = findFsMountedSources(fs_source_filters)
+#fs_sources.insert(0, FsMountPoint(0, fs_source_filters[0], 'dummy', 'dummy', self_dir))
+fs_sources.insert(0, FsMountPoint(0, fs_source_filters[0], 'test', 'self_test_in', self_test_in))
+print 'fs_sources', fs_sources
+
+
+################################
+def findFtpActiveSources(filters):
+	ret = []
+	for f in filters:
+		try:
+			con = ftplib.FTP(); 
+			con.connect(f.address, f.port, 0.1)
+			con.login(f.user, f.pwd)
+			welcome = con.getwelcome()
+			if True:
+				print welcome
+			ret.append(f)
+		except ftplib.all_errors, e:
+			e
+	return ret		
+
+
+FtpMountPoint = namedtuple('FtpMountPoint', 'enabled id descr address port user pwd')
+ftp_source_filters = [
+				FtpMountPoint(True, '-1', 'MacTestFtp', '127.0.0.1', 21, 'jad', '')
+		]
+
+# sudo -s launchctl [un]load -w /System/Library/LaunchDaemons/ftp.plist
+ftp_sources = findFtpActiveSources(ftp_source_filters)
+print 'ftp_sources', ftp_sources
 
 ################################
 def genFileMD5(fname):
@@ -163,7 +196,7 @@ def bkpDumpDb(session, fp):
 		for line in session.dbConn.iterdump():
 			f.write('%s\n' % line)
 
-def bkpFindNewFileInfos(session, mount):
+def bkpFindNewFsFileInfos(session, mount):
 	ret = []
 	for subdir, dirs, files in os.walk(mount.path):
 		for file in files:
@@ -181,25 +214,50 @@ def bkpBackupNewFileInfos(session, finfos):
 	for finfo in finfos:
 		session.dbConn.execute("INSERT INTO file_infos VALUES (?,?)", ( finfo.fid, finfo.fpath,))
 		session.dbConn.commit()
+		print 'Backed up', finfo.fpath
 
 
+def bkpBackupNewFileInfos2(session, finfos):
+
+	if (len(finfos) == 0):
+		return
+
+	arch_path = os.path.join(self_test_out, str(uuid.uuid4())+'.tar')
+	
+	while (os.path.isfile(arch_path)):
+			arch_path = os.path.join(self_test_out, str(uuid.uuid4())+'.tar')
+
+	open(arch_path, 'a').close()
+	print 'Archive', arch_path
+	tar = tarfile.open(arch_path, "w")
+	for finfo in finfos:
+		tar.add(finfo.fpath)
+	tar.close()
+
+	for finfo in finfos:
+		session.dbConn.execute("INSERT INTO file_infos VALUES (?,?)", ( finfo.fid, finfo.fpath,))
+		session.dbConn.commit()
+		print 'Backed up', finfo.fpath
 
 
-print genFileMD5(self_test_image)
-print genFileCrc32(self_test_image)
-print genFileMD5(self_test_image2)
-print genFileCrc32(self_test_image2)
+if False:
+	print genFileMD5(self_test_image)
+	print genFileCrc32(self_test_image)
+	print genFileMD5(self_test_image2)
+	print genFileCrc32(self_test_image2)
 
-session = bkpStartSession(self_test_db, True)
-print bkpExistsFile(session, self_test_image)
-print bkpExistsFile(session, self_test_image2)
+session = bkpStartSession(self_test_db, False)
+
+if False:
+	print bkpExistsFile(session, self_test_image)
+	print bkpExistsFile(session, self_test_image2)
 bkpDumpDb(session, self_test_db+'.sql')
 
-if (len(found_sources) > 0):
-	nfi = bkpFindNewFileInfos(session, found_sources[0])
+if (True and len(fs_sources) > 0):
+	nfi = bkpFindNewFsFileInfos(session, fs_sources[0])
 	print nfi
-	bkpBackupNewFileInfos(session, nfi)
-	print bkpFindNewFileInfos(session, found_sources[0])
+	bkpBackupNewFileInfos2(session, nfi)
+	print bkpFindNewFsFileInfos(session, fs_sources[0])
 
 
 bkpEndSession(session)
