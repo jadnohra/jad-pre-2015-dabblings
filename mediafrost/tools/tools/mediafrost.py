@@ -239,6 +239,10 @@ def bkpBackupNewFileInfos2(session, finfos):
 		session.dbConn.commit()
 		print 'Backed up', finfo.fpath
 
+# http://www.withoutthesarcasm.com/using-amazon-glacier-for-personal-backups/
+# duplicator for db file[s]
+# multiple outs, glacier should NOT be the only target. http://www.daemonology.net/blog/2012-09-04-thoughts-on-glacier-pricing.html
+
 
 if False:
 	print genFileMD5(self_test_image)
