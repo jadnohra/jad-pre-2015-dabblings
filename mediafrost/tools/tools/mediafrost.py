@@ -9,6 +9,7 @@ import uuid
 import time
 import ftplib
 import tarfile
+import shutil
 
 self_path = os.path.realpath(__file__)
 self_dir = os.path.dirname(self_path)
@@ -39,7 +40,7 @@ if False:
 def printDiskInfo():
 	print subprocess.Popen(['diskutil', 'list'], stdout=subprocess.PIPE).stdout.read()
 
-def getFsMountPath(mount):
+def fsGetMountPath(mount):
 	info = subprocess.Popen(['mount'], stdout=subprocess.PIPE).stdout.read()
 	for line in iter(info.splitlines()):
 		data = line.split()
@@ -48,8 +49,7 @@ def getFsMountPath(mount):
 	return None	
 
 
-def findFsMountedSources(filters):
-	found = []
+def fsFindMounts():
 	ret = []
 	out = subprocess.Popen(['diskutil', 'list'], stdout=subprocess.PIPE).stdout.read()
 	disk_name = ''
@@ -57,35 +57,61 @@ def findFsMountedSources(filters):
 		if line.startswith('/'):
 			disk_name = line
 		else:
-			for i in range(len(filters)):
-				if (filters[i].enabled and (filters[i].name in line)):
-					if i in found:
-						print 'Duplicate mount points!'
-						return []
-					data = line.split()
-					mount_name = '/dev/' + data[-1]
-					mount_path = getMountPath(mount_name)
-					found.append(i)
-					ret.append(MountPoint(i, filters[i], disk_name, mount_name, mount_path))
+			data = line.split()
+			mount_name = '/dev/' + data[-1]
+			mount_path = fsGetMountPath(mount_name)
+			if (mount_path != None):
+				ret.append(FsMountPoint(disk_name, mount_name, mount_path, line))
 	return ret
 
-FsMountPointFilter = namedtuple('FsMountPointFilter', 'enabled id descr serial name size')
+
+def fsFilterMounts(mounts, filters):
+	ret = []
+	for i in range(len(filters)):
+		if (filters[i].enabled):
+			matching_mounts = []
+			for m in mounts:
+				if (filters[i].name in m.info):
+					matching_mounts.append(m)
+			if (len(matching_mounts) >= 2):
+					print 'Duplicate mount matches!'
+					return []
+			if (len(matching_mounts) == 1):
+				dir = os.path.join(m.path, filters[i].dir)
+				if (os.path.isdir(dir)):
+					ret.append(FsStoragePoint(i, filters[i], m.disk, m.mount, m.path, filters[i].dir))
+				else:
+					print 'Missing directory:', dir 
+	return ret
+				
+
+FsMountPointFilter = namedtuple('FsMountPointFilter', 'enabled id descr serial name size dir')
 fs_source_filters = [ 
-					FsMountPointFilter(True, '-1', 'Canon', '0', 'EOS_DIGITAL', '16'), 
-					FsMountPointFilter(True, '-2', 'Panasonic', '0', 'CAM_SD', '32'),
-					FsMountPointFilter(False, '-3', 'Apple_HFS', '0', 'Mac', '790'), 
+					FsMountPointFilter(True, '-1', 'Canon', '0', 'EOS_DIGITAL', '16', ''), 
+					FsMountPointFilter(True, '-2', 'Panasonic', '0', 'CAM_SD', '32', ''),
+					FsMountPointFilter(True, '-3', 'Apple_HFS', '0', 'Mac', '790', 'Users/nohra/Jad/mediafrost/tools/test/in'), 
+					FsMountPointFilter(True, '-4', 'Apple_HFS', '0', 'Mac', '790', 'Users/nohra/Jad/mediafrost/tools/test/in1'), 
+
 				]
-FsMountPoint = namedtuple('FsMountPoint', 'filter_index filter disk mount path')
+fs_target_filters = [ 
+					FsMountPointFilter(True, '-1', 'Apple_HFS', '0', 'Mac', '790', 'Users/nohra/Jad/mediafrost/tools/test/out'), 
+					FsMountPointFilter(True, '-2', 'Apple_HFS', '0', 'Mac', '790', 'Users/nohra/Jad/mediafrost/tools/test/out1'), 
+				]
 
+FsMountPoint = namedtuple('FsMountPoint', 'disk mount path info')
+FsStoragePoint =  namedtuple('FsStoragePoint', 'filter_index filter mount_disk mount_mount mount_path dir')
 
-fs_sources = findFsMountedSources(fs_source_filters)
-#fs_sources.insert(0, FsMountPoint(0, fs_source_filters[0], 'dummy', 'dummy', self_dir))
-fs_sources.insert(0, FsMountPoint(0, fs_source_filters[0], 'test', 'self_test_in', self_test_in))
-print 'fs_sources', fs_sources
+fs_mounts = fsFindMounts()
+fs_sources = fsFilterMounts(fs_mounts, fs_source_filters)
+fs_targets = fsFilterMounts(fs_mounts, fs_target_filters)
+if False:
+	print 'fs_mounts', fs_mounts
+	print 'fs_sources', fs_sources
+	print 'fs_targets', fs_targets
 
 
 ################################
-def findFtpActiveSources(filters):
+def ftpFindActiveSources(filters):
 	ret = []
 	for f in filters:
 		try:
@@ -101,14 +127,15 @@ def findFtpActiveSources(filters):
 	return ret		
 
 
-FtpMountPoint = namedtuple('FtpMountPoint', 'enabled id descr address port user pwd')
+FtpStoragePoint = namedtuple('FtpStoragePoint', 'enabled id descr address port user pwd')
 ftp_source_filters = [
-				FtpMountPoint(True, '-1', 'MacTestFtp', '127.0.0.1', 21, 'jad', '')
+				FtpStoragePoint(True, '-1', 'MacTestFtp', '127.0.0.1', 21, 'jad', '')
 		]
 
 # sudo -s launchctl [un]load -w /System/Library/LaunchDaemons/ftp.plist
-ftp_sources = findFtpActiveSources(ftp_source_filters)
-print 'ftp_sources', ftp_sources
+ftp_sources = ftpFindActiveSources(ftp_source_filters)
+if False:
+	print 'ftp_sources', ftp_sources
 
 ################################
 def genFileMD5(fname):
@@ -121,9 +148,15 @@ def genFileCrc32(fileName):
 	return "%X"%(prev & 0xFFFFFFFF) 
 
 
-BackupSession = namedtuple('BackupSession', 'dbPath dbConn')
+BackupSession = namedtuple('BackupSession', 'dbPath dbConn descr')
 BackupFileInfo = namedtuple('BackupFileInfo', 'fid')
 NewFileInfo = namedtuple('NewFileInfo', 'fpath fid')
+PointBackupSession = namedtuple('PointBackupSession', 'success impl')
+
+
+def fiGetFilename(fi):
+	head, tail = os.path.split(fi.fpath)
+	return tail
 
 media_extensions = ['jpg']
 def bkpIsMediaFile(name):
@@ -149,7 +182,7 @@ def bkpExistsFile(session, fname):
 def bkpExistsFileId(session, fid):
 	return bkpFindFileId(session, fid) is not None
 
-def bkpStartSession(dbPath, bootstrap = False):
+def bkpStartSession(dbPath, bootstrap = False, descr = ''):
 	if (bootstrap):
 		os.remove(dbPath)	
 	else:	
@@ -161,7 +194,8 @@ def bkpStartSession(dbPath, bootstrap = False):
 		return None
 	
 	if bootstrap:
-		conn.execute('CREATE TABLE file_infos(fid text PRIMARY KEY, bla text)')
+		conn.execute('CREATE TABLE file_infos(fid TEXT PRIMARY KEY, bla TEXT)')
+		conn.execute('CREATE TABLE sessions(sind INTEGER PRIMARY KEY AUTOINCREMENT, descr TEXT, state INTEGER)')
 	
 		perf_test = False
 		if perf_test:
@@ -172,8 +206,8 @@ def bkpStartSession(dbPath, bootstrap = False):
 			conn.commit()
 			print time.time()-start	
 			
-		conn.execute("INSERT INTO file_infos VALUES (?,?)", ( bkpGenFileId(self_test_image), 'hey',))
-		conn.commit()
+		#conn.execute("INSERT INTO file_infos VALUES (?,?)", ( bkpGenFileId(self_test_image), 'hey',))
+		#conn.commit()
 
 		if perf_test:
 			session = BackupSession(dbPath, conn)
@@ -182,7 +216,7 @@ def bkpStartSession(dbPath, bootstrap = False):
 				bkpFindFileId(session, str(uuid.uuid4()))		
 			print time.time()-start		
 		
-	session = BackupSession(dbPath, conn)
+	session = BackupSession(dbPath, conn, descr)
 	return session
 
 def bkpEndSession(session):
@@ -196,18 +230,24 @@ def bkpDumpDb(session, fp):
 		for line in session.dbConn.iterdump():
 			f.write('%s\n' % line)
 
-def bkpFindNewFsFileInfos(session, mount):
+def bkpFindNewFsFileInfos(session, point, dups):
 	ret = []
-	for subdir, dirs, files in os.walk(mount.path):
+	root_dir = os.path.join(point.mount_path, point.dir)
+	for subdir, dirs, files in os.walk(root_dir):
 		for file in files:
 			if (bkpIsMediaFile(file)):
 				#print subdir+'/'+file
 				fp = os.path.join(subdir,file)
 				fid = bkpGenFileId(fp)
-				bkpinfo = bkpExistsFileId(session, fid)
-				#print fp, not exists
-				if not bkpinfo:
-					ret.append(NewFileInfo(fp, fid))
+				is_dup = (fid in dups)
+				if (is_dup):
+					print 'duplicate', dups[fid], ' <-> ', fp
+				else:	
+					bkpinfo = bkpExistsFileId(session, fid)
+					#print fp, not exists
+					if not bkpinfo:
+						ret.append(NewFileInfo(fp, fid))
+						dups[fid] = fp
 	return ret
 
 def bkpBackupNewFileInfos(session, finfos):
@@ -225,7 +265,7 @@ def bkpBackupNewFileInfos2(session, finfos):
 	arch_path = os.path.join(self_test_out, str(uuid.uuid4())+'.tar')
 	
 	while (os.path.isfile(arch_path)):
-			arch_path = os.path.join(self_test_out, str(uuid.uuid4())+'.tar')
+		arch_path = os.path.join(self_test_out, str(uuid.uuid4())+'.tar')
 
 	open(arch_path, 'a').close()
 	print 'Archive', arch_path
@@ -239,6 +279,92 @@ def bkpBackupNewFileInfos2(session, finfos):
 		session.dbConn.commit()
 		print 'Backed up', finfo.fpath
 
+
+def fsBackupFiles(finfos, targetPoint, bkpDir):
+
+	point_path = os.path.join(targetPoint.mount_path, targetPoint.dir)
+	bkp_path = os.path.join(point_path, bkpDir) 
+
+	os.mkdir(bkp_path)
+
+	#if (not os.path.isdir(bkp_path)):
+	#	print 'Missing target', bkp_path
+	#	return PointBackupSession(False, bkp_path)
+
+	for i in range(len(finfos)):
+		finfo = finfos[i]
+		fname = str(i) + '_' + fiGetFilename(finfo)
+		shutil.copyfile(finfo.fpath, os.path.join(bkp_path, fname))
+		print finfo.fpath, '--->',  os.path.join(bkp_path, fname)
+
+	return PointBackupSession(True, bkp_path)
+
+
+def fsEndBackupFiles(targetPoint, pointSession):
+
+	if (not pointSession.success):
+		return
+
+	fp = os.path.join(pointSession.impl, 'mediafrost.txt')
+	with open(fp, 'w') as f:
+		f.write('ok\n')
+
+
+def bkpBackupFs(session, sources, targets):
+
+	has_work = False
+	sfinfos = []
+	dups = {}
+	for s in sources:
+		nfi = bkpFindNewFsFileInfos(session, s, dups)
+		sfinfos.append(nfi)
+		has_work = has_work or (len(nfi)>0)
+
+	if (not has_work):
+		print 'no work'
+		return
+
+	session.dbConn.execute("INSERT INTO sessions VALUES (?,?,?)", (None, session.descr, 0))
+	session.dbConn.commit()
+
+	#cursor = session.dbConn.execute('SELECT max(id) FROM table_name')
+	sind_cursor = session.dbConn.execute('SELECT last_insert_rowid()')
+	sind = sind_cursor.fetchone()[0]
+
+	fs_sessions = []
+	has_errors = False
+	for si in range(len(sources)):
+		s = sources[si]
+		nfi = sfinfos[si]
+		if (len(nfi) > 0):
+			for t in targets:
+				bkp_dir = 'session_' + str(sind) + '_' + str(si)
+				fs_sess = fsBackupFiles(nfi, t, bkp_dir)
+				fs_sessions.append((t, fs_sess))
+				if (fs_sess.success == False):
+					has_errors = True
+					break
+		if (has_errors):
+			break
+	
+	if (has_errors):
+		return
+
+	for t,s in fs_sessions:
+		fsEndBackupFiles(t,s)
+
+	for finfos in sfinfos:
+		for finfo in finfos:
+			session.dbConn.execute("INSERT INTO file_infos VALUES (?,?)", ( finfo.fid, finfo.fpath,))
+			session.dbConn.commit()
+			print 'Backed up', finfo.fpath
+
+	session.dbConn.execute("UPDATE sessions SET state=? WHERE sind=?", (1, sind,))
+	session.dbConn.commit()
+
+	
+
+
 # http://www.withoutthesarcasm.com/using-amazon-glacier-for-personal-backups/
 # duplicator for db file[s]
 # multiple outs, glacier should NOT be the only target. http://www.daemonology.net/blog/2012-09-04-thoughts-on-glacier-pricing.html
@@ -250,18 +376,23 @@ if False:
 	print genFileMD5(self_test_image2)
 	print genFileCrc32(self_test_image2)
 
-session = bkpStartSession(self_test_db, False)
+test_bootstrap = ('-bootstrap' in sys.argv)
+session = bkpStartSession(self_test_db, test_bootstrap, 'testing')
 
 if False:
 	print bkpExistsFile(session, self_test_image)
 	print bkpExistsFile(session, self_test_image2)
 bkpDumpDb(session, self_test_db+'.sql')
 
-if (True and len(fs_sources) > 0):
-	nfi = bkpFindNewFsFileInfos(session, fs_sources[0])
+if (False and len(fs_sources) > 0):
+	dups = {}
+	nfi = bkpFindNewFsFileInfos(session, fs_sources[0], dups)
 	print nfi
 	bkpBackupNewFileInfos2(session, nfi)
 	print bkpFindNewFsFileInfos(session, fs_sources[0])
+
+if (True):	
+	bkpBackupFs(session, fs_sources, fs_targets)
 
 
 bkpEndSession(session)
