@@ -131,20 +131,21 @@ def ftpFindActiveSources(filters):
 			welcome = con.getwelcome()
 			if True:
 				print welcome
+				print con.nlst()
 			ret.append(f)
 		except ftplib.all_errors, e:
 			e
 	return ret		
 
 
-FtpStoragePoint = namedtuple('FtpStoragePoint', 'enabled id descr address port user pwd')
+FtpStoragePoint = namedtuple('FtpStoragePoint', 'enabled id descr long_descr address port user pwd')
 ftp_source_filters = [
-				FtpStoragePoint(True, 'test_ftp', 'MacTestFtp', '127.0.0.1', 21, 'jad', '')
+				FtpStoragePoint(True, 'test_ftp', 'test_ftp_jad_motog','test_ftp_jad_motog', '192.168.1.9', 1024, 'mediafrost', 'mediafrost')
 		]
 
 # sudo -s launchctl [un]load -w /System/Library/LaunchDaemons/ftp.plist
 ftp_sources = ftpFindActiveSources(ftp_source_filters)
-if False:
+if True:
 	print 'ftp_sources', ftp_sources
 
 ################################
@@ -158,7 +159,7 @@ def genFileCrc32(fileName):
 	return "%X"%(prev & 0xFFFFFFFF) 
 
 
-BackupSession = namedtuple('BackupSession', 'dbPath dbConn descr')
+BackupSession = namedtuple('BackupSession', 'dbPath dbConn descr options')
 BackupFileInfo = namedtuple('BackupFileInfo', 'fid')
 NewFileInfo = namedtuple('NewFileInfo', 'fpath fid')
 PointBackupSession = namedtuple('PointBackupSession', 'success impl')
@@ -176,6 +177,7 @@ def bkpIsMediaFile(name):
 
 def bkpGenFileId(fname):
 	return str(genFileMD5(fname))
+	#return str(genFileCrc32(fname))
 
 def bkpFindFileId(session, fid, tblname):
 	t = (fid,)
@@ -219,8 +221,9 @@ def bkpStartSession(dbPath, bootstrap = False, descr = ''):
 	
 	if bootstrap:
 		dbBootstrap(conn)
-			
-	session = BackupSession(dbPath, conn, descr)
+		
+	options = { 'bootstrap':bootstrap }	
+	session = BackupSession(dbPath, conn, descr, options)
 	return session
 
 def bkpEndSession(session):
@@ -234,16 +237,28 @@ def bkpDumpDb(session, fp):
 		for line in session.dbConn.iterdump():
 			f.write('%s\n' % line)
 
+def bkpSessionOption(session, opt, dft = False):
+	if (opt in session.options):
+		return session.options[opt]
+	return dft	
+
+def bkpPrepareTargetTables(session, targets):
+	for target in targets:
+		point_tbl = dbMakePointFidTableName(target.filter.id)
+		dbAddPointFidTable(session.dbConn, point_tbl)
+	session.dbConn.commit()
+
+
 def bkpFindNewFsFileInfos(session, sources, targets):
 	dups = {}
 	ret = {}
 	target_tbls = []
+	perfile = bkpSessionOption(session, 'perfile')
+
+	bkpPrepareTargetTables(session, targets)
 
 	for target in targets:
-		point_tbl = dbMakePointFidTableName(target.filter.id)
-		dbAddPointFidTable(session.dbConn, point_tbl)
-		target_tbls.append(point_tbl)
-	session.dbConn.commit()
+		target_tbls.append(dbMakePointFidTableName(target.filter.id))
 
 	for source in sources:
 		root_dir = fsGetPointPath(source)
@@ -259,12 +274,13 @@ def bkpFindNewFsFileInfos(session, sources, targets):
 		for subdir, dirs, files in os.walk(root_dir):
 			for file in files:
 				if (bkpIsMediaFile(file)):
-					print subdir+'/'+file
+					if (perfile):
+						print subdir+'/'+file
 					fp = os.path.join(subdir,file)
 					fid = bkpGenFileId(fp)
 					is_dup = (fid in dups)
 					if (is_dup):
-						print 'duplicate', dups[fid], ' <-> ', fp
+						print 'Found duplicate: [{}] <-> [{}]'.format(dups[fid], fp)
 					else:	
 						for target,tbl,fi_list in zip(targets, target_tbls, fi_lists):
 							if (not bkpExistsFileId(session, fid, tbl)):
@@ -272,37 +288,8 @@ def bkpFindNewFsFileInfos(session, sources, targets):
 								dups[fid] = fp
 	return ret
 
-def bkpBackupNewFileInfos(session, finfos):
-	for finfo in finfos:
-		session.dbConn.execute("INSERT INTO file_infos VALUES (?,?)", ( finfo.fid, finfo.fpath,))
-		session.dbConn.commit()
-		print 'Backed up', finfo.fpath
 
-
-def bkpBackupNewFileInfos2(session, finfos):
-
-	if (len(finfos) == 0):
-		return
-
-	arch_path = os.path.join(self_test_out, str(uuid.uuid4())+'.tar')
-	
-	while (os.path.isfile(arch_path)):
-		arch_path = os.path.join(self_test_out, str(uuid.uuid4())+'.tar')
-
-	open(arch_path, 'a').close()
-	print 'Archive', arch_path
-	tar = tarfile.open(arch_path, "w")
-	for finfo in finfos:
-		tar.add(finfo.fpath)
-	tar.close()
-
-	for finfo in finfos:
-		session.dbConn.execute("INSERT INTO file_infos VALUES (?,?)", ( finfo.fid, finfo.fpath,))
-		session.dbConn.commit()
-		print 'Backed up', finfo.fpath
-
-
-def fsBackupFiles(finfos, targetPoint, bkpDir):
+def fsBackupFiles(session, finfos, targetPoint, bkpDir):
 	print 'Writing to [{}]...'.format(targetPoint.filter.long_descr)
 
 	point_path = fsGetPointPath(targetPoint)
@@ -314,11 +301,14 @@ def fsBackupFiles(finfos, targetPoint, bkpDir):
 	#	print 'Missing target', bkp_path
 	#	return PointBackupSession(False, bkp_path)
 
+	perfile = bkpSessionOption(session, 'perfile')
+
 	for i in range(len(finfos)):
 		finfo = finfos[i]
 		fname = str(i) + '_' + fiGetFilename(finfo)
 		shutil.copyfile(finfo.fpath, os.path.join(bkp_path, fname))
-		print finfo.fpath, '--->',  os.path.join(bkp_path, fname)
+		if (perfile):
+			print finfo.fpath, '--->',  os.path.join(bkp_path, fname)
 
 	return PointBackupSession(True, bkp_path)
 
@@ -360,7 +350,7 @@ def bkpBackupFs(session, sources, targets):
 			nfi = nfi_dict[(source, target)]
 			if (len(nfi) > 0):
 				bkp_dir = 'session_' + str(sind) + '_' + str(si)
-				fs_sess = fsBackupFiles(nfi, target, bkp_dir)
+				fs_sess = fsBackupFiles(session, nfi, target, bkp_dir)
 				fs_sessions.append((target, fs_sess))
 				if (fs_sess.success == False):
 					print 'Target Failed'
@@ -430,6 +420,7 @@ def bkpUiChooseStoragePoints(fs_sources, fs_targets):
 
 test_bootstrap = ('-bootstrap' in sys.argv)
 session = bkpStartSession(self_test_db, test_bootstrap, 'testing')
+session.options['perfile'] = ('-perfile' in sys.argv)
 
 if (test_bootstrap):
 	for t in fs_targets:
