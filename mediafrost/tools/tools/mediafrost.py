@@ -87,15 +87,15 @@ def fsFilterMounts(mounts, filters):
 
 FsMountPointFilter = namedtuple('FsMountPointFilter', 'enabled id descr serial name size dir')
 fs_source_filters = [ 
-					FsMountPointFilter(True, '-1', 'Canon', '0', 'EOS_DIGITAL', '16', ''), 
-					FsMountPointFilter(True, '-2', 'Panasonic', '0', 'CAM_SD', '32', ''),
-					FsMountPointFilter(True, '-3', 'Apple_HFS', '0', 'Mac', '790', 'Users/nohra/Jad/mediafrost/tools/test/in'), 
-					FsMountPointFilter(True, '-4', 'Apple_HFS', '0', 'Mac', '790', 'Users/nohra/Jad/mediafrost/tools/test/in1'), 
+					FsMountPointFilter(True, 'Canon1', 'Canon', '0', 'EOS_DIGITAL', '16', ''), 
+					FsMountPointFilter(True, 'Panasonic1', 'Panasonic', '0', 'CAM_SD', '32', ''),
+					FsMountPointFilter(True, 'test_fs_in1', 'Apple_HFS', '0', 'Mac', '790', 'Users/nohra/Jad/mediafrost/tools/test/in'), 
+					FsMountPointFilter(True, 'test_fs_in2', 'Apple_HFS', '0', 'Mac', '790', 'Users/nohra/Jad/mediafrost/tools/test/in1'), 
 
 				]
 fs_target_filters = [ 
-					FsMountPointFilter(True, '-1', 'Apple_HFS', '0', 'Mac', '790', 'Users/nohra/Jad/mediafrost/tools/test/out'), 
-					FsMountPointFilter(True, '-2', 'Apple_HFS', '0', 'Mac', '790', 'Users/nohra/Jad/mediafrost/tools/test/out1'), 
+					FsMountPointFilter(True, 'test_fs_out1', 'Apple_HFS', '0', 'Mac', '790', 'Users/nohra/Jad/mediafrost/tools/test/out'), 
+					FsMountPointFilter(True, 'test_fs_out2', 'Apple_HFS', '0', 'Mac', '790', 'Users/nohra/Jad/mediafrost/tools/test/out1'), 
 				]
 
 FsMountPoint = namedtuple('FsMountPoint', 'disk mount path info')
@@ -129,7 +129,7 @@ def ftpFindActiveSources(filters):
 
 FtpStoragePoint = namedtuple('FtpStoragePoint', 'enabled id descr address port user pwd')
 ftp_source_filters = [
-				FtpStoragePoint(True, '-1', 'MacTestFtp', '127.0.0.1', 21, 'jad', '')
+				FtpStoragePoint(True, 'test_ftp', 'MacTestFtp', '127.0.0.1', 21, 'jad', '')
 		]
 
 # sudo -s launchctl [un]load -w /System/Library/LaunchDaemons/ftp.plist
@@ -158,7 +158,7 @@ def fiGetFilename(fi):
 	head, tail = os.path.split(fi.fpath)
 	return tail
 
-media_extensions = ['jpg']
+media_extensions = ['jpg','mp4','m4v']
 def bkpIsMediaFile(name):
 	global media_extensions
 	return (name.split('.')[-1].lower() in media_extensions)
@@ -167,20 +167,34 @@ def bkpIsMediaFile(name):
 def bkpGenFileId(fname):
 	return str(genFileMD5(fname))
 
-def bkpFindFileId(session, fid):
+def bkpFindFileId(session, fid, tblname):
 	t = (fid,)
-	c = session.dbConn.execute('SELECT * FROM file_infos WHERE fid=?', t)
+	c = session.dbConn.execute('SELECT * FROM {} WHERE fid=?'.format(tblname), t)
 	rec = c.fetchone()
 	if (rec is None):
 		return None
 	return BackupFileInfo(fid)
 
-def bkpExistsFile(session, fname):
+def bkpExistsFile(session, fname, tblname):
 	fid = bkpGenFileId(fname)
-	return bkpFindFileId(session, fid) is not None
+	return bkpFindFileId(session, fid, tblname) is not None
 
-def bkpExistsFileId(session, fid):
-	return bkpFindFileId(session, fid) is not None
+def bkpExistsFileId(session, fid, tblname):
+	return bkpFindFileId(session, fid, tblname) is not None
+
+def dbMakePointFidTableName(pointName):
+	return 'point_fids_{}'.format(pointName)
+
+def dbAddPointFidTable(conn, tableName):
+	conn.execute('CREATE TABLE IF NOT EXISTS {}(fid TEXT PRIMARY KEY)'.format(tableName))
+
+def dbAddPointFid(conn, tableName, fid):
+	session.dbConn.execute('INSERT INTO {} VALUES (?)'.format(tableName), (fid,))
+
+def dbBootstrap(conn):
+	conn.execute('CREATE TABLE file_infos(fid TEXT PRIMARY KEY)')
+	conn.execute('CREATE TABLE sessions(sind INTEGER PRIMARY KEY AUTOINCREMENT, descr TEXT, state INTEGER)')
+	conn.commit()
 
 def bkpStartSession(dbPath, bootstrap = False, descr = ''):
 	if (bootstrap):
@@ -194,28 +208,8 @@ def bkpStartSession(dbPath, bootstrap = False, descr = ''):
 		return None
 	
 	if bootstrap:
-		conn.execute('CREATE TABLE file_infos(fid TEXT PRIMARY KEY, bla TEXT)')
-		conn.execute('CREATE TABLE sessions(sind INTEGER PRIMARY KEY AUTOINCREMENT, descr TEXT, state INTEGER)')
-	
-		perf_test = False
-		if perf_test:
-			start = time.time()
-			for i in range(1000*1000):
-				t = (str(uuid.uuid4()), str(uuid.uuid4()),)
-				conn.execute("INSERT INTO file_infos VALUES (?,?)",t)
-			conn.commit()
-			print time.time()-start	
+		dbBootstrap(conn)
 			
-		#conn.execute("INSERT INTO file_infos VALUES (?,?)", ( bkpGenFileId(self_test_image), 'hey',))
-		#conn.commit()
-
-		if perf_test:
-			session = BackupSession(dbPath, conn)
-			start = time.time()
-			for i in range(1000):
-				bkpFindFileId(session, str(uuid.uuid4()))		
-			print time.time()-start		
-		
 	session = BackupSession(dbPath, conn, descr)
 	return session
 
@@ -230,24 +224,40 @@ def bkpDumpDb(session, fp):
 		for line in session.dbConn.iterdump():
 			f.write('%s\n' % line)
 
-def bkpFindNewFsFileInfos(session, point, dups):
-	ret = []
-	root_dir = os.path.join(point.mount_path, point.dir)
-	for subdir, dirs, files in os.walk(root_dir):
-		for file in files:
-			if (bkpIsMediaFile(file)):
-				#print subdir+'/'+file
-				fp = os.path.join(subdir,file)
-				fid = bkpGenFileId(fp)
-				is_dup = (fid in dups)
-				if (is_dup):
-					print 'duplicate', dups[fid], ' <-> ', fp
-				else:	
-					bkpinfo = bkpExistsFileId(session, fid)
-					#print fp, not exists
-					if not bkpinfo:
-						ret.append(NewFileInfo(fp, fid))
-						dups[fid] = fp
+def bkpFindNewFsFileInfos(session, sources, targets):
+	dups = {}
+	ret = {}
+	target_tbls = []
+
+	for target in targets:
+		point_tbl = dbMakePointFidTableName(target.filter.id)
+		dbAddPointFidTable(session.dbConn, point_tbl)
+		target_tbls.append(point_tbl)
+	session.dbConn.commit()
+
+	for source in sources:
+		root_dir = os.path.join(source.mount_path, source.dir)
+
+		fi_lists = []
+		for target in targets:
+			fi_list = []
+			ret[(source, target)] = fi_list
+			fi_lists.append(fi_list)
+
+		for subdir, dirs, files in os.walk(root_dir):
+			for file in files:
+				if (bkpIsMediaFile(file)):
+					#print subdir+'/'+file
+					fp = os.path.join(subdir,file)
+					fid = bkpGenFileId(fp)
+					is_dup = (fid in dups)
+					if (is_dup):
+						print 'duplicate', dups[fid], ' <-> ', fp
+					else:	
+						for target,tbl,fi_list in zip(targets, target_tbls, fi_lists):
+							if (not bkpExistsFileId(session, fid, tbl)):
+								fi_list.append(NewFileInfo(fp, fid))
+								dups[fid] = fp
 	return ret
 
 def bkpBackupNewFileInfos(session, finfos):
@@ -312,12 +322,10 @@ def fsEndBackupFiles(targetPoint, pointSession):
 
 def bkpBackupFs(session, sources, targets):
 
+	nfi_dict = bkpFindNewFsFileInfos(session, sources, targets)
+	
 	has_work = False
-	sfinfos = []
-	dups = {}
-	for s in sources:
-		nfi = bkpFindNewFsFileInfos(session, s, dups)
-		sfinfos.append(nfi)
+	for nfi in nfi_dict.values():
 		has_work = has_work or (len(nfi)>0)
 
 	if (not has_work):
@@ -334,13 +342,13 @@ def bkpBackupFs(session, sources, targets):
 	fs_sessions = []
 	has_errors = False
 	for si in range(len(sources)):
-		s = sources[si]
-		nfi = sfinfos[si]
-		if (len(nfi) > 0):
-			for t in targets:
+		source = sources[si]
+		for target in targets:
+			nfi = nfi_dict[(source, target)]
+			if (len(nfi) > 0):
 				bkp_dir = 'session_' + str(sind) + '_' + str(si)
-				fs_sess = fsBackupFiles(nfi, t, bkp_dir)
-				fs_sessions.append((t, fs_sess))
+				fs_sess = fsBackupFiles(nfi, target, bkp_dir)
+				fs_sessions.append((target, fs_sess))
 				if (fs_sess.success == False):
 					has_errors = True
 					break
@@ -353,11 +361,12 @@ def bkpBackupFs(session, sources, targets):
 	for t,s in fs_sessions:
 		fsEndBackupFiles(t,s)
 
-	for finfos in sfinfos:
-		for finfo in finfos:
-			session.dbConn.execute("INSERT INTO file_infos VALUES (?,?)", ( finfo.fid, finfo.fpath,))
-			session.dbConn.commit()
-			print 'Backed up', finfo.fpath
+	for source in sources:
+		for target in targets:
+			nfi = nfi_dict[(source,target)]
+			tbl_name = dbMakePointFidTableName(target.filter.id)
+			for finfo in nfi:
+				dbAddPointFid(session.dbConn, tbl_name, finfo.fid)
 
 	session.dbConn.execute("UPDATE sessions SET state=? WHERE sind=?", (1, sind,))
 	session.dbConn.commit()
@@ -379,17 +388,18 @@ if False:
 test_bootstrap = ('-bootstrap' in sys.argv)
 session = bkpStartSession(self_test_db, test_bootstrap, 'testing')
 
-if False:
-	print bkpExistsFile(session, self_test_image)
-	print bkpExistsFile(session, self_test_image2)
-bkpDumpDb(session, self_test_db+'.sql')
+if (test_bootstrap):
+	for t in fs_targets:
+		point_path = os.path.join(t.mount_path, t.dir)
+		if ('mediafrost/tools/test/out' in point_path):
+			for subdir, dirs, files in os.walk(point_path):
+				for dir in dirs:
+					if ('session' in dir):
+						dp = os.path.join(subdir,dir)
+						#print dp
+						shutil.rmtree(dp)
 
-if (False and len(fs_sources) > 0):
-	dups = {}
-	nfi = bkpFindNewFsFileInfos(session, fs_sources[0], dups)
-	print nfi
-	bkpBackupNewFileInfos2(session, nfi)
-	print bkpFindNewFsFileInfos(session, fs_sources[0])
+
 
 if (True):	
 	bkpBackupFs(session, fs_sources, fs_targets)
