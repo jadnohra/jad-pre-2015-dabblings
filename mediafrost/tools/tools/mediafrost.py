@@ -83,19 +83,24 @@ def fsFilterMounts(mounts, filters):
 				else:
 					print 'Missing directory:', dir 
 	return ret
-				
+			
+def fsGetPointPath(point):
+	return os.path.join(point.mount_path, point.dir)
 
-FsMountPointFilter = namedtuple('FsMountPointFilter', 'enabled id descr serial name size dir')
+
+
+FsMountPointFilter = namedtuple('FsMountPointFilter', 'enabled id descr long_descr name size dir')
 fs_source_filters = [ 
-					FsMountPointFilter(True, 'Canon1', 'Canon', '0', 'EOS_DIGITAL', '16', ''), 
-					FsMountPointFilter(True, 'Panasonic1', 'Panasonic', '0', 'CAM_SD', '32', ''),
-					FsMountPointFilter(True, 'test_fs_in1', 'Apple_HFS', '0', 'Mac', '790', 'Users/nohra/Jad/mediafrost/tools/test/in'), 
-					FsMountPointFilter(True, 'test_fs_in2', 'Apple_HFS', '0', 'Mac', '790', 'Users/nohra/Jad/mediafrost/tools/test/in1'), 
+					FsMountPointFilter(True, 'Cam_Canon_Eos550D_1', 'Eos550D','', 'EOS_DIGITAL', '16', ''), 
+					FsMountPointFilter(True, 'Vid_Panasonic_HDCSD90_1', 'Panasonic','', 'CAM_SD', '32', ''),
+					FsMountPointFilter(True, 'test_fs_in', 'test_fs_in','test_fs_in', 'Mac', '790', 'Users/nohra/Jad/mediafrost/tools/test/in'), 
+					FsMountPointFilter(True, 'test_fs_in1', 'test_fs_in1','test_fs_in1', 'Mac', '790', 'Users/nohra/Jad/mediafrost/tools/test/in1'), 
 
 				]
 fs_target_filters = [ 
-					FsMountPointFilter(True, 'test_fs_out1', 'Apple_HFS', '0', 'Mac', '790', 'Users/nohra/Jad/mediafrost/tools/test/out'), 
-					FsMountPointFilter(True, 'test_fs_out2', 'Apple_HFS', '0', 'Mac', '790', 'Users/nohra/Jad/mediafrost/tools/test/out1'), 
+					FsMountPointFilter(True, 'test_fs_out', 'test_fs_out','test_fs_out', 'Mac', '790', 'Users/nohra/Jad/mediafrost/tools/test/out'), 
+					FsMountPointFilter(True, 'test_fs_out1', 'test_fs_out1','test_fs_out1', 'Mac', '790', 'Users/nohra/Jad/mediafrost/tools/test/out1'),
+					FsMountPointFilter(True, 'test_fs_out2', 'test_fs_out2','test_fs_out2', 'Mac', '790', 'Users/nohra/Jad/mediafrost/tools/test/out2'), 
 				]
 
 FsMountPoint = namedtuple('FsMountPoint', 'disk mount path info')
@@ -158,7 +163,7 @@ def fiGetFilename(fi):
 	head, tail = os.path.split(fi.fpath)
 	return tail
 
-media_extensions = ['jpg','mp4','m4v']
+media_extensions = ['jpg','mp4','m4v','mov','mts']
 def bkpIsMediaFile(name):
 	global media_extensions
 	return (name.split('.')[-1].lower() in media_extensions)
@@ -236,8 +241,8 @@ def bkpFindNewFsFileInfos(session, sources, targets):
 	session.dbConn.commit()
 
 	for source in sources:
-		root_dir = os.path.join(source.mount_path, source.dir)
-
+		root_dir = fsGetPointPath(source)
+		
 		fi_lists = []
 		for target in targets:
 			fi_list = []
@@ -292,7 +297,7 @@ def bkpBackupNewFileInfos2(session, finfos):
 
 def fsBackupFiles(finfos, targetPoint, bkpDir):
 
-	point_path = os.path.join(targetPoint.mount_path, targetPoint.dir)
+	point_path = fsGetPointPath(targetPoint)
 	bkp_path = os.path.join(point_path, bkpDir) 
 
 	os.mkdir(bkp_path)
@@ -371,20 +376,40 @@ def bkpBackupFs(session, sources, targets):
 	session.dbConn.execute("UPDATE sessions SET state=? WHERE sind=?", (1, sind,))
 	session.dbConn.commit()
 
+
+def bkpUiChooseStoragePoints(fs_sources, fs_targets):
+
+	points = fs_sources + fs_targets
+	types = [1]*len(fs_sources) + [2]*len(fs_targets)
+	type_switches = { 1:0, 2:0, 0:3, 3:4, 4:0 }
+
+	def display(points, types):
+		type_names = ['Disabled', 'Source', 'Target', 'Source*', 'Target*' ]
+		index = 1
+		for type,point in zip(types,points):
+			print '{}. {}: [{}] [{}]'.format(index, type_names[type], point.filter.long_descr, fsGetPointPath(point))
+			index = index + 1
+
+	display(points, types)
+	input_str = raw_input('Choose index (or Enter): ')	
+	while(len(input_str) > 0):
+		choice = int(input_str)-1
+		types[choice] = type_switches[types[choice]]
+		display(points, types)
+		input_str = raw_input('Choose index (or Enter): ')	
+
+	fs_sources = []
+	fs_targets = []
+	for type,point in zip(types,points):
+		if (type == 1 or type == 3):
+			fs_sources.append(point)
+		if (type == 2 or type == 4):
+			fs_targets.append(point)
 	
-
-
-# http://www.withoutthesarcasm.com/using-amazon-glacier-for-personal-backups/
-# duplicator for db file[s]
-# multiple outs, glacier should NOT be the only target. http://www.daemonology.net/blog/2012-09-04-thoughts-on-glacier-pricing.html
-
-
-if False:
-	print genFileMD5(self_test_image)
-	print genFileCrc32(self_test_image)
-	print genFileMD5(self_test_image2)
-	print genFileCrc32(self_test_image2)
-
+	print fs_sources
+	print fs_targets
+	
+	
 test_bootstrap = ('-bootstrap' in sys.argv)
 session = bkpStartSession(self_test_db, test_bootstrap, 'testing')
 
@@ -401,7 +426,8 @@ if (test_bootstrap):
 
 
 
-if (True):	
+if (True):
+	bkpUiChooseStoragePoints(fs_sources, fs_targets)
 	bkpBackupFs(session, fs_sources, fs_targets)
 
 
