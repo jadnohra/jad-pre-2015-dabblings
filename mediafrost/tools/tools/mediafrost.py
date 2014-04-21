@@ -50,6 +50,8 @@ def fsGetMountPath(mount):
 
 
 def fsFindMounts():
+	print 'Finding file system mounts...'
+	
 	ret = []
 	out = subprocess.Popen(['diskutil', 'list'], stdout=subprocess.PIPE).stdout.read()
 	disk_name = ''
@@ -66,20 +68,23 @@ def fsFindMounts():
 
 
 def fsFilterMounts(mounts, filters):
+	print 'Filtering file system mounts...'
+
 	ret = []
 	for i in range(len(filters)):
 		if (filters[i].enabled):
 			matching_mounts = []
 			for m in mounts:
-				if (filters[i].name in m.info):
+				if (filters[i].mount_match in m.info):
 					matching_mounts.append(m)
 			if (len(matching_mounts) >= 2):
 					print 'Duplicate mount matches!'
 					return []
 			if (len(matching_mounts) == 1):
-				dir = os.path.join(m.path, filters[i].dir)
+				chosen_mount = matching_mounts[0]
+				dir = os.path.join(chosen_mount.path, filters[i].dir)
 				if (os.path.isdir(dir)):
-					ret.append(FsStoragePoint(i, filters[i], m.disk, m.mount, m.path, filters[i].dir))
+					ret.append(FsStoragePoint(i, filters[i], chosen_mount.disk, chosen_mount.mount, chosen_mount.path, filters[i].dir))
 				else:
 					print 'Missing directory:', dir 
 	return ret
@@ -89,18 +94,18 @@ def fsGetPointPath(point):
 
 
 
-FsMountPointFilter = namedtuple('FsMountPointFilter', 'enabled id descr long_descr name size dir')
+FsMountPointFilter = namedtuple('FsMountPointFilter', 'enabled id descr long_descr mount_match size dir')
 fs_source_filters = [ 
-					FsMountPointFilter(True, 'Cam_Canon_Eos550D_1', 'Eos550D','', 'EOS_DIGITAL', '16', ''), 
-					FsMountPointFilter(True, 'Vid_Panasonic_HDCSD90_1', 'Panasonic','', 'CAM_SD', '32', ''),
-					FsMountPointFilter(True, 'test_fs_in', 'test_fs_in','test_fs_in', 'Mac', '790', 'Users/nohra/Jad/mediafrost/tools/test/in'), 
-					FsMountPointFilter(True, 'test_fs_in1', 'test_fs_in1','test_fs_in1', 'Mac', '790', 'Users/nohra/Jad/mediafrost/tools/test/in1'), 
+					FsMountPointFilter(True, 'Cam_Canon_Eos550D_1', 'Eos550D','Eos550D', 'EOS_DIGITAL', '16', ''), 
+					FsMountPointFilter(True, 'Vid_Panasonic_HDCSD90_1', 'Panasonic','Video', 'CAM_SD', '32', ''),
+					FsMountPointFilter(True, 'test_fs_in', 'test_fs_in','test_fs_in', 'Apple_HFS', '790', 'Users/nohra/Jad/mediafrost/tools/test/in'), 
+					FsMountPointFilter(True, 'test_fs_in1', 'test_fs_in1','test_fs_in1', 'Apple_HFS', '790', 'Users/nohra/Jad/mediafrost/tools/test/in1'), 
 
 				]
 fs_target_filters = [ 
-					FsMountPointFilter(True, 'test_fs_out', 'test_fs_out','test_fs_out', 'Mac', '790', 'Users/nohra/Jad/mediafrost/tools/test/out'), 
-					FsMountPointFilter(True, 'test_fs_out1', 'test_fs_out1','test_fs_out1', 'Mac', '790', 'Users/nohra/Jad/mediafrost/tools/test/out1'),
-					FsMountPointFilter(True, 'test_fs_out2', 'test_fs_out2','test_fs_out2', 'Mac', '790', 'Users/nohra/Jad/mediafrost/tools/test/out2'), 
+					FsMountPointFilter(True, 'test_fs_out', 'test_fs_out','test_fs_out', 'Apple_HFS', '790', 'Users/nohra/Jad/mediafrost/tools/test/out'), 
+					FsMountPointFilter(True, 'test_fs_out1', 'test_fs_out1','test_fs_out1', 'Apple_HFS', '790', 'Users/nohra/Jad/mediafrost/tools/test/out1'),
+					FsMountPointFilter(True, 'test_fs_out2', 'test_fs_out2','test_fs_out2', 'Apple_HFS', '790', 'Users/nohra/Jad/mediafrost/tools/test/out2'), 
 				]
 
 FsMountPoint = namedtuple('FsMountPoint', 'disk mount path info')
@@ -243,6 +248,8 @@ def bkpFindNewFsFileInfos(session, sources, targets):
 	for source in sources:
 		root_dir = fsGetPointPath(source)
 		
+		print 'Analyzing source [{}]...'.format(source.filter.long_descr)
+
 		fi_lists = []
 		for target in targets:
 			fi_list = []
@@ -252,7 +259,7 @@ def bkpFindNewFsFileInfos(session, sources, targets):
 		for subdir, dirs, files in os.walk(root_dir):
 			for file in files:
 				if (bkpIsMediaFile(file)):
-					#print subdir+'/'+file
+					print subdir+'/'+file
 					fp = os.path.join(subdir,file)
 					fid = bkpGenFileId(fp)
 					is_dup = (fid in dups)
@@ -296,6 +303,7 @@ def bkpBackupNewFileInfos2(session, finfos):
 
 
 def fsBackupFiles(finfos, targetPoint, bkpDir):
+	print 'Writing to [{}]...'.format(targetPoint.filter.long_descr)
 
 	point_path = fsGetPointPath(targetPoint)
 	bkp_path = os.path.join(point_path, bkpDir) 
@@ -334,7 +342,7 @@ def bkpBackupFs(session, sources, targets):
 		has_work = has_work or (len(nfi)>0)
 
 	if (not has_work):
-		print 'no work'
+		print 'Nothing to do'
 		return
 
 	session.dbConn.execute("INSERT INTO sessions VALUES (?,?,?)", (None, session.descr, 0))
@@ -355,13 +363,17 @@ def bkpBackupFs(session, sources, targets):
 				fs_sess = fsBackupFiles(nfi, target, bkp_dir)
 				fs_sessions.append((target, fs_sess))
 				if (fs_sess.success == False):
+					print 'Target Failed'
 					has_errors = True
 					break
 		if (has_errors):
 			break
 	
 	if (has_errors):
+		print 'Session failed'
 		return
+
+	print 'Updating database...'
 
 	for t,s in fs_sessions:
 		fsEndBackupFiles(t,s)
@@ -375,6 +387,9 @@ def bkpBackupFs(session, sources, targets):
 
 	session.dbConn.execute("UPDATE sessions SET state=? WHERE sind=?", (1, sind,))
 	session.dbConn.commit()
+
+	print 'Session succeeded'
+
 
 
 def bkpUiChooseStoragePoints(fs_sources, fs_targets):
@@ -391,25 +406,28 @@ def bkpUiChooseStoragePoints(fs_sources, fs_targets):
 			index = index + 1
 
 	display(points, types)
-	input_str = raw_input('Choose index (or Enter): ')	
+	input_str = raw_input('Choose index (Enter or 0): ')	
 	while(len(input_str) > 0):
 		choice = int(input_str)-1
-		types[choice] = type_switches[types[choice]]
-		display(points, types)
-		input_str = raw_input('Choose index (or Enter): ')	
+		if (choice == -1):
+			types = [0]*len(types)
+			input_str = ''
+		else:
+			types[choice] = type_switches[types[choice]]
+			display(points, types)
+			input_str = raw_input('Choose index (Enter or 0): ')	
 
-	fs_sources = []
-	fs_targets = []
+	del fs_sources[:]
+	del fs_targets[:]
 	for type,point in zip(types,points):
 		if (type == 1 or type == 3):
 			fs_sources.append(point)
 		if (type == 2 or type == 4):
 			fs_targets.append(point)
-	
-	print fs_sources
-	print fs_targets
-	
-	
+		
+	#print fs_sources
+	#print fs_targets
+
 test_bootstrap = ('-bootstrap' in sys.argv)
 session = bkpStartSession(self_test_db, test_bootstrap, 'testing')
 
