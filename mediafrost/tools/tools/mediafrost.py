@@ -274,10 +274,10 @@ def bkpFindNewFsFileInfos(session, sources, targets):
 		for subdir, dirs, files in os.walk(root_dir):
 			for file in files:
 				if (bkpIsMediaFile(file)):
-					if (perfile):
-						print subdir+'/'+file
 					fp = os.path.join(subdir,file)
 					fid = bkpGenFileId(fp)
+					if (perfile):
+						print '[{}] : [{}]'.format(fp, fid)
 					is_dup = (fid in dups)
 					if (is_dup):
 						print 'Found duplicate: [{}] <-> [{}]'.format(dups[fid], fp)
