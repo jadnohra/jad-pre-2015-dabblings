@@ -21,20 +21,20 @@ self_test_out = os.path.join(self_dir, 'test/out')
 self_test_in = os.path.join(self_dir, 'test/in')
 
 ######################################
-sys.path.append(os.path.join(self_module_dir, 'exif-py'))
-import exifread
+#sys.path.append(os.path.join(self_module_dir, 'exif-py'))
+#import exifread
 
-f = open(self_test_image, 'rb')
-tags = exifread.process_file(f)
+#f = open(self_test_image, 'rb')
+#tags = exifread.process_file(f)
 #print tags
 
-fields = ['date', 'model', 'manufacturer']
+#fields = ['date', 'model', 'manufacturer']
 
-if False:
-	for (key,tag) in tags.iteritems():
-		for field in fields:
-			if field in key.lower():
-				print key,tag
+#if False:
+#	for (key,tag) in tags.iteritems():
+#		for field in fields:
+#			if field in key.lower():
+#				print key,tag
 
 #####################################
 def printDiskInfo():
@@ -111,9 +111,11 @@ fs_target_filters = [
 FsMountPoint = namedtuple('FsMountPoint', 'disk mount path info')
 FsStoragePoint =  namedtuple('FsStoragePoint', 'filter_index filter mount_disk mount_mount mount_path dir')
 
-fs_mounts = fsFindMounts()
-fs_sources = fsFilterMounts(fs_mounts, fs_source_filters)
-fs_targets = fsFilterMounts(fs_mounts, fs_target_filters)
+if False:
+	fs_mounts = fsFindMounts()
+	fs_sources = fsFilterMounts(fs_mounts, fs_source_filters)
+	fs_targets = fsFilterMounts(fs_mounts, fs_target_filters)
+
 if False:
 	print 'fs_mounts', fs_mounts
 	print 'fs_sources', fs_sources
@@ -144,9 +146,10 @@ ftp_source_filters = [
 		]
 
 # sudo -s launchctl [un]load -w /System/Library/LaunchDaemons/ftp.plist
-ftp_sources = ftpFindActiveSources(ftp_source_filters)
-if True:
-	print 'ftp_sources', ftp_sources
+if False:
+	ftp_sources = ftpFindActiveSources(ftp_source_filters)
+	if True:
+		print 'ftp_sources', ftp_sources
 
 ################################
 def genFileMD5(fname):
@@ -418,27 +421,29 @@ def bkpUiChooseStoragePoints(fs_sources, fs_targets):
 	#print fs_sources
 	#print fs_targets
 
-test_bootstrap = ('-bootstrap' in sys.argv)
-session = bkpStartSession(self_test_db, test_bootstrap, 'testing')
-session.options['perfile'] = ('-perfile' in sys.argv)
+def runTestSession():
+	fs_mounts = fsFindMounts()
+	fs_sources = fsFilterMounts(fs_mounts, fs_source_filters)
+	fs_targets = fsFilterMounts(fs_mounts, fs_target_filters)
 
-if (test_bootstrap):
-	for t in fs_targets:
-		point_path = os.path.join(t.mount_path, t.dir)
-		if ('mediafrost/tools/test/out' in point_path):
-			for subdir, dirs, files in os.walk(point_path):
-				for dir in dirs:
-					if ('session' in dir):
-						dp = os.path.join(subdir,dir)
-						#print dp
-						shutil.rmtree(dp)
+	test_bootstrap = ('-bootstrap' in sys.argv)
+	session = bkpStartSession(self_test_db, test_bootstrap, 'testing')
+	session.options['perfile'] = ('-perfile' in sys.argv)
 
+	if (test_bootstrap):
+		for t in fs_targets:
+			point_path = os.path.join(t.mount_path, t.dir)
+			if ('mediafrost/tools/test/out' in point_path):
+				for subdir, dirs, files in os.walk(point_path):
+					for dir in dirs:
+						if ('session' in dir):
+							dp = os.path.join(subdir,dir)
+							#print dp
+							shutil.rmtree(dp)
+	
+	if (True):
+		bkpUiChooseStoragePoints(fs_sources, fs_targets)
+		bkpBackupFs(session, fs_sources, fs_targets)
 
-
-if (True):
-	bkpUiChooseStoragePoints(fs_sources, fs_targets)
-	bkpBackupFs(session, fs_sources, fs_targets)
-
-
-bkpEndSession(session)
+	bkpEndSession(session)
 
