@@ -10,6 +10,8 @@ import time
 import ftplib
 import tarfile
 import shutil
+import datetime
+import math
 
 self_path = os.path.realpath(__file__)
 self_dir = os.path.dirname(self_path)
@@ -292,6 +294,32 @@ def bkpFindNewFsFileInfos(session, sources, targets):
 	return ret
 
 
+def fiGenUniqueIndices(fnames):
+	counts = {}
+	for fname in fnames:
+		if (fname in counts):
+			counts[fname] = counts[fname] + 1
+		else:
+			counts[fname] = 1
+	indices = {}
+	ret = []
+	for fname in fnames:
+		index = None
+		if (counts[fname] > 1):
+			if (fname in indices):
+				index = indices[fname] + 1
+			else:	
+				index = 1
+			infices[fname] = index
+		ret.append(index)
+	return ret
+
+def fiGenUniqueName(fname, index):
+	if (not index is None):
+		return str(index) + '_' + fname
+	return fname
+
+
 def fsBackupFiles(session, finfos, targetPoint, bkpDir):
 	print 'Writing to [{}]...'.format(targetPoint.filter.long_descr)
 
@@ -305,26 +333,30 @@ def fsBackupFiles(session, finfos, targetPoint, bkpDir):
 	#	return PointBackupSession(False, bkp_path)
 
 	perfile = bkpSessionOption(session, 'perfile')
+	findices = fiGenUniqueIndices([fiGetFilename(x) for x in finfos])
 
 	for i in range(len(finfos)):
 		finfo = finfos[i]
-		fname = str(i) + '_' + fiGetFilename(finfo)
+		fname = fiGenUniqueName(fiGetFilename(finfo), findices[i])
 		shutil.copyfile(finfo.fpath, os.path.join(bkp_path, fname))
 		if (perfile):
 			print finfo.fpath, '--->',  os.path.join(bkp_path, fname)
-
 	return PointBackupSession(True, bkp_path)
 
 
 def fsEndBackupFiles(targetPoint, pointSession):
-
 	if (not pointSession.success):
 		return
-
 	fp = os.path.join(pointSession.impl, 'mediafrost.txt')
 	with open(fp, 'w') as f:
 		f.write('ok\n')
 
+def bkpGenSessionDir(now, sind, si, sc):
+	ret = "s"+str(sind)
+	if sc > 1:
+		ret = ret+str(si+1)
+	pref = 'Q'+int(math.ceil(now.month/3))+'_'+str(now.year)
+	return os.path.join(pref, ret)	
 
 def bkpBackupFs(session, sources, targets, manual_nfi_dict = None):
 
@@ -348,6 +380,7 @@ def bkpBackupFs(session, sources, targets, manual_nfi_dict = None):
 	sind_cursor = session.dbConn.execute('SELECT last_insert_rowid()')
 	sind = sind_cursor.fetchone()[0]
 
+	now = datetime.datetime.now()
 	fs_sessions = []
 	has_errors = False
 	for si in range(len(sources)):
@@ -355,7 +388,7 @@ def bkpBackupFs(session, sources, targets, manual_nfi_dict = None):
 		for target in targets:
 			nfi = nfi_dict[(source, target)]
 			if (len(nfi) > 0):
-				bkp_dir = 'session_' + str(sind) + '_' + str(si)
+				bkp_dir = bkpGenSessionDir(now, sind, si, sc)
 				fs_sess = fsBackupFiles(session, nfi, target, bkp_dir)
 				fs_sessions.append((target, fs_sess))
 				if (fs_sess.success == False):

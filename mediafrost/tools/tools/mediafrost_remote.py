@@ -7,7 +7,7 @@ import mediafrost as frost
 
 self_path = os.path.realpath(__file__)
 self_dir = os.path.dirname(self_path)
-self_test_cache = os.path.join(self_dir, 'remotecache')
+self_test_cache =  os.path.join(os.path.join(self_dir, 'test'), 'cache')
 
 #frost.printDiskInfo()
 
@@ -24,7 +24,7 @@ fs_cache_filters = [ frost.FsMountPointFilter(True, 'test_fs_cache', 'test_fs_ca
 fs_cache_sources = frost.fsFilterMounts(fs_mounts, fs_cache_filters)
 
 
-port = 24100
+port = 24101
 sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
 sock.bind(('', port))
 
@@ -48,20 +48,27 @@ while 1:
 	
 	did_print_file_size = False
 	session = None
-	session_fid = {}
+	session_fid = []
+	session_fname = []
 	session_fi_lists = []
+	session_request_fid = {}
 
 	while serving:
 		try:
 			recv = conn.recv(1024)
-		except socket.error, e:
-			err = e.args[0]
-			if err == errno.EAGAIN or err == errno.EWOULDBLOCK:
+			if not recv:
+				serving = False
+				conn.close()
+				break
+		except socket.error as e:
+			if e.args[0] == errno.EAGAIN or e.args[0] == errno.EWOULDBLOCK:
 				sleep(1)
 				continue
 			else:
-				print e
 				serving = False
+				conn.close()
+				break
+
 		conn_buf = conn_buf + recv
 
 		if (conn_buf.startswith(cmd_start)):
@@ -88,11 +95,12 @@ while 1:
 					fid = cmd_data
 					file_name = cmd_splt[1]
 					print 'fid',file_name,cmd_data
-					file_path = os.path.join(self_test_cache, file_name)
-					session_fid[fid] = file_path
+					session_fid.append(fid); session_fname.append(file_name);
 
 		if (conn_buf.startswith(cmd_fidend)):
 			conn_buf = conn_buf[len(cmd_fidend):]
+
+			findices = frost.fiGenUniqueIndices(session_fname)
 
 			targets = fs_targets
 			test_bootstrap = ('-bootstrap' in sys.argv)
@@ -101,24 +109,25 @@ while 1:
 
 			target_tbls = []
 			fi_lists = session_fi_lists
-			request_fids = Set()
 
 			for target in targets:
 				target_tbls.append(frost.dbMakePointFidTableName(target.filter.id))
 				fi_lists.append([])
-			
-			for fid,fname in session_fid.iteritems():
+
+			for fid,fname,fuind in zip(session_fid, session_fname, findices):
+				funame = frost.fiGenUniqueName(fname, fuind)	
 				for target,tbl,fi_list in zip(targets, target_tbls, fi_lists):
 					file_exists = frost.bkpExistsFileId(session, fid, tbl)
 					if (not file_exists):
-						request_fids.add(fid) 
-						fi_list.append(frost.NewFileInfo(fname, fid))
+						fpath = os.path.join(self_test_cache, funame)
+						session_request_fid[fid] = fpath
+						fi_list.append(frost.NewFileInfo(fpath, fid))
 						rel = '--->'
 					else:
 						rel = 'in'
-					print '{} {} {}'.format(fname, rel, target.filter.long_descr)
+					print '{} {} {}'.format(funame, rel, target.filter.long_descr)
 						
-			for fid in request_fids:
+			for fid in session_request_fid.iterkeys():
 				print 'Requesting {}...'.format(fid)
 				conn.send('/frequest:{}'.format(fid))
 			conn.sendall('/frequestend')	
@@ -133,8 +142,8 @@ while 1:
 				cmd_hdr_size = len(cmd_splt[0]) + 1 + len(cmd_splt[1]) + 1 + len(cmd_splt[2]) + 1 
 				total_len = cmd_hdr_size + file_size
 				if (len(conn_buf) >= total_len):
-					file_name = cmd_splt[1]
-					file_path = os.path.join(self_test_cache, file_name)
+					file_fid = cmd_splt[1]
+					file_path = session_request_fid[file_fid]
 					cmd_data = conn_buf[cmd_hdr_size:total_len]
 					conn_buf = conn_buf[total_len:]
 					with open(file_path, 'wb') as output:
@@ -164,6 +173,8 @@ while 1:
 			conn.send('/success:{}'.format(code))
 			conn.sendall(cmd_end)
 			serving = False
-		
+	
+	conn.close()
+
 conn.close()
 sock.close()
