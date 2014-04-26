@@ -3,6 +3,12 @@ import sys
 from sets import Set
 import mediafrost as frost
 
+self_path = os.path.realpath(__file__)
+self_dir = os.path.dirname(self_path)
+self_test_cache = os.path.join(self_dir, 'remotecache')
+if (not os.path.isdir(self_test_cache)):
+	os.path.mkdir(self_test_cache)
+
 #frost.printDiskInfo()
 
 fs_mounts = frost.fsFindMounts()
@@ -118,6 +124,7 @@ while 1:
 				total_len = cmd_hdr_size + file_size
 				if (len(conn_buf) >= total_len):
 					file_name = cmd_splt[1]
+					file_path = os.path.join(self_test_cache, file_name)
 					cmd_data = conn_buf[cmd_hdr_size:total_len]
 					conn_buf = conn_buf[total_len:]
 					with open(file_name, 'wb') as output:
