@@ -204,7 +204,7 @@ def dbAddPointFidTable(conn, tableName):
 	conn.execute('CREATE TABLE IF NOT EXISTS {}(fid TEXT PRIMARY KEY)'.format(tableName))
 
 def dbAddPointFid(conn, tableName, fid):
-	session.dbConn.execute('INSERT INTO {} VALUES (?)'.format(tableName), (fid,))
+	conn.execute('INSERT INTO {} VALUES (?)'.format(tableName), (fid,))
 
 def dbBootstrap(conn):
 	conn.execute('CREATE TABLE file_infos(fid TEXT PRIMARY KEY)')
@@ -326,17 +326,20 @@ def fsEndBackupFiles(targetPoint, pointSession):
 		f.write('ok\n')
 
 
-def bkpBackupFs(session, sources, targets):
+def bkpBackupFs(session, sources, targets, manual_nfi_dict = None):
 
-	nfi_dict = bkpFindNewFsFileInfos(session, sources, targets)
-	
+	if (manual_nfi_dict is None):
+		nfi_dict = bkpFindNewFsFileInfos(session, sources, targets)
+	else:
+		nfi_dict = manual_nfi_dict
+
 	has_work = False
 	for nfi in nfi_dict.values():
 		has_work = has_work or (len(nfi)>0)
 
 	if (not has_work):
 		print 'Nothing to do'
-		return
+		return True
 
 	session.dbConn.execute("INSERT INTO sessions VALUES (?,?,?)", (None, session.descr, 0))
 	session.dbConn.commit()
@@ -364,7 +367,7 @@ def bkpBackupFs(session, sources, targets):
 	
 	if (has_errors):
 		print 'Session failed'
-		return
+		return False
 
 	print 'Updating database...'
 
@@ -382,7 +385,7 @@ def bkpBackupFs(session, sources, targets):
 	session.dbConn.commit()
 
 	print 'Session succeeded'
-
+	return True
 
 
 def bkpUiChooseStoragePoints(fs_sources, fs_targets):

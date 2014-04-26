@@ -1,13 +1,13 @@
 import socket
 import sys
+import os
+import traceback
 from sets import Set
 import mediafrost as frost
 
 self_path = os.path.realpath(__file__)
 self_dir = os.path.dirname(self_path)
 self_test_cache = os.path.join(self_dir, 'remotecache')
-if (not os.path.isdir(self_test_cache)):
-	os.path.mkdir(self_test_cache)
 
 #frost.printDiskInfo()
 
@@ -17,10 +17,17 @@ fs_targets = frost.fsFilterMounts(fs_mounts, frost.fs_target_filters)
 if False:
 	bkpUiChooseStoragePoints(fs_sources, fs_targets)
 
+if (not os.path.isdir(self_test_cache)):
+	os.mkdir(self_test_cache)
 
-port = 24096
+fs_cache_filters = [ frost.FsMountPointFilter(True, 'test_fs_cache', 'test_fs_cache','test_fs_cache', 'Apple_HFS', '790', self_test_cache) ]
+fs_cache_sources = frost.fsFilterMounts(fs_mounts, fs_cache_filters)
+
+
+port = 24100
 sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
 sock.bind(('', port))
+
 sock.listen(1)
 while 1:
 	print 'Listening on', port, '...'
@@ -32,8 +39,9 @@ while 1:
 	cmd_end = '/end'
 	cmd_fid = '/fid:'
 	fid_len = 256/4
-	cmd_file = '/fdata:'
-	cmd_endfid = '/fidend'
+	cmd_fdata = '/fdata:'
+	cmd_fidend = '/fidend'
+	cmd_fdataend = '/fdataend'
 	conn_buf = ''
 	serving = True
 	sock.setblocking(0)
@@ -41,6 +49,7 @@ while 1:
 	did_print_file_size = False
 	session = None
 	session_fid = {}
+	session_fi_lists = []
 
 	while serving:
 		try:
@@ -79,10 +88,11 @@ while 1:
 					fid = cmd_data
 					file_name = cmd_splt[1]
 					print 'fid',file_name,cmd_data
-					session_fid[fid] = file_name
+					file_path = os.path.join(self_test_cache, file_name)
+					session_fid[fid] = file_path
 
-		if (conn_buf.startswith(cmd_endfid)):
-			conn_buf = conn_buf[len(cmd_endfid):]
+		if (conn_buf.startswith(cmd_fidend)):
+			conn_buf = conn_buf[len(cmd_fidend):]
 
 			targets = fs_targets
 			test_bootstrap = ('-bootstrap' in sys.argv)
@@ -90,7 +100,7 @@ while 1:
 			frost.bkpPrepareTargetTables(session, targets)
 
 			target_tbls = []
-			fi_lists = []
+			fi_lists = session_fi_lists
 			request_fids = Set()
 
 			for target in targets:
@@ -111,9 +121,9 @@ while 1:
 			for fid in request_fids:
 				print 'Requesting {}...'.format(fid)
 				conn.send('/frequest:{}'.format(fid))
-			conn.sendall('/end')	
+			conn.sendall('/frequestend')	
 				
-		if (conn_buf.startswith(cmd_file)):
+		if (conn_buf.startswith(cmd_fdata)):
 			cmd_splt = conn_buf.split(':', 3)
 			if (len(cmd_splt) == 4):
 				file_size = int(cmd_splt[2])
@@ -127,10 +137,33 @@ while 1:
 					file_path = os.path.join(self_test_cache, file_name)
 					cmd_data = conn_buf[cmd_hdr_size:total_len]
 					conn_buf = conn_buf[total_len:]
-					with open(file_name, 'wb') as output:
+					with open(file_path, 'wb') as output:
 						output.write(cmd_data)
 					print 'wrote', file_name
-					did_print_file_size = False	
+					did_print_file_size = False
+
+		if (conn_buf.startswith(cmd_fdataend)):
+			conn_buf = conn_buf[len(cmd_fdataend):]
+
+			source = fs_cache_sources[0]
+			nfi_dict = {}
+			for target,list in zip(fs_targets, session_fi_lists):
+				nfi_dict[(source, target)] = list
+
+			try:
+				success = frost.bkpBackupFs(session, fs_cache_sources, fs_targets, nfi_dict)
+			except:
+				print traceback.format_exc()
+				success = False
+
+			if (success):
+				code = 1
+			else:
+				code = 0
+
+			conn.send('/success:{}'.format(code))
+			conn.sendall(cmd_end)
+			serving = False
 		
 conn.close()
 sock.close()
