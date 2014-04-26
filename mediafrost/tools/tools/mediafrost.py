@@ -326,7 +326,7 @@ def fsBackupFiles(session, finfos, targetPoint, bkpDir):
 	point_path = fsGetPointPath(targetPoint)
 	bkp_path = os.path.join(point_path, bkpDir) 
 
-	os.mkdir(bkp_path)
+	os.makedirs(bkp_path)
 
 	#if (not os.path.isdir(bkp_path)):
 	#	print 'Missing target', bkp_path
@@ -355,7 +355,7 @@ def bkpGenSessionDir(now, sind, si, sc):
 	ret = "s"+str(sind)
 	if sc > 1:
 		ret = ret+str(si+1)
-	pref = 'Q'+int(math.ceil(now.month/3))+'_'+str(now.year)
+	pref = 'Q'+str(int(math.ceil(now.month/3.0)))+'_'+str(now.year)
 	return os.path.join(pref, ret)	
 
 def bkpBackupFs(session, sources, targets, manual_nfi_dict = None):
@@ -388,7 +388,7 @@ def bkpBackupFs(session, sources, targets, manual_nfi_dict = None):
 		for target in targets:
 			nfi = nfi_dict[(source, target)]
 			if (len(nfi) > 0):
-				bkp_dir = bkpGenSessionDir(now, sind, si, sc)
+				bkp_dir = bkpGenSessionDir(now, sind, si, len(sources))
 				fs_sess = fsBackupFiles(session, nfi, target, bkp_dir)
 				fs_sessions.append((target, fs_sess))
 				if (fs_sess.success == False):

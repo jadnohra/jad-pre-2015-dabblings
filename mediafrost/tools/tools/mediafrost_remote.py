@@ -23,12 +23,15 @@ if (not os.path.isdir(self_test_cache)):
 fs_cache_filters = [ frost.FsMountPointFilter(True, 'test_fs_cache', 'test_fs_cache','test_fs_cache', 'Apple_HFS', '790', self_test_cache) ]
 fs_cache_sources = frost.fsFilterMounts(fs_mounts, fs_cache_filters)
 
+perfile = ('-perfile' in sys.argv)
 
-port = 24101
+
+port = 24105
 sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
 sock.bind(('', port))
 
 sock.listen(1)
+
 while 1:
 	print 'Listening on', port, '...'
 	sock.setblocking(1)
@@ -72,11 +75,10 @@ while 1:
 		conn_buf = conn_buf + recv
 
 		if (conn_buf.startswith(cmd_start)):
-			print cmd_start
+			print 'Receving fids...'
 			conn_buf = conn_buf[len(cmd_start):]
 
 		if (conn_buf.startswith(cmd_end)):
-			print cmd_end
 			conn_buf = conn_buf[len(cmd_end):]
 			conn.close()
 			serving = False
@@ -94,10 +96,12 @@ while 1:
 					conn_buf = conn_buf[total_len:]	
 					fid = cmd_data
 					file_name = cmd_splt[1]
-					print 'fid',file_name,cmd_data
+					if (perfile):
+						print 'fid',file_name,cmd_data
 					session_fid.append(fid); session_fname.append(file_name);
 
 		if (conn_buf.startswith(cmd_fidend)):
+			print 'Analyzing fids...'
 			conn_buf = conn_buf[len(cmd_fidend):]
 
 			findices = frost.fiGenUniqueIndices(session_fname)
@@ -125,19 +129,30 @@ while 1:
 						rel = '--->'
 					else:
 						rel = 'in'
-					print '{} {} {}'.format(funame, rel, target.filter.long_descr)
+					if (perfile):	
+						print '{} {} {}'.format(funame, rel, target.filter.long_descr)
 						
-			for fid in session_request_fid.iterkeys():
-				print 'Requesting {}...'.format(fid)
-				conn.send('/frequest:{}'.format(fid))
-			conn.sendall('/frequestend')	
+				
+			if (len(session_request_fid) > 0):
+				print 'Requesting files...'	
+				for fid in session_request_fid.iterkeys():
+					if (perfile):
+						print 'Requesting {}...'.format(fid)
+					conn.send('/frequest:{}'.format(fid))
+				conn.sendall('/frequestend')	
+				print 'Caching files...'
+			else:
+				print 'Nothing to do'
+				serving = False
+				conn.close()
 				
 		if (conn_buf.startswith(cmd_fdata)):
 			cmd_splt = conn_buf.split(':', 3)
 			if (len(cmd_splt) == 4):
 				file_size = int(cmd_splt[2])
 				if (not did_print_file_size):	
-					print 'reading {} file bytes ...'.format(file_size)
+					if (perfile):
+						print 'reading {} file bytes ...'.format(file_size)
 					did_print_file_size = True
 				cmd_hdr_size = len(cmd_splt[0]) + 1 + len(cmd_splt[1]) + 1 + len(cmd_splt[2]) + 1 
 				total_len = cmd_hdr_size + file_size
@@ -148,10 +163,12 @@ while 1:
 					conn_buf = conn_buf[total_len:]
 					with open(file_path, 'wb') as output:
 						output.write(cmd_data)
-					print 'wrote', file_name
+					if (perfile):
+						print 'wrote', file_name
 					did_print_file_size = False
 
 		if (conn_buf.startswith(cmd_fdataend)):
+			print 'Backing up...'	
 			conn_buf = conn_buf[len(cmd_fdataend):]
 
 			source = fs_cache_sources[0]
@@ -169,10 +186,12 @@ while 1:
 				code = 1
 			else:
 				code = 0
-
+			print 'Success: {}'.format(code)	
+			
 			conn.send('/success:{}'.format(code))
 			conn.sendall(cmd_end)
 			serving = False
+			conn.close()
 	
 	conn.close()
 
