@@ -1,5 +1,6 @@
 import socket
 import sys
+from sets import Set
 import mediafrost as frost
 
 #frost.printDiskInfo()
@@ -75,7 +76,6 @@ while 1:
 					session_fid[fid] = file_name
 
 		if (conn_buf.startswith(cmd_endfid)):
-			print cmd_endfid
 			conn_buf = conn_buf[len(cmd_endfid):]
 
 			targets = fs_targets
@@ -85,6 +85,7 @@ while 1:
 
 			target_tbls = []
 			fi_lists = []
+			request_fids = Set()
 
 			for target in targets:
 				target_tbls.append(frost.dbMakePointFidTableName(target.filter.id))
@@ -94,12 +95,16 @@ while 1:
 				for target,tbl,fi_list in zip(targets, target_tbls, fi_lists):
 					file_exists = frost.bkpExistsFileId(session, fid, tbl)
 					if (not file_exists):
+						request_fids.add(fid) 
 						fi_list.append(frost.NewFileInfo(fname, fid))
 						rel = '--->'
 					else:
 						rel = 'in'
 					print '{} {} {}'.format(fname, rel, target.filter.long_descr)
 						
+			for fid in request_fids:
+				print 'Requesting {}...'.format(fid)
+				conn.send('/frequest:{}'.format(fid)))
 				
 		if (conn_buf.startswith(cmd_file)):
 			cmd_splt = conn_buf.split(':', 3)
