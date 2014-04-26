@@ -104,7 +104,8 @@ while 1:
 						
 			for fid in request_fids:
 				print 'Requesting {}...'.format(fid)
-				conn.send('/frequest:{}'.format(fid)))
+				conn.send('/frequest:{}'.format(fid))
+			conn.sendall('/end')	
 				
 		if (conn_buf.startswith(cmd_file)):
 			cmd_splt = conn_buf.split(':', 3)
