@@ -2,6 +2,8 @@ import socket
 import sys
 import os
 import traceback
+import errno
+import time
 from sets import Set
 import mediafrost as frost
 
@@ -26,7 +28,7 @@ fs_cache_sources = frost.fsFilterMounts(fs_mounts, fs_cache_filters)
 perfile = ('-perfile' in sys.argv)
 
 
-port = 24105
+port = 24107
 sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
 sock.bind(('', port))
 
@@ -65,7 +67,7 @@ while 1:
 				break
 		except socket.error as e:
 			if e.args[0] == errno.EAGAIN or e.args[0] == errno.EWOULDBLOCK:
-				sleep(1)
+				time.sleep(1)
 				continue
 			else:
 				serving = False
@@ -144,6 +146,7 @@ while 1:
 			else:
 				print 'Nothing to do'
 				serving = False
+				conn.sendall('/frequestend')
 				conn.close()
 				
 		if (conn_buf.startswith(cmd_fdata)):
