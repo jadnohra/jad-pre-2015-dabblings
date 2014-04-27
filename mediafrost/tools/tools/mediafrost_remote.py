@@ -4,6 +4,7 @@ import os
 import traceback
 import errno
 import time
+import threading
 from sets import Set
 import mediafrost as frost
 
@@ -31,6 +32,40 @@ perfile = ('-perfile' in sys.argv)
 port = 24107
 sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
 sock.bind(('', port))
+
+main_thread = threading.current_thread()
+
+def discoveryRun(port):
+	print 'discovery'
+	ANY = '0.0.0.0'
+	MCAST_ADDR = '224.168.2.9'
+	MCAST_PORT = 1600
+	#create a UDP socket
+	sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM, socket.IPPROTO_UDP)
+	#allow multiple sockets to use the same PORT number
+	sock.setsockopt(socket.SOL_SOCKET,socket.SO_REUSEADDR,1)
+	#Bind to the port that we know will receive multicast data
+	sock.bind((ANY,MCAST_PORT))
+	#tell the kernel that we are a multicast socket
+	sock.setsockopt(socket.IPPROTO_IP, socket.IP_MULTICAST_TTL, 255)
+	#Tell the kernel that we want to add ourselves to a multicast group
+	#The address for the multicast group is the third param
+	status = sock.setsockopt(socket.IPPROTO_IP,
+	socket.IP_ADD_MEMBERSHIP,
+	socket.inet_aton(MCAST_ADDR) + socket.inet_aton(ANY));
+
+	sock.setblocking(0)
+	ts = time.time()
+	while main_thread.isAlive():
+		try:
+			time.sleep(1)
+			data, addr = sock.recvfrom(1024)
+		except socket.error, e:
+			pass
+		else:
+			print 'Discovery request from', addr
+
+threading.Thread(target = discoveryRun, args = (port, )).start()	
 
 sock.listen(1)
 
