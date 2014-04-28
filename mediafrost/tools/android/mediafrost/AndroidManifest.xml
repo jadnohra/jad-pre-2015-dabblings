@@ -26,6 +26,15 @@
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
         </activity>
+        
+         <activity
+            android:name="com.ponyandpony.mediafrost.SettingsActivity">
+            <intent-filter>
+                 <action android:name=".Preferences" />
+                <category android:name="android.intent.catagory.PREFERENCE" />
+            </intent-filter>
+        </activity>
+        
     </application>
 
 </manifest>
