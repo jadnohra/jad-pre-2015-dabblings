@@ -693,7 +693,7 @@ public class FullscreenActivity extends Activity {
 	public static List<String> getCameraImages(Context context) {
 
 		ArrayList<String> result = new ArrayList<String>();
-		//getMediaFiles(context, MediaStore.Images.Media.DATA, MediaStore.Images.Media.BUCKET_ID, MediaStore.Images.Media.EXTERNAL_CONTENT_URI, result);
+		getMediaFiles(context, MediaStore.Images.Media.DATA, MediaStore.Images.Media.BUCKET_ID, MediaStore.Images.Media.EXTERNAL_CONTENT_URI, result);
 		getMediaFiles(context, MediaStore.Video.Media.DATA, MediaStore.Video.Media.BUCKET_ID, MediaStore.Video.Media.EXTERNAL_CONTENT_URI, result);
 		return result;
 	}

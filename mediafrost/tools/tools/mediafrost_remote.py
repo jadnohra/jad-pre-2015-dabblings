@@ -77,6 +77,39 @@ threading.Thread(target = discoveryRun, args = (port, )).start()
 
 sock.listen(1)
 
+
+def recvConnBytes(conn, bufsize, totalsize, sleep, processFunc):	
+	leftsize = totalsize
+	serving = True
+	while serving and (leftsize > 0):
+		try:
+			recvsize = min(leftsize, bufsize)
+			bytes = conn.recv(recvsize)
+			if not recv:
+				serving = False
+				conn.close()
+				break
+		except socket.error as e:
+			if e.args[0] == errno.EAGAIN or e.args[0] == errno.EWOULDBLOCK:
+				if (sleep > 0):
+					time.sleep(sleep)
+				continue
+			else:
+				serving = False
+				conn.close()
+				break
+		processFunc(conn, bytes)
+		leftsize = leftsize - len(bytes)
+
+
+def recvProcessWriteFile(fileOut):
+    recvProcessWriteFile.file = fileOut
+    def write(conn, bytes):
+		#print 'writing', len(bytes)
+		recvProcessWriteFile.file.write(bytes)
+    return write
+
+
 while 1:
 	print 'Listening on', port, '...'
 	sock.setblocking(1)
@@ -91,8 +124,6 @@ while 1:
 	cmd_fidend = '/fidend'
 	cmd_fdataend = '/fdataend'
 	conn_buf = ''
-	conn_buf_cache = []
-	conn_buf_cache_len = 0
 	serving = True
 	sock.setblocking(0)
 	
@@ -119,11 +150,7 @@ while 1:
 				conn.close()
 				break
 
-		if conn_buf_cache:
-			conn_buf_cache_len = conn_buf_cache_len + len(recv)
-			conn_buf_cache.append(recv)
-		else:
-			conn_buf = conn_buf + recv
+		conn_buf = conn_buf + recv
 
 		if (conn_buf.startswith(cmd_start)):
 			print 'Receving fids...'
@@ -208,38 +235,23 @@ while 1:
 					did_print_file_size = True
 				cmd_hdr_size = len(cmd_splt[0]) + 1 + len(cmd_splt[1]) + 1 + len(cmd_splt[2]) + 1 
 				total_len = cmd_hdr_size + file_size
-				avail_len = len(conn_buf)+conn_buf_cache_len
-				if (avail_len >= total_len):
-					#TODO: use disk
-					file_fid = cmd_splt[1]
-					file_path = session_request_fid[file_fid]
-					if conn_buf_cache_len > 0:
-						with open(file_path, 'wb') as output:
-							cmd_data = conn_buf[cmd_hdr_size:]
-							output.write(cmd_data)
-							used_len = len(cmd_data)
-							cache_index = 0
-							while used_len < total_len:
-								left_len = total_len - used_len
-								cil = len(conn_buf_cache[cache_index])
-								if (left_len >= cil):
-									cache_index = SPLIT!! 
-
-					else:
-						cmd_data = conn_buf[cmd_hdr_size:total_len]
+				avail_len = len(conn_buf)
+				file_fid = cmd_splt[1]
+				file_path = session_request_fid[file_fid]
+				with open(file_path, 'wb') as output:
+					cmd_data = conn_buf[cmd_hdr_size:total_len]
+					output.write(cmd_data)
+					if (avail_len >= total_len):
 						conn_buf = conn_buf[total_len:]
-						with open(file_path, 'wb') as output:
-							output.write(cmd_data)
+					else:
+						conn_buf = ''
+						leftsize = total_len - avail_len
+						func = recvProcessWriteFile(output)
+						recvConnBytes(conn, 64*1024, leftsize, 0, func)
 
 					if (perfile):
 						print 'wrote', file_name
-					did_print_file_size = False
-					conn_buf_cache = None
-					conn_buf_cache_len = 0
-				else:
-					if (not conn_buf_cache):
-						conn_buf_cache = []
-					
+					did_print_file_size = False					
 
 		if (conn_buf.startswith(cmd_fdataend)):
 			print 'Backing up...'	
