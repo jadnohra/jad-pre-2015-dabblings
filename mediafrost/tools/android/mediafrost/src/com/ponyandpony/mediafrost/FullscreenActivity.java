@@ -298,12 +298,14 @@ public class FullscreenActivity extends Activity {
 		StatusTextViews mStatusTextViews;
 		Handler mTimerHandler;
 		Runnable mTimerRunnable;
+		String mStatusText;
 
 		NetworkThread(Handler messageHandler, NetworkThreadSettings settings, List<String> images, StatusTextViews statusTextViews) {
 			mMessageHandler = messageHandler;
 			mSettings = settings;
 			mImages = images;
 			mStatusTextViews = statusTextViews;
+			mStatusText = "";
 
 			mTimerHandler = new Handler();
 			final NetworkThread mThis = this;
@@ -434,9 +436,9 @@ public class FullscreenActivity extends Activity {
 
 		void logStatus(final String str) {
 			Log.v("Testing", str);
+			mStatusText = String.format("%s\n%s", mStatusText, str);
 			setText(mStatusTextViews.activity, str);
-			setText(mStatusTextViews.console, String.format("%s\n%s",
-					mStatusTextViews.console.getText(), str));
+			setText(mStatusTextViews.console, mStatusText);
 		}
 
 		public void run() {
@@ -456,12 +458,22 @@ public class FullscreenActivity extends Activity {
 				if (sock.isConnected()) {
 					logStatus(String.format("Connected to %s", sock
 							.getRemoteSocketAddress().toString()));
-					logStatus(String.format("Senging %d fids ...",
-							mImages.size()));
-					sock.getOutputStream().write("/start".getBytes("US-ASCII"));
+					
 					int imageCount = mImages.size();
-					if (imageCount > 20)
-						imageCount = 20;
+					if (imageCount > mSettings.maxFiles)
+					{
+						logStatus(String.format("Limiting %d to max. %d files", mImages.size(), mSettings.maxFiles));
+						imageCount = mSettings.maxFiles;
+					}
+					if (imageCount < mSettings.minFiles)
+					{
+						logStatus(String.format("%d files is below %d", mImages.size(), mSettings.minFiles));
+						imageCount = 0;
+					}
+					
+					logStatus(String.format("Senging %d fids ...", imageCount));
+					sock.getOutputStream().write("/start".getBytes("US-ASCII"));
+					
 					HashMap<String, Integer> fidMap = new HashMap<String, Integer>();
 
 					for (int i = 0; i < imageCount; i++) {
@@ -545,7 +557,7 @@ public class FullscreenActivity extends Activity {
 									String.format("/fdata:%s:%d:", fid,
 											fileSize).getBytes("US-ASCII"));
 
-							byte[] buffer = new byte[128];
+							byte[] buffer = new byte[16*1024];
 							int read = 0;
 							while ((read = fileInputStream.read(buffer, 0,
 									buffer.length)) != -1)
@@ -626,7 +638,7 @@ public class FullscreenActivity extends Activity {
 			FileInputStream fileInputStream = new FileInputStream(file);
 
 			DigestInputStream dis = new DigestInputStream(fileInputStream, md);
-			byte[] buffer = new byte[128];
+			byte[] buffer = new byte[16*1024];
 			while (dis.read(buffer, 0, buffer.length) != -1) {
 			}
 			dis.close();
@@ -650,35 +662,40 @@ public class FullscreenActivity extends Activity {
 	public static String getBucketId(String path) {
 		return String.valueOf(path.toLowerCase().hashCode());
 	}
-
-	public static List<String> getCameraImages(Context context) {
+	
+	public static void getMediaFiles(Context context, String proj, String buck, Uri uri, List<String> out) {
 
 		try {
 
-			final String[] projection = { MediaStore.Images.Media.DATA };
-			final String selection = MediaStore.Images.Media.BUCKET_ID + " = ?";
+			final String[] projection = { proj  };
+			final String selection = buck + " = ?";
 			final String CAMERA_IMAGE_BUCKET_NAME = Environment
 					.getExternalStorageDirectory().toString() + "/DCIM/Camera";
 			final String CAMERA_IMAGE_BUCKET_ID = getBucketId(CAMERA_IMAGE_BUCKET_NAME);
 			final String[] selectionArgs = { CAMERA_IMAGE_BUCKET_ID };
 			final Cursor cursor = context.getContentResolver().query(
-					Images.Media.EXTERNAL_CONTENT_URI, projection, selection,
+					uri, projection, selection,
 					selectionArgs, null);
-			ArrayList<String> result = new ArrayList<String>(cursor.getCount());
 			if (cursor.moveToFirst()) {
 				final int dataColumn = cursor
-						.getColumnIndexOrThrow(MediaStore.Images.Media.DATA);
+						.getColumnIndexOrThrow(MediaStore.Video.Media.DATA);
 				do {
 					final String data = cursor.getString(dataColumn);
-					result.add(data);
+					out.add(data);
 				} while (cursor.moveToNext());
 			}
 			cursor.close();
-			return result;
 		} catch (Exception e) {
 			Log.v("Testing", e.toString());
-			return new ArrayList<String>();
 		}
+	}
+
+	public static List<String> getCameraImages(Context context) {
+
+		ArrayList<String> result = new ArrayList<String>();
+		//getMediaFiles(context, MediaStore.Images.Media.DATA, MediaStore.Images.Media.BUCKET_ID, MediaStore.Images.Media.EXTERNAL_CONTENT_URI, result);
+		getMediaFiles(context, MediaStore.Video.Media.DATA, MediaStore.Video.Media.BUCKET_ID, MediaStore.Video.Media.EXTERNAL_CONTENT_URI, result);
+		return result;
 	}
 
 }

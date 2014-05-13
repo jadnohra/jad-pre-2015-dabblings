@@ -108,6 +108,8 @@ fs_target_filters = [
 					FsMountPointFilter(True, 'test_fs_out', 'test_fs_out','test_fs_out', 'Apple_HFS', '790', 'Users/nohra/Jad/mediafrost/tools/test/out'), 
 					FsMountPointFilter(True, 'test_fs_out1', 'test_fs_out1','test_fs_out1', 'Apple_HFS', '790', 'Users/nohra/Jad/mediafrost/tools/test/out1'),
 					FsMountPointFilter(True, 'test_fs_out2', 'test_fs_out2','test_fs_out2', 'Apple_HFS', '790', 'Users/nohra/Jad/mediafrost/tools/test/out2'), 
+					FsMountPointFilter(True, 'fs_back1', 'Vault_Jad','Vault_Jad', 'Vault_Jad', '1000', 'Vault/mediafrost'), 
+					FsMountPointFilter(True, 'fs_back2', 'Vault_Lena','Vault_Lena', 'Vault_Lena', '1000', 'Vault/mediafrost'), 
 				]
 
 FsMountPoint = namedtuple('FsMountPoint', 'disk mount path info')
@@ -166,7 +168,7 @@ def genFileCrc32(fileName):
 
 BackupSession = namedtuple('BackupSession', 'dbPath dbConn descr options')
 BackupFileInfo = namedtuple('BackupFileInfo', 'fid')
-NewFileInfo = namedtuple('NewFileInfo', 'fpath fid')
+NewFileInfo = namedtuple('NewFileInfo', 'fpath fid fsize')
 PointBackupSession = namedtuple('PointBackupSession', 'success impl')
 
 
@@ -203,13 +205,13 @@ def dbMakePointFidTableName(pointName):
 	return 'point_fids_{}'.format(pointName)
 
 def dbAddPointFidTable(conn, tableName):
-	conn.execute('CREATE TABLE IF NOT EXISTS {}(fid TEXT PRIMARY KEY)'.format(tableName))
+	conn.execute('CREATE TABLE IF NOT EXISTS {}(fid TEXT PRIMARY KEY, size INTEGER)'.format(tableName))
 
-def dbAddPointFid(conn, tableName, fid):
-	conn.execute('INSERT INTO {} VALUES (?)'.format(tableName), (fid,))
+def dbAddPointFid(conn, tableName, fid, size):
+	conn.execute('INSERT INTO {} VALUES (?,?)'.format(tableName), (fid,size,))
 
 def dbBootstrap(conn):
-	conn.execute('CREATE TABLE file_infos(fid TEXT PRIMARY KEY)')
+	conn.execute('CREATE TABLE file_infos(fid TEXT PRIMARY KEY, size INTEGER)')
 	conn.execute('CREATE TABLE sessions(sind INTEGER PRIMARY KEY AUTOINCREMENT, descr TEXT, state INTEGER)')
 	conn.commit()
 
@@ -412,7 +414,7 @@ def bkpBackupFs(session, sources, targets, manual_nfi_dict = None):
 			nfi = nfi_dict[(source,target)]
 			tbl_name = dbMakePointFidTableName(target.filter.id)
 			for finfo in nfi:
-				dbAddPointFid(session.dbConn, tbl_name, finfo.fid)
+				dbAddPointFid(session.dbConn, tbl_name, finfo.fid, finfo.fsize)
 
 	session.dbConn.execute("UPDATE sessions SET state=? WHERE sind=?", (1, sind,))
 	session.dbConn.commit()

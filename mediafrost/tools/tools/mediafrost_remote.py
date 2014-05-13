@@ -17,8 +17,9 @@ self_test_cache =  os.path.join(os.path.join(self_dir, 'test'), 'cache')
 fs_mounts = frost.fsFindMounts()
 fs_sources = []
 fs_targets = frost.fsFilterMounts(fs_mounts, frost.fs_target_filters)
-if False:
-	bkpUiChooseStoragePoints(fs_sources, fs_targets)
+choose_targets = ('-ui' in sys.argv)
+if choose_targets:
+	frost.bkpUiChooseStoragePoints(fs_sources, fs_targets)
 
 if (not os.path.isdir(self_test_cache)):
 	os.mkdir(self_test_cache)
@@ -30,10 +31,17 @@ perfile = ('-perfile' in sys.argv)
 
 
 port = 24107
+if ('-port' in sys.argv):
+	port = int(sys.argv[int(sys.argv.index('-port')+1)])
+
 sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
 sock.bind(('', port))
 
 main_thread = threading.current_thread()
+
+# http://tobilehman.com/blog/2013/03/10/make-a-computer-controlled-light-switch-with-a-raspberry-pi/
+# https://learn.adafruit.com/adafruits-raspberry-pi-lesson-13-power-control/software
+# http://www.adafruit.com/products/1516
 
 def discoveryRun(port):
 	print 'discovery'
@@ -83,6 +91,8 @@ while 1:
 	cmd_fidend = '/fidend'
 	cmd_fdataend = '/fdataend'
 	conn_buf = ''
+	conn_buf_cache = []
+	conn_buf_cache_len = 0
 	serving = True
 	sock.setblocking(0)
 	
@@ -95,7 +105,7 @@ while 1:
 
 	while serving:
 		try:
-			recv = conn.recv(1024)
+			recv = conn.recv(16*1024)
 			if not recv:
 				serving = False
 				conn.close()
@@ -109,7 +119,11 @@ while 1:
 				conn.close()
 				break
 
-		conn_buf = conn_buf + recv
+		if conn_buf_cache:
+			conn_buf_cache_len = conn_buf_cache_len + len(recv)
+			conn_buf_cache.append(recv)
+		else:
+			conn_buf = conn_buf + recv
 
 		if (conn_buf.startswith(cmd_start)):
 			print 'Receving fids...'
@@ -162,7 +176,7 @@ while 1:
 					if (not file_exists):
 						fpath = os.path.join(self_test_cache, funame)
 						session_request_fid[fid] = fpath
-						fi_list.append(frost.NewFileInfo(fpath, fid))
+						fi_list.append(frost.NewFileInfo(fpath, fid, 0))
 						rel = '--->'
 					else:
 						rel = 'in'
@@ -194,16 +208,38 @@ while 1:
 					did_print_file_size = True
 				cmd_hdr_size = len(cmd_splt[0]) + 1 + len(cmd_splt[1]) + 1 + len(cmd_splt[2]) + 1 
 				total_len = cmd_hdr_size + file_size
-				if (len(conn_buf) >= total_len):
+				avail_len = len(conn_buf)+conn_buf_cache_len
+				if (avail_len >= total_len):
+					#TODO: use disk
 					file_fid = cmd_splt[1]
 					file_path = session_request_fid[file_fid]
-					cmd_data = conn_buf[cmd_hdr_size:total_len]
-					conn_buf = conn_buf[total_len:]
-					with open(file_path, 'wb') as output:
-						output.write(cmd_data)
+					if conn_buf_cache_len > 0:
+						with open(file_path, 'wb') as output:
+							cmd_data = conn_buf[cmd_hdr_size:]
+							output.write(cmd_data)
+							used_len = len(cmd_data)
+							cache_index = 0
+							while used_len < total_len:
+								left_len = total_len - used_len
+								cil = len(conn_buf_cache[cache_index])
+								if (left_len >= cil):
+									cache_index = SPLIT!! 
+
+					else:
+						cmd_data = conn_buf[cmd_hdr_size:total_len]
+						conn_buf = conn_buf[total_len:]
+						with open(file_path, 'wb') as output:
+							output.write(cmd_data)
+
 					if (perfile):
 						print 'wrote', file_name
 					did_print_file_size = False
+					conn_buf_cache = None
+					conn_buf_cache_len = 0
+				else:
+					if (not conn_buf_cache):
+						conn_buf_cache = []
+					
 
 		if (conn_buf.startswith(cmd_fdataend)):
 			print 'Backing up...'	
