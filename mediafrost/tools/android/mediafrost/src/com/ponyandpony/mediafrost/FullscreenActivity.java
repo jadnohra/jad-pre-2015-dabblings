@@ -623,6 +623,8 @@ public class FullscreenActivity extends Activity {
 				}
 
 			} catch (Exception e) {
+				//TODO: log last lines of stack trace, special case for server connect time out.
+				//TODO: file and byte percentage bars or text
 				logStatus(e.toString());
 			}
 			mTimerHandler.removeCallbacks(mTimerRunnable);
