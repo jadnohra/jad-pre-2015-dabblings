@@ -1,0 +1,292 @@
+from sets import Set
+import itertools
+from fractions import Fraction
+
+def g_numDefault(x):
+	return x
+g_num = g_numDefault
+
+def print_tab(list, pref='', sep=' ', post=''):
+    col_width = [max(len(str(x)) for x in col) for col in itertools.izip_longest(*list, fillvalue='')]
+    for line in list:
+        print pref + sep.join("{:{}}".format(x, col_width[i]) for i,x in enumerate(line)) + post
+
+def mat_print(inMatrix, inName):
+	rows = len(inMatrix)
+	print inName, '[',rows,'x',len(inMatrix[0]),']'
+	for r in range(rows):
+		row = inMatrix[r]
+		cols = len(row)
+		print '|',
+		for c in range(cols):
+			print row[c],
+		print '|'	
+
+def endl_print(log = True):
+	if (not log):
+		return
+	print '\n'	
+
+def vec_print(row, log = True):
+	if (not log):
+		return
+	cols = len(row)
+	print '<',
+	for c in range(cols):
+		print row[c],
+	print '>'	
+
+def vec_create(n,v):
+	return [v]*n
+
+def vec_dim(v):
+	return len(v)
+
+def mat_rows(M):
+	return len(M)
+
+def mat_cols(M):
+	return len(M[0])
+
+def mat_dims(M):
+	return [mat_rows(M), mat_cols(M)]
+
+def mat_create(r,c,v):
+	return [[v]*c for x in xrange(r)]
+
+def mat_identity(r,c):
+	M = mat_create(r,c, g_num(0))
+	for i in range(r):
+		M[i][i] = g_num(1)
+	return M
+
+def mat_swapr(M, i, j):
+	r=M[i]; M[i]=M[j]; M[j]=r
+
+def mat_copy(M):
+	r1 = len(M);c1 = len(M[0]);
+	N = mat_create(r1, c1, None)
+	for i in range(r1):
+		rm = M[i]
+		rn = N[i]
+		for j in range(c1):
+			rn[j] = rm[j]
+	return N		
+
+def mat_copyTo(M, N):
+	r1 = len(M);c1 = len(M[0]);
+	for i in range(r1):
+		rm = M[i]
+		rn = N[i]
+		for j in range(c1):
+			rn[j] = rm[j]
+	return N	
+
+def mat_neg(M):
+	r1 = len(M);c1 = len(M[0]);
+	N = mat_create(r1, c1, None)
+	for i in range(r1):
+		rm = M[i]
+		rn = N[i]
+		for j in range(c1):
+			rn[j] = -rm[j]
+	return N		
+
+def mat_add(M, N):
+	r1 = len(M);c1 = len(M[0]);
+	S = mat_create(r1, c1, None)
+	for i in range(r1):
+		rm = M[i]
+		rn = N[i]
+		rs = S[i]
+		for j in range(c1):
+			rs[j] = rm[j]+rn[j]
+	return S	
+
+def mat_sub(M, N):
+	r1 = len(M);c1 = len(M[0]);
+	S = mat_create(r1, c1, None)
+	for i in range(r1):
+		rm = M[i]
+		rn = N[i]
+		rs = S[i]
+		for j in range(c1):
+			rs[j] = rm[j]-rn[j]
+	return S	
+
+def mat_mul(M1, M2):
+	r1 = len(M1);c1 = len(M1[0]);r2 = len(M2);c2 = len(M2[0]);r3 = r1;c3 = c2;
+	M3 = [None]*r3;
+	for i in range(r3):
+		M3[i] = [None]*c3
+		row_3 = M3[i]
+		row_1 = M1[i]
+		for j in range(c3):
+			dot = g_num(0)
+			for d in range(c1):
+				dot = dot + row_1[d] * M2[d][j]
+			row_3[j] = dot
+	return M3		
+
+def mat_mulv(M1, V2):
+	r1 = len(M1);c1 = len(M1[0]);r3 = r1;c3 = 1;M3 = [None]*r3;
+	for i in range(r3):
+		row_3 = M3[i]
+		row_1 = M1[i]
+		dot = g_num(0)
+		for d in range(c1):
+			dot = dot + row_1[d] * V2[d]
+		M3[i] = dot
+	return M3		
+
+def mat_mulDiag1(M1, M2Diag):
+	r1 = len(M1);c1 = len(M1[0]);M3 = mat_create(r1, c1, g_num(0))
+	for i in range(r1):
+		for j in range(c1):
+			M3[i][j] = M1[i][j] * M2Diag[i]
+	return M3
+
+def mat_mulDiag2(M1Diag, M2):
+	r1 = len(M2);c1 = len(M2[0]);M3 = mat_create(r1, c1, g_num(0))
+	for i in range(r1):
+		for j in range(c1):
+			M3[i][j] = M2[i][j] * M1Diag[i]
+	return M3
+
+def mat_transp(M):
+	r = len(M);
+	c = len(M[0]);
+	T = [None]*c;
+	for i in range(c):
+		T[i] = [None]*r
+		row = T[i]
+		for j in range(r):
+			row[j] = M[j][i]
+	return T 		
+
+def mat_diagInv(M):
+	r = len(M);c = len(M[0]);
+	I = [g_num(0)]*r
+	for i in range(r):
+		I[i] = [g_num(0)]*c
+		I[i][i] = g_num(1)/M[i][i]
+	return I
+
+def lp_scst_tblCreate(A,B,C):
+	nb = vec_dim(B) # basic count (slack)
+	nnb = len(C) # nonbasic count (original)
+	n = nb + nnb
+	bi = Set(range(nb))
+	nbi = Set(range(nb, n, 1))
+	tblr = vec_create(nb+1, g_num(0)); 
+	x = vec_create(n, g_num(0))
+	tbl = mat_create(nb+1, n, g_num(0))
+	mat_copyTo(A, tbl)
+	for i in range(nb):
+		tbl[i][(n-nb)+i] = g_num(1)
+	for i in range(len(C)):	
+		tbl[nb][i] = C[i]
+	return {'n':n, 'nb':nb, 'nnb':nnb, 'bi':bi, 'nbi':nbi, 'tbl':tbl, 'tblr':tblr, 'x':x}
+	
+def lp_scst_tblMul(tbl, x):
+	return mat_mulv(tbl['tbl'], x)
+
+def lp_scst_feasible(tbl):
+	return all(x >= 0 for x in tbl['tblr'])
+
+def lp_scst_zrow(tbl):
+	return tbl['tbl'][-1]
+
+def lp_scst_findEntering(tbl):
+	v, i = max((v, i) for (i, v) in enumerate(lp_scst_zrow(tbl)))
+	return i
+
+def lp_scst_findLeaving(tbl, pe):
+	M = tbl['tbl']
+	pl = -1; minsr = 0;
+	for ri in range(len(M)):
+		r = M[ri][pe]
+		if (M[ri][pe] > 0):
+			s = M[ri][-1]
+			sr = s/r
+			if (pl == -1 or sr < minsr):
+				minsr = sr
+				pl = ri
+	return pl
+
+def lp_scst_tblPrint(tbl, log = True):
+	if (not log):
+		return 
+	ld = [tbl['nb']+2, tbl['n']+2]
+	list = mat_create(ld[0], ld[1], '-')
+	mat_copyTo(tbl['tbl'], list)
+	for i in range(ld[0]-1):
+		list[i][ld[1]-1] = tbl['tblr'][i]
+	mat_swapr(list, -1, -2)	
+	print_tab(list)
+
+
+def lp_scst(A,B,C, log = False):
+	tbl = lp_scst_tblCreate(A,B,C)
+	lp_scst_tblPrint(tbl, log)
+	# Try to initialize	
+	for i in range(len(B)):
+		tbl['x'][-i-1] = B[-i-1] 
+	tbl['tblr'] = lp_scst_tblMul(tbl, tbl['x'])
+	endl_print(log); vec_print(tbl['x'], log); lp_scst_tblPrint(tbl, log)
+	if (not lp_scst_feasible(tbl)):
+		print '*** initialize'; return False
+	# Optimize
+	pc = lp_scst_findEntering(tbl)
+	if (lp_scst_zrow(tbl)[pc] <= 0):
+		print '*** optimal'; return False
+	pr = lp_scst_findLeaving(tbl, pc)
+	if (pr == -1):
+		print '*** unbounded'; return False
+	pn = tbl['tbl'][pr][pc]	
+	vec_print([pc, pr, pn], log)
+	return True	
+
+
+# maximize Cx, with Ax = B, x >= 0, x in Rn.
+def lp_standard_canonical_simplex_tableau(A,B,C, log = True):
+	return lp_scst(A,B,C, log)
+
+# maximize Cx, with Ax <= B. x >= 0.
+def lp_standard_simplex_dictionary(A,B,C):
+	return 0
+
+def rational(x, y=1):
+	return Fraction(x, y)
+
+def g_numRational(x):
+	return rational(x)
+
+def vec_rational(V):
+	n = len(V);
+	W = vec_create(n, None)
+	for i in range(n):
+		W[i] = rational(V[i])
+	return W
+
+def mat_rational(M):
+	r1 = len(M);c1 = len(M[0]);
+	N = mat_create(r1, c1, None)
+	for i in range(r1):
+		rm = M[i]
+		rn = N[i]
+		for j in range(c1):
+			rn[j] = rational(rm[j])
+	return N	
+
+
+if 1:
+	g_num = g_numRational
+	A = [ 	[2, 3, 1],
+			[4, 1, 2],
+			[3, 4, 2]
+		]
+	B = [5, 11, 8]
+	C = [5, 4, 3]
+	lp_standard_canonical_simplex_tableau(mat_rational(A),vec_rational(B),vec_rational(C), True)
+	g_num = g_numDefault
