@@ -268,13 +268,7 @@ def lp_scst_swapBasis(tbl, pe, pl):
 	L = tbl['tbll']		
 	L[pl] = pe
 
-def lp_scst(A,B,C, maxit = 0, log = False):
-	tbl = lp_scst_tblCreate(A,B,C)
-	s_print('+++ lp_scst', log); lp_scst_tblPrint(tbl, log);
-	# Try to initialize	
-	if (not lp_scst_feasible(tbl)):
-		print '*** initialize'; return False
-	# Optimize
+def lp_scst_opt(tbl, maxit = 0, log = False):
 	it = 0
 	while (it < maxit or maxit <= 0):
 		it = it + 1
@@ -284,10 +278,70 @@ def lp_scst(A,B,C, maxit = 0, log = False):
 		pr = lp_scst_findLeaving(tbl, pc)
 		if (pr == -1):
 			print '*** unbounded'; return False
-		pn = tbl['tbl'][pr][pc]	
 		lp_scst_swapBasis(tbl, pc, pr)
 		s_print('', log); lp_scst_tblPrint(tbl, log);
-	return False
+	print '*** maxiter'; return False
+
+def lp_scst_initFeed(tbl, tblp, maxit, log = False):
+	if (not lp_scst_feasible(tblp)):
+		print '*** error 1'; return False
+	if (not lp_scst_opt(tblp, maxit, log)):
+		print '*** no init 0'; return False
+	if (tblp['tblr'][-1] != 0):
+		print '*** no init 1'; return False
+
+	R = tbl['tblr']; Rp = tblp['tblr'];
+	T = tbl['tbl']; Tp = tblp['tbl'];
+	for i in range(len(R)-1):
+		R[i] = Rp[i]
+		for j in range(len(T[i])):
+			T[i][j]=Tp[i][j+1]
+
+	z = lp_scst_zrow(tbl)
+	nz = list(z)
+	nzr = 0.0
+	L = tblp['tbll']
+	for i in range(len(L)):
+		xi = L[i]-1
+		if (xi >= 0 and xi < len(nz)):
+			nz = vec_add(nz, vec_muls(T[i], z[xi]))
+			nzr = nzr + (Rp[i] * z[xi])
+			print z[xi], nz, nzr
+	R[-1] = nzr
+	T[-1] = nz
+	print nzr, 'WRONG, fix lp_scst_initFeed [p41]'
+	s_print('*** main', log)		
+	return True		
+
+def lp_scst_init(A,B,C, tbl, maxit = 0, log = False):
+	# Chvatal [p41]
+	if (lp_scst_feasible(tbl)):
+		return True
+	else:	
+		s_print('*** aux', log)
+		Cp = [g_num(0)]*(len(C)+1);	Cp[0] = g_num(-1)
+		Ap = mat_create(mat_rows(A), mat_cols(A)+1, g_num(-1))
+		for i in range(len(A)):
+			for j in range(len(A[i])):
+				Ap[i][j+1] = A[i][j]
+		tblp = lp_scst_tblCreate(Ap,B,Cp)
+		pc = 0; pr = 0;
+		for i in range(len(B)):
+			if (B[i] < B[pr]):
+				pr = i
+		lp_scst_swapBasis(tblp, pc, pr)
+		s_print('', log); lp_scst_tblPrint(tblp, log);
+		return lp_scst_initFeed(tbl, tblp, maxit, log)
+
+
+def lp_scst(A,B,C, maxit = 0, log = False):
+	# Chvatal [p24-25]
+	tbl = lp_scst_tblCreate(A,B,C)
+	s_print('+++ lp_scst', log); lp_scst_tblPrint(tbl, log);
+	if (not lp_scst_init(A,B,C, tbl, maxit, log)):
+		return False
+	return lp_scst_opt(tbl, maxit, log)
+
 
 
 # maximize Cx, with Ax = B, x >= 0, x in Rn.
@@ -322,7 +376,7 @@ def mat_rational(M):
 	return N	
 
 
-if 1:
+if 0:
 	g_num = g_numRational
 	A = [ 	[2, 3, 1],
 			[4, 1, 2],
@@ -333,7 +387,7 @@ if 1:
 	lp_standard_canonical_simplex_tableau(mat_rational(A),vec_rational(B),vec_rational(C), 10, True)
 	g_num = g_numDefault
 
-if 1:
+if 0:
 	g_num = g_numRational
 	A = [ 	[1, 3, 1],
 			[-1, 0, 3],
@@ -347,10 +401,11 @@ if 1:
 
 if 1:
 	g_num = g_numRational
-	A = [ 	[5, -4, 13, -2, 1],
-			[1, -1, 5, -1, 1]
+	A = [ 	[2, -1, 2],
+			[2, -3, 1],
+			[-1, 1, -2],
 		]
-	B = [20, 8]
-	C = [1, 6, -7, 1, 5]
+	B = [4, -5, -1]
+	C = [1, -1, 1]
 	lp_standard_canonical_simplex_tableau(mat_rational(A),vec_rational(B),vec_rational(C), 10, True)
 	g_num = g_numDefault	
