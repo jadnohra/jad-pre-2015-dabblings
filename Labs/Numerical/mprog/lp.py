@@ -9,7 +9,7 @@ g_num = g_numDefault
 def print_tab(list, pref='', sep=' ', post=''):
     col_width = [max(len(str(x)) for x in col) for col in itertools.izip_longest(*list, fillvalue='')]
     for line in list:
-        print pref + sep.join("{:{}}".format(x, col_width[i]) for i,x in enumerate(line)) + post
+        print pref + sep.join("{:>{}}".format(x, col_width[i]) for i,x in enumerate(line)) + post
 
 def mat_print(inMatrix, inName):
 	rows = len(inMatrix)
@@ -25,7 +25,12 @@ def mat_print(inMatrix, inName):
 def endl_print(log = True):
 	if (not log):
 		return
-	print '\n'	
+	print ''	
+
+def s_print(str, log = True):
+	if (not log):
+		return
+	print str	
 
 def vec_print(row, log = True):
 	if (not log):
@@ -42,6 +47,12 @@ def vec_create(n,v):
 def vec_dim(v):
 	return len(v)
 
+def vec_add(a,b):
+	return [x+y for x, y in zip(a, b)]
+
+def vec_muls(a,s):
+	return [x*s for x in a]	
+	
 def mat_rows(M):
 	return len(M)
 
@@ -172,21 +183,42 @@ def mat_diagInv(M):
 		I[i][i] = g_num(1)/M[i][i]
 	return I
 
+def lp_scst_tblPrint(tbl, log = True):
+	if (not log):
+		return 
+	ld = [tbl['nb']+2, tbl['n']+3]
+	list = mat_create(ld[0], ld[1], '--')
+	for i in range(ld[0]):
+		list[i][-2] = '|'
+	L = tbl['tbll']
+	for i in range(ld[0]-2):	
+		list[i][0] = 'x{}'.format(L[i]+1)
+	list[-2][0] = '-z'
+	M = tbl['tbl']	
+	for i in range(len(M)):
+		r = M[i]	
+		for j in range(len(r)):
+			list[i][j+1] = r[j]
+	for i in range(ld[0]-1):
+		list[i][ld[1]-1] = tbl['tblr'][i]
+	mat_swapr(list, -1, -2)	
+	print_tab(list)
+
 def lp_scst_tblCreate(A,B,C):
 	nb = vec_dim(B) # basic count (slack)
 	nnb = len(C) # nonbasic count (original)
 	n = nb + nnb
-	bi = Set(range(nb))
-	nbi = Set(range(nb, n, 1))
+	tbll = range(nnb, nnb+nb, 1)
 	tblr = vec_create(nb+1, g_num(0)); 
-	x = vec_create(n, g_num(0))
 	tbl = mat_create(nb+1, n, g_num(0))
 	mat_copyTo(A, tbl)
 	for i in range(nb):
 		tbl[i][(n-nb)+i] = g_num(1)
+		tblr[i] = B[i]
+	tblr[-1] = 0
 	for i in range(len(C)):	
 		tbl[nb][i] = C[i]
-	return {'n':n, 'nb':nb, 'nnb':nnb, 'bi':bi, 'nbi':nbi, 'tbl':tbl, 'tblr':tblr, 'x':x}
+	return {'n':n, 'nb':nb, 'tbll':tbll, 'tbl':tbl, 'tblr':tblr}
 	
 def lp_scst_tblMul(tbl, x):
 	return mat_mulv(tbl['tbl'], x)
@@ -198,59 +230,69 @@ def lp_scst_zrow(tbl):
 	return tbl['tbl'][-1]
 
 def lp_scst_findEntering(tbl):
-	v, i = max((v, i) for (i, v) in enumerate(lp_scst_zrow(tbl)))
-	return i
+	zr = lp_scst_zrow(tbl)
+	maxi = 0
+	for i in range(len(zr)):
+		if zr[i] > zr[maxi]:
+			maxi = i
+	return maxi
 
 def lp_scst_findLeaving(tbl, pe):
 	M = tbl['tbl']
+	R = tbl['tblr']
 	pl = -1; minsr = 0;
-	for ri in range(len(M)):
+	for ri in range(len(M)-1):
 		r = M[ri][pe]
 		if (M[ri][pe] > 0):
-			s = M[ri][-1]
-			sr = s/r
+			sr = R[ri]/r
 			if (pl == -1 or sr < minsr):
 				minsr = sr
 				pl = ri
 	return pl
 
-def lp_scst_tblPrint(tbl, log = True):
-	if (not log):
-		return 
-	ld = [tbl['nb']+2, tbl['n']+2]
-	list = mat_create(ld[0], ld[1], '-')
-	mat_copyTo(tbl['tbl'], list)
-	for i in range(ld[0]-1):
-		list[i][ld[1]-1] = tbl['tblr'][i]
-	mat_swapr(list, -1, -2)	
-	print_tab(list)
+def lp_scst_swapBasis(tbl, pe, pl):
+	M = tbl['tbl']
+	R = tbl['tblr']
+	prow = M[pl]
+	pn = prow[pe]	
+	for i in range(len(prow)):
+		prow[i] = prow[i] / pn
+	R[pl] = R[pl] / pn
+	rows = range(len(M)); rows.pop(pl);
+	for ri in rows:
+		row = M[ri]
+		if (row[pe] != 0):
+			s = g_num(-row[pe])
+			M[ri] = vec_add(vec_muls(prow, s), row)
+			R[ri] = (R[pl]*s)+R[ri]
+	L = tbl['tbll']		
+	L[pl] = pe
 
-
-def lp_scst(A,B,C, log = False):
+def lp_scst(A,B,C, maxit = 0, log = False):
 	tbl = lp_scst_tblCreate(A,B,C)
-	lp_scst_tblPrint(tbl, log)
+	s_print('+++ lp_scst', log); lp_scst_tblPrint(tbl, log);
 	# Try to initialize	
-	for i in range(len(B)):
-		tbl['x'][-i-1] = B[-i-1] 
-	tbl['tblr'] = lp_scst_tblMul(tbl, tbl['x'])
-	endl_print(log); vec_print(tbl['x'], log); lp_scst_tblPrint(tbl, log)
 	if (not lp_scst_feasible(tbl)):
 		print '*** initialize'; return False
 	# Optimize
-	pc = lp_scst_findEntering(tbl)
-	if (lp_scst_zrow(tbl)[pc] <= 0):
-		print '*** optimal'; return False
-	pr = lp_scst_findLeaving(tbl, pc)
-	if (pr == -1):
-		print '*** unbounded'; return False
-	pn = tbl['tbl'][pr][pc]	
-	vec_print([pc, pr, pn], log)
-	return True	
+	it = 0
+	while (it < maxit or maxit <= 0):
+		it = it + 1
+		pc = lp_scst_findEntering(tbl)
+		if (lp_scst_zrow(tbl)[pc] <= 0):
+			print '*** optimal'; return True
+		pr = lp_scst_findLeaving(tbl, pc)
+		if (pr == -1):
+			print '*** unbounded'; return False
+		pn = tbl['tbl'][pr][pc]	
+		lp_scst_swapBasis(tbl, pc, pr)
+		s_print('', log); lp_scst_tblPrint(tbl, log);
+	return False
 
 
 # maximize Cx, with Ax = B, x >= 0, x in Rn.
-def lp_standard_canonical_simplex_tableau(A,B,C, log = True):
-	return lp_scst(A,B,C, log)
+def lp_standard_canonical_simplex_tableau(A,B,C, maxit = 0, log = True):
+	return lp_scst(A,B,C, maxit, log)
 
 # maximize Cx, with Ax <= B. x >= 0.
 def lp_standard_simplex_dictionary(A,B,C):
@@ -288,5 +330,27 @@ if 1:
 		]
 	B = [5, 11, 8]
 	C = [5, 4, 3]
-	lp_standard_canonical_simplex_tableau(mat_rational(A),vec_rational(B),vec_rational(C), True)
+	lp_standard_canonical_simplex_tableau(mat_rational(A),vec_rational(B),vec_rational(C), 10, True)
 	g_num = g_numDefault
+
+if 1:
+	g_num = g_numRational
+	A = [ 	[1, 3, 1],
+			[-1, 0, 3],
+			[2, -1, 2],
+			[2, 3, -1],
+		]
+	B = [3, 2, 4, 2]
+	C = [5, 5, 3]
+	lp_standard_canonical_simplex_tableau(mat_rational(A),vec_rational(B),vec_rational(C), 10, True)
+	g_num = g_numDefault	
+
+if 1:
+	g_num = g_numRational
+	A = [ 	[5, -4, 13, -2, 1],
+			[1, -1, 5, -1, 1]
+		]
+	B = [20, 8]
+	C = [1, 6, -7, 1, 5]
+	lp_standard_canonical_simplex_tableau(mat_rational(A),vec_rational(B),vec_rational(C), 10, True)
+	g_num = g_numDefault	
