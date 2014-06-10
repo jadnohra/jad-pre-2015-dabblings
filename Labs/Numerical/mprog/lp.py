@@ -47,6 +47,9 @@ def vec_create(n,v):
 def vec_dim(v):
 	return len(v)
 
+def vec_neg(a):
+	return [-x for x in a]
+
 def vec_add(a,b):
 	return [x+y for x, y in zip(a, b)]
 
@@ -183,7 +186,7 @@ def mat_diagInv(M):
 		I[i][i] = g_num(1)/M[i][i]
 	return I
 
-def lp_scst_tblPrint(tbl, log = True):
+def lp_scst_tblPrint(tbl, log = True, toFloat = False):
 	if (not log):
 		return 
 	ld = [tbl['nb']+2, tbl['n']+3]
@@ -198,9 +201,16 @@ def lp_scst_tblPrint(tbl, log = True):
 	for i in range(len(M)):
 		r = M[i]	
 		for j in range(len(r)):
-			list[i][j+1] = r[j]
+			v = r[j]
+			if toFloat:
+				v = float(v)
+			list[i][j+1] = v
+	R = tbl['tblr']			
 	for i in range(ld[0]-1):
-		list[i][ld[1]-1] = tbl['tblr'][i]
+		v = R[i]
+		if toFloat:
+				v = float(v)
+		list[i][ld[1]-1] = v
 	mat_swapr(list, -1, -2)	
 	print_tab(list)
 
@@ -290,6 +300,7 @@ def lp_scst_initFeed(tbl, tblp, maxit, log = False):
 	if (tblp['tblr'][-1] != 0):
 		print '*** no init 1'; return False
 
+	# Transfer T	
 	R = tbl['tblr']; Rp = tblp['tblr'];
 	T = tbl['tbl']; Tp = tblp['tbl'];
 	for i in range(len(R)-1):
@@ -297,19 +308,34 @@ def lp_scst_initFeed(tbl, tblp, maxit, log = False):
 		for j in range(len(T[i])):
 			T[i][j]=Tp[i][j+1]
 
-	z = lp_scst_zrow(tbl)
-	nz = list(z)
-	nzr = 0.0
-	L = tblp['tbll']
+	# Transfer L
+	L = tbl['tbll']; Lp = tblp['tbll']
 	for i in range(len(L)):
-		xi = L[i]-1
-		if (xi >= 0 and xi < len(nz)):
-			nz = vec_add(nz, vec_muls(T[i], z[xi]))
-			nzr = nzr + (Rp[i] * z[xi])
-			print z[xi], nz, nzr
+		L[i] = Lp[i]-1
+
+	# Transfer z		
+	z = lp_scst_zrow(tbl)
+	tv = [None]*len(z)
+	tvr = [g_num(0)]*len(z)
+	for i in range(len(z)):
+		tv[i] = [g_num(0)]*len(z)
+		tv[i][i] = g_num(1)
+	for i in range(len(Lp)):
+		xi = Lp[i]-1
+		print xi
+		if (xi >= 0 and xi < len(z)):
+			tv[xi] = vec_neg(T[i])
+			tv[xi][xi] = g_num(0)
+			tvr[xi] = Rp[i]
+	nz = [g_num(0)]*len(z)
+	nzr = g_num(0)
+	for i in range(len(z)):
+		nz = vec_add(nz, vec_muls(tv[i], z[i]))
+		nzr = nzr + tvr[i] * z[i]
 	R[-1] = nzr
 	T[-1] = nz
-	print nzr, 'WRONG, fix lp_scst_initFeed [p41]'
+
+	s_print('', log); lp_scst_tblPrint(tbl, log);
 	s_print('*** main', log)		
 	return True		
 
