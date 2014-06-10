@@ -244,6 +244,7 @@ def lp_scst_zrow(tbl):
 
 def lp_scst_findEntering(tbl):
 	# Will use minimum index in case of tie
+	# TODO: bland's rule
 	M = tbl['tbl']
 	zr = lp_scst_zrow(tbl)
 	maxi = 0
