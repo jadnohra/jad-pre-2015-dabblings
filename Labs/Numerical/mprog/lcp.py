@@ -203,7 +203,9 @@ def mat_diagInv(M):
 	return I
 
 def lcp_tbl_create(n):
-	return { 'n':n, 'L':[i for i in range(n)], 'Mq':mat_create(n, (2*n)+1, g_num(0)) }
+	tbl = { 'n':n, 'L':[i for i in range(n)], 'Mq':mat_create(n, (2*n)+1, g_num(0)) }
+	mat_copyTo(mat_identity(n,n), tbl['Mq'])
+	return tbl
 
 def lcp_tbl_pivot(tbl, plr, pec):
 	Mq = tbl['Mq']; 
@@ -258,8 +260,7 @@ if 1:
 	Mq[0] = [1, 0, 0, -1, 0, 0, -1]
 	Mq[1] = [0, 1, 0, -2, -1, 0, -1]
 	Mq[2] = [0, 0, 1, -2, -2, -1, -1]
-	print tbl['Mq']
-	lcp_solve_principal_tableau(tbl)
+	lcp_solve_principal_tableau(tbl, {'maxit':20})
 	print tbl['Mq']
 
 
