@@ -322,7 +322,6 @@ def lp_scst_initFeed(tbl, tblp, maxit, log = False):
 		tv[i][i] = g_num(1)
 	for i in range(len(Lp)):
 		xi = Lp[i]-1
-		print xi
 		if (xi >= 0 and xi < len(z)):
 			tv[xi] = vec_neg(T[i])
 			tv[xi][xi] = g_num(0)
@@ -425,7 +424,7 @@ if 0:
 	lp_standard_canonical_simplex_tableau(mat_rational(A),vec_rational(B),vec_rational(C), 10, True)
 	g_num = g_numDefault	
 
-if 1:
+if 0:
 	g_num = g_numRational
 	A = [ 	[2, -1, 2],
 			[2, -3, 1],
@@ -435,3 +434,31 @@ if 1:
 	C = [1, -1, 1]
 	lp_standard_canonical_simplex_tableau(mat_rational(A),vec_rational(B),vec_rational(C), 10, True)
 	g_num = g_numDefault	
+
+if 1:
+	#5,5,z=25
+	g_num = g_numRational
+	A = [ [2, 1], [1, 3], ], B = [15, 20], C = [2, 3]
+	lp_standard_canonical_simplex_tableau(mat_rational(A),vec_rational(B),vec_rational(C), 10, True)
+	g_num = g_numDefault	
+
+if 1:
+	#3,6,z=24
+	g_num = g_numRational
+	A = [ [3, 1], [1, 1], [2, -1], ], B = [15, 10, 0], C = [6, 1]
+	lp_standard_canonical_simplex_tableau(mat_rational(A),vec_rational(B),vec_rational(C), 10, True)
+	g_num = g_numDefault		
+
+if 1:
+	#3,6,z=24
+	g_num = g_numRational
+	A = [ [3, 1], [1, 1], [2, -1], ], B = [15, 10, 0], C = [5, 1, 0, 0, 0]
+	lp_standard_canonical_simplex_tableau(mat_rational(A),vec_rational(B),vec_rational(C), 10, True)
+	g_num = g_numDefault		
+
+if 1:
+	#1,2,0
+	g_num = g_numRational
+	A = [ [-2, -2, -1], [-1, -2, -3], ], B = [-6, -5], C = [-3, -4, -5]
+	lp_standard_canonical_simplex_tableau(mat_rational(A),vec_rational(B),vec_rational(C), 10, True)
+	g_num = g_numDefault			
