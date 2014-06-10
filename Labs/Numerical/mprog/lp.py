@@ -53,6 +53,9 @@ def vec_neg(a):
 def vec_add(a,b):
 	return [x+y for x, y in zip(a, b)]
 
+def vec_sub(a,b):
+	return [x-y for x, y in zip(a, b)]
+
 def vec_muls(a,s):
 	return [x*s for x in a]	
 	
@@ -240,6 +243,8 @@ def lp_scst_zrow(tbl):
 	return tbl['tbl'][-1]
 
 def lp_scst_findEntering(tbl):
+	# Will use minimum index in case of tie
+	M = tbl['tbl']
 	zr = lp_scst_zrow(tbl)
 	maxi = 0
 	for i in range(len(zr)):
@@ -247,19 +252,52 @@ def lp_scst_findEntering(tbl):
 			maxi = i
 	return maxi
 
-def lp_scst_findLeaving(tbl, pe):
+def lp_scst_findLeaving_simple(tbl, pe):
+	# Will use minimum index in case of tie
 	M = tbl['tbl']
 	R = tbl['tblr']
 	pl = -1; minsr = 0;
 	for ri in range(len(M)-1):
 		r = M[ri][pe]
-		if (M[ri][pe] > 0):
+		if (r > 0):
 			sr = R[ri]/r
 			if (pl == -1 or sr < minsr):
 				minsr = sr
 				pl = ri
 	return pl
 
+def lp_lexiPos(v):
+	for e in v:
+		if e > 0:
+			return 1
+		if e < 0:
+			return -1
+	return 0		
+
+def lp_lexiComp(v1, v2):
+	return lp_lexiPos(vec_sub(v2, v1))
+
+def lp_scst_findLeaving_lexi(tbl, pe):
+	M = tbl['tbl']
+	R = tbl['tblr']
+	lexiinfo = []
+	for ri in range(len(M)-1):
+		r = M[ri][pe]
+		if (r > 0):
+			v = list(M[ri])
+			v.append(R[ri])
+			v = vec_muls(v, 1/r)
+			lexiinfo.append([ri,v])
+	lexiinfo = sorted(lexiinfo, cmp=lambda x,y: lp_lexiComp(x[1], y[1]))
+	return lexiinfo[0][0]
+
+def lp_scst_findLeaving(tbl, pe, opts):
+	lexi = opts.get('lexi', False)
+	if lexi:
+		return lp_scst_findLeaving_lexi(tbl, pe)
+	else:
+		return lp_scst_findLeaving_simple(tbl, pe)
+		
 def lp_scst_swapBasis(tbl, pe, pl):
 	M = tbl['tbl']
 	R = tbl['tblr']
@@ -278,24 +316,25 @@ def lp_scst_swapBasis(tbl, pe, pl):
 	L = tbl['tbll']		
 	L[pl] = pe
 
-def lp_scst_opt(tbl, maxit = 0, log = False):
+def lp_scst_opt(tbl, opts, log = False):
 	it = 0
+	maxit = opts.get('maxit', 0)
 	while (it < maxit or maxit <= 0):
 		it = it + 1
 		pc = lp_scst_findEntering(tbl)
 		if (lp_scst_zrow(tbl)[pc] <= 0):
 			print '*** optimal'; return True
-		pr = lp_scst_findLeaving(tbl, pc)
+		pr = lp_scst_findLeaving(tbl, pc, opts)
 		if (pr == -1):
 			print '*** unbounded'; return False
 		lp_scst_swapBasis(tbl, pc, pr)
 		s_print('', log); lp_scst_tblPrint(tbl, log);
 	print '*** maxiter'; return False
 
-def lp_scst_initFeed(tbl, tblp, maxit, log = False):
+def lp_scst_initFeed(tbl, tblp, opts, log = False):
 	if (not lp_scst_feasible(tblp)):
 		print '*** error 1'; return False
-	if (not lp_scst_opt(tblp, maxit, log)):
+	if (not lp_scst_opt(tblp, opts, log)):
 		print '*** no init 0'; return False
 	if (tblp['tblr'][-1] != 0):
 		print '*** no init 1'; return False
@@ -338,7 +377,7 @@ def lp_scst_initFeed(tbl, tblp, maxit, log = False):
 	s_print('*** main', log)		
 	return True		
 
-def lp_scst_init(A,B,C, tbl, maxit = 0, log = False):
+def lp_scst_init(A,B,C, tbl, opts = {}, log = False):
 	# Chvatal [p41]
 	if (lp_scst_feasible(tbl)):
 		return True
@@ -356,22 +395,22 @@ def lp_scst_init(A,B,C, tbl, maxit = 0, log = False):
 				pr = i
 		lp_scst_swapBasis(tblp, pc, pr)
 		s_print('', log); lp_scst_tblPrint(tblp, log);
-		return lp_scst_initFeed(tbl, tblp, maxit, log)
+		return lp_scst_initFeed(tbl, tblp, opts, log)
 
 
-def lp_scst(A,B,C, maxit = 0, log = False):
+def lp_scst(A,B,C, opts = {}, log = False):
 	# Chvatal [p24-25]
 	tbl = lp_scst_tblCreate(A,B,C)
 	s_print('+++ lp_scst', log); lp_scst_tblPrint(tbl, log);
-	if (not lp_scst_init(A,B,C, tbl, maxit, log)):
+	if (not lp_scst_init(A,B,C, tbl, opts, log)):
 		return False
-	return lp_scst_opt(tbl, maxit, log)
+	return lp_scst_opt(tbl, opts, log)
 
 
 
 # maximize Cx, with Ax = B, x >= 0, x in Rn.
-def lp_standard_canonical_simplex_tableau(A,B,C, maxit = 0, log = True):
-	return lp_scst(A,B,C, maxit, log)
+def lp_standard_canonical_simplex_tableau(A,B,C, opts = {}, log = True):
+	return lp_scst(A,B,C, opts, log)
 
 # maximize Cx, with Ax <= B. x >= 0.
 def lp_standard_simplex_dictionary(A,B,C):
@@ -409,7 +448,7 @@ if 0:
 		]
 	B = [5, 11, 8]
 	C = [5, 4, 3]
-	lp_standard_canonical_simplex_tableau(mat_rational(A),vec_rational(B),vec_rational(C), 10, True)
+	lp_standard_canonical_simplex_tableau(mat_rational(A),vec_rational(B),vec_rational(C), {'maxit':10}, True)
 	g_num = g_numDefault
 
 if 0:
@@ -421,7 +460,7 @@ if 0:
 		]
 	B = [3, 2, 4, 2]
 	C = [5, 5, 3]
-	lp_standard_canonical_simplex_tableau(mat_rational(A),vec_rational(B),vec_rational(C), 10, True)
+	lp_standard_canonical_simplex_tableau(mat_rational(A),vec_rational(B),vec_rational(C), {'maxit':10}, True)
 	g_num = g_numDefault	
 
 if 0:
@@ -432,33 +471,47 @@ if 0:
 		]
 	B = [4, -5, -1]
 	C = [1, -1, 1]
-	lp_standard_canonical_simplex_tableau(mat_rational(A),vec_rational(B),vec_rational(C), 10, True)
+	lp_standard_canonical_simplex_tableau(mat_rational(A),vec_rational(B),vec_rational(C), {'maxit':10}, True)
 	g_num = g_numDefault	
 
 if 1:
+	#cycles if using mininum subscript
+	g_num = g_numDefault
+	A = [ 	[0, 0, 0, 0, 1],
+			[0.5, -5.5, -2.5, 9, 1],
+			[0.5, -1.5, -0.5, 1, 1],
+			[1, 0, 0, 0, 1]
+		]
+	B = [1, 1, 1, 2]
+	C = [10, -57, -9, -24, 100]
+	lp_standard_canonical_simplex_tableau(A, B, C, {'maxit':10}, True)
+	lp_standard_canonical_simplex_tableau(A, B, C, {'maxit':10, 'lexi':True}, True)
+	g_num = g_numDefault
+
+if 0:
 	#5,5,z=25
 	g_num = g_numRational
-	A = [ [2, 1], [1, 3], ], B = [15, 20], C = [2, 3]
-	lp_standard_canonical_simplex_tableau(mat_rational(A),vec_rational(B),vec_rational(C), 10, True)
+	A = [ [2, 1], [1, 3], ]; B = [15, 20]; C = [2, 3]
+	lp_standard_canonical_simplex_tableau(mat_rational(A),vec_rational(B),vec_rational(C), {'maxit':10}, True)
 	g_num = g_numDefault	
 
-if 1:
+if 0:
 	#3,6,z=24
 	g_num = g_numRational
-	A = [ [3, 1], [1, 1], [2, -1], ], B = [15, 10, 0], C = [6, 1]
-	lp_standard_canonical_simplex_tableau(mat_rational(A),vec_rational(B),vec_rational(C), 10, True)
+	A = [ [3, 1], [1, 1], [2, -1], ]; B = [15, 10, 0]; C = [6, 1]
+	lp_standard_canonical_simplex_tableau(mat_rational(A),vec_rational(B),vec_rational(C), {'maxit':10}, True)
 	g_num = g_numDefault		
 
-if 1:
+if 0:
 	#3,6,z=24
 	g_num = g_numRational
-	A = [ [3, 1], [1, 1], [2, -1], ], B = [15, 10, 0], C = [5, 1, 0, 0, 0]
-	lp_standard_canonical_simplex_tableau(mat_rational(A),vec_rational(B),vec_rational(C), 10, True)
+	A = [ [3, 1], [1, 1], [2, -1], ]; B = [15, 10, 0]; C = [5, 1, 0, 0, 0]
+	lp_standard_canonical_simplex_tableau(mat_rational(A),vec_rational(B),vec_rational(C), {'maxit':10}, True)
 	g_num = g_numDefault		
 
-if 1:
+if 0:
 	#1,2,0
 	g_num = g_numRational
-	A = [ [-2, -2, -1], [-1, -2, -3], ], B = [-6, -5], C = [-3, -4, -5]
-	lp_standard_canonical_simplex_tableau(mat_rational(A),vec_rational(B),vec_rational(C), 10, True)
+	A = [ [-2, -2, -1], [-1, -2, -3], ]; B = [-6, -5]; C = [-3, -4, -5]
+	lp_standard_canonical_simplex_tableau(mat_rational(A),vec_rational(B),vec_rational(C), {'maxit':10}, True)
 	g_num = g_numDefault			
