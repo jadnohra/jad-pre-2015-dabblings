@@ -28,13 +28,8 @@ def opt_print(str, opt = {}):
  	log_print(str, opt.get('log', False))	
 
 def vec_print(row, log = True):
-	if (not log):
-		return
-	cols = len(row)
-	print '<',
-	for c in range(cols):
-		print row[c],
-	print '>'	
+	if (log):
+		print '({})'.format(', '.join(str(x) for x in row))
 
 def vec_create(n,v):
 	return [v]*n
@@ -79,6 +74,9 @@ def mat_col(M, c):
 	v = [None]*len(M); 
 	for i in range(len(M)): v[i] = M[i][c]; 
 	return v;
+
+def mat_rput(M, r, coff, v):
+	for i in range(len(v)): M[r][coff+i] = v[i]
 
 def mat_swapr(M, i, j):
 	r=M[i]; M[i]=M[j]; M[j]=r
@@ -199,6 +197,16 @@ def mat_rational(M):
 			rn[j] = rational(rm[j])
 	return N		
 
+def mat_float(M):
+	r1 = len(M);c1 = len(M[0]);
+	N = mat_create(r1, c1, None)
+	for i in range(r1):
+		rm = M[i]
+		rn = N[i]
+		for j in range(c1):
+			rn[j] = float(rm[j])
+	return N	
+
 def lcp_tbl_create(n):
 	tbl = { 'n':n, 'L':[i for i in range(n)], 'Mq':mat_create(n, (2*n)+1, g_num(0)) }
 	mat_copyTo(mat_identity(n,n), tbl['Mq'])
@@ -213,11 +221,37 @@ def lcp_tbl_woff(tbl):
 def lcp_tbl_qoff(tbl):
 	return 2*tbl['n']
 
+def lcp_tbl_rinit(tbl, r, m, q):
+	mat_rput(tbl['Mq'], r, lcp_tbl_zoff(tbl), m)
+	tbl['Mq'][r][lcp_tbl_qoff(tbl)] = q
+
+def lcp_tbl_mqinit(tbl, M):
+	for r in range(len(M)):
+		lcp_tbl_rinit(tbl, r, M[r][:-1], M[r][-1])
+
 def lcp_tbl_qcol(tbl):
 	 return mat_col(tbl['Mq'], lcp_tbl_qoff(tbl))
 
 def lcp_compl(tbl, xi):
 	return (xi +  tbl['n']) % (2*tbl['n'])
+
+def lcp_tbl_lbl(tbl, i):
+	xi = tbl['L'][i]
+	zoff = lcp_tbl_zoff(tbl); woff = lcp_tbl_woff(tbl); 
+	if (zoff > woff):
+		if (xi >= zoff):
+			return 'z{}'.format(1+xi-zoff)
+		return 'w{}'.format(1+xi-woff)
+	else:
+		if (xi >= woff):
+			return 'w{}'.format(1+xi-woff)
+		return 'z{}'.format(1+xi-zoff)
+		
+def lcp_tbl_lbls(tbl):
+	return [lcp_tbl_lbl(tbl, i) for i in range(tbl['n'])]
+
+def lcp_tbl_lbls2(tbl):
+	return  '({})'.format(', '.join(lcp_tbl_lbls(tbl)))
 
 def lcp_tbl_pivot(tbl, plr, pec):
 	Mq = tbl['Mq']; 
@@ -247,39 +281,78 @@ def lcp_tbl_solution(tbl):
 def lcp_solve_principal_tableau(tbl, opts = {}):
 	#Murty p.255 (opt. p.259)
 	# Finite for P, may cycle otherwise.
-	maxit = opts.get('maxit', 0); it = 0;
-	while (maxit == 0 or it < maxit):
+	maxit = opts.get('maxit', 0); it = 0; status = 1;
+	while (status == 1 and (maxit == 0 or it < maxit)):
 		it = it + 1
 		Mq = tbl['Mq']; q = lcp_tbl_qcol(tbl);
 		# Test for termination
 		if all(x >= 0 for x in q):
-			tbl['wz'] = lcp_tbl_solution(tbl)
-			return True
+			status = 2; break;
 		cands = [x for x in range(len(q)) if q[x] < 0]
 		r,c = cands[-1], lcp_compl(tbl, tbl['L'][cands[-1]]) 
-		opt_print('pvt: {}-{}'.format(r,c), opts)
+		if (Mq[r][c] == 0):
+			status = 0; break;
 		lcp_tbl_pivot(tbl, r, c)
-	tbl['wz'] = None
+		opt_print('{}. pvt: {}-{}, {}'.format(it, r,c, lcp_tbl_lbls2(tbl)), opts)
+	if (status == 2):
+		tbl['wz'] = lcp_tbl_solution(tbl)
+	else:	
+		tbl['wz'] = []
 	return False
 
 if 0:
 	tbl = lcp_tbl_create(3)
-	Mq = tbl['Mq']
-	Mq[0] = [1, 0, 0, -1, 1, -1, 3]
-	Mq[1] = [0, 1, 0, -1, 1, -1, 5]
-	Mq[2] = [0, 0, 1, -1, -1, -1, -9]
+	lcp_tbl_mqinit(tbl, mat_rational([
+			[-1, 1, -1, 3],
+			[-1, 1, -1, 5],
+			[-1, -1, -1, 9]
+			]) )
 	print tbl['Mq']
 	lcp_tbl_pivot(tbl, 5, 2)
 	print tbl['Mq']
 
 if 1:
+	#Murty p.255 
 	tbl = lcp_tbl_create(3)
-	Mq = tbl['Mq']
-	Mq[0] = [1, 0, 0, -1, 0, 0, -1]
-	Mq[1] = [0, 1, 0, -2, -1, 0, -1]
-	Mq[2] = [0, 0, 1, -2, -2, -1, -1]
-	lcp_solve_principal_tableau(tbl, {'maxit':20})
-	print tbl['Mq']
-	print tbl['wz']
+	lcp_tbl_mqinit(tbl, mat_rational([
+			[-1, 0, 0, -1],
+			[-2, -1, 0, -1],
+			[-2, -2, -1, -1]
+			]) )
+	lcp_solve_principal_tableau(tbl, {'maxit':20, 'log':True})
+	#print tbl['Mq']
+	vec_print(tbl['wz'])
 
+if 0:
+	#Murty p.261
+	tbl = lcp_tbl_create(3)
+	lcp_tbl_mqinit(tbl, mat_float([
+			[10, 0, -2, 10],
+			[2, 0.1, -0.4, 1],
+			[0, 0.2, 0.1, -1]
+			]) )
+	lcp_solve_principal_tableau(tbl, {'maxit':10, 'log':False})
+	vec_print(tbl['wz'])
 
+if 0:
+	#Murty p.262
+	tbl = lcp_tbl_create(3)
+	lcp_tbl_mqinit(tbl, mat_rational([
+			[1, 0, -2, 1],
+			[-2, 1, 4, -1],
+			[-4, 2, 9, -3]
+			]) )
+	lcp_solve_principal_tableau(tbl, {'maxit':10, 'log':True})
+	vec_print(tbl['wz'])
+
+if 1:
+	#Murty p.265
+	tbl = lcp_tbl_create(4)
+	lcp_tbl_mqinit(tbl, mat_float([
+			[-1, 2, -1, 1, -4],
+			[-2, 0, 2, -1, -4],
+			[1, -2, 0, 3, 2],
+			[-2, 1, -3, -3, 1]
+			]) )
+	lcp_solve_principal_tableau(tbl, {'maxit':10, 'log':True})
+	vec_print(tbl['wz'])
