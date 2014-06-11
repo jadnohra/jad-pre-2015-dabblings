@@ -6,29 +6,6 @@ def g_numDefault(x):
 	return x
 g_num = g_numDefault
 
-def rational(x, y=1):
-	return Fraction(x, y)
-
-def g_numRational(x):
-	return rational(x)
-
-def vec_rational(V):
-	n = len(V);
-	W = vec_create(n, None)
-	for i in range(n):
-		W[i] = rational(V[i])
-	return W
-
-def mat_rational(M):
-	r1 = len(M);c1 = len(M[0]);
-	N = mat_create(r1, c1, None)
-	for i in range(r1):
-		rm = M[i]
-		rn = N[i]
-		for j in range(c1):
-			rn[j] = rational(rm[j])
-	return N	
-
 def print_tab(list, pref='', sep=' ', post=''):
     col_width = [max(len(str(x)) for x in col) for col in itertools.izip_longest(*list, fillvalue='')]
     for line in list:
@@ -43,15 +20,12 @@ def mat_print(inMatrix, inName):
 			print row[c],
 		print '|'	
 
-def endl_print(log = True):
-	if (not log):
-		return
-	print ''
+def log_print(str, log = True):
+	if (log):
+		print str	
 
-def s_print(str, log = True):
-	if (not log):
-		return
-	print str	
+def opt_print(str, opt = {}):
+ 	log_print(str, opt.get('log', False))	
 
 def vec_print(row, log = True):
 	if (not log):
@@ -202,10 +176,48 @@ def mat_diagInv(M):
 		I[i] = [g_num(0)]*c; I[i][i] = g_num(1)/M[i][i];
 	return I
 
+def rational(x, y=1):
+	return Fraction(x, y)
+
+def g_numRational(x):
+	return rational(x)
+
+def vec_rational(V):
+	n = len(V);
+	W = vec_create(n, None)
+	for i in range(n):
+		W[i] = rational(V[i])
+	return W
+
+def mat_rational(M):
+	r1 = len(M);c1 = len(M[0]);
+	N = mat_create(r1, c1, None)
+	for i in range(r1):
+		rm = M[i]
+		rn = N[i]
+		for j in range(c1):
+			rn[j] = rational(rm[j])
+	return N		
+
 def lcp_tbl_create(n):
 	tbl = { 'n':n, 'L':[i for i in range(n)], 'Mq':mat_create(n, (2*n)+1, g_num(0)) }
 	mat_copyTo(mat_identity(n,n), tbl['Mq'])
 	return tbl
+
+def lcp_tbl_zoff(tbl):
+	return tbl['n']	
+
+def lcp_tbl_woff(tbl):
+	return 0
+
+def lcp_tbl_qoff(tbl):
+	return 2*tbl['n']
+
+def lcp_tbl_qcol(tbl):
+	 return mat_col(tbl['Mq'], lcp_tbl_qoff(tbl))
+
+def lcp_compl(tbl, xi):
+	return (xi +  tbl['n']) % (2*tbl['n'])
 
 def lcp_tbl_pivot(tbl, plr, pec):
 	Mq = tbl['Mq']; 
@@ -214,34 +226,40 @@ def lcp_tbl_pivot(tbl, plr, pec):
 		Mq[i] = vec_add(Mq[i], vec_muls(Mq[plr], g_num(-Mq[i][pec])))
 	tbl['L'][plr] = pec
 
-def lcp_tbl_qcol(tbl):
-	 return mat_col(tbl['Mq'], -1)
+def lcp_tbl_solution(tbl):
+	Mq = tbl['Mq']; L = tbl['L']; q = lcp_tbl_qcol(tbl); wz = [g_num(0)]*2*tbl['n'];
+	for i in range(len(L)): wz[L[i]] = q[i]
+	return wz
 
-def lcp_solve_bard_tableau(tbl):
-	#TLCP p.239
-	while True:
-		Mq = tbl['Mq']; q = lcp_tbl_qcol(tbl);
-		# Test for termination
-		if all(x >= 0 for x in q):
-			return True
-		for i in range(len(q)):
-			if (q[i] < 0):
-				lcp_tbl_pivot(tbl, i, i)
-				break;
+# def lcp_solve_bard_tableau(tbl):
+# 	#TLCP p.239
+# 	while True:
+# 		Mq = tbl['Mq']; q = lcp_tbl_qcol(tbl);
+# 		# Test for termination
+# 		if all(x >= 0 for x in q):
+# 			return True
+# 		for i in range(len(q)):
+# 			if (q[i] < 0):
+# 				lcp_tbl_pivot(tbl, i, i)
+# 				break;
+#	return False			
 
 def lcp_solve_principal_tableau(tbl, opts = {}):
-	#LC_L_NP p.255
-	maxit = opts.get('maxit', 0); it = 0
+	#Murty p.255 (opt. p.259)
+	# Finite for P, may cycle otherwise.
+	maxit = opts.get('maxit', 0); it = 0;
 	while (maxit == 0 or it < maxit):
 		it = it + 1
 		Mq = tbl['Mq']; q = lcp_tbl_qcol(tbl);
 		# Test for termination
 		if all(x >= 0 for x in q):
+			tbl['wz'] = lcp_tbl_solution(tbl)
 			return True
 		cands = [x for x in range(len(q)) if q[x] < 0]
-		r,c = cands[-1], (tbl['L'][cands[-1]] + tbl['n']) % (2*tbl['n'])
-		print r,c
+		r,c = cands[-1], lcp_compl(tbl, tbl['L'][cands[-1]]) 
+		opt_print('pvt: {}-{}'.format(r,c), opts)
 		lcp_tbl_pivot(tbl, r, c)
+	tbl['wz'] = None
 	return False
 
 if 0:
@@ -262,5 +280,6 @@ if 1:
 	Mq[2] = [0, 0, 1, -2, -2, -1, -1]
 	lcp_solve_principal_tableau(tbl, {'maxit':20})
 	print tbl['Mq']
+	print tbl['wz']
 
 
