@@ -11,7 +11,7 @@ def print_tab(list, pref='', sep=' ', post=''):
     col_width = [max(len(str(x)) for x in col) for col in itertools.izip_longest(*list, fillvalue='')]
     for line in list:
         print pref + sep.join("{:>{}}".format(x, col_width[i]) for i,x in enumerate(line)) + post
-def mat_print(inMatrix, inName):
+def mat_print(inMatrix, inName=''):
 	rows = len(inMatrix)
 	print inName, '[',rows,'x',len(inMatrix[0]),']'
 	for r in range(rows):
@@ -361,6 +361,7 @@ def lcp_solve_cpa_tableau(tbl, opts = {}):
 		r = lp_tbl_leaving_lexi(tbl, cands, c)
 		dropped = tbl['L'][r]; 
 		lcp_tbl_pivot(tbl, r, c); 
+		#mat_print(tbl['M'], True)
 		opt_print('{}. pvt: {}-{}, {}'.format(it, r,c, lcp_tbl_lbls_str(tbl)), opts)
 	if (status == 2):
 		tbl['sol'] = lcp_tbl_solution(tbl, ['z'])
