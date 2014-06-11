@@ -1,5 +1,5 @@
-from sets import Set
 import itertools
+from sets import Set
 from fractions import Fraction
 
 def g_numDefault(x):
