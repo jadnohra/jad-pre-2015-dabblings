@@ -198,16 +198,14 @@ def lcp_tbl_pivot(tbl, plr, pec):
 		M[i] = vec_add(M[i], vec_muls(M[plr], g_num(-M[i][pec])))
 	tbl['L'][plr] = pec
 
-def lcp_tbl_struct(nc, off, lbl, init):
-	return { 'nc':nc, 'off':off, 'lbl':lbl, 'init':init }
+def lcp_tbl_struct(nc, off, end, lbl, init):
+	return { 'nc':nc, 'off':off, 'end':end, 'lbl':lbl, 'init':init }
 
 def lcp_tbl_sorted_structs(tbl):
 	return sorted(tbl['structs'].values(), key=lambda x: x['off'])
 
 def lcp_tbl_create(n, structs):
-	nc = 0
-	for s in structs.values():
-		nc = nc + s['nc']
+	nc = sum([s['nc'] for s in structs.values()])
 	tbl = { 'n':n, 'nc':nc, 'L':[i for i in range(n)], 'M':mat_create(n, nc, g_num(0)), 'structs':structs }	
 	for s in structs.values():
 		if (s['init'] == 'id'):
@@ -225,23 +223,42 @@ def lcp_tbl_col(tbl, lbl):
 def lcp_tbl_lbl(tbl, i):
 	xi = tbl['L'][i]; structs = tbl['structs']; sv = lcp_tbl_sorted_structs(tbl);
 	for si in range(len(sv)):
-		if (xi < sv[si]['off']):
-			if (sv[si-1]['nc'] > 1):
-				return '{}{}'.format(sv[si-1]['lbl'], 1+xi-sv[si-1]['off'])
+		if (xi >= sv[si]['off'] and xi <= sv[si]['end']):
+			if (sv[si]['nc'] > 1):
+				return '{}{}'.format(sv[si]['lbl'], 1+xi-sv[si]['off'])
 			else:
-				return sv[si-1]['lbl']
+				return sv[si]['lbl']
 	return ''		
 		
 def lcp_tbl_lbls(tbl):
 	return [lcp_tbl_lbl(tbl, i) for i in range(tbl['n'])]
 
-def lcp_tbl_lbls2(tbl):
+def lcp_tbl_lbls_str(tbl):
 	return  '({})'.format(', '.join(lcp_tbl_lbls(tbl)))
 
+def lcp_tbl_solution(tbl, lbls, str=False):
+	L = tbl['L']; q = lcp_tbl_col(tbl, 'q'); 
+	sol = []
+	for lbl in lbls:
+		s = tbl['structs'][lbl]
+		lblsol = [g_num(0)]*s['nc']
+		for i in range(len(L)): 
+			if (L[i] >= s['off'] and L[i] <= s['end']):
+				xi = L[i]-s['off']
+				lblsol[xi] = q[i]
+		if (str):		
+			if (s['nc'] == 1):
+				lblsol[i] = '{}={}'.format(s['lbl'], lblsol[i])
+			else:	
+				for i in range(s['nc']):
+					lblsol[i] = '{}{}={}'.format(s['lbl'], i+1, lblsol[i])
+		sol.extend(lblsol)
+	return sol
+
 def lcp_tbl_pp_struct(n):
-	return {'w': lcp_tbl_struct(n, 0, 'w', 'id'), 
-			'z': lcp_tbl_struct(n, n, 'z', 0), 
-			'q': lcp_tbl_struct(1, (2*n), 'q', 0)}
+	return {'w': lcp_tbl_struct(n, 0, n-1, 'w', 'id'), 
+			'z': lcp_tbl_struct(n, n, (2*n)-1, 'z', 0), 
+			'q': lcp_tbl_struct(1, (2*n), (2*n), 'q', 0)}
 	
 def lcp_tbl_pp_create(n):
 	return lcp_tbl_create(n, lcp_tbl_pp_struct(n))
@@ -252,11 +269,6 @@ def lcp_tbl_pp_rinit(tbl, r, m, q):
 
 def lcp_tbl_pp_mqinit(tbl, M):
 	for r in range(len(M)): lcp_tbl_pp_rinit(tbl, r, M[r][:-1], M[r][-1])
-
-def lcp_tbl_pp_solution(tbl):
-	M = tbl['M']; L = tbl['L']; q = lcp_tbl_col(tbl, 'q'); wz = [g_num(0)]*(tbl['nc']-1);
-	for i in range(len(L)): wz[L[i]] = q[i]
-	return wz
 
 def lcp_tbl_pp_compl(tbl, xi):
 	return (xi +  tbl['n']) % (2*tbl['n'])
@@ -277,18 +289,18 @@ def lcp_solve_ppm1_tableau(tbl, opts = {}):
 			status = 0; break;
 		# Pivot
 		lcp_tbl_pivot(tbl, r, c)
-		opt_print('{}. pvt: {}-{}, {}'.format(it, r,c, lcp_tbl_lbls2(tbl)), opts)
+		opt_print('{}. pvt: {}-{}, {}'.format(it, r,c, lcp_tbl_lbls_str(tbl)), opts)
 	if (status == 2):
-		tbl['wz'] = lcp_tbl_pp_solution(tbl)
+		tbl['sol'] = lcp_tbl_solution(tbl,['z'])
 	else:	
-		tbl['wz'] = []
+		tbl['sol'] = []
 	return (status == 2)
 
 def lcp_tbl_cpa_struct(n):
-	return {'w': lcp_tbl_struct(n, 0, 'w', 'id'), 
-			'z': lcp_tbl_struct(n, n, 'z', 0), 
-			'z0': lcp_tbl_struct(1, 2*n, 'z0', '-en'), 
-			'q': lcp_tbl_struct(1, (2*n)+1, 'q', 0)}
+	return {'w': lcp_tbl_struct(n, 0, n-1, 'w', 'id'), 
+			'z': lcp_tbl_struct(n, n, (2*n)-1, 'z', 0), 
+			'z0': lcp_tbl_struct(1, (2*n), (2*n), 'z0', '-en'), 
+			'q': lcp_tbl_struct(1, (2*n)+1, (2*n)+1, 'q', 0)}
 
 def lcp_tbl_cpa_create(n):
 	return lcp_tbl_create(n, lcp_tbl_cpa_struct(n))
@@ -322,18 +334,19 @@ def lp_tbl_leaving_lexi(tbl, cands, col):
 	return lexarr[0][0]
 
 def lcp_solve_cpa_tableau(tbl, opts = {}):
-	# Complementary Pivot Algorithm, Murty p.66
+	# Complementary Pivot Algorithm, Murty p.66, opt. p.81
 	#
 	#Initialization, p.71
+	status = 1
 	t,qt = vec_argmin2(lcp_tbl_col(tbl, 'q'))
 	if (qt >= 0):
-		#tbl['wz'] = lcp_tbl_solution(tbl)
-		return True
+		lcp_tbl_solution(tbl, ['z'])
+		status = 2
 	else:
-		lcp_tbl_pivot(tbl, t, lcp_tbl_off(tbl, 'z0')); dropped = t;
-	opt_print('Init. {}'.format(lcp_tbl_lbls2(tbl)), opts)
-	
-	maxit = opts.get('maxit', 0); it = 0; status = 1;
+		dropped = tbl['L'][t];
+		lcp_tbl_pivot(tbl, t, lcp_tbl_off(tbl, 'z0')); 
+	opt_print('Init. {}'.format(lcp_tbl_lbls_str(tbl)), opts)
+	maxit = opts.get('maxit', 0); it = 0; 
 	while (status == 1 and (maxit == 0 or it < maxit)):
 		it = it + 1
 		L = tbl['L']; q = lcp_tbl_col(tbl, 'q'); z0i = lcp_tbl_off(tbl, 'z0');
@@ -341,18 +354,18 @@ def lcp_solve_cpa_tableau(tbl, opts = {}):
 		if (z0r is None or q[z0r] == 0): # Success, p.74
 			status = 2; break;
 		M = tbl['M']
-		c = lcp_tbl_pp_compl(tbl, dropped); 
+		c = lcp_tbl_pp_compl(tbl, dropped)
 		cands = [x for x in range(tbl['n']) if M[x][c] > 0]
 		if (len(cands) == 0): # Failure, p.68
 			status = 0; break;
 		r = lp_tbl_leaving_lexi(tbl, cands, c)
-		lcp_tbl_pivot(tbl, r, c); dropped = r;
-		opt_print('{}. pvt: {}-{}, {}'.format(it, r,c, lcp_tbl_lbls2(tbl)), opts)
-	print status	
-	#if (status == 2):
-	#	tbl['wz'] = lcp_tbl_solution(tbl)
-	#else:	
-	#	tbl['wz'] = []
+		dropped = tbl['L'][r]; 
+		lcp_tbl_pivot(tbl, r, c); 
+		opt_print('{}. pvt: {}-{}, {}'.format(it, r,c, lcp_tbl_lbls_str(tbl)), opts)
+	if (status == 2):
+		tbl['sol'] = lcp_tbl_solution(tbl, ['z'])
+	else:	
+		tbl['sol'] = []
 	return (status == 2)
 
 if 0:
@@ -376,7 +389,7 @@ if 0:
 			]) )
 	lcp_solve_ppm1_tableau(tbl, {'maxit':20, 'log':True})
 	#print tbl['M']
-	vec_print(tbl['wz'])
+	vec_print(tbl['sol'])
 
 if 0:
 	#Murty p.261
@@ -387,7 +400,7 @@ if 0:
 			[0, 0.2, 0.1, -1]
 			]) )
 	lcp_solve_ppm1_tableau(tbl, {'maxit':10, 'log':False})
-	vec_print(tbl['wz'])
+	vec_print(tbl['sol'])
 
 if 0:
 	#Murty p.262
@@ -398,7 +411,7 @@ if 0:
 			[-4, 2, 9, -3]
 			]) )
 	lcp_solve_ppm1_tableau(tbl, {'maxit':10, 'log':True})
-	vec_print(tbl['wz'])
+	vec_print(tbl['sol'])
 
 if 0:
 	#Murty p.265
@@ -410,9 +423,9 @@ if 0:
 			[-2, 1, -3, -3, 1]
 			]) )
 	lcp_solve_ppm1_tableau(tbl, {'maxit':10, 'log':True})
-	vec_print(tbl['wz'])
+	vec_print(tbl['sol'])
 
-if 1:
+if 0:
 	#Murty p.77 
 	tbl = lcp_tbl_cpa_create(4)
 	lcp_tbl_cpa_mqinit(tbl, mat_rational([
@@ -423,4 +436,53 @@ if 1:
 			]) )
 	lcp_solve_cpa_tableau(tbl, {'maxit':20, 'log':True})
 	#print tbl['M']
-	#vec_print(tbl['wz'])
+	vec_print(tbl['sol'])
+
+if 0:
+	#Murty p.79
+	tbl = lcp_tbl_cpa_create(3)
+	lcp_tbl_cpa_mqinit(tbl, mat_float([
+			[1, 0, 3, -3],
+			[-1, 2, 5, -2],
+			[2, 1, 2, -1],
+			]) )
+	lcp_solve_cpa_tableau(tbl, {'maxit':4, 'log':True})
+	#print tbl['M']
+	vec_print(tbl['sol'])	
+
+if 0:
+	#Murty p.79 (modified)
+	tbl = lcp_tbl_cpa_create(3)
+	lcp_tbl_cpa_mqinit(tbl, mat_float([
+			[-1, 0, 3, -3],
+			[1, 2, 5, -2],
+			[-2, 1, 2, -1],
+			]) )
+	lcp_solve_cpa_tableau(tbl, {'maxit':4, 'log':True})
+	#print tbl['M']
+	vec_print(tbl['sol'])	
+
+if 0:
+	#Murty p.81 (erratum fixed, wrong signs)
+	tbl = lcp_tbl_cpa_create(3)
+	lcp_tbl_cpa_mqinit(tbl, mat_rational([
+			[-1, 0, 0, -8],
+			[-2, -1, 0, -12],
+			[-2, -2, -1, -14],
+			]) )
+	lcp_solve_cpa_tableau(tbl, {'maxit':20, 'log':True})
+	#print tbl['M']
+	vec_print(tbl['sol'])		
+
+if 1:
+	#Murty p.83 ----------> should process according to p.84!
+	#also TODO, case where no z0 is needed
+	tbl = lcp_tbl_cpa_create(3)
+	lcp_tbl_cpa_mqinit(tbl, mat_rational([
+			[1, 2, 0, -1],
+			[0, 1, 2, -1],
+			[2, 0, 1, -1],
+			]) )
+	lcp_solve_cpa_tableau(tbl, {'maxit':20, 'log':True})
+	#print tbl['M']
+	vec_print(tbl['sol'])			
