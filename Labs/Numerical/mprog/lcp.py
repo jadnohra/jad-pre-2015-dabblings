@@ -226,7 +226,7 @@ def lcp_tbl_lbl(tbl, i):
 	xi = tbl['L'][i]; structs = tbl['structs']; sv = lcp_tbl_sorted_structs(tbl);
 	for si in range(len(sv)):
 		if (xi < sv[si]['off']):
-			if (sv[si]['nc'] > 1):
+			if (sv[si-1]['nc'] > 1):
 				return '{}{}'.format(sv[si-1]['lbl'], 1+xi-sv[si-1]['off'])
 			else:
 				return sv[si-1]['lbl']
@@ -269,20 +269,20 @@ def lcp_solve_ppm1_tableau(tbl, opts = {}):
 	while (status == 1 and (maxit == 0 or it < maxit)):
 		it = it + 1
 		M = tbl['M']; q = lcp_tbl_col(tbl, 'q');
-		# Test for termination
-		if all(x >= 0 for x in q):
+		if all(x >= 0 for x in q): # Success 
 			status = 2; break;
 		cands = [x for x in range(len(q)) if q[x] < 0]
 		r,c = cands[-1], lcp_tbl_pp_compl(tbl, tbl['L'][cands[-1]]) 
-		if (M[r][c] == 0):
+		if (M[r][c] == 0): # Failure
 			status = 0; break;
+		# Pivot
 		lcp_tbl_pivot(tbl, r, c)
 		opt_print('{}. pvt: {}-{}, {}'.format(it, r,c, lcp_tbl_lbls2(tbl)), opts)
 	if (status == 2):
 		tbl['wz'] = lcp_tbl_pp_solution(tbl)
 	else:	
 		tbl['wz'] = []
-	return False
+	return (status == 2)
 
 def lcp_tbl_cpa_struct(n):
 	return {'w': lcp_tbl_struct(n, 0, 'w', 'id'), 
@@ -300,6 +300,27 @@ def lcp_tbl_cpa_rinit(tbl, r, m, q):
 def lcp_tbl_cpa_mqinit(tbl, M):
 	for r in range(len(M)): lcp_tbl_cpa_rinit(tbl, r, M[r][:-1], M[r][-1])
 
+def lcp_tbl_cpa_compl(tbl, xi):
+	return (xi +  tbl['n']) % (2*tbl['n'])
+
+def lcp_lex(v):
+	for e in v:
+		if e > 0:
+			return 1
+		if e < 0:
+			return -1
+	return 0		
+
+def lp_tbl_leaving_lexi(tbl, cands, col):
+	M = tbl['M']; qoff = lcp_tbl_off(tbl, 'q');
+	ratios = sorted([ [ri, M[ri][qoff]/M[ri][col]] for ri in cands ], key=lambda x: x[1])
+	if (len(ratios) <= 1 or ratios[0][1] != ratios[1][1]):
+		return ratios[0][0]
+	lexarr = []
+	for ri in cands: lexarr.append([ri, vec_divs(M[ri], M[ri][col])])
+	lexarr = sorted(lexarr, cmp=lambda x,y: lcp_lex(vec_sub(y[1], x[1])))
+	return lexarr[0][0]
+
 def lcp_solve_cpa_tableau(tbl, opts = {}):
 	# Complementary Pivot Algorithm, Murty p.66
 	#
@@ -309,28 +330,30 @@ def lcp_solve_cpa_tableau(tbl, opts = {}):
 		#tbl['wz'] = lcp_tbl_solution(tbl)
 		return True
 	else:
-		lcp_tbl_pivot(tbl, t, lcp_tbl_off(tbl, 'z0'))
+		lcp_tbl_pivot(tbl, t, lcp_tbl_off(tbl, 'z0')); dropped = t;
 	opt_print('Init. {}'.format(lcp_tbl_lbls2(tbl)), opts)
 	
-	return False	
 	maxit = opts.get('maxit', 0); it = 0; status = 1;
 	while (status == 1 and (maxit == 0 or it < maxit)):
 		it = it + 1
-		M = tbl['M']; q = lcp_tbl_col(tbl, 'q');
-		# Test for termination, p.74
-		if all(x >= 0 for x in q):
+		L = tbl['L']; q = lcp_tbl_col(tbl, 'q'); z0i = lcp_tbl_off(tbl, 'z0');
+		z0r = L.index(z0i) if z0i in L else None
+		if (z0r is None or q[z0r] == 0): # Success, p.74
 			status = 2; break;
-		cands = [x for x in range(len(q)) if q[x] < 0]
-		r,c = cands[-1], lcp_tbl_pp_compl(tbl, tbl['L'][cands[-1]]) 
-		if (M[r][c] == 0):
+		M = tbl['M']
+		c = lcp_tbl_pp_compl(tbl, dropped); 
+		cands = [x for x in range(tbl['n']) if M[x][c] > 0]
+		if (len(cands) == 0): # Failure, p.68
 			status = 0; break;
-		lcp_tbl_pivot(tbl, r, c)
+		r = lp_tbl_leaving_lexi(tbl, cands, c)
+		lcp_tbl_pivot(tbl, r, c); dropped = r;
 		opt_print('{}. pvt: {}-{}, {}'.format(it, r,c, lcp_tbl_lbls2(tbl)), opts)
-	if (status == 2):
-		tbl['wz'] = lcp_tbl_solution(tbl)
-	else:	
-		tbl['wz'] = []
-	return False
+	print status	
+	#if (status == 2):
+	#	tbl['wz'] = lcp_tbl_solution(tbl)
+	#else:	
+	#	tbl['wz'] = []
+	return (status == 2)
 
 if 0:
 	tbl = lcp_tbl_pp_create(3)
@@ -390,12 +413,13 @@ if 0:
 	vec_print(tbl['wz'])
 
 if 1:
-	#Murty p.255 
-	tbl = lcp_tbl_cpa_create(3)
-	lcp_tbl_cpa_mqinit(tbl, mat_float([
-			[-1, 0, 0, -1],
-			[-2, -1, 0, -1],
-			[-2, -2, -1, -1]
+	#Murty p.77 
+	tbl = lcp_tbl_cpa_create(4)
+	lcp_tbl_cpa_mqinit(tbl, mat_rational([
+			[-1, 1, 1, 1, 3],
+			[1, -1, 1, 1, 5],
+			[-1, -1, -2, 0, -9],
+			[-1, -1, 0, -2, -5]
 			]) )
 	lcp_solve_cpa_tableau(tbl, {'maxit':20, 'log':True})
 	#print tbl['M']

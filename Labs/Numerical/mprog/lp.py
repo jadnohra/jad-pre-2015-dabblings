@@ -279,6 +279,7 @@ def lp_lexiComp(v1, v2):
 	return lp_lexiPos(vec_sub(v2, v1))
 
 def lp_smtp_findLeaving_lexi(tbl, pe):
+	# TODO, test ratios first, see lcp
 	M = tbl['tbl']
 	R = tbl['tblr']
 	lexiinfo = []
