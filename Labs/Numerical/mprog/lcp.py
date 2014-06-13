@@ -462,56 +462,40 @@ def get_test_Mq(test):
 		[
 			[-1.5, 2, -5],
 			[-4, 4, 17]
+		],
+		'Murty p.107':
+		[
+			[2, 1, 1, -4],
+			[1, 2, 1, -5],
+			[1, 1, 2, -1],
 		]
 	}
 	return Mq_tbl[test]
 
 if 1:
 	g_num = g_num_rational
+
+def test_ppm1(test, opts = {}):
+	tbl = lcp_tbl_pp_create_Mq( mat_rational(get_test_Mq(test)) )
+	lcp_solve_ppm1_tableau(tbl, opts)
+	vec_print(tbl['sol'])
+
+def test_cpa(test, opts = {}):
+	tbl = lcp_tbl_cpa_create_Mq( mat_rational(get_test_Mq(test)) )
+	lcp_solve_cpa_tableau(tbl, opts)
+	vec_print(tbl['sol'])	
+
 if 0:
 	tbl = lcp_tbl_pp_create_Mq(mat_rational([ [-1, 1, -1, 3], [-1, 1, -1, 5], [-1, -1, -1, 9] ]) )
 	mat_print(tbl['M']); lcp_tbl_pivot(tbl, 2, 5); mat_print(tbl['M']);
-if 0:
-	tbl = lcp_tbl_pp_create_Mq( mat_rational(get_test_Mq('Murty p.255')) )
-	lcp_solve_ppm1_tableau(tbl, {'maxit':20, 'log':True})
-	vec_print(tbl['sol'])
-if 0:
-	tbl = lcp_tbl_pp_create_Mq( mat_float(get_test_Mq('Murty p.261')) )
-	lcp_solve_ppm1_tableau(tbl, {'maxit':10, 'log':False})
-	vec_print(tbl['sol'])
-if 0:
-	tbl = lcp_tbl_pp_create_Mq( mat_rational(get_test_Mq('Murty p.262')) )
-	lcp_solve_ppm1_tableau(tbl, {'maxit':10, 'log':True})
-	vec_print(tbl['sol'])
-if 0:
-	tbl = lcp_tbl_pp_create_Mq( mat_float(get_test_Mq('Murty p.265')) )
-	lcp_solve_ppm1_tableau(tbl, {'maxit':10, 'log':True})
-	vec_print(tbl['sol'])
-if 0:
-	tbl = lcp_tbl_cpa_create_Mq( mat_rational(get_test_Mq('Murty p.77')) )
-	lcp_solve_cpa_tableau(tbl, {'maxit':20, 'log':True})
-	vec_print(tbl['sol'])
-if 0:
-	tbl = lcp_tbl_cpa_create_Mq( mat_float(get_test_Mq('Murty p.79')) )
-	lcp_solve_cpa_tableau(tbl, {'maxit':4, 'log':True})
-	vec_print(tbl['sol'])	
-if 0:
-	tbl = lcp_tbl_cpa_create_Mq( mat_float(get_test_Mq('Murty p.79 (mod)')) )
-	lcp_solve_cpa_tableau(tbl, {'maxit':4, 'log':True})
-	vec_print(tbl['sol'])	
-if 0:
-	tbl = lcp_tbl_cpa_create_Mq( mat_rational(get_test_Mq('Murty p.81')) )
-	lcp_solve_cpa_tableau(tbl, {'maxit':20, 'log':True})
-	vec_print(tbl['sol'])		
-if 0:
-	tbl = lcp_tbl_cpa_create_Mq( mat_rational(get_test_Mq('Murty p.83')) )
-	tbl1 = copy.deepcopy(tbl)
-	lcp_solve_cpa_tableau(tbl1, {'maxit':10, 'log':True, 'no-lex':True})
-	vec_print(tbl1['sol'])
-	tbl2 = copy.deepcopy(tbl)
-	lcp_solve_cpa_tableau(tbl2, {'maxit':10, 'log':True})
-	vec_print(tbl2['sol'])
-if 0:
-	tbl = lcp_tbl_cpa_create_Mq( mat_rational(get_test_Mq('Murty p.97')) )
-	lcp_solve_cpa_tableau(tbl, {'maxit':20, 'log':True})
-	vec_print(tbl['sol'])
+if 0: test_ppm1('Murty p.255', {'maxit':20, 'log':True})
+if 0: test_ppm1('Murty p.261', {'maxit':10, 'log':False})
+if 0: test_ppm1('Murty p.262', {'maxit':10, 'log':True})
+if 0: test_ppm1('Murty p.265', {'maxit':10, 'log':True})
+if 0: test_cpa('Murty p.77', {'maxit':20, 'log':True})
+if 0: test_cpa('Murty p.79', {'maxit':4, 'log':True})
+if 0: test_cpa('Murty p.79 (mod)', {'maxit':4, 'log':True})
+if 0: test_cpa('Murty p.81', {'maxit':20, 'log':True})
+if 0: test_cpa('Murty p.83', {'maxit':10, 'log':True, 'no-lex':True}); test_cpa('Murty p.83', {'maxit':10, 'log':True}); 
+if 0: test_cpa('Murty p.97', {'maxit':20, 'log':True})
+if 1: test_cpa('Murty p.107', {'maxit':20, 'log':True})
