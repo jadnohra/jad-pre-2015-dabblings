@@ -501,9 +501,8 @@ if 0:
 	#print tbl['M']
 	vec_print(tbl['sol'])		
 
-if 1:
+if 0:
 	#Murty p.83
-	#also TODO, case where no z0 is needed
 	tbl = lcp_tbl_cpa_create(3)
 	lcp_tbl_cpa_mqinit(tbl, mat_rational([
 			[1, 2, 0, -1],
@@ -511,8 +510,8 @@ if 1:
 			[2, 0, 1, -1],
 			]) )
 	tbl1 = copy.deepcopy(tbl)
-	#lcp_solve_cpa_tableau(tbl1, {'maxit':10, 'log':True, 'nolexi':True})
-	#vec_print(tbl1['sol'])
+	lcp_solve_cpa_tableau(tbl1, {'maxit':10, 'log':True, 'nolexi':True})
+	vec_print(tbl1['sol'])
 	tbl2 = copy.deepcopy(tbl)
 	lcp_solve_cpa_tableau(tbl2, {'maxit':10, 'log':True})
 	vec_print(tbl2['sol'])
