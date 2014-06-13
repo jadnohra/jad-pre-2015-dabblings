@@ -1,6 +1,8 @@
+import math
 import itertools
-from fractions import Fraction
-from operator import itemgetter 
+import copy
+import fractions
+import operator
 
 def g_numDefault(x):
 	return x
@@ -28,6 +30,8 @@ def vec_print(row, log = True):
 	if (log):
 		print '({})'.format(', '.join(str(x) for x in row))
 
+def m_isgn(v):
+	return int(math.copysign(1, v))
 def vec_create(n,v):
 	return [v]*n
 def vec_dim(v):
@@ -43,9 +47,9 @@ def vec_muls(a,s):
 def vec_divs(a,s):
 	return [x/s for x in a]		
 def vec_argmin2(v):
-	return min(enumerate(v), key=itemgetter(1)); 
+	return min(enumerate(v), key=operator.itemgetter(1)); 
 def vec_argmax2(v):
-	return max(enumerate(v), key=itemgetter(1)); 
+	return max(enumerate(v), key=operator.itemgetter(1)); 
 def vec_argmin(v):
 	return vec_argmin2(v)[0]
 def vec_argmax(v):
@@ -162,7 +166,7 @@ def mat_diagInv(M):
 	return I
 
 def rational(x, y=1):
-	return Fraction(x, y)
+	return fractions.Fraction(x, y)
 def g_numRational(x):
 	return rational(x)
 def vec_rational(V):
@@ -264,11 +268,12 @@ def lcp_tbl_pp_create(n):
 	return lcp_tbl_create(n, lcp_tbl_pp_struct(n))
 
 def lcp_tbl_pp_rinit(tbl, r, m, q):
-	mat_rput(tbl['M'], r, lcp_tbl_off(tbl, 'z'), m)
+	mat_rput(tbl['M'], r, lcp_tbl_off(tbl, 'z'), vec_neg(m))
 	tbl['M'][r][lcp_tbl_off(tbl, 'q')] = q
 
-def lcp_tbl_pp_mqinit(tbl, M):
-	for r in range(len(M)): lcp_tbl_pp_rinit(tbl, r, M[r][:-1], M[r][-1])
+# solve w-Mz=q
+def lcp_tbl_pp_mqinit(tbl, Mq):
+	for r in range(len(Mq)): lcp_tbl_pp_rinit(tbl, r, Mq[r][:-1], Mq[r][-1])
 
 def lcp_tbl_pp_compl(tbl, xi):
 	return (xi +  tbl['n']) % (2*tbl['n'])
@@ -305,12 +310,14 @@ def lcp_tbl_cpa_struct(n):
 def lcp_tbl_cpa_create(n):
 	return lcp_tbl_create(n, lcp_tbl_cpa_struct(n))
 
+# solve w-Mz=q
 def lcp_tbl_cpa_rinit(tbl, r, m, q):
-	mat_rput(tbl['M'], r, lcp_tbl_off(tbl, 'z'), m)
+	mat_rput(tbl['M'], r, lcp_tbl_off(tbl, 'z'), vec_neg(m))
 	tbl['M'][r][lcp_tbl_off(tbl, 'q')] = q
 
-def lcp_tbl_cpa_mqinit(tbl, M):
-	for r in range(len(M)): lcp_tbl_cpa_rinit(tbl, r, M[r][:-1], M[r][-1])
+# solve w-Mz=q
+def lcp_tbl_cpa_mqinit(tbl, Mq):
+	for r in range(len(Mq)): lcp_tbl_cpa_rinit(tbl, r, Mq[r][:-1], Mq[r][-1])
 
 def lcp_tbl_cpa_compl(tbl, xi):
 	return (xi +  tbl['n']) % (2*tbl['n'])
@@ -323,6 +330,13 @@ def lcp_lex(v):
 			return -1
 	return 0		
 
+def lp_tbl_leaving_topmost(tbl, cands, col):
+	M = tbl['M']; qoff = lcp_tbl_off(tbl, 'q');
+	cmp_lambda = lambda x,y: m_isgn(x[0]-y[0]) if (x[1] == y[1]) else m_isgn(x[1]-y[1])
+	ratios = sorted([ [ri, M[ri][qoff]/M[ri][col]] for ri in cands ], cmp=cmp_lambda)
+	#print 'ratios', [[x[0], str(x[1])] for x in ratios]
+	return ratios[0][0]
+
 def lp_tbl_leaving_lexi(tbl, cands, col):
 	M = tbl['M']; qoff = lcp_tbl_off(tbl, 'q');
 	ratios = sorted([ [ri, M[ri][qoff]/M[ri][col]] for ri in cands ], key=lambda x: x[1])
@@ -333,19 +347,28 @@ def lp_tbl_leaving_lexi(tbl, cands, col):
 	lexarr = sorted(lexarr, cmp=lambda x,y: lcp_lex(vec_sub(y[1], x[1])))
 	return lexarr[0][0]
 
+def lp_tbl_leaving(tbl, cands, col, opts):
+	if opts.get('nolexi', False):
+		return lp_tbl_leaving_topmost(tbl, cands, col)
+	else:	
+		 return lp_tbl_leaving_lexi(tbl, cands, col)
+
 def lcp_solve_cpa_tableau(tbl, opts = {}):
 	# Complementary Pivot Algorithm, Murty p.66, opt. p.81
 	#
 	#Initialization, p.71
+	mat_print(tbl['M'], '')
 	status = 1
-	t,qt = vec_argmin2(lcp_tbl_col(tbl, 'q'))
-	if (qt >= 0):
+	r,qr = vec_argmin2(lcp_tbl_col(tbl, 'q'))
+	if (qr >= 0):
 		lcp_tbl_solution(tbl, ['z'])
 		status = 2
 	else:
-		dropped = tbl['L'][t];
-		lcp_tbl_pivot(tbl, t, lcp_tbl_off(tbl, 'z0')); 
-	opt_print('Init. {}'.format(lcp_tbl_lbls_str(tbl)), opts)
+		c = lcp_tbl_off(tbl, 'z0')
+		dropped = tbl['L'][r];
+		lcp_tbl_pivot(tbl, r, c); 
+		opt_print('0. pvt: {}-{}, {}'.format(r,c, lcp_tbl_lbls_str(tbl)), opts)
+		#mat_print(tbl['M'], '')	
 	maxit = opts.get('maxit', 0); it = 0; 
 	while (status == 1 and (maxit == 0 or it < maxit)):
 		it = it + 1
@@ -358,11 +381,11 @@ def lcp_solve_cpa_tableau(tbl, opts = {}):
 		cands = [x for x in range(tbl['n']) if M[x][c] > 0]
 		if (len(cands) == 0): # Failure, p.68
 			status = 0; break;
-		r = lp_tbl_leaving_lexi(tbl, cands, c)
+		r = lp_tbl_leaving(tbl, cands, c, opts)
 		dropped = tbl['L'][r]; 
 		lcp_tbl_pivot(tbl, r, c); 
-		#mat_print(tbl['M'], True)
 		opt_print('{}. pvt: {}-{}, {}'.format(it, r,c, lcp_tbl_lbls_str(tbl)), opts)
+		#mat_print(tbl['M'], '');
 	if (status == 2):
 		tbl['sol'] = lcp_tbl_solution(tbl, ['z'])
 	else:	
@@ -384,9 +407,9 @@ if 0:
 	#Murty p.255 
 	tbl = lcp_tbl_pp_create(3)
 	lcp_tbl_pp_mqinit(tbl, mat_rational([
-			[-1, 0, 0, -1],
-			[-2, -1, 0, -1],
-			[-2, -2, -1, -1]
+			[1, 0, 0, -1],
+			[2, 1, 0, -1],
+			[2, 2, 1, -1]
 			]) )
 	lcp_solve_ppm1_tableau(tbl, {'maxit':20, 'log':True})
 	#print tbl['M']
@@ -418,10 +441,10 @@ if 0:
 	#Murty p.265
 	tbl = lcp_tbl_pp_create(4)
 	lcp_tbl_pp_mqinit(tbl, mat_float([
-			[-1, 2, -1, 1, -4],
-			[-2, 0, 2, -1, -4],
-			[1, -2, 0, 3, 2],
-			[-2, 1, -3, -3, 1]
+			[1, -2, 1, -1, -4],
+			[2, 0, -2, 1, -4],
+			[-1, 2, 0, -3, 2],
+			[2, -1, 3, 3, 1]
 			]) )
 	lcp_solve_ppm1_tableau(tbl, {'maxit':10, 'log':True})
 	vec_print(tbl['sol'])
@@ -430,10 +453,10 @@ if 0:
 	#Murty p.77 
 	tbl = lcp_tbl_cpa_create(4)
 	lcp_tbl_cpa_mqinit(tbl, mat_rational([
-			[-1, 1, 1, 1, 3],
-			[1, -1, 1, 1, 5],
-			[-1, -1, -2, 0, -9],
-			[-1, -1, 0, -2, -5]
+			[1, -1, -1, -1, 3],
+			[-1, 1, -1, -1, 5],
+			[1, 1, 2, 0, -9],
+			[1, 1, 0, 2, -5]
 			]) )
 	lcp_solve_cpa_tableau(tbl, {'maxit':20, 'log':True})
 	#print tbl['M']
@@ -443,9 +466,9 @@ if 0:
 	#Murty p.79
 	tbl = lcp_tbl_cpa_create(3)
 	lcp_tbl_cpa_mqinit(tbl, mat_float([
-			[1, 0, 3, -3],
-			[-1, 2, 5, -2],
-			[2, 1, 2, -1],
+			[-1, 0, -3, -3],
+			[1, -2, -5, -2],
+			[-2, -1, -2, -1],
 			]) )
 	lcp_solve_cpa_tableau(tbl, {'maxit':4, 'log':True})
 	#print tbl['M']
@@ -455,28 +478,28 @@ if 0:
 	#Murty p.79 (modified)
 	tbl = lcp_tbl_cpa_create(3)
 	lcp_tbl_cpa_mqinit(tbl, mat_float([
-			[-1, 0, 3, -3],
-			[1, 2, 5, -2],
-			[-2, 1, 2, -1],
+			[1, 0, -3, -3],
+			[-1, -2, -5, -2],
+			[2, -1, -2, -1],
 			]) )
 	lcp_solve_cpa_tableau(tbl, {'maxit':4, 'log':True})
 	#print tbl['M']
 	vec_print(tbl['sol'])	
 
 if 0:
-	#Murty p.81 (erratum fixed, wrong signs)
+	#Murty p.81
 	tbl = lcp_tbl_cpa_create(3)
 	lcp_tbl_cpa_mqinit(tbl, mat_rational([
-			[-1, 0, 0, -8],
-			[-2, -1, 0, -12],
-			[-2, -2, -1, -14],
+			[1, 0, 0, -8],
+			[2, 1, 0, -12],
+			[2, 2, 1, -14],
 			]) )
 	lcp_solve_cpa_tableau(tbl, {'maxit':20, 'log':True})
 	#print tbl['M']
 	vec_print(tbl['sol'])		
 
 if 1:
-	#Murty p.83 ----------> should process according to p.84!
+	#Murty p.83
 	#also TODO, case where no z0 is needed
 	tbl = lcp_tbl_cpa_create(3)
 	lcp_tbl_cpa_mqinit(tbl, mat_rational([
@@ -484,6 +507,10 @@ if 1:
 			[0, 1, 2, -1],
 			[2, 0, 1, -1],
 			]) )
-	lcp_solve_cpa_tableau(tbl, {'maxit':20, 'log':True})
-	#print tbl['M']
-	vec_print(tbl['sol'])			
+	tbl1 = copy.deepcopy(tbl)
+	lcp_solve_cpa_tableau(tbl1, {'maxit':10, 'log':True, 'nolexi':True})
+	vec_print(tbl1['sol'])
+	tbl2 = copy.deepcopy(tbl)
+	lcp_solve_cpa_tableau(tbl2, {'maxit':10, 'log':True})
+	vec_print(tbl2['sol'])
+	
