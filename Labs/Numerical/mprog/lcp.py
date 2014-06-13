@@ -25,10 +25,11 @@ def log_print(str, log = True):
 	if (log):
 		print str	
 def opt_print(str, opt = {}):
- 	log_print(str, opt.get('log', False))	
-def vec_print(row, log = True):
-	if (log):
-		print '({})'.format(', '.join(str(x) for x in row))
+ 	log_print(str, opt.get('log', False))
+def vec_str(v):
+		return '({})'.format(', '.join(str(x) for x in v))	
+def vec_print(v, log = True):
+	print vec_str(v) if log else 0
 
 def m_isgn(v):
 	return int(math.copysign(1, v))
@@ -342,10 +343,12 @@ def lp_tbl_leaving_lexi(tbl, cands, col):
 	ratios = sorted([ [ri, M[ri][qoff]/M[ri][col]] for ri in cands ], key=lambda x: x[1])
 	if (len(ratios) <= 1 or ratios[0][1] != ratios[1][1]):
 		return ratios[0][0]
-	lexarr = []
-	for ri in cands: lexarr.append([ri, vec_divs(M[ri], M[ri][col])])
-	lexarr = sorted(lexarr, cmp=lambda x,y: lcp_lex(vec_sub(y[1], x[1])))
-	return lexarr[0][0]
+	#print 'ratios', [[x[0], str(x[1])] for x in ratios]	
+	lex_cands = [el[0] for el in filter(lambda el: el[1]==ratios[0][1], ratios)] 
+	lex_ratios = [ [ri, vec_divs(M[ri], M[ri][col])] for ri in lex_cands ]
+	lex_ratios = sorted(lex_ratios, cmp=lambda x,y: lcp_lex(vec_sub(y[1], x[1])))
+	#print 'lex_ratios', [[x[0], vec_str(x[1])] for x in lex_ratios]
+	return lex_ratios[0][0]
 
 def lp_tbl_leaving(tbl, cands, col, opts):
 	if opts.get('nolexi', False):
@@ -357,7 +360,7 @@ def lcp_solve_cpa_tableau(tbl, opts = {}):
 	# Complementary Pivot Algorithm, Murty p.66, opt. p.81
 	#
 	#Initialization, p.71
-	mat_print(tbl['M'], '')
+	#mat_print(tbl['M'], '')
 	status = 1
 	r,qr = vec_argmin2(lcp_tbl_col(tbl, 'q'))
 	if (qr >= 0):
@@ -508,8 +511,8 @@ if 1:
 			[2, 0, 1, -1],
 			]) )
 	tbl1 = copy.deepcopy(tbl)
-	lcp_solve_cpa_tableau(tbl1, {'maxit':10, 'log':True, 'nolexi':True})
-	vec_print(tbl1['sol'])
+	#lcp_solve_cpa_tableau(tbl1, {'maxit':10, 'log':True, 'nolexi':True})
+	#vec_print(tbl1['sol'])
 	tbl2 = copy.deepcopy(tbl)
 	lcp_solve_cpa_tableau(tbl2, {'maxit':10, 'log':True})
 	vec_print(tbl2['sol'])
