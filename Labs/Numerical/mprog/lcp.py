@@ -202,6 +202,39 @@ def lcp_tbl_pivot(tbl, plr, pec):
 		M[i] = vec_add(M[i], vec_muls(M[plr], g_num(-M[i][pec])))
 	tbl['L'][plr] = pec
 
+def lcp_lex(v):
+	for e in v:
+		if e > 0:
+			return 1
+		if e < 0:
+			return -1
+	return 0		
+
+def lcp_tbl_leaving_topmost(tbl, rcands, col):
+	M = tbl['M']; qoff = lcp_tbl_off(tbl, 'q');
+	cmp_lambda = lambda x,y: m_isgn(x[0]-y[0]) if (x[1] == y[1]) else m_isgn(x[1]-y[1])
+	ratios = sorted([ [ri, M[ri][qoff]/M[ri][col]] for ri in rcands ], cmp=cmp_lambda)
+	#print 'ratios', [[x[0], str(x[1])] for x in ratios]
+	return ratios[0][0]
+
+def lcp_tbl_leaving_lexi(tbl, rcands, col):
+	M = tbl['M']; qoff = lcp_tbl_off(tbl, 'q');
+	ratios = sorted([ [ri, M[ri][qoff]/M[ri][col]] for ri in rcands ], key=lambda x: x[1])
+	if (len(ratios) <= 1 or ratios[0][1] != ratios[1][1]):
+		return ratios[0][0]
+	#print 'ratios', [[x[0], str(x[1])] for x in ratios]	
+	lex_cands = [el[0] for el in filter(lambda el: el[1]==ratios[0][1], ratios)] 
+	lex_ratios = [ [ri, vec_divs(M[ri], M[ri][col])] for ri in lex_cands ]
+	lex_ratios = sorted(lex_ratios, cmp=lambda x,y: lcp_lex(vec_sub(y[1], x[1])))
+	#print 'lex_ratios', [[x[0], vec_str(x[1])] for x in lex_ratios]
+	return lex_ratios[0][0]
+
+def lcp_tbl_leaving(tbl, rcands, col, opts):
+	if opts.get('no-lex', False):
+		return lcp_tbl_leaving_topmost(tbl, rcands, col)
+	else:	
+		 return lcp_tbl_leaving_lexi(tbl, rcands, col)
+
 def lcp_tbl_struct(nc, off, end, lbl, init):
 	return { 'nc':nc, 'off':off, 'end':end, 'lbl':lbl, 'init':init }
 
@@ -291,13 +324,42 @@ def lcp_solve_ppm1_tableau(tbl, opts = {}):
 		M = tbl['M']; q = lcp_tbl_col(tbl, 'q');
 		if all(x >= 0 for x in q): # Success 
 			status = 2; break;
-		cands = [x for x in range(len(q)) if q[x] < 0]
-		r,c = cands[-1], lcp_tbl_pp_compl(tbl, tbl['L'][cands[-1]]) 
+		rcands = [x for x in range(len(q)) if q[x] < 0]
+		r,c = rcands[-1], lcp_tbl_pp_compl(tbl, tbl['L'][rcands[-1]]) 
 		if (M[r][c] == 0): # Failure
 			status = 0; break;
 		# Pivot
 		lcp_tbl_pivot(tbl, r, c)
 		opt_print('{}. pvt: {}-{}, {}'.format(it, r,c, lcp_tbl_lbls_str(tbl)), opts)
+	if (status == 2):
+		tbl['sol'] = lcp_tbl_solution(tbl,['z'])
+	else:	
+		tbl['sol'] = []
+	return (status == 2)
+
+def lcp_solve_ppcd1_tableau(tbl, opts = {}):
+	# Dantzig-Cottle Principal Pivoting Method, Murty p.273
+	# Processes P matrices.
+	#
+	maxit = opts.get('maxit', 0); it = 0; status = 1;
+	while (status == 1 and (maxit == 0 or it < maxit)):
+		it = it + 1
+		M = tbl['M']; q = lcp_tbl_col(tbl, 'q');
+		if all(x >= 0 for x in q): # Success 
+			status = 2; break;
+		rcands = [x for x in range(len(q)) if q[x] < 0]
+		c_disting = lcp_tbl_pp_compl(tbl, tbl['L'][rcands[-1]]) 
+		r_block = lcp_tbl_leaving(tbl, rcands, c_disting, opts); xi_block = tbl['L'][r_block];
+		lcp_tbl_pivot(tbl, r_block, c_disting)
+		opt_print('{}. M-pvt: {}-{}, {}'.format(it, r,c, lcp_tbl_lbls_str(tbl)), opts)
+		while ((lcp_tbl_pp_compl(tbl, xi_block) != c_disting) 
+				and (status == 1 and (maxit == 0 or it < maxit)):
+			it = it + 1
+			c_driv = lcp_tbl_pp_compl(tbl, xi_block)
+			rcands = [x for x in range(len(q)) if q[x] < 0]
+			r_block = lcp_tbl_leaving(tbl, rcands, c_driv, opts); xi_block = tbl['L'][r_block];
+			lcp_tbl_pivot(tbl, r_block, c_disting)
+			opt_print('{}. m-pvt: {}-{}, {}'.format(it, r,c, lcp_tbl_lbls_str(tbl)), opts)
 	if (status == 2):
 		tbl['sol'] = lcp_tbl_solution(tbl,['z'])
 	else:	
@@ -325,42 +387,6 @@ def lcp_tbl_cpa_init_Mq(tbl, Mq):
 def lcp_tbl_cpa_create_Mq(Mq): 
 	tbl = lcp_tbl_cpa_create(len(Mq[0])-1); lcp_tbl_cpa_init_Mq(tbl, Mq); return tbl;
 
-def lcp_tbl_cpa_compl(tbl, xi):
-	return (xi +  tbl['n']) % (2*tbl['n'])
-
-def lcp_lex(v):
-	for e in v:
-		if e > 0:
-			return 1
-		if e < 0:
-			return -1
-	return 0		
-
-def lp_tbl_leaving_topmost(tbl, cands, col):
-	M = tbl['M']; qoff = lcp_tbl_off(tbl, 'q');
-	cmp_lambda = lambda x,y: m_isgn(x[0]-y[0]) if (x[1] == y[1]) else m_isgn(x[1]-y[1])
-	ratios = sorted([ [ri, M[ri][qoff]/M[ri][col]] for ri in cands ], cmp=cmp_lambda)
-	#print 'ratios', [[x[0], str(x[1])] for x in ratios]
-	return ratios[0][0]
-
-def lp_tbl_leaving_lexi(tbl, cands, col):
-	M = tbl['M']; qoff = lcp_tbl_off(tbl, 'q');
-	ratios = sorted([ [ri, M[ri][qoff]/M[ri][col]] for ri in cands ], key=lambda x: x[1])
-	if (len(ratios) <= 1 or ratios[0][1] != ratios[1][1]):
-		return ratios[0][0]
-	#print 'ratios', [[x[0], str(x[1])] for x in ratios]	
-	lex_cands = [el[0] for el in filter(lambda el: el[1]==ratios[0][1], ratios)] 
-	lex_ratios = [ [ri, vec_divs(M[ri], M[ri][col])] for ri in lex_cands ]
-	lex_ratios = sorted(lex_ratios, cmp=lambda x,y: lcp_lex(vec_sub(y[1], x[1])))
-	#print 'lex_ratios', [[x[0], vec_str(x[1])] for x in lex_ratios]
-	return lex_ratios[0][0]
-
-def lp_tbl_leaving(tbl, cands, col, opts):
-	if opts.get('no-lex', False):
-		return lp_tbl_leaving_topmost(tbl, cands, col)
-	else:	
-		 return lp_tbl_leaving_lexi(tbl, cands, col)
-
 def lcp_solve_cpa_tableau(tbl, opts = {}):
 	# Complementary Pivot Algorithm, Murty p.66, opt. p.81
 	#
@@ -386,10 +412,10 @@ def lcp_solve_cpa_tableau(tbl, opts = {}):
 			status = 2; break;
 		M = tbl['M']
 		c = lcp_tbl_pp_compl(tbl, dropped)
-		cands = [x for x in range(tbl['n']) if M[x][c] > 0]
-		if (len(cands) == 0): # Failure, p.68
+		rcands = [x for x in range(tbl['n']) if M[x][c] > 0]
+		if (len(rcands) == 0): # Failure, p.68
 			status = 0; break;
-		r = lp_tbl_leaving(tbl, cands, c, opts)
+		r = lcp_tbl_leaving(tbl, rcands, c, opts)
 		dropped = tbl['L'][r]; 
 		lcp_tbl_pivot(tbl, r, c); 
 		opt_print('{}. pvt: {}-{}, {}'.format(it, r,c, lcp_tbl_lbls_str(tbl)), opts)
