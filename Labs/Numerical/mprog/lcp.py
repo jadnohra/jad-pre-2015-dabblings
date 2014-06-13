@@ -352,8 +352,8 @@ def lcp_solve_ppcd1_tableau(tbl, opts = {}):
 		r_block = lcp_tbl_leaving(tbl, rcands, c_disting, opts); xi_block = tbl['L'][r_block];
 		lcp_tbl_pivot(tbl, r_block, c_disting)
 		opt_print('{}. M-pvt: {}-{}, {}'.format(it, r,c, lcp_tbl_lbls_str(tbl)), opts)
-		while ((lcp_tbl_pp_compl(tbl, xi_block) != c_disting) 
-				and (status == 1 and (maxit == 0 or it < maxit)):
+		while ( (lcp_tbl_pp_compl(tbl, xi_block) != c_disting) 
+				and (status == 1 and (maxit == 0 or it < maxit)) ):
 			it = it + 1
 			c_driv = lcp_tbl_pp_compl(tbl, xi_block)
 			rcands = [x for x in range(len(q)) if q[x] < 0]
@@ -428,30 +428,37 @@ def lcp_solve_cpa_tableau(tbl, opts = {}):
 
 def get_test_Mq(test):
 	Mq_tbl = {
-		'Murty p.255':
+		'Murty p.255':	# P
 		[
 			[1, 0, 0, -1],
 			[2, 1, 0, -1],
 			[2, 2, 1, -1] 
 		],
-		'Murty p.261':
+		'Murty p.261':	# P
 		[
 			[10, 0, -2, 10],
 			[2, 0.1, -0.4, 1],
 			[0, 0.2, 0.1, -1]
 		],
-		'Murty p.262':
+		'Murty p.262': # P
 		[
 			[1, 0, -2, 1],
 			[-2, 1, 4, -1],
 			[-4, 2, 9, -3]
 		],
-		'Murty p.265':
+		'Murty p.265':	# PSD
 		[
 			[1, -2, 1, -1, -4],
 			[2, 0, -2, 1, -4],
 			[-1, 2, 0, -3, 2],
 			[2, -1, 3, 3, 1]
+		],
+		'Murty p.268':	# PSD, no-sol
+		[
+			[1, -1, 1, 1, 2],
+			[1, 1, 0, 2, 0],
+			[-1, 0, 1, 0, -2],
+			[-1, -2, 0, 0, -1]
 		],
 		'Murty p.77':
 		[
@@ -484,7 +491,7 @@ def get_test_Mq(test):
 			[0, 1, 2, -1],
 			[2, 0, 1, -1],
 		],
-		'Murty p.97':
+		'Murty p.97':	# pca-ray-termin
 		[
 			[-1.5, 2, -5],
 			[-4, 4, 17]
@@ -511,6 +518,11 @@ def test_cpa(test, opts = {}):
 	lcp_solve_cpa_tableau(tbl, opts)
 	vec_print(tbl['sol'])	
 
+def test_ppcd1(test, opts = {}):
+	tbl = lcp_tbl_pp_create_Mq( mat_rational(get_test_Mq(test)) )
+	lcp_solve_ppcd1_tableau(tbl, opts)
+	vec_print(tbl['sol'])		
+
 if 0:
 	tbl = lcp_tbl_pp_create_Mq(mat_rational([ [-1, 1, -1, 3], [-1, 1, -1, 5], [-1, -1, -1, 9] ]) )
 	mat_print(tbl['M']); lcp_tbl_pivot(tbl, 2, 5); mat_print(tbl['M']);
@@ -524,4 +536,5 @@ if 0: test_cpa('Murty p.79 (mod)', {'maxit':4, 'log':True})
 if 0: test_cpa('Murty p.81', {'maxit':20, 'log':True})
 if 0: test_cpa('Murty p.83', {'maxit':10, 'log':True, 'no-lex':True}); test_cpa('Murty p.83', {'maxit':10, 'log':True}); 
 if 0: test_cpa('Murty p.97', {'maxit':20, 'log':True})
-if 1: test_cpa('Murty p.107', {'maxit':20, 'log':True})
+if 0: test_cpa('Murty p.107', {'maxit':20, 'log':True})
+if 1: test_ppcd1('Murty p.255', {'maxit':20, 'log':True})
