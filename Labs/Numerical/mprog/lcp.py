@@ -4,9 +4,9 @@ import copy
 import fractions
 import operator
 
-def g_numDefault(x):
+def g_num_default(x):
 	return x
-g_num = g_numDefault
+g_num = g_num_default
 
 
 def print_tab(list, pref='', sep=' ', post=''):
@@ -166,15 +166,14 @@ def mat_diagInv(M):
 		I[i] = [g_num(0)]*c; I[i][i] = g_num(1)/M[i][i];
 	return I
 
-def rational(x, y=1):
-	return fractions.Fraction(x, y)
-def g_numRational(x):
-	return rational(x)
+def g_num_rational(x):
+	return fractions.Fraction(str(x))
+
 def vec_rational(V):
 	n = len(V);
 	W = vec_create(n, None)
 	for i in range(n):
-		W[i] = rational(V[i])
+		W[i] = g_num_rational(V[i])
 	return W
 def mat_rational(M):
 	r1 = len(M);c1 = len(M[0]);
@@ -183,7 +182,7 @@ def mat_rational(M):
 		rm = M[i]
 		rn = N[i]
 		for j in range(c1):
-			rn[j] = rational(rm[j])
+			rn[j] = g_num_rational(rm[j])
 	return N		
 def mat_float(M):
 	r1 = len(M);c1 = len(M[0]);
@@ -357,7 +356,7 @@ def lp_tbl_leaving_lexi(tbl, cands, col):
 	return lex_ratios[0][0]
 
 def lp_tbl_leaving(tbl, cands, col, opts):
-	if opts.get('nolexi', False):
+	if opts.get('no-lex', False):
 		return lp_tbl_leaving_topmost(tbl, cands, col)
 	else:	
 		 return lp_tbl_leaving_lexi(tbl, cands, col)
@@ -458,10 +457,17 @@ def get_test_Mq(test):
 			[1, 2, 0, -1],
 			[0, 1, 2, -1],
 			[2, 0, 1, -1],
+		],
+		'Murty p.97':
+		[
+			[-1.5, 2, -5],
+			[-4, 4, 17]
 		]
 	}
 	return Mq_tbl[test]
 
+if 1:
+	g_num = g_num_rational
 if 0:
 	tbl = lcp_tbl_pp_create_Mq(mat_rational([ [-1, 1, -1, 3], [-1, 1, -1, 5], [-1, -1, -1, 9] ]) )
 	mat_print(tbl['M']); lcp_tbl_pivot(tbl, 2, 5); mat_print(tbl['M']);
@@ -500,9 +506,12 @@ if 0:
 if 0:
 	tbl = lcp_tbl_cpa_create_Mq( mat_rational(get_test_Mq('Murty p.83')) )
 	tbl1 = copy.deepcopy(tbl)
-	lcp_solve_cpa_tableau(tbl1, {'maxit':10, 'log':True, 'nolexi':True})
+	lcp_solve_cpa_tableau(tbl1, {'maxit':10, 'log':True, 'no-lex':True})
 	vec_print(tbl1['sol'])
 	tbl2 = copy.deepcopy(tbl)
 	lcp_solve_cpa_tableau(tbl2, {'maxit':10, 'log':True})
 	vec_print(tbl2['sol'])
-	
+if 0:
+	tbl = lcp_tbl_cpa_create_Mq( mat_rational(get_test_Mq('Murty p.97')) )
+	lcp_solve_cpa_tableau(tbl, {'maxit':20, 'log':True})
+	vec_print(tbl['sol'])
