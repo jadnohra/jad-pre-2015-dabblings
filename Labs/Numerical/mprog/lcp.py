@@ -210,16 +210,16 @@ def lcp_lex(v):
 			return -1
 	return 0		
 
-def lcp_tbl_leaving_topmost(tbl, rcands, col):
+def lcp_tbl_leaving_topmost(tbl, r_cands, col):
 	M = tbl['M']; qoff = lcp_tbl_off(tbl, 'q');
 	cmp_lambda = lambda x,y: m_isgn(x[0]-y[0]) if (x[1] == y[1]) else m_isgn(x[1]-y[1])
-	ratios = sorted([ [ri, M[ri][qoff]/M[ri][col]] for ri in rcands ], cmp=cmp_lambda)
+	ratios = sorted([ [ri, M[ri][qoff]/M[ri][col]] for ri in r_cands ], cmp=cmp_lambda)
 	#print 'ratios', [[x[0], str(x[1])] for x in ratios]
 	return ratios[0][0]
 
-def lcp_tbl_leaving_lexi(tbl, rcands, col):
+def lcp_tbl_leaving_lexi(tbl, r_cands, col):
 	M = tbl['M']; qoff = lcp_tbl_off(tbl, 'q');
-	ratios = sorted([ [ri, M[ri][qoff]/M[ri][col]] for ri in rcands ], key=lambda x: x[1])
+	ratios = sorted([ [ri, M[ri][qoff]/M[ri][col]] for ri in r_cands ], key=lambda x: x[1])
 	if (len(ratios) <= 1 or ratios[0][1] != ratios[1][1]):
 		return ratios[0][0]
 	#print 'ratios', [[x[0], str(x[1])] for x in ratios]	
@@ -229,11 +229,11 @@ def lcp_tbl_leaving_lexi(tbl, rcands, col):
 	#print 'lex_ratios', [[x[0], vec_str(x[1])] for x in lex_ratios]
 	return lex_ratios[0][0]
 
-def lcp_tbl_leaving(tbl, rcands, col, opts):
+def lcp_tbl_leaving(tbl, r_cands, col, opts):
 	if opts.get('no-lex', False):
-		return lcp_tbl_leaving_topmost(tbl, rcands, col)
+		return lcp_tbl_leaving_topmost(tbl, r_cands, col)
 	else:	
-		 return lcp_tbl_leaving_lexi(tbl, rcands, col)
+		 return lcp_tbl_leaving_lexi(tbl, r_cands, col)
 
 def lcp_tbl_struct(nc, off, end, lbl, init):
 	return { 'nc':nc, 'off':off, 'end':end, 'lbl':lbl, 'init':init }
@@ -324,8 +324,8 @@ def lcp_solve_ppm1_tableau(tbl, opts = {}):
 		M = tbl['M']; q = lcp_tbl_col(tbl, 'q');
 		if all(x >= 0 for x in q): # Success 
 			status = 2; break;
-		rcands = [x for x in range(len(q)) if q[x] < 0]
-		r,c = rcands[-1], lcp_tbl_pp_compl(tbl, tbl['L'][rcands[-1]]) 
+		r_cands = [x for x in range(len(q)) if q[x] < 0]
+		r,c = r_cands[-1], lcp_tbl_pp_compl(tbl, tbl['L'][r_cands[-1]]) 
 		if (M[r][c] == 0): # Failure
 			status = 0; break;
 		# Pivot
@@ -347,19 +347,26 @@ def lcp_solve_ppcd1_tableau(tbl, opts = {}):
 		M = tbl['M']; q = lcp_tbl_col(tbl, 'q');
 		if all(x >= 0 for x in q): # Success 
 			status = 2; break;
-		rcands = [x for x in range(len(q)) if q[x] < 0]
-		c_disting = lcp_tbl_pp_compl(tbl, tbl['L'][rcands[-1]]) 
-		r_block = lcp_tbl_leaving(tbl, rcands, c_disting, opts); xi_block = tbl['L'][r_block];
+		q_cands = [x for x in range(len(q)) if q[x] < 0]
+		r_disting = q_cands[-1]
+		c_disting = lcp_tbl_pp_compl(tbl, tbl['L'][r_disting]) 
+		q = lcp_tbl_col(tbl, 'q');
+		r_cands = [r_disting] + [x for x in range(tbl['n']) if M[x][c_disting] > 0 and q[x] >= 0]
+		mat_print(tbl['M'], '')
+		print 'r_cands', r_cands
+		r_block = lcp_tbl_leaving(tbl, r_cands, c_disting, opts); xi_block = tbl['L'][r_block];
 		lcp_tbl_pivot(tbl, r_block, c_disting)
-		opt_print('{}. M-pvt: {}-{}, {}'.format(it, r,c, lcp_tbl_lbls_str(tbl)), opts)
+		opt_print('{}. M-pvt: {}-{}, {}'.format(it, r_block,c_disting, lcp_tbl_lbls_str(tbl)), opts)
 		while ( (lcp_tbl_pp_compl(tbl, xi_block) != c_disting) 
 				and (status == 1 and (maxit == 0 or it < maxit)) ):
 			it = it + 1
 			c_driv = lcp_tbl_pp_compl(tbl, xi_block)
-			rcands = [x for x in range(len(q)) if q[x] < 0]
-			r_block = lcp_tbl_leaving(tbl, rcands, c_driv, opts); xi_block = tbl['L'][r_block];
-			lcp_tbl_pivot(tbl, r_block, c_disting)
-			opt_print('{}. m-pvt: {}-{}, {}'.format(it, r,c, lcp_tbl_lbls_str(tbl)), opts)
+			q = lcp_tbl_col(tbl, 'q');
+			#???
+			r_cands = [x for x in range(tbl['n']) if M[x][c_driv] > 0 and q[x] >= 0]
+			r_block = lcp_tbl_leaving(tbl, r_cands, c_driv, opts); xi_block = tbl['L'][r_block];
+			lcp_tbl_pivot(tbl, r_block, c_driv)
+			opt_print('{}. m-pvt: {}-{}, {}'.format(it, r_block,c_driv, lcp_tbl_lbls_str(tbl)), opts)
 	if (status == 2):
 		tbl['sol'] = lcp_tbl_solution(tbl,['z'])
 	else:	
@@ -412,10 +419,10 @@ def lcp_solve_cpa_tableau(tbl, opts = {}):
 			status = 2; break;
 		M = tbl['M']
 		c = lcp_tbl_pp_compl(tbl, dropped)
-		rcands = [x for x in range(tbl['n']) if M[x][c] > 0]
-		if (len(rcands) == 0): # Failure, p.68
+		r_cands = [x for x in range(tbl['n']) if M[x][c] > 0]
+		if (len(r_cands) == 0): # Failure, p.68
 			status = 0; break;
-		r = lcp_tbl_leaving(tbl, rcands, c, opts)
+		r = lcp_tbl_leaving(tbl, r_cands, c, opts)
 		dropped = tbl['L'][r]; 
 		lcp_tbl_pivot(tbl, r, c); 
 		opt_print('{}. pvt: {}-{}, {}'.format(it, r,c, lcp_tbl_lbls_str(tbl)), opts)
