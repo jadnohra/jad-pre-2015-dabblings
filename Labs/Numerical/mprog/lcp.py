@@ -541,4 +541,6 @@ if 0: test_cpa('Murty p.81', {'maxit':20, 'log':True})
 if 0: test_cpa('Murty p.83', {'maxit':10, 'log':True, 'no-lex':True}); test_cpa('Murty p.83', {'maxit':10, 'log':True}); 
 if 0: test_cpa('Murty p.97', {'maxit':20, 'log':True})
 if 0: test_cpa('Murty p.107', {'maxit':20, 'log':True})
-if 1: test_ppcd1('Murty p.255', {'maxit':20, 'log':True})
+if 0: test_ppcd1('Murty p.255', {'maxit':20, 'log':True})
+if 0: test_ppcd1('Murty p.261', {'maxit':20, 'log':True})
+if 1: test_ppcd1('Murty p.262', {'maxit':20, 'log':True})
