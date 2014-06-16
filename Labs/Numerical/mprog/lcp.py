@@ -341,6 +341,7 @@ def lcp_solve_ppcd1_tableau(tbl, opts = {}):
 	# Dantzig-Cottle Principal Pivoting Method, Murty p.273
 	# Processes P matrices.
 	#
+	qoff = lcp_tbl_off(tbl, 'q');
 	maxit = opts.get('maxit', 0); it = 0; status = 1;
 	while (status == 1 and (maxit == 0 or it < maxit)):
 		it = it + 1
@@ -350,10 +351,8 @@ def lcp_solve_ppcd1_tableau(tbl, opts = {}):
 		q_cands = [x for x in range(len(q)) if q[x] < 0]
 		r_disting = q_cands[-1]
 		c_disting = lcp_tbl_pp_compl(tbl, tbl['L'][r_disting]) 
-		q = lcp_tbl_col(tbl, 'q');
-		r_cands = [r_disting] + [x for x in range(tbl['n']) if M[x][c_disting] > 0 and q[x] >= 0]
-		mat_print(tbl['M'], '')
-		print 'r_cands', r_cands
+		r_cands = [r_disting] + [x for x in range(tbl['n']) if M[x][c_disting] > 0 and M[x][qoff] >= 0]
+		#mat_print(tbl['M'], '')
 		r_block = lcp_tbl_leaving(tbl, r_cands, c_disting, opts); xi_block = tbl['L'][r_block];
 		lcp_tbl_pivot(tbl, r_block, c_disting)
 		opt_print('{}. M-pvt: {}-{}, {}'.format(it, r_block,c_disting, lcp_tbl_lbls_str(tbl)), opts)
@@ -361,9 +360,7 @@ def lcp_solve_ppcd1_tableau(tbl, opts = {}):
 				and (status == 1 and (maxit == 0 or it < maxit)) ):
 			it = it + 1
 			c_driv = lcp_tbl_pp_compl(tbl, xi_block)
-			q = lcp_tbl_col(tbl, 'q');
-			#???
-			r_cands = [x for x in range(tbl['n']) if M[x][c_driv] > 0 and q[x] >= 0]
+			r_cands = [r_disting] + [x for x in range(tbl['n']) if M[x][c_driv] > 0 and M[x][qoff] >= 0]
 			r_block = lcp_tbl_leaving(tbl, r_cands, c_driv, opts); xi_block = tbl['L'][r_block];
 			lcp_tbl_pivot(tbl, r_block, c_driv)
 			opt_print('{}. m-pvt: {}-{}, {}'.format(it, r_block,c_driv, lcp_tbl_lbls_str(tbl)), opts)
