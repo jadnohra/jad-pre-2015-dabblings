@@ -443,13 +443,16 @@ def lcp_solve_ppcd2_tableau(tbl, opts = {}):
 				i_disting = tbl['L'][r_disting]; i_driv = lcp_tbl_pp_compl(tbl, i_disting);
 			else:
 				first_lbda = next((x for x in range(len(lb)) if lb[x] == lbda), -1)
+				print 'first_lbda', first_lbda
 				if (first_lbda == -1) or (all(M[x][qoff] >= 0 for x in range(n))):
 					status = 2; break;
 				i_disting = first_lbda; i_driv = i_disting;
+				print 'disting', lcp_tbl_lbl(tbl, i_disting)
 				# Pivot-less one-step major cycle
 				is_blocked = False
 				for ri in range(n):
 					bound = lcp_tbl_ppcd2_block_bounds(tbl, ri, i_driv)
+					print bound, 'this is wrong'
 					if (bound[1] and bound[1] < 0):
 						is_blocked = True
 						break
@@ -469,7 +472,6 @@ def lcp_solve_ppcd2_tableau(tbl, opts = {}):
 			disting_bound = lcp_tbl_ppcd2_block_bounds(tbl, r_disting, i_driv)
 			if disting_bound[0] and ((r_block == -1) or (disting_bound[0] < driv_bound)):
 				r_block = r_disting; driv_bound = disting_bound[0]; block_val = disting_bound[2];
-			print 'lb', lb
 			print 'drive:', driv_bound, block_val
 			if (r_block == -1):
 				status = 0; break;
@@ -477,12 +479,13 @@ def lcp_solve_ppcd2_tableau(tbl, opts = {}):
 			i_block = tbl['L'][r_block]	
 			lcp_tbl_ppcd2_pivot(tbl, r_block, i_block, i_driv, block_val)
 			opt_print('{}. pvt: {}-{}, {}'.format(it, r_block,i_driv, lcp_tbl_lbls_str(tbl, tbl['L'])), opts)
-			vec_print(tbl['lb'])
 			mat_print(tbl['M'])
+			vec_print(tbl['lb'])
 			# Decide next operation
 			if (i_block != i_disting):
 				i_driv = lcp_tbl_pp_compl(tbl, i_block) 
 			else:	
+				print 'NEXT'
 				break
 
 
