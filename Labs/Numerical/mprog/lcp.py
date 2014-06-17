@@ -33,6 +33,8 @@ def vec_print(v, log = True):
 
 def m_isgn(v):
 	return int(math.copysign(1, v))
+def m_ineg(v):
+	return 1 if v < 0 else 0
 def vec_create(n,v):
 	return [v]*n
 def vec_dim(v):
@@ -257,21 +259,21 @@ def lcp_tbl_off(tbl, lbl):
 def lcp_tbl_col(tbl, lbl):
 	 return mat_col(tbl['M'], lcp_tbl_off(tbl, lbl))
 
-def lcp_tbl_lbl(tbl, i):
-	xi = tbl['L'][i]; structs = tbl['structs']; sv = lcp_tbl_sorted_structs(tbl);
+def lcp_tbl_lbl(tbl, xi):
+	structs = tbl['structs']; sv = lcp_tbl_sorted_structs(tbl);
 	for si in range(len(sv)):
 		if (xi >= sv[si]['off'] and xi <= sv[si]['end']):
 			if (sv[si]['nc'] > 1):
 				return '{}{}'.format(sv[si]['lbl'], 1+xi-sv[si]['off'])
 			else:
 				return sv[si]['lbl']
-	return ''		
+	return ''
 		
-def lcp_tbl_lbls(tbl):
-	return [lcp_tbl_lbl(tbl, i) for i in range(tbl['n'])]
+def lcp_tbl_lbls(tbl, xis):
+	return [lcp_tbl_lbl(tbl, xi) for xi in xis]
 
-def lcp_tbl_lbls_str(tbl):
-	return  '({})'.format(', '.join(lcp_tbl_lbls(tbl)))
+def lcp_tbl_lbls_str(tbl, xis):
+	return  '({})'.format(', '.join(lcp_tbl_lbls(tbl, xis)))
 
 def lcp_tbl_solution(tbl, lbls, str=False):
 	L = tbl['L']; q = lcp_tbl_col(tbl, 'q'); 
@@ -296,21 +298,16 @@ def lcp_tbl_pp_struct(n):
 	return {'w': lcp_tbl_struct(n, 0, n-1, 'w', 'id'), 
 			'z': lcp_tbl_struct(n, n, (2*n)-1, 'z', 0), 
 			'q': lcp_tbl_struct(1, (2*n), (2*n), 'q', 0)}
-	
 def lcp_tbl_pp_create(n):
 	return lcp_tbl_create(n, lcp_tbl_pp_struct(n))
-
 def lcp_tbl_pp_rinit(tbl, r, m, q):
 	mat_rput(tbl['M'], r, lcp_tbl_off(tbl, 'z'), vec_neg(m))
 	tbl['M'][r][lcp_tbl_off(tbl, 'q')] = q
-
 # solve w-Mz=q
 def lcp_tbl_pp_init_Mq(tbl, Mq):
 	for r in range(len(Mq)): lcp_tbl_pp_rinit(tbl, r, Mq[r][:-1], Mq[r][-1])
-
 def lcp_tbl_pp_create_Mq(Mq): 
 	tbl = lcp_tbl_pp_create(len(Mq[0])-1); lcp_tbl_pp_init_Mq(tbl, Mq); return tbl;
-
 def lcp_tbl_pp_compl(tbl, xi):
 	return (xi +  tbl['n']) % (2*tbl['n'])
 
@@ -330,7 +327,7 @@ def lcp_solve_ppm1_tableau(tbl, opts = {}):
 			status = 0; break;
 		# Pivot
 		lcp_tbl_pivot(tbl, r, c)
-		opt_print('{}. pvt: {}-{}, {}'.format(it, r,c, lcp_tbl_lbls_str(tbl)), opts)
+		opt_print('{}. pvt: {}-{}, {}'.format(it, r,c, lcp_tbl_lbls_str(tbl, tbl['L'])), opts)
 	if (status == 2):
 		tbl['sol'] = lcp_tbl_solution(tbl,['z'])
 	else:	
@@ -341,34 +338,173 @@ def lcp_solve_ppcd1_tableau(tbl, opts = {}):
 	# Dantzig-Cottle Principal Pivoting Method, Murty p.273
 	# Processes P matrices.
 	#
-	qoff = lcp_tbl_off(tbl, 'q');
+	M = tbl['M']; qoff = lcp_tbl_off(tbl, 'q'); n = tbl['n'];
 	maxit = opts.get('maxit', 0); it = 0; status = 1;
 	while (status == 1 and (maxit == 0 or it < maxit)):
 		it = it + 1
-		M = tbl['M']; q = lcp_tbl_col(tbl, 'q');
-		if all(x >= 0 for x in q): # Success 
+		if all(M[x][qoff] >= 0 for x in range(n)): # Success 
 			status = 2; break;
-		q_cands = [x for x in range(len(q)) if q[x] < 0]
+		q_cands = [x for x in range(n) if M[x][qoff] < 0]
 		r_disting = q_cands[-1]
 		c_disting = lcp_tbl_pp_compl(tbl, tbl['L'][r_disting]) 
-		r_cands = [r_disting] + [x for x in range(tbl['n']) if M[x][c_disting] > 0 and M[x][qoff] >= 0]
+		r_cands = [r_disting] + [x for x in range(n) if M[x][c_disting] > 0 and M[x][qoff] >= 0]
 		#mat_print(tbl['M'], '')
 		r_block = lcp_tbl_leaving(tbl, r_cands, c_disting, opts); xi_block = tbl['L'][r_block];
 		lcp_tbl_pivot(tbl, r_block, c_disting)
-		opt_print('{}. M-pvt: {}-{}, {}'.format(it, r_block,c_disting, lcp_tbl_lbls_str(tbl)), opts)
+		opt_print('{}. M-pvt: {}-{}, {}'.format(it, r_block,c_disting, lcp_tbl_lbls_str(tbl, tbl['L'])), opts)
 		while ( (lcp_tbl_pp_compl(tbl, xi_block) != c_disting) 
 				and (status == 1 and (maxit == 0 or it < maxit)) ):
 			it = it + 1
 			c_driv = lcp_tbl_pp_compl(tbl, xi_block)
-			r_cands = [r_disting] + [x for x in range(tbl['n']) if M[x][c_driv] > 0 and M[x][qoff] >= 0]
+			r_cands = [r_disting] + [x for x in range(n) if M[x][c_driv] > 0 and M[x][qoff] >= 0]
 			r_block = lcp_tbl_leaving(tbl, r_cands, c_driv, opts); xi_block = tbl['L'][r_block];
 			lcp_tbl_pivot(tbl, r_block, c_driv)
-			opt_print('{}. m-pvt: {}-{}, {}'.format(it, r_block,c_driv, lcp_tbl_lbls_str(tbl)), opts)
+			opt_print('{}. m-pvt: {}-{}, {}'.format(it, r_block,c_driv, lcp_tbl_lbls_str(tbl, tbl['L'])), opts)
 	if (status == 2):
 		tbl['sol'] = lcp_tbl_solution(tbl,['z'])
 	else:	
 		tbl['sol'] = []
 	return (status == 2)
+
+
+def lcp_tbl_ppcd2_struct(n):
+	return {'w': lcp_tbl_struct(n, 0, n-1, 'w', 'id'), 
+			'z': lcp_tbl_struct(n, n, (2*n)-1, 'z', 0), 
+			'q': lcp_tbl_struct(1, (2*n), (2*n), 'q', 0),
+			'b': lcp_tbl_struct(1, (2*n)+1, (2*n)+1, 'b', 0)}
+def lcp_tbl_ppcd2_create(n):
+	return lcp_tbl_create(n, lcp_tbl_ppcd2_struct(n))
+def lcp_tbl_ppcd2_rinit(tbl, r, m, q):
+	mat_rput(tbl['M'], r, lcp_tbl_off(tbl, 'z'), vec_neg(m))
+	tbl['M'][r][lcp_tbl_off(tbl, 'q')] = q
+	tbl['M'][r][lcp_tbl_off(tbl, 'b')] = q
+# solve w-Mz=q
+def lcp_tbl_ppcd2_init_Mq(tbl, Mq):
+	for r in range(len(Mq)): lcp_tbl_ppcd2_rinit(tbl, r, Mq[r][:-1], Mq[r][-1])
+def lcp_tbl_ppcd2_create_Mq(Mq): 
+	tbl = lcp_tbl_ppcd2_create(len(Mq[0])-1); lcp_tbl_ppcd2_init_Mq(tbl, Mq); return tbl;
+def lcp_tbl_ppcd2_compl(tbl, xi):
+	return (xi +  tbl['n']) % (2*tbl['n'])
+
+def lcp_tbl_ppcd2_pivot(tbl, plr, pec, lbda, i_disting):
+	n = tbl['n']; M = tbl['M']; boff = lcp_tbl_off(tbl, 'b');
+	i_leaving = tbl['L'][plr]
+	tbl['lb'][i_leaving] = g_num(0) if (i_leaving == i_disting) or (M[plr][boff] >= 0) else g_num(1)
+	lcp_tbl_pivot(tbl, plr, pec)
+	off = tbl['lb'][i_leaving] * lbda
+	for ri in range(n): M[ri][boff] = M[ri][boff] - (off*M[ri][i_leaving])
+		
+def lcp_tbl_ppcd2_leaving_topmost(tbl, r_cands, col, lbda, r_disting, i_disting):
+	M = tbl['M']; L = tbl['L']; boff = lcp_tbl_off(tbl, 'b');
+	cmp_lambda = lambda x,y: m_isgn(x[0]-y[0]) if (x[1] == y[1]) else m_isgn(x[1]-y[1])
+	ratios = sorted([[ri, (M[ri][boff]-m_ineg(M[ri][boff])*lbda)/M[ri][col]] for ri in r_cands], cmp=cmp_lambda)
+	for el in filter(lambda el: el[1]==ratios[0][1] and L[el[0]] == i_disting, ratios):
+		return el
+	return ratios[0]
+
+def lcp_solve_ppcd2_tableau(tbl, opts = {}):
+	# Asymmetric PPM, Cottle p.260, 336
+	# Dantzig-Cottle Principal Pivoting Method, Murty p.276.
+	# Processes P, PSD matrices.
+	#
+	#TODO: lexi
+	#
+	M = tbl['M']; n = tbl['n']; qoff = lcp_tbl_off(tbl, 'q'); boff = lcp_tbl_off(tbl, 'b');
+	lb = [g_num(0)]*(2*n); tbl['lb'] = lb;
+	maxit = opts.get('maxit', 0); it = 0; status = 1;
+	lbda = g_num(int(math.ceil(min(M[x][qoff] for x in range(n)) - 1)))
+	print 'lbda', lbda
+	while (status == 1 and (maxit == 0 or it < maxit)):
+		it = it + 1
+		if all(M[x][qoff] >= 0 for x in range(n)): # Success 
+			status = 2; break;
+		# Determine distinguished
+		r_disting = next((x for x in range(n) if M[x][boff] < 0), -1)
+		if (r_disting == -1):
+			first_lbda = next((x for x in range(len(lb)) if lb[x] == 1), -1)
+			if (first_lbda == -1) or (all(M[x][qoff] >= 0)):
+				status = 2; break;
+			i_disting = first_lbda; i_driv = i_disting;
+		else:
+			i_disting = tbl['L'][r_disting]; i_driv = lcp_tbl_pp_compl(tbl, i_disting);
+		print 'disting', lcp_tbl_lbl(tbl, i_disting)
+		# Determine blocking
+		while (status == 1 and (maxit == 0 or it < maxit)):
+			r_cands = [x for x in range(n) if M[x][i_driv] > 0]
+			if (len(r_cands) == 0):	# Unblocked, no solution
+				status = 0; break;
+			print 'r_cands', r_cands	
+			r_block, driv_theta = lcp_tbl_ppcd2_leaving_topmost(tbl, r_cands, i_driv, lbda, r_disting, i_disting)
+			if (i_driv == i_disting and driv_theta >= 0):
+				print 'status 3'
+				status = 3; break; #TODO, no pivot, todo leaving should return disting if that is involved in a tie
+			# Pivot
+			i_block = tbl['L'][r_block]
+			print 'driv', lcp_tbl_lbl(tbl, i_driv), 'theta', driv_theta, 'r_block', r_block, 'block', lcp_tbl_lbl(tbl, i_block)
+			lcp_tbl_ppcd2_pivot(tbl, r_block, i_driv, lbda, i_disting)
+			vec_print(tbl['lb'])
+			mat_print(tbl['M'])
+			opt_print('{}. pvt: {}-{}, {}'.format(it, r_block,i_driv, lcp_tbl_lbls_str(tbl, tbl['L'])), opts)
+			# Decide next step
+			if (i_block != i_disting):
+				i_driv = lcp_tbl_pp_compl(tbl, i_block) 
+			else:
+				break;	
+	if (status == 2):
+		tbl['sol'] = lcp_tbl_solution(tbl,['z'])
+	else:	
+		tbl['sol'] = []
+	return (status == 2)
+
+#----------------------------------------------------------
+# def lcp_solve_ppcd2_tableau(tbl, opts = {}):
+# 	# Asymmetric PPM, Cottle p.260, 336
+# 	# Dantzig-Cottle Principal Pivoting Method, Murty p.276.
+# 	# Processes P, PSD matrices.
+# 	#
+# 	M = tbl['M']; qoff = lcp_tbl_off(tbl, 'q'); n = tbl['n'];
+# 	nb = ([0]*n)+([1]*n); tbl['nb'] = nb;
+# 	nbv = [g_num(0)]*(2*n); tbl['nbv'] = nbv;
+# 	maxit = opts.get('maxit', 0); it = 0; status = 1;
+# 	lbda = g_num(int(min(M[x][qoff] for x in range(n)) - 2))
+# 	while (status == 1 and (maxit == 0 or it < maxit)):
+# 		it = it + 1
+# 		if all(M[x][qoff] >= 0 for x in range(n)): # Success 
+# 			status = 2; break;
+# 		# Determine distinguished
+# 		lbda_nb = next((x for x in range(2*n) if nb[x] == 1 and nbv[x]=lbda), -1)
+# 		if (lbda_nb != -1):
+# 			i_disting = lbda_nb; i_driv = lbda_nb;
+# 		else:
+# 			i_disting = next(x for x in range(n) if M[x][qoff] < 0)
+# 			i_driv = lcp_tbl_pp_compl(tbl, i_disting) 
+# 		if (nb[i_driv] == 0) raise ValueError('')
+# 		# Determine blocking
+
+
+# 		q_cands = [x for x in range(n) if M[x][qoff] < 0]
+# 		r_disting = q_cands[-1]
+# 		c_disting = lcp_tbl_pp_compl(tbl, tbl['L'][r_disting]) 
+# 		if (M[r_disting][c_disting] == 0) and all(M[x][c_disting] <= 0 for x in range(n)): # no solution
+# 			status = 0; break;
+# 		r_cands = [r_disting] + [x for x in range(n) if M[x][c_disting] > 0 and M[x][qoff] >= 0]
+# 		#mat_print(tbl['M'], '')
+# 		r_block = lcp_tbl_leaving(tbl, r_cands, c_disting, opts); xi_block = tbl['L'][r_block];
+# 		lcp_tbl_pivot(tbl, r_block, c_disting)
+# 		opt_print('{}. M-pvt: {}-{}, {}'.format(it, r_block,c_disting, lcp_tbl_lbls_str(tbl, tbl['L'])), opts)
+# 		while ( (lcp_tbl_pp_compl(tbl, xi_block) != c_disting) 
+# 				and (status == 1 and (maxit == 0 or it < maxit)) ):
+# 			it = it + 1
+# 			c_driv = lcp_tbl_pp_compl(tbl, xi_block)
+# 			r_cands = [r_disting] + [x for x in range(n) if M[x][c_driv] > 0 and M[x][qoff] >= 0]
+# 			r_block = lcp_tbl_leaving(tbl, r_cands, c_driv, opts); xi_block = tbl['L'][r_block];
+# 			lcp_tbl_pivot(tbl, r_block, c_driv)
+# 			opt_print('{}. m-pvt: {}-{}, {}'.format(it, r_block,c_driv, lcp_tbl_lbls_str(tbl, tbl['L'])), opts)
+# 	if (status == 2):
+# 		tbl['sol'] = lcp_tbl_solution(tbl,['z'])
+# 	else:	
+# 		tbl['sol'] = []
+# 	return (status == 2)
 
 def lcp_tbl_cpa_struct(n):
 	return {'w': lcp_tbl_struct(n, 0, n-1, 'w', 'id'), 
@@ -405,7 +541,7 @@ def lcp_solve_cpa_tableau(tbl, opts = {}):
 		c = lcp_tbl_off(tbl, 'z0')
 		dropped = tbl['L'][r];
 		lcp_tbl_pivot(tbl, r, c); 
-		opt_print('0. pvt: {}-{}, {}'.format(r,c, lcp_tbl_lbls_str(tbl)), opts)
+		opt_print('0. pvt: {}-{}, {}'.format(r,c, lcp_tbl_lbls_str(tbl, tbl['L'])), opts)
 		#mat_print(tbl['M'], '')	
 	maxit = opts.get('maxit', 0); it = 0; 
 	while (status == 1 and (maxit == 0 or it < maxit)):
@@ -422,7 +558,7 @@ def lcp_solve_cpa_tableau(tbl, opts = {}):
 		r = lcp_tbl_leaving(tbl, r_cands, c, opts)
 		dropped = tbl['L'][r]; 
 		lcp_tbl_pivot(tbl, r, c); 
-		opt_print('{}. pvt: {}-{}, {}'.format(it, r,c, lcp_tbl_lbls_str(tbl)), opts)
+		opt_print('{}. pvt: {}-{}, {}'.format(it, r,c, lcp_tbl_lbls_str(tbl, tbl['L'])), opts)
 		#mat_print(tbl['M'], '');
 	if (status == 2):
 		tbl['sol'] = lcp_tbl_solution(tbl, ['z'])
@@ -505,6 +641,12 @@ def get_test_Mq(test):
 			[2, 1, 1, -4],
 			[1, 2, 1, -5],
 			[1, 1, 2, -1],
+		],
+		'Cottle p.258':
+		[
+			[0, -1, 2, -3],
+			[2, 0, -2, 6],
+			[-1, 1, 0, -1],
 		]
 	}
 	return Mq_tbl[test]
@@ -512,35 +654,47 @@ def get_test_Mq(test):
 if 1:
 	g_num = g_num_rational
 
-def test_ppm1(test, opts = {}):
-	tbl = lcp_tbl_pp_create_Mq( mat_rational(get_test_Mq(test)) )
-	lcp_solve_ppm1_tableau(tbl, opts)
-	vec_print(tbl['sol'])
+def test_ppm1(tests, opts = {}):
+	for test in tests:
+		tbl = lcp_tbl_pp_create_Mq( mat_rational(get_test_Mq(test)) )
+		lcp_solve_ppm1_tableau(tbl, opts)
+		vec_print(tbl['sol'])
 
-def test_cpa(test, opts = {}):
-	tbl = lcp_tbl_cpa_create_Mq( mat_rational(get_test_Mq(test)) )
-	lcp_solve_cpa_tableau(tbl, opts)
-	vec_print(tbl['sol'])	
+def test_cpa(tests, opts = {}):
+	for test in tests:
+		tbl = lcp_tbl_cpa_create_Mq( mat_rational(get_test_Mq(test)) )
+		lcp_solve_cpa_tableau(tbl, opts)
+		vec_print(tbl['sol'])	
 
-def test_ppcd1(test, opts = {}):
-	tbl = lcp_tbl_pp_create_Mq( mat_rational(get_test_Mq(test)) )
-	lcp_solve_ppcd1_tableau(tbl, opts)
-	vec_print(tbl['sol'])		
+def test_ppcd1(tests, opts = {}):
+	for test in tests:
+		tbl = lcp_tbl_pp_create_Mq( mat_rational(get_test_Mq(test)) )
+		lcp_solve_ppcd1_tableau(tbl, opts)
+		vec_print(tbl['sol'])		
+
+def test_ppcd2(tests, opts = {}):
+	for test in tests:
+		tbl = lcp_tbl_ppcd2_create_Mq( mat_rational(get_test_Mq(test)) )
+		lcp_solve_ppcd2_tableau(tbl, opts)
+		vec_print(tbl['sol'])
 
 if 0:
 	tbl = lcp_tbl_pp_create_Mq(mat_rational([ [-1, 1, -1, 3], [-1, 1, -1, 5], [-1, -1, -1, 9] ]) )
 	mat_print(tbl['M']); lcp_tbl_pivot(tbl, 2, 5); mat_print(tbl['M']);
-if 0: test_ppm1('Murty p.255', {'maxit':20, 'log':True})
-if 0: test_ppm1('Murty p.261', {'maxit':10, 'log':False})
-if 0: test_ppm1('Murty p.262', {'maxit':10, 'log':True})
-if 0: test_ppm1('Murty p.265', {'maxit':10, 'log':True})
-if 0: test_cpa('Murty p.77', {'maxit':20, 'log':True})
-if 0: test_cpa('Murty p.79', {'maxit':4, 'log':True})
-if 0: test_cpa('Murty p.79 (mod)', {'maxit':4, 'log':True})
-if 0: test_cpa('Murty p.81', {'maxit':20, 'log':True})
-if 0: test_cpa('Murty p.83', {'maxit':10, 'log':True, 'no-lex':True}); test_cpa('Murty p.83', {'maxit':10, 'log':True}); 
-if 0: test_cpa('Murty p.97', {'maxit':20, 'log':True})
-if 0: test_cpa('Murty p.107', {'maxit':20, 'log':True})
-if 0: test_ppcd1('Murty p.255', {'maxit':20, 'log':True})
-if 0: test_ppcd1('Murty p.261', {'maxit':20, 'log':True})
-if 1: test_ppcd1('Murty p.262', {'maxit':20, 'log':True})
+if 0: test_ppm1(['Murty p.255'], {'maxit':20, 'log':True})
+if 0: test_ppm1(['Murty p.261'], {'maxit':10, 'log':False})
+if 0: test_ppm1(['Murty p.262'], {'maxit':10, 'log':True})
+if 0: test_ppm1(['Murty p.265'], {'maxit':10, 'log':True})
+if 0: test_cpa(['Murty p.77'], {'maxit':20, 'log':True})
+if 0: test_cpa(['Murty p.79'], {'maxit':4, 'log':True})
+if 0: test_cpa(['Murty p.79 (mod)'], {'maxit':4, 'log':True})
+if 0: test_cpa(['Murty p.81'], {'maxit':20, 'log':True})
+if 0: test_cpa(['Murty p.83'], {'maxit':10, 'log':True, 'no-lex':True}); test_cpa('Murty p.83', {'maxit':10, 'log':True}); 
+if 0: test_cpa(['Murty p.97'], {'maxit':20, 'log':True})
+if 0: test_cpa(['Murty p.107'], {'maxit':20, 'log':True})
+if 0: test_ppcd1(['Murty p.255'], {'maxit':20, 'log':True})
+if 0: test_ppcd1(['Murty p.261'], {'maxit':20, 'log':True})
+if 0: test_ppcd1(['Murty p.262'], {'maxit':20, 'log':True})
+if 0: test_ppcd2(['Murty p.255', 'Murty p.261', 'Murty p.262'], {'maxit':20, 'log':False})
+if 1: test_ppcd2(['Cottle p.258'], {'maxit':20, 'log':True})
+if 0: test_ppcd2(['Murty p.265'], {'maxit':20, 'log':True})
