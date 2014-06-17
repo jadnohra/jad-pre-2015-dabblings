@@ -2,6 +2,7 @@ package com.ponyandpony.mediafrost;
 
 import java.io.File;
 import java.io.FileInputStream;
+import java.io.IOException;
 import java.io.InputStream;
 import java.io.InterruptedIOException;
 import java.io.UnsupportedEncodingException;
@@ -481,7 +482,7 @@ public class FullscreenActivity extends Activity {
 						String fileName = new File(filePath).getName();
 
 						setText(mStatusTextViews.activity,
-								String.format("Hashing %s", fileName));
+								String.format("Hashing %s (%d/%d)", fileName, i+1, imageCount));
 						String fid = genMD5Hash(filePath);
 						fidMap.put(fid, Integer.valueOf(i));
 						sock.getOutputStream().write(
@@ -549,7 +550,7 @@ public class FullscreenActivity extends Activity {
 
 							File file = new File(filePath);
 							setText(mStatusTextViews.activity,
-									String.format("Sending %s", file.getName()));
+									String.format("Sending %s (%d/%d)", file.getName(), i+1, requestedFids.size()));
 							FileInputStream fileInputStream = new FileInputStream(
 									file);
 							int fileSize = fileInputStream.available();
@@ -622,10 +623,11 @@ public class FullscreenActivity extends Activity {
 					logStatus("Done.");
 				}
 
+			} catch(IOException e1) {
+				logStatus(e1.toString());
 			} catch (Exception e) {
-				//TODO: log last lines of stack trace, special case for server connect time out.
 				//TODO: file and byte percentage bars or text
-				logStatus(e.toString());
+				logStatus(Log.getStackTraceString(e));
 			}
 			mTimerHandler.removeCallbacks(mTimerRunnable);
 			stopProgress();
