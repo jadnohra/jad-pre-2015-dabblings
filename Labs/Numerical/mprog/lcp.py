@@ -387,11 +387,14 @@ def lcp_tbl_ppcd2_create_Mq(Mq):
 def lcp_tbl_ppcd2_compl(tbl, xi):
 	return (xi +  tbl['n']) % (2*tbl['n'])
 
-def lcp_tbl_ppcd2_pivot(tbl, plr, pli, pec, plv):
+def lcp_tbl_ppcd2_pivot(tbl, plr, pli, pec, plv, pev):
 	n = tbl['n']; M = tbl['M']; boff = lcp_tbl_off(tbl, 'b');
 	lcp_tbl_pivot(tbl, plr, pec)
-	tbl['lb'][pli] = plv
+	#lcp_tbl_print_M(tbl)
 	for ri in range(n): M[ri][boff] = M[ri][boff] - (M[ri][pli] * plv)
+	#print '>>', plr, pev
+	M[plr][boff] = pev
+	tbl['lb'][pli] = plv
 		
 def lcp_tbl_ppcd2_leaving_topmost(tbl, r_cands, col, lbda, r_disting, i_disting):
 	M = tbl['M']; L = tbl['L']; boff = lcp_tbl_off(tbl, 'b');
@@ -412,11 +415,11 @@ def lcp_tbl_ppcd2_block_change(tbl, r, c):
 		return [None, None, M[r][boff]]
 	if (mrc > 0):
 		low_block = m_ineg(M[r][boff])*lbda
-		change = (M[r][boff] - low_block ) / mrc
+		change = (M[r][boff] - low_block) / mrc
 		return [None, change, low_block]
 	if (mrc < 0):
 		zero_block = g_num(0)
-		change = (M[r][boff] - zero_block ) / mrc
+		change = (M[r][boff] - zero_block) / mrc
 		return [change, None, zero_block]	
 
 def lcp_solve_ppcd2_tableau(tbl, opts = {}):
@@ -476,12 +479,12 @@ def lcp_solve_ppcd2_tableau(tbl, opts = {}):
 				disting_change = lcp_tbl_ppcd2_block_change(tbl, r_disting, i_driv)
 				if disting_change[0] and ((r_block == -1) or (disting_change[0] < driv_change)):
 					r_block = r_disting; driv_change = disting_change[0]; block_val = disting_change[2];
-			print 'drive:', driv_change, block_val
+			print 'drive:', driv_change, block_val, driv_change+lb[i_driv]
 			if (r_block == -1):
 				status = 0; break;
 			# Pivot
 			i_block = tbl['L'][r_block]	
-			lcp_tbl_ppcd2_pivot(tbl, r_block, i_block, i_driv, block_val)
+			lcp_tbl_ppcd2_pivot(tbl, r_block, i_block, i_driv, block_val, driv_change+lb[i_driv])
 			opt_print('{}. pvt: {}-{}, {}'.format(it, r_block,i_driv, lcp_tbl_lbls_str(tbl, tbl['L'])), opts)
 			lcp_tbl_print_M(tbl)
 			vec_print(tbl['lb'])
