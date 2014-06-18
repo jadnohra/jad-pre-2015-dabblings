@@ -79,6 +79,9 @@ def mat_rput(M, r, coff, v):
 	for i in range(len(v)): M[r][coff+i] = v[i]
 def mat_swapr(M, i, j):
 	r=M[i]; M[i]=M[j]; M[j]=r
+def mat_swapc(M, i, j):
+	for ri in range(len(M)):
+		r = M[ri][i]; M[ri][i] = M[ri][j]; M[ri][j] = r;
 def mat_copy(M):
 	r1 = len(M);c1 = len(M[0]);
 	N = mat_create(r1, c1, None)
@@ -87,7 +90,7 @@ def mat_copy(M):
 		for j in range(c1):
 			rn[j] = rm[j]
 	return N		
-def mat_copyTo(M, N):
+def mat_copy_to(M, N):
 	r1 = len(M);c1 = len(M[0]);
 	for i in range(r1):
 		rm = M[i]; rn = N[i];
@@ -558,6 +561,34 @@ def lcp_solve_cpa_tableau(tbl, opts = {}):
 	else:	
 		tbl['sol'] = []
 	return (status == 2)
+
+def mlcp_to_lcp_Mq(Mq, bounds, subst):
+	# TODO: handle unbounded variables using a phase 1 algorithm that drives them 
+	# to basic variables, trying both directions 
+	# (splitting each unbounded into 2, then choosing the one can be a succesful driver)
+	N = []
+	for bi in xrange(len(bounds)):
+		b = bounds[bi]
+		if (b[0]):
+			subst[bi] = [g_num(1), b[0]]
+			for ri in xrange(len(Mq)):
+				Mq[ri][-1] += Mq[ri][bi]*b[0]
+			if (b[1]): 
+				N.append(bi)
+		elif (b[1]):
+			subst[bi] = [g_num(-1), b[1]]
+			for ri in xrange(len(Mq)):
+				Mq[ri][-1] -= Mq[ri][bi]*b[1]
+				Mq[ri][bi] = -Mq[ri][bi]
+	new_Mq = mat_create(len(Mq)+len(N), len(bounds)+len(N), g_num(0))
+	mat_copy_to(Mq, new_Mq)
+	mat_swapc(new_Mq, len(bounds), len(new_Mq)-1)
+	off = [len(Mq), len(bounds)]
+	for i in len(N):
+		bi = N[i]
+		new_Mq[off[0]+i][bi] = g_num(1)
+		new_Mq[off[0]+i][off[1]+1] = g_num(1)
+		new_Mq[off[0]+i][-1] = bounds[bi][1]-bounds[bi][0]
 
 def get_test_Mq(test):
 	Mq_tbl = {
