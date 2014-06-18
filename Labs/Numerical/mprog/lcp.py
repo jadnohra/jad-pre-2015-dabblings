@@ -13,14 +13,8 @@ def print_tab(list, pref='', sep=' ', post=''):
     col_width = [max(len(str(x)) for x in col) for col in itertools.izip_longest(*list, fillvalue='')]
     for line in list:
         print pref + sep.join("{:>{}}".format(x, col_width[i]) for i,x in enumerate(line)) + post
-def mat_print(inMatrix, inName=''):
-	rows = len(inMatrix)
-	print inName, '[',rows,'x',len(inMatrix[0]),']'
-	for r in range(rows):
-		row = inMatrix[r]; cols = len(row); print '|',
-		for c in range(cols):
-			print row[c],
-		print '|'	
+def mat_print(M):
+	print_tab([[str(x) for x in M[r]] for r in range(len(M))])
 def log_print(str, log = True):
 	if (log):
 		print str	
@@ -294,6 +288,13 @@ def lcp_tbl_solution(tbl, lbls, str=False):
 		sol.extend(lblsol)
 	return sol
 
+def lcp_tbl_print_M(tbl):
+	M = tbl['M']; L = tbl['L'];
+	head = [['']+lcp_tbl_lbls(tbl, range(len(M[0])))]
+	list = [[lcp_tbl_lbl(tbl, L[r])]+[str(x) for x in M[r]] for r in range(len(M))]
+	head.extend(list)
+	print_tab(head)
+
 def lcp_tbl_pp_struct(n):
 	return {'w': lcp_tbl_struct(n, 0, n-1, 'w', 'id'), 
 			'z': lcp_tbl_struct(n, n, (2*n)-1, 'z', 0), 
@@ -405,18 +406,18 @@ def lcp_tbl_ppcd2_is_upper_block(tbl, r, c): return tbl['M'][r][c] > 0
 def lcp_tbl_ppcd2_is_lower_block(tbl, r, c): return tbl['M'][r][c] < 0
 def lcp_tbl_ppcd2_is_no_block(tbl, r, c): return tbl['M'][r][c] == 0
 
-def lcp_tbl_ppcd2_block_bounds(tbl, r, c):
+def lcp_tbl_ppcd2_block_change(tbl, r, c):
 	M = tbl['M']; L=tbl['L']; boff = lcp_tbl_off(tbl, 'b'); lbda=tbl['lbda']; mrc = M[r][c];
 	if (mrc == 0): 
 		return [None, None, M[r][boff]]
 	if (mrc > 0):
 		low_block = m_ineg(M[r][boff])*lbda
-		bound = (M[r][boff] - low_block ) / mrc
-		return [None, bound, low_block]
+		change = (M[r][boff] - low_block ) / mrc
+		return [None, change, low_block]
 	if (mrc < 0):
 		zero_block = g_num(0)
-		bound = (M[r][boff] - zero_block ) / mrc
-		return [bound, None, zero_block]	
+		change = (M[r][boff] - zero_block ) / mrc
+		return [change, None, zero_block]	
 
 def lcp_solve_ppcd2_tableau(tbl, opts = {}):
 	# Asymmetric PPM, Cottle p.260, 336
@@ -436,8 +437,9 @@ def lcp_solve_ppcd2_tableau(tbl, opts = {}):
 		if all(M[x][qoff] >= 0 for x in range(n)): # Success 
 			status = 2; break;
 		# Determine distinguished
-		r_disting = -1
-		while (r_disting == -1) and (status == 1) and (maxit == 0 or it < maxit):
+		#r_disting = -1
+		#while (r_disting == -1) and (status == 1) and (maxit == 0 or it < maxit):
+		if True:
 			r_disting = next((x for x in range(n) if M[x][boff] < 0), -1)
 			if (r_disting != -1):
 				i_disting = tbl['L'][r_disting]; i_driv = lcp_tbl_pp_compl(tbl, i_disting);
@@ -447,39 +449,41 @@ def lcp_solve_ppcd2_tableau(tbl, opts = {}):
 				if (first_lbda == -1) or (all(M[x][qoff] >= 0 for x in range(n))):
 					status = 2; break;
 				i_disting = first_lbda; i_driv = i_disting;
-				print 'disting', lcp_tbl_lbl(tbl, i_disting)
 				# Pivot-less one-step major cycle
-				is_blocked = False
-				for ri in range(n):
-					bound = lcp_tbl_ppcd2_block_bounds(tbl, ri, i_driv)
-					print bound, 'this is wrong'
-					if (bound[1] and bound[1] < 0):
-						is_blocked = True
-						break
-				if (not is_blocked):
+				if 0:
+					print 'disting', lcp_tbl_lbl(tbl, i_disting)
+					is_blocked = False
 					for ri in range(n):
-						M[ri][boff] += M[ri][i_driv]*lbda # or is it -=
-					lb[i_driv] = g_num(0)
-					r_disting = -1
-		print 'disting', lcp_tbl_lbl(tbl, i_disting)
+						change = lcp_tbl_ppcd2_block_change(tbl, ri, i_driv)
+						if (change[1] and (change[1] + lbda) < 0):
+							is_blocked = True
+							break
+					if (not is_blocked):
+						for ri in range(n):
+							M[ri][boff] += M[ri][i_driv]*lbda # or is it -=
+						lb[i_driv] = g_num(0)
+						r_disting = -1
+		print 'disting', lcp_tbl_lbl(tbl, i_disting), 'driving', lcp_tbl_lbl(tbl, i_driv)
 		while (status == 1 and (maxit == 0 or it < maxit)):
+			it = it + 1
 			# Determine blocking
-			r_block = -1; driv_bound = None; block_val = None; # TODO: lexi
+			r_block = -1; driv_change = None; block_val = None; # TODO: lexi
 			for ri in range(n):
-				bound = lcp_tbl_ppcd2_block_bounds(tbl, ri, i_driv)
-				if bound[1] and ((r_block == -1) or (bound[1] < driv_bound)):
-					r_block = ri; driv_bound = bound[1]; block_val = bound[2];
-			disting_bound = lcp_tbl_ppcd2_block_bounds(tbl, r_disting, i_driv)
-			if disting_bound[0] and ((r_block == -1) or (disting_bound[0] < driv_bound)):
-				r_block = r_disting; driv_bound = disting_bound[0]; block_val = disting_bound[2];
-			print 'drive:', driv_bound, block_val
+				change = lcp_tbl_ppcd2_block_change(tbl, ri, i_driv)
+				if change[1] and ((r_block == -1) or (change[1] < driv_change)):
+					r_block = ri; driv_change = change[1]; block_val = change[2];
+			if (r_disting != -1):		
+				disting_change = lcp_tbl_ppcd2_block_change(tbl, r_disting, i_driv)
+				if disting_change[0] and ((r_block == -1) or (disting_change[0] < driv_change)):
+					r_block = r_disting; driv_change = disting_change[0]; block_val = disting_change[2];
+			print 'drive:', driv_change, block_val
 			if (r_block == -1):
 				status = 0; break;
 			# Pivot
 			i_block = tbl['L'][r_block]	
 			lcp_tbl_ppcd2_pivot(tbl, r_block, i_block, i_driv, block_val)
 			opt_print('{}. pvt: {}-{}, {}'.format(it, r_block,i_driv, lcp_tbl_lbls_str(tbl, tbl['L'])), opts)
-			mat_print(tbl['M'])
+			lcp_tbl_print_M(tbl)
 			vec_print(tbl['lb'])
 			# Decide next operation
 			if (i_block != i_disting):
