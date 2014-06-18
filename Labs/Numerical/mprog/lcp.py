@@ -434,7 +434,7 @@ def lcp_solve_ppcd2_tableau(tbl, opts = {}):
 	maxit = opts.get('maxit', 0); it = 0; status = 1;
 	lbda = g_num(int(math.ceil(min(M[x][qoff] for x in range(n)) - 1)))
 	tbl['lbda'] = lbda
-	print 'lbda', lbda
+	#print 'lbda', lbda
 	while (status == 1 and (maxit == 0 or it < maxit)):
 		it = it + 1
 		if all(M[x][qoff] >= 0 for x in range(n)): # Success 
@@ -448,7 +448,6 @@ def lcp_solve_ppcd2_tableau(tbl, opts = {}):
 				i_disting = tbl['L'][r_disting]; i_driv = lcp_tbl_pp_compl(tbl, i_disting);
 			else:
 				first_lbda = next((x for x in range(len(lb)) if lb[x] == lbda), -1)
-				print 'first_lbda', first_lbda
 				if (first_lbda == -1) or (all(M[x][qoff] >= 0 for x in range(n))):
 					status = 2; break;
 				i_disting = first_lbda; i_driv = i_disting;
@@ -466,7 +465,7 @@ def lcp_solve_ppcd2_tableau(tbl, opts = {}):
 							M[ri][boff] += M[ri][i_driv]*lbda # or is it -=
 						lb[i_driv] = g_num(0)
 						r_disting = -1
-		print 'disting', lcp_tbl_lbl(tbl, i_disting), 'driving', lcp_tbl_lbl(tbl, i_driv)
+		#print 'disting', lcp_tbl_lbl(tbl, i_disting), 'driving', lcp_tbl_lbl(tbl, i_driv)
 		while (status == 1 and (maxit == 0 or it < maxit)):
 			it = it + 1
 			# Determine blocking
@@ -479,23 +478,21 @@ def lcp_solve_ppcd2_tableau(tbl, opts = {}):
 				disting_change = lcp_tbl_ppcd2_block_change(tbl, r_disting, i_driv)
 				if disting_change[0] and ((r_block == -1) or (disting_change[0] < driv_change)):
 					r_block = r_disting; driv_change = disting_change[0]; block_val = disting_change[2];
-			print 'drive:', driv_change, block_val, driv_change+lb[i_driv]
+			#print 'drive:', lcp_tbl_lbl(tbl, i_driv), driv_change, block_val, driv_change+lb[i_driv]
 			if (r_block == -1):
 				status = 0; break;
 			# Pivot
 			i_block = tbl['L'][r_block]	
 			lcp_tbl_ppcd2_pivot(tbl, r_block, i_block, i_driv, block_val, driv_change+lb[i_driv])
+			if (r_disting == -1):
+				r_disting = r_block
 			opt_print('{}. pvt: {}-{}, {}'.format(it, r_block,i_driv, lcp_tbl_lbls_str(tbl, tbl['L'])), opts)
-			lcp_tbl_print_M(tbl)
-			vec_print(tbl['lb'])
+			#lcp_tbl_print_M(tbl); vec_print(tbl['lb']);
 			# Decide next operation
 			if (i_block != i_disting):
 				i_driv = lcp_tbl_pp_compl(tbl, i_block) 
 			else:	
-				print 'NEXT'
 				break
-
-
 
 			# print r_block, driv_bound, lcp_tbl_lbl(tbl, tbl['L'][r_block])
 			# return 0	
