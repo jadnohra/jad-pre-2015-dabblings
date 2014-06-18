@@ -440,31 +440,29 @@ def lcp_solve_ppcd2_tableau(tbl, opts = {}):
 		if all(M[x][qoff] >= 0 for x in range(n)): # Success 
 			status = 2; break;
 		# Determine distinguished
-		#r_disting = -1
-		#while (r_disting == -1) and (status == 1) and (maxit == 0 or it < maxit):
-		if True:
-			r_disting = next((x for x in range(n) if M[x][boff] < 0), -1)
-			if (r_disting != -1):
-				i_disting = tbl['L'][r_disting]; i_driv = lcp_tbl_pp_compl(tbl, i_disting);
-			else:
-				first_lbda = next((x for x in range(len(lb)) if lb[x] == lbda), -1)
-				if (first_lbda == -1) or (all(M[x][qoff] >= 0 for x in range(n))):
-					status = 2; break;
-				i_disting = first_lbda; i_driv = i_disting;
-				# Pivot-less one-step major cycle
-				if 0:
-					print 'disting', lcp_tbl_lbl(tbl, i_disting)
-					is_blocked = False
+		r_disting = -1; i_disting = -1;
+		r_disting = next((x for x in range(n) if M[x][boff] < 0), -1)
+		if (r_disting != -1):
+			i_disting = tbl['L'][r_disting]; i_driv = lcp_tbl_pp_compl(tbl, i_disting);
+		else:
+			first_lbda = next((x for x in range(len(lb)) if lb[x] == lbda), -1)
+			if (first_lbda == -1) or (all(M[x][qoff] >= 0 for x in range(n))):
+				status = 2; break;
+			i_disting = first_lbda; i_driv = i_disting;
+			# Pivot-less one-step major cycle
+			if 0:
+				print 'disting', lcp_tbl_lbl(tbl, i_disting)
+				is_blocked = False
+				for ri in range(n):
+					change = lcp_tbl_ppcd2_block_change(tbl, ri, i_driv)
+					if (change[1] and (change[1] + lbda) < 0):
+						is_blocked = True
+						break
+				if (not is_blocked):
 					for ri in range(n):
-						change = lcp_tbl_ppcd2_block_change(tbl, ri, i_driv)
-						if (change[1] and (change[1] + lbda) < 0):
-							is_blocked = True
-							break
-					if (not is_blocked):
-						for ri in range(n):
-							M[ri][boff] += M[ri][i_driv]*lbda # or is it -=
-						lb[i_driv] = g_num(0)
-						r_disting = -1
+						M[ri][boff] += M[ri][i_driv]*lbda # or is it -=
+					lb[i_driv] = g_num(0)
+					r_disting = -1
 		#print 'disting', lcp_tbl_lbl(tbl, i_disting), 'driving', lcp_tbl_lbl(tbl, i_driv)
 		while (status == 1 and (maxit == 0 or it < maxit)):
 			it = it + 1
@@ -493,87 +491,13 @@ def lcp_solve_ppcd2_tableau(tbl, opts = {}):
 				i_driv = lcp_tbl_pp_compl(tbl, i_block) 
 			else:	
 				break
-
 			# print r_block, driv_bound, lcp_tbl_lbl(tbl, tbl['L'][r_block])
-			# return 0	
-					
-
-			# r_cands = [x for x in range(n) if M[x][i_driv] > 0]
-			# if (len(r_cands) == 0):	# Unblocked, no solution
-			# 	status = 0; break;
-			# print 'r_cands', r_cands	
-			# r_block, driv_theta = lcp_tbl_ppcd2_leaving_topmost(tbl, r_cands, i_driv, lbda, r_disting, i_disting)
-			# if (i_driv == i_disting and driv_theta >= 0):
-			# 	print 'status 3'
-			# 	status = 3; break; #TODO, no pivot, todo leaving should return disting if that is involved in a tie
-			# # Pivot
-			# i_block = tbl['L'][r_block]
-			# print 'driv', lcp_tbl_lbl(tbl, i_driv), 'theta', driv_theta, 'r_block', r_block, 'block', lcp_tbl_lbl(tbl, i_block)
-			# lcp_tbl_ppcd2_pivot(tbl, r_block, i_driv, lbda, i_disting)
-			# vec_print(tbl['lb'])
-			# mat_print(tbl['M'])
-			# opt_print('{}. pvt: {}-{}, {}'.format(it, r_block,i_driv, lcp_tbl_lbls_str(tbl, tbl['L'])), opts)
-			# # Decide next step
-			# if (i_block != i_disting):
-			# 	i_driv = lcp_tbl_pp_compl(tbl, i_block) 
-			# else:
-			# 	break;	
 
 	if (status == 2):
 		tbl['sol'] = lcp_tbl_solution(tbl,['z'])
 	else:	
 		tbl['sol'] = []
 	return (status == 2)
-
-#----------------------------------------------------------
-# def lcp_solve_ppcd2_tableau(tbl, opts = {}):
-# 	# Asymmetric PPM, Cottle p.260, 336
-# 	# Dantzig-Cottle Principal Pivoting Method, Murty p.276.
-# 	# Processes P, PSD matrices.
-# 	#
-# 	M = tbl['M']; qoff = lcp_tbl_off(tbl, 'q'); n = tbl['n'];
-# 	nb = ([0]*n)+([1]*n); tbl['nb'] = nb;
-# 	nbv = [g_num(0)]*(2*n); tbl['nbv'] = nbv;
-# 	maxit = opts.get('maxit', 0); it = 0; status = 1;
-# 	lbda = g_num(int(min(M[x][qoff] for x in range(n)) - 2))
-# 	while (status == 1 and (maxit == 0 or it < maxit)):
-# 		it = it + 1
-# 		if all(M[x][qoff] >= 0 for x in range(n)): # Success 
-# 			status = 2; break;
-# 		# Determine distinguished
-# 		lbda_nb = next((x for x in range(2*n) if nb[x] == 1 and nbv[x]=lbda), -1)
-# 		if (lbda_nb != -1):
-# 			i_disting = lbda_nb; i_driv = lbda_nb;
-# 		else:
-# 			i_disting = next(x for x in range(n) if M[x][qoff] < 0)
-# 			i_driv = lcp_tbl_pp_compl(tbl, i_disting) 
-# 		if (nb[i_driv] == 0) raise ValueError('')
-# 		# Determine blocking
-
-
-# 		q_cands = [x for x in range(n) if M[x][qoff] < 0]
-# 		r_disting = q_cands[-1]
-# 		c_disting = lcp_tbl_pp_compl(tbl, tbl['L'][r_disting]) 
-# 		if (M[r_disting][c_disting] == 0) and all(M[x][c_disting] <= 0 for x in range(n)): # no solution
-# 			status = 0; break;
-# 		r_cands = [r_disting] + [x for x in range(n) if M[x][c_disting] > 0 and M[x][qoff] >= 0]
-# 		#mat_print(tbl['M'], '')
-# 		r_block = lcp_tbl_leaving(tbl, r_cands, c_disting, opts); xi_block = tbl['L'][r_block];
-# 		lcp_tbl_pivot(tbl, r_block, c_disting)
-# 		opt_print('{}. M-pvt: {}-{}, {}'.format(it, r_block,c_disting, lcp_tbl_lbls_str(tbl, tbl['L'])), opts)
-# 		while ( (lcp_tbl_pp_compl(tbl, xi_block) != c_disting) 
-# 				and (status == 1 and (maxit == 0 or it < maxit)) ):
-# 			it = it + 1
-# 			c_driv = lcp_tbl_pp_compl(tbl, xi_block)
-# 			r_cands = [r_disting] + [x for x in range(n) if M[x][c_driv] > 0 and M[x][qoff] >= 0]
-# 			r_block = lcp_tbl_leaving(tbl, r_cands, c_driv, opts); xi_block = tbl['L'][r_block];
-# 			lcp_tbl_pivot(tbl, r_block, c_driv)
-# 			opt_print('{}. m-pvt: {}-{}, {}'.format(it, r_block,c_driv, lcp_tbl_lbls_str(tbl, tbl['L'])), opts)
-# 	if (status == 2):
-# 		tbl['sol'] = lcp_tbl_solution(tbl,['z'])
-# 	else:	
-# 		tbl['sol'] = []
-# 	return (status == 2)
 
 def lcp_tbl_cpa_struct(n):
 	return {'w': lcp_tbl_struct(n, 0, n-1, 'w', 'id'), 
