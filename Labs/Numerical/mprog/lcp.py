@@ -786,7 +786,7 @@ def solve_file(fin, fout, algo):
 	if tbl['sol'] is not None: 
 		sol = mlcp_subst_sol(Mq, tbl['sol'], subst)
 	if (fout is not None):	
-		with open(sys.argv[fop], 'w') as fo: fo.write(','.join(sol))
+		with open(fout, 'w') as fo: fo.write(','.join([str(x) for x in sol]))
 	else:
 		vec_print(sol)
 
