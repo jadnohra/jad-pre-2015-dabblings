@@ -6,7 +6,7 @@ import fractions
 import operator
 
 def g_num_default(x):
-	return x
+	return float(x)
 g_num = g_num_default
 
 
@@ -34,6 +34,8 @@ def vec_create(n,v):
 	return [v]*n
 def vec_dim(v):
 	return len(v)
+def vec_copy(a):
+	return [x for x in a]
 def vec_neg(a):
 	return [-x for x in a]
 def vec_add(a,b):
@@ -58,19 +60,23 @@ def mat_cols(M):
 	return len(M[0])
 def mat_dims(M):
 	return [mat_rows(M), mat_cols(M)]
+def mat_is_empty(M):
+	return mat_rows(M) == 0 or mat_cols(M) == 0
 def mat_create(r,c,v):
 	return [[v]*c for x in xrange(r)]
+def mat_zero(r,c):
+	return mat_create(r,c, g_num(0))
 def mat_identity(r,c):
 	M = mat_create(r,c, g_num(0))
 	for i in range(r):
 		M[i][i] = g_num(1)
 	return M
-def mat_blockIdentity(M, r,c, n):
+def mat_block_identity(M, r,c, n):
 	for i in range(n): 
 		for j in range(n):
 			M[r+i][c+j] = g_num(0)
 		M[r+i][c+i] = g_num(1)		
-def mat_blockSetCol(M, r,c, n, v):
+def mat_block_set_col(M, r,c, n, v):
 	for j in range(n): M[r+j][c] = v
 def mat_col(M, c):
 	v = [None]*len(M);
@@ -98,6 +104,58 @@ def mat_copy_to(M, N):
 		for j in range(c1):
 			rn[j] = rm[j]
 	return N	
+def mat_extract_block(M, roff, rows, coff, cols):
+	B = mat_create(rows, cols, None)
+	for ri in range(rows):
+		for ci in range(cols):
+			B[ri][ci]=M[roff+ri][coff+ci]
+	return B		
+def mat_put_block(M, roff, rows, coff, cols, B):
+	for ri in range(rows):
+		for ci in range(cols):
+			M[roff+ri][coff+ci]=B[ri][ci]
+def mat_extract_block2(M, rows, cols):
+	B = mat_create(len(rows), len(cols), None)
+	for ri in range(len(rows)):
+		for ci in range(len(cols)):
+			B[ri][ci]=M[rows[ri]][cols[ci]]
+	return B			
+def mat_put_block2(M, rows, cols, B):
+	for ri in range(len(rows)):
+		for ci in range(len(cols)):
+			M[rows[ri]][cols[ci]]=B[ri][ci]	
+def mat_block_implode(M, rblocks, cblocks):
+	BM = mat_create(len(rblocks), len(cblocks), None)
+	roff = 0; bri = 0;
+	for b_rows in rblocks:
+		coff = 0; cri = 0;
+		for b_cols in cblocks:
+			BM[bri][cri] = mat_extract_block(M, roff, b_rows, coff, b_cols)
+			coff += b_cols; cri += 1;
+		roff += b_rows; bri += 1;
+	return BM	
+def mat_block_explode(BM, rblocks, cblocks):
+	M = mat_create(sum(rblocks), sum(cblocks), None)
+	roff = 0; bri = 0;
+	for b_rows in rblocks:
+		coff = 0; bci = 0;
+		for b_cols in cblocks:
+			mat_put_block(M, roff, b_rows, coff, b_cols, BM[bri][bci])
+			coff += b_cols; bci += 1;
+		roff += b_rows; bri += 1;
+	return M	
+def mat_block_implode2(M, rblocks, cblocks):
+	BM = mat_create(len(rblocks), len(cblocks), None)
+	for bri in range(len(rblocks)):
+		for bci in range(len(cblocks)):
+			BM[bri][bci] = mat_extract_block2(M, rblocks[bri], cblocks[bci])
+	return BM	
+def mat_block_explode2(BM, rblocks, cblocks):
+	M = mat_create(sum([len(rows) for rows in rblocks]), sum([len(cols) for cols in cblocks]), None)
+	for bri in range(len(rblocks)):
+		for bci in range(len(cblocks)):
+			mat_put_block2(M, rblocks[bri], cblocks[bci], BM[bri][bci])
+	return M
 def mat_neg(M):
 	r1 = len(M);c1 = len(M[0]);
 	N = mat_create(r1, c1, None)
@@ -134,6 +192,7 @@ def mat_mul(M1, M2):
 			row_3[j] = dot
 	return M3		
 def mat_mulv(M1, V2):
+	if (len(V2) == 0): return vec_copy(V2)
 	r1 = len(M1);c1 = len(M1[0]);r3 = r1;c3 = 1;M3 = [None]*r3;
 	for i in range(r3):
 		row_3 = M3[i]; row_1 = M1[i]; dot = g_num(0);
@@ -246,9 +305,9 @@ def lcp_tbl_create(n, structs, nrows):
 	tbl = { 'nrows':nrows, 'n':n, 'nc':nc, 'L':[i for i in range(nrows)], 'M':mat_create(nrows, nc, g_num(0)), 'structs':structs }	
 	for s in structs.values():
 		if (s['init'] == 'id'):
-			mat_blockIdentity(tbl['M'], 0, s['off'], s['nc'])
+			mat_block_identity(tbl['M'], 0, s['off'], s['nc'])
 		elif (s['init'] == '-en'):
-			mat_blockSetCol(tbl['M'], 0, s['off'], nrows, g_num(-1))	
+			mat_block_set_col(tbl['M'], 0, s['off'], nrows, g_num(-1))	
 	return tbl		
 
 def lcp_tbl_off(tbl, lbl):
@@ -336,7 +395,7 @@ def lcp_solve_ppm1_tableau(tbl, opts = {}):
 	if (status == 2):
 		tbl['sol'] = lcp_tbl_solution(tbl,['z'])
 	else:	
-		tbl['sol'] = None
+		tbl['sol'] = []
 	return (status == 2)
 
 def lcp_solve_ppcd1_tableau(tbl, opts = {}):
@@ -438,7 +497,9 @@ def lcp_solve_ppcd2_tableau(tbl, opts = {}):
 	maxit = opts.get('maxit', 0); it = 0; status = 1;
 	lbda = g_num(int(math.ceil(min(M[x][qoff] for x in range(nrows)) - 1)))
 	tbl['lbda'] = lbda
-	#lcp_tbl_print_M(tbl); print 'lbda', lbda
+	if opts.get('log', False):
+		lcp_tbl_print_M(tbl); 
+	opt_print('lbda {}'.format(lbda), opts)	
 	while (status == 1 and (maxit == 0 or it < maxit)):
 		it = it + 1
 		if all(M[x][qoff] >= 0 for x in range(nrows)): # Success 
@@ -467,7 +528,8 @@ def lcp_solve_ppcd2_tableau(tbl, opts = {}):
 						M[ri][boff] += M[ri][i_driv]*lbda # or is it -=
 					lb[i_driv] = g_num(0)
 					r_disting = -1
-		#print 'disting', lcp_tbl_lbl(tbl, i_disting), 'driving', lcp_tbl_lbl(tbl, i_driv)
+		if opts.get('log', False):			
+			print 'disting', lcp_tbl_lbl(tbl, i_disting), 'driving', lcp_tbl_lbl(tbl, i_driv)
 		while (status == 1 and (maxit == 0 or it < maxit)):
 			it = it + 1
 			# Determine blocking
@@ -480,7 +542,8 @@ def lcp_solve_ppcd2_tableau(tbl, opts = {}):
 				disting_change = lcp_tbl_ppcd2_block_change(tbl, r_disting, i_driv)
 				if disting_change[0] and ((r_block == -1) or (disting_change[0] < driv_change)):
 					r_block = r_disting; driv_change = disting_change[0]; block_val = disting_change[2];
-			#print 'drive:', lcp_tbl_lbl(tbl, i_driv), driv_change, block_val, driv_change+lb[i_driv] if (not driv_change is None) else None
+			if opts.get('log', False):
+				print 'drive:', lcp_tbl_lbl(tbl, i_driv), driv_change, block_val, driv_change+lb[i_driv] if (not driv_change is None) else None
 			if (r_block == -1):
 				status = 0; break;
 			# Pivot
@@ -489,7 +552,8 @@ def lcp_solve_ppcd2_tableau(tbl, opts = {}):
 			if (r_disting == -1):
 				r_disting = r_block
 			opt_print('{}. pvt: {}-{}, {}'.format(it, r_block,i_driv, lcp_tbl_lbls_str(tbl, tbl['L'])), opts)
-			#lcp_tbl_print_M(tbl); vec_print(tbl['lb']);
+			if opts.get('log', False):
+				lcp_tbl_print_M(tbl); vec_print(tbl['lb']);
 			# Decide next operation
 			if (i_block != i_disting):
 				i_driv = lcp_tbl_pp_compl(tbl, i_block) 
@@ -525,7 +589,8 @@ def lcp_solve_cpa_tableau(tbl, opts = {}):
 	# Complementary Pivot Algorithm, Murty p.66, opt. p.81
 	#
 	#Initialization, p.71
-	#mat_print(tbl['M'])
+	if opts.get('log', False):
+		lcp_tbl_print_M(tbl)
 	status = 1
 	r,qr = vec_argmin2(lcp_tbl_col(tbl, 'q'))
 	if (qr >= 0):
@@ -536,7 +601,8 @@ def lcp_solve_cpa_tableau(tbl, opts = {}):
 		dropped = tbl['L'][r];
 		lcp_tbl_pivot(tbl, r, c); 
 		opt_print('0. pvt: {}-{}, {}'.format(r,c, lcp_tbl_lbls_str(tbl, tbl['L'])), opts)
-		#mat_print(tbl['M'])	
+		if opts.get('log', False):
+			lcp_tbl_print_M(tbl)
 	maxit = opts.get('maxit', 0); it = 0; 
 	while (status == 1 and (maxit == 0 or it < maxit)):
 		it = it + 1
@@ -553,7 +619,8 @@ def lcp_solve_cpa_tableau(tbl, opts = {}):
 		dropped = tbl['L'][r]; 
 		lcp_tbl_pivot(tbl, r, c); 
 		opt_print('{}. pvt: {}-{}, {}'.format(it, r,c, lcp_tbl_lbls_str(tbl, tbl['L'])), opts)
-		#mat_print(tbl['M']);
+		if opts.get('log', False):
+			lcp_tbl_print_M(tbl)
 	if (status == 2):
 		tbl['sol'] = lcp_tbl_solution(tbl, ['z'])
 	else:	
@@ -567,13 +634,13 @@ def mlcp_to_lcp_Mq(Mq, bounds, subst):
 	N = []
 	for bi in xrange(len(bounds)):
 		b = bounds[bi]
-		if not (b[0] is None):
+		if b[0] is not None:
 			subst[bi] = [g_num(1), b[0]]
 			for ri in xrange(len(Mq)):
 				Mq[ri][-1] -= Mq[ri][bi]*b[0]
-			if not (b[1] is None):
+			if b[1] is not None:
 				N.append(bi)
-		elif not (b[1] is None):
+		elif b[1] is not None:
 			subst[bi] = [g_num(-1), b[1]]
 			for ri in xrange(len(Mq)):
 				Mq[ri][-1] -= Mq[ri][bi]*b[1]
@@ -584,8 +651,10 @@ def mlcp_to_lcp_Mq(Mq, bounds, subst):
 	off = [len(Mq), len(bounds)]
 	for i in range(len(N)):
 		bi = N[i]
-		cMq[off[0]+i][bi] = g_num(1)
-		cMq[off[0]+i][off[1]+i] = g_num(1)
+		#cMq[off[0]+i][bi] = g_num(1)
+		#cMq[off[0]+i][off[1]+i] = g_num(1)
+		cMq[off[0]+i][bi] = g_num(-1)
+		cMq[i][off[1]+i] = g_num(1)
 		cMq[off[0]+i][-1] = bounds[bi][1]-bounds[bi][0]
 	return cMq	
 
@@ -596,6 +665,52 @@ def mlcp_subst_sol(Mq, lcp_sol, subst):
 		mlcp_sol.append(lcp_sol[i] * subst[i][0] + subst[i][1])
 	return mlcp_sol	
 
+def mlcp_to_lcp_Mq2(Mq, bounds, subst):
+	# Extension to Lemke, Judice.
+	def convertJ(Mq, J1, J2, J3, bj1, bj3):
+		def mat_copy2(M):
+			return mat_copy(M) if not mat_is_empty(M) else [[]]	
+		def mat_add2(M, N):
+			return mat_add(M, N) if not mat_is_empty(N) else mat_copy2(M)
+		def mat_neg2(M):
+			return mat_neg(M) if not mat_is_empty(M) else mat_copy2(M)
+		j1 = len(J1); j2 = len(J2); j3 = len(J3);
+		irblocks = [J1, J2, J3]; icblocks = [J1, J2, J3, [len(Mq[0])-1]];
+		BMq = mat_block_implode2(Mq, irblocks, icblocks)
+		cBMq = mat_create(4, 5, None)
+		cBMq[0][0] = mat_copy2(BMq[0][0]); cBMq[0][1] = mat_copy2(BMq[0][1]); cBMq[0][2] = mat_neg2(BMq[0][2]);
+		cBMq[0][3] = mat_identity(j1, j1)
+		cBMq[0][-1] = mat_add2(BMq[0][-1], [mat_mulv(BMq[0][2], bj3)])
+		cBMq[1][0] = mat_copy2(BMq[1][0]); cBMq[1][1] = mat_copy2(BMq[1][1]); cBMq[1][2] = mat_neg2(BMq[1][2]);
+		cBMq[1][3] = mat_zero(j2, j1)
+		cBMq[1][-1] = mat_add2(BMq[1][-1], [mat_mulv(BMq[1][2], bj3)])
+		cBMq[2][0] = mat_neg2(BMq[2][0]); cBMq[2][1] = mat_neg2(BMq[2][1]); cBMq[2][2] = mat_copy2(BMq[2][2]);
+		cBMq[2][3] = mat_zero(j3, j1)
+		cBMq[2][-1] = mat_add2(BMq[2][-1], [mat_mulv(BMq[2][2], bj3)])
+		cBMq[3][0] = mat_neg(mat_identity(j1, j1))
+		cBMq[3][1] = mat_zero(j1, j2); cBMq[3][2] = mat_zero(j1, j3); cBMq[3][3] = mat_zero(j1, j1)
+		cBMq[3][-1] = [vec_copy(bj1)]
+		erblocks = [j1, j2, j3, j1]; ecblocks = [j1, j2, j3, j1, 1];
+		return mat_block_explode(cBMq, erblocks, ecblocks)
+	# subst	
+	for b in bounds:
+		if b[0] is not None:	
+			b[0] = g_num(0)
+	# map		
+	G = []; J1 = []; J2 = []; J3 = []; bj1 = []; bj3 = [];
+	for bi in xrange(len(bounds)):
+		b = bounds[bi]
+		if b[0] is not None and b[1] is not None:
+			J1.append(bi); bj1.append(b[1]);
+		elif b[0] is not None:
+			J2.append(bi)
+		elif b[1] is not None:
+			J3.append(bi); bj3.append(b[1]);
+		else:
+			G.append(bi)
+	if (len(G) > 0):
+		return None
+	return convertJ(Mq, J1, J2, J3, bj1, bj3)
 
 def get_test_Mq(test):
 	Mq_tbl = {
@@ -736,7 +851,7 @@ def run_tests():
 	if 0: test_ppcd1(['Murty p.262'], {'maxit':20, 'log':True})
 	if 0: test_ppcd2(['Murty p.255', 'Murty p.261', 'Murty p.262'], {'maxit':20, 'log':False})
 	if 0: test_ppcd2(['Cottle p.258'], {'maxit':20, 'log':True})
-	if 1: test_ppcd2(['Murty p.265'], {'maxit':20, 'log':True})
+	if 0: test_ppcd2(['Murty p.265'], {'maxit':20, 'log':True})
 	if 0: 
 		bounds = [[-4, -2], [0, None]]; subst = [None]*len(bounds)
 		Mq = get_test_Mq('test 1')
@@ -748,8 +863,13 @@ def run_tests():
 		#lcp_solve_cpa_tableau(tbl, {})
 		vec_print(tbl['sol'])
 		vec_print(mlcp_subst_sol(Mq, tbl['sol'], subst))
+	if 1: 
+		bounds = [[-4, -2], [0, None]]; subst = [None]*len(bounds)
+		Mq = get_test_Mq('test 1')
+		cMq = mlcp_to_lcp_Mq2(mat_rational(Mq), bounds, subst)
+		mat_print(cMq)
 		
-def solve_file(fin, fout, algo):
+def solve_file(fin, fout, algo, opts):
 	with open(fin, 'r') as fi: 
 		def read_bound(b): return None if 'inf' in b else float(b)
 		def read_bounds(b): return [read_bound(b[0]), read_bound(b[1])]
@@ -770,34 +890,62 @@ def solve_file(fin, fout, algo):
 				bounds.append(read_bounds(bd))
 	subst = [None]*len(bounds)
 	cMq = mlcp_to_lcp_Mq(Mq, bounds, subst)
+	#cMq = mlcp_to_lcp_Mq2(Mq, bounds, subst)
+	if opts.get('log', False):
+		mat_print(cMq)
+		print subst
 	if algo == 'cpa':
 		tbl = lcp_tbl_cpa_create_Mq(cMq)
-		lcp_solve_cpa_tableau(tbl, {})
+		lcp_solve_cpa_tableau(tbl, opts)
 	elif algo == 'ppm1':
 		tbl = lcp_tbl_pp_create_Mq(cMq)
-		lcp_solve_ppm1_tableau(tbl, {})	
+		lcp_solve_ppm1_tableau(tbl, opts)	
 	elif algo == 'ppcd1':
 		tbl = lcp_tbl_pp_create_Mq(cMq)
-		lcp_solve_ppcd1_tableau(tbl, {})		
+		lcp_solve_ppcd1_tableau(tbl, opts)		
 	else:
 		tbl = lcp_tbl_ppcd2_create_Mq(cMq)
-		lcp_solve_ppcd2_tableau(tbl, {})
+		lcp_solve_ppcd2_tableau(tbl, opts)
 	sol = ()
-	if tbl['sol'] is not None: 
+	if len(tbl['sol']) > 0: 
+		print tbl['sol']
 		sol = mlcp_subst_sol(Mq, tbl['sol'], subst)
 	if (fout is not None):	
 		with open(fout, 'w') as fo: fo.write(','.join([str(x) for x in sol]))
 	else:
 		vec_print(sol)
 
-if len(sys.argv) == 1:
+
+
+if 0:
+	M = [
+		[1, -1, -1, -1, 3],
+		[-1, 1, -1, -1, 5],
+		[1, 1, 2, 0, -9],
+		[1, 1, 0, 2, -5]
+	]
+	BM = mat_block_implode(M, [2, 2], [2, 3])
+	print BM
+	MM = mat_block_explode(BM, [2, 2], [2, 3])
+	print MM
+
+	BM = mat_block_implode2(M, [[0,3], [1,2]], [[0,1], [2,4,3]])
+	print BM
+	MM = mat_block_explode2(BM, [[0,3], [1,2]], [[0,1], [2,4,3]])
+	print MM
+	MM = mat_block_explode(BM, [2, 2], [2, 3])
+	print MM
+elif len(sys.argv) == 1:
 	run_tests()
 else:	
+	g_num = g_num_default
 	fip = 1 + (sys.argv.index('-in') if '-in' in sys.argv else -2)
 	fop = 1 + (sys.argv.index('-out') if '-out' in sys.argv else -2)
 	algo = 1 + (sys.argv.index('-algo') if '-algo' in sys.argv else -2)
+	log = '-log' in sys.argv
 	if fip >= 0:
 		fip = sys.argv[fip] if fip >= 0 else None
 		fop = sys.argv[fop] if fop >= 0 else None
-		algo = sys.argv[algo] if algo == -1 else 'ppcd2'
-		solve_file(fip, fop, algo)
+		algo = sys.argv[algo] if algo >= 0 else 'ppcd2'
+		opts = {'log':log}
+		solve_file(fip, fop, algo, opts)
