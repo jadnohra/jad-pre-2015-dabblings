@@ -749,53 +749,55 @@ def run_tests():
 		vec_print(tbl['sol'])
 		vec_print(mlcp_subst_sol(Mq, tbl['sol'], subst))
 		
+def solve_file(fin, fout, algo):
+	with open(fin, 'r') as fi: 
+		def read_bound(b): return None if 'inf' in b else float(b)
+		def read_bounds(b): return [read_bound(b[0]), read_bound(b[1])]
+		mode = 'pref'; Mq = []; bounds = [];
+		for line in fi:
+			line = "".join(line.split())
+			if mode == 'pref':
+				mode = 'n'
+			elif mode == 'n':
+				n = int(line)
+				mode = 'Mq'
+			elif mode == 'Mq':
+				Mq.append([float(x) for x in line.split(',')])
+				if (len(Mq) == n):
+					mode = 'bds'
+			elif mode == 'bds':
+				bd = line.split(',')
+				bounds.append(read_bounds(bd))
+	subst = [None]*len(bounds)
+	cMq = mlcp_to_lcp_Mq(Mq, bounds, subst)
+	if algo == 'cpa':
+		tbl = lcp_tbl_cpa_create_Mq(cMq)
+		lcp_solve_cpa_tableau(tbl, {})
+	elif algo == 'ppm1':
+		tbl = lcp_tbl_pp_create_Mq(cMq)
+		lcp_solve_ppm1_tableau(tbl, {})	
+	elif algo == 'ppcd1':
+		tbl = lcp_tbl_pp_create_Mq(cMq)
+		lcp_solve_ppcd1_tableau(tbl, {})		
+	else:
+		tbl = lcp_tbl_ppcd2_create_Mq(cMq)
+		lcp_solve_ppcd2_tableau(tbl, {})
+	sol = ()
+	if tbl['sol'] is not None: 
+		sol = mlcp_subst_sol(Mq, tbl['sol'], subst)
+	if (fout is not None):	
+		with open(sys.argv[fop], 'w') as fo: fo.write(','.join(sol))
+	else:
+		vec_print(sol)
+
 if len(sys.argv) == 1:
 	run_tests()
 else:	
 	fip = 1 + (sys.argv.index('-in') if '-in' in sys.argv else -2)
 	fop = 1 + (sys.argv.index('-out') if '-out' in sys.argv else -2)
-	alg = 1 + (sys.argv.index('-alg') if '-alg' in sys.argv else -2)
-	alg = 'ppcd2' if alg == -1 else sys.argv[alg]
+	algo = 1 + (sys.argv.index('-algo') if '-algo' in sys.argv else -2)
 	if fip >= 0:
-		with open(sys.argv[fip], 'r') as fi: 
-			def read_bound(b): return None if 'inf' in b else float(b)
-			def read_bounds(b): return [read_bound(b[0]), read_bound(b[1])]
-			mode = 'pref'; Mq = []; bounds = [];
-			for line in fi:
-				line = "".join(line.split())
-				if mode == 'pref':
-					mode = 'n'
-				elif mode == 'n':
-					n = int(line)
-					mode = 'Mq'
-				elif mode == 'Mq':
-					Mq.append([float(x) for x in line.split(',')])
-					if (len(Mq) == n):
-						mode = 'bds'
-				elif mode == 'bds':
-					bd = line.split(',')
-					bounds.append(read_bounds(bd))
-		subst = [None]*len(bounds)
-		cMq = mlcp_to_lcp_Mq(Mq, bounds, subst)
-
-		if alg == 'cpa':
-			tbl = lcp_tbl_cpa_create_Mq(cMq)
-			lcp_solve_cpa_tableau(tbl, {})
-		elif alg == 'ppm1':
-			tbl = lcp_tbl_pp_create_Mq(cMq)
-			lcp_solve_ppm1_tableau(tbl, {})	
-		elif alg == 'ppcd1':
-			tbl = lcp_tbl_pp_create_Mq(cMq)
-			lcp_solve_ppcd1_tableau(tbl, {})		
-		else:
-			tbl = lcp_tbl_ppcd2_create_Mq(cMq)
-			lcp_solve_ppcd2_tableau(tbl, {})
-
-		sol = ()
-		if tbl['sol'] is not None: 
-			sol = mlcp_subst_sol(Mq, tbl['sol'], subst)
-
-		if (fop >= 0):	
-			with open(sys.argv[fop], 'w') as fo: fo.write(','.join(sol))
-		else:
-			vec_print(sol)
+		fip = sys.argv[fip] if fip >= 0 else None
+		fop = sys.argv[fop] if fop >= 0 else None
+		algo = sys.argv[algo] if algo == -1 else 'ppcd2'
+		solve_file(fip, fop, algo)
