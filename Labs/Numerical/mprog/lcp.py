@@ -336,7 +336,7 @@ def lcp_solve_ppm1_tableau(tbl, opts = {}):
 	if (status == 2):
 		tbl['sol'] = lcp_tbl_solution(tbl,['z'])
 	else:	
-		tbl['sol'] = []
+		tbl['sol'] = None
 	return (status == 2)
 
 def lcp_solve_ppcd1_tableau(tbl, opts = {}):
@@ -438,8 +438,7 @@ def lcp_solve_ppcd2_tableau(tbl, opts = {}):
 	maxit = opts.get('maxit', 0); it = 0; status = 1;
 	lbda = g_num(int(math.ceil(min(M[x][qoff] for x in range(nrows)) - 1)))
 	tbl['lbda'] = lbda
-	lcp_tbl_print_M(tbl)
-	print 'lbda', lbda
+	#lcp_tbl_print_M(tbl); print 'lbda', lbda
 	while (status == 1 and (maxit == 0 or it < maxit)):
 		it = it + 1
 		if all(M[x][qoff] >= 0 for x in range(nrows)): # Success 
@@ -468,7 +467,7 @@ def lcp_solve_ppcd2_tableau(tbl, opts = {}):
 						M[ri][boff] += M[ri][i_driv]*lbda # or is it -=
 					lb[i_driv] = g_num(0)
 					r_disting = -1
-		print 'disting', lcp_tbl_lbl(tbl, i_disting), 'driving', lcp_tbl_lbl(tbl, i_driv)
+		#print 'disting', lcp_tbl_lbl(tbl, i_disting), 'driving', lcp_tbl_lbl(tbl, i_driv)
 		while (status == 1 and (maxit == 0 or it < maxit)):
 			it = it + 1
 			# Determine blocking
@@ -481,7 +480,7 @@ def lcp_solve_ppcd2_tableau(tbl, opts = {}):
 				disting_change = lcp_tbl_ppcd2_block_change(tbl, r_disting, i_driv)
 				if disting_change[0] and ((r_block == -1) or (disting_change[0] < driv_change)):
 					r_block = r_disting; driv_change = disting_change[0]; block_val = disting_change[2];
-			print 'drive:', lcp_tbl_lbl(tbl, i_driv), driv_change, block_val, driv_change+lb[i_driv] if (not driv_change is None) else None
+			#print 'drive:', lcp_tbl_lbl(tbl, i_driv), driv_change, block_val, driv_change+lb[i_driv] if (not driv_change is None) else None
 			if (r_block == -1):
 				status = 0; break;
 			# Pivot
@@ -490,7 +489,7 @@ def lcp_solve_ppcd2_tableau(tbl, opts = {}):
 			if (r_disting == -1):
 				r_disting = r_block
 			opt_print('{}. pvt: {}-{}, {}'.format(it, r_block,i_driv, lcp_tbl_lbls_str(tbl, tbl['L'])), opts)
-			lcp_tbl_print_M(tbl); vec_print(tbl['lb']);
+			#lcp_tbl_print_M(tbl); vec_print(tbl['lb']);
 			# Decide next operation
 			if (i_block != i_disting):
 				i_driv = lcp_tbl_pp_compl(tbl, i_block) 
@@ -590,7 +589,8 @@ def mlcp_to_lcp_Mq(Mq, bounds, subst):
 		cMq[off[0]+i][-1] = bounds[bi][1]-bounds[bi][0]
 	return cMq	
 
-def mlcp_subst_sol(n, lcp_sol, subst):
+def mlcp_subst_sol(Mq, lcp_sol, subst):
+	n = len(Mq[0])-1
 	mlcp_sol = []
 	for i in range(n):
 		mlcp_sol.append(lcp_sol[i] * subst[i][0] + subst[i][1])
@@ -736,8 +736,8 @@ def run_tests():
 	if 0: test_ppcd1(['Murty p.262'], {'maxit':20, 'log':True})
 	if 0: test_ppcd2(['Murty p.255', 'Murty p.261', 'Murty p.262'], {'maxit':20, 'log':False})
 	if 0: test_ppcd2(['Cottle p.258'], {'maxit':20, 'log':True})
-	if 0: test_ppcd2(['Murty p.265'], {'maxit':20, 'log':True})
-	if 1: 
+	if 1: test_ppcd2(['Murty p.265'], {'maxit':20, 'log':True})
+	if 0: 
 		bounds = [[-4, -2], [0, None]]; subst = [None]*len(bounds)
 		Mq = get_test_Mq('test 1')
 		cMq = mlcp_to_lcp_Mq(mat_rational(Mq), bounds, subst)
@@ -747,7 +747,7 @@ def run_tests():
 		#tbl = lcp_tbl_cpa_create_Mq( mat_rational(cMq) )
 		#lcp_solve_cpa_tableau(tbl, {})
 		vec_print(tbl['sol'])
-		vec_print(mlcp_subst_sol(tbl['n'], tbl['sol'], subst))
+		vec_print(mlcp_subst_sol(Mq, tbl['sol'], subst))
 		
 if len(sys.argv) == 1:
 	run_tests()
@@ -756,37 +756,46 @@ else:
 	fop = 1 + (sys.argv.index('-out') if '-out' in sys.argv else -2)
 	alg = 1 + (sys.argv.index('-alg') if '-alg' in sys.argv else -2)
 	alg = 'ppcd2' if alg == -1 else sys.argv[alg]
-	with open(fip, 'r') as fi: 
-		def read_bound(b): return None if 'inf' in b else float(b)
-		mode = 'n'; Mq = []; bounds = [];
-		for line in fi:
-			if mode == 'n':
-				n = int(line)
-				mode = 'Mq'
-			elif mode == 'Mq':
-				M.append([float(x) for x in line.split(',')])
-				if (len(M) == n):
-					mode = 'bds'
-			elif mode == 'bds':
-				bd = line.split(',')
-				bounds.append(read_bound(bd[0], bd[1]))
-	subst = [None]*len(bounds)
-	cMq = mlcp_to_lcp_Mq(Mq, bounds, subst)
+	if fip >= 0:
+		with open(sys.argv[fip], 'r') as fi: 
+			def read_bound(b): return None if 'inf' in b else float(b)
+			def read_bounds(b): return [read_bound(b[0]), read_bound(b[1])]
+			mode = 'pref'; Mq = []; bounds = [];
+			for line in fi:
+				line = "".join(line.split())
+				if mode == 'pref':
+					mode = 'n'
+				elif mode == 'n':
+					n = int(line)
+					mode = 'Mq'
+				elif mode == 'Mq':
+					Mq.append([float(x) for x in line.split(',')])
+					if (len(Mq) == n):
+						mode = 'bds'
+				elif mode == 'bds':
+					bd = line.split(',')
+					bounds.append(read_bounds(bd))
+		subst = [None]*len(bounds)
+		cMq = mlcp_to_lcp_Mq(Mq, bounds, subst)
 
-	if alg == 'cpa':
-		tbl = lcp_tbl_cpa_create_Mq(cMq)
-		lcp_solve_cpa_tableau(tbl, {})
-	elif alg == 'ppm1':
-		tbl = lcp_tbl_pp_create_Mq(cMq)
-		lcp_solve_ppm1_tableau(tbl, {})	
-	elif alg == 'ppcd1':
-		tbl = lcp_tbl_pp_create_Mq(cMq)
-		lcp_solve_ppcd1_tableau(tbl, {})		
-	else:
-		tbl = lcp_tbl_ppcd2_create_Mq(cMq)
-		lcp_solve_ppcd2_tableau(tbl, {})
+		if alg == 'cpa':
+			tbl = lcp_tbl_cpa_create_Mq(cMq)
+			lcp_solve_cpa_tableau(tbl, {})
+		elif alg == 'ppm1':
+			tbl = lcp_tbl_pp_create_Mq(cMq)
+			lcp_solve_ppm1_tableau(tbl, {})	
+		elif alg == 'ppcd1':
+			tbl = lcp_tbl_pp_create_Mq(cMq)
+			lcp_solve_ppcd1_tableau(tbl, {})		
+		else:
+			tbl = lcp_tbl_ppcd2_create_Mq(cMq)
+			lcp_solve_ppcd2_tableau(tbl, {})
 
-	sol = ()
-	if tbl['sol'] is not None: 
-		sol = mlcp_subst_sol(tbl['n'], tbl['sol'], subst)
-	with open(fop, 'w') as fo: fo.write(','.join(sol))
+		sol = ()
+		if tbl['sol'] is not None: 
+			sol = mlcp_subst_sol(Mq, tbl['sol'], subst)
+
+		if (fop >= 0):	
+			with open(sys.argv[fop], 'w') as fo: fo.write(','.join(sol))
+		else:
+			vec_print(sol)
