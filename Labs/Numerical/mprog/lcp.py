@@ -1,3 +1,4 @@
+import sys
 import math
 import itertools
 import copy
@@ -240,14 +241,14 @@ def lcp_tbl_struct(nc, off, end, lbl, init):
 def lcp_tbl_sorted_structs(tbl):
 	return sorted(tbl['structs'].values(), key=lambda x: x['off'])
 
-def lcp_tbl_create(n, structs):
+def lcp_tbl_create(n, structs, nrows):
 	nc = sum([s['nc'] for s in structs.values()])
-	tbl = { 'n':n, 'nc':nc, 'L':[i for i in range(n)], 'M':mat_create(n, nc, g_num(0)), 'structs':structs }	
+	tbl = { 'nrows':nrows, 'n':n, 'nc':nc, 'L':[i for i in range(nrows)], 'M':mat_create(nrows, nc, g_num(0)), 'structs':structs }	
 	for s in structs.values():
 		if (s['init'] == 'id'):
 			mat_blockIdentity(tbl['M'], 0, s['off'], s['nc'])
 		elif (s['init'] == '-en'):
-			mat_blockSetCol(tbl['M'], 0, s['off'], n, g_num(-1))	
+			mat_blockSetCol(tbl['M'], 0, s['off'], nrows, g_num(-1))	
 	return tbl		
 
 def lcp_tbl_off(tbl, lbl):
@@ -302,8 +303,8 @@ def lcp_tbl_pp_struct(n):
 	return {'w': lcp_tbl_struct(n, 0, n-1, 'w', 'id'), 
 			'z': lcp_tbl_struct(n, n, (2*n)-1, 'z', 0), 
 			'q': lcp_tbl_struct(1, (2*n), (2*n), 'q', 0)}
-def lcp_tbl_pp_create(n):
-	return lcp_tbl_create(n, lcp_tbl_pp_struct(n))
+def lcp_tbl_pp_create(n,nrows):
+	return lcp_tbl_create(n, lcp_tbl_pp_struct(n), nrows)
 def lcp_tbl_pp_rinit(tbl, r, m, q):
 	mat_rput(tbl['M'], r, lcp_tbl_off(tbl, 'z'), vec_neg(m))
 	tbl['M'][r][lcp_tbl_off(tbl, 'q')] = q
@@ -311,7 +312,7 @@ def lcp_tbl_pp_rinit(tbl, r, m, q):
 def lcp_tbl_pp_init_Mq(tbl, Mq):
 	for r in range(len(Mq)): lcp_tbl_pp_rinit(tbl, r, Mq[r][:-1], Mq[r][-1])
 def lcp_tbl_pp_create_Mq(Mq): 
-	tbl = lcp_tbl_pp_create(len(Mq[0])-1); lcp_tbl_pp_init_Mq(tbl, Mq); return tbl;
+	tbl = lcp_tbl_pp_create(len(Mq[0])-1, len(Mq)); lcp_tbl_pp_init_Mq(tbl, Mq); return tbl;
 def lcp_tbl_pp_compl(tbl, xi):
 	return (xi +  tbl['n']) % (2*tbl['n'])
 
@@ -342,7 +343,7 @@ def lcp_solve_ppcd1_tableau(tbl, opts = {}):
 	# Dantzig-Cottle Principal Pivoting Method, Murty p.273
 	# Processes P matrices.
 	#
-	M = tbl['M']; qoff = lcp_tbl_off(tbl, 'q'); n = tbl['n'];
+	M = tbl['M']; qoff = lcp_tbl_off(tbl, 'q'); n = tbl['n']; nrows = tbl['nrows'];
 	maxit = opts.get('maxit', 0); it = 0; status = 1;
 	while (status == 1 and (maxit == 0 or it < maxit)):
 		it = it + 1
@@ -351,7 +352,7 @@ def lcp_solve_ppcd1_tableau(tbl, opts = {}):
 		q_cands = [x for x in range(n) if M[x][qoff] < 0]
 		r_disting = q_cands[-1]
 		c_disting = lcp_tbl_pp_compl(tbl, tbl['L'][r_disting]) 
-		r_cands = [r_disting] + [x for x in range(n) if M[x][c_disting] > 0 and M[x][qoff] >= 0]
+		r_cands = [r_disting] + [x for x in range(nrows) if M[x][c_disting] > 0 and M[x][qoff] >= 0]
 		#mat_print(tbl['M'], '')
 		r_block = lcp_tbl_leaving(tbl, r_cands, c_disting, opts); xi_block = tbl['L'][r_block];
 		lcp_tbl_pivot(tbl, r_block, c_disting)
@@ -360,7 +361,7 @@ def lcp_solve_ppcd1_tableau(tbl, opts = {}):
 				and (status == 1 and (maxit == 0 or it < maxit)) ):
 			it = it + 1
 			c_driv = lcp_tbl_pp_compl(tbl, xi_block)
-			r_cands = [r_disting] + [x for x in range(n) if M[x][c_driv] > 0 and M[x][qoff] >= 0]
+			r_cands = [r_disting] + [x for x in range(nrows) if M[x][c_driv] > 0 and M[x][qoff] >= 0]
 			r_block = lcp_tbl_leaving(tbl, r_cands, c_driv, opts); xi_block = tbl['L'][r_block];
 			lcp_tbl_pivot(tbl, r_block, c_driv)
 			opt_print('{}. m-pvt: {}-{}, {}'.format(it, r_block,c_driv, lcp_tbl_lbls_str(tbl, tbl['L'])), opts)
@@ -371,13 +372,13 @@ def lcp_solve_ppcd1_tableau(tbl, opts = {}):
 	return (status == 2)
 
 
-def lcp_tbl_ppcd2_struct(n):
-	return {'w': lcp_tbl_struct(n, 0, n-1, 'w', 'id'), 
-			'z': lcp_tbl_struct(n, n, (2*n)-1, 'z', 0), 
-			'q': lcp_tbl_struct(1, (2*n), (2*n), 'q', 0),
-			'b': lcp_tbl_struct(1, (2*n)+1, (2*n)+1, 'b', 0)}
-def lcp_tbl_ppcd2_create(n):
-	return lcp_tbl_create(n, lcp_tbl_ppcd2_struct(n))
+def lcp_tbl_ppcd2_struct(n, nrows):
+	return {'w': lcp_tbl_struct(nrows, 0, nrows-1, 'w', 'id'), 
+			'z': lcp_tbl_struct(n, nrows, nrows+(n-1), 'z', 0), 
+			'q': lcp_tbl_struct(1, (nrows+n), (nrows+n), 'q', 0),
+			'b': lcp_tbl_struct(1, (nrows+n)+1, (nrows+n)+1, 'b', 0)}
+def lcp_tbl_ppcd2_create(n,nrows):
+	return lcp_tbl_create(n, lcp_tbl_ppcd2_struct(n, nrows), nrows)
 def lcp_tbl_ppcd2_rinit(tbl, r, m, q):
 	mat_rput(tbl['M'], r, lcp_tbl_off(tbl, 'z'), vec_neg(m))
 	tbl['M'][r][lcp_tbl_off(tbl, 'q')] = q
@@ -386,7 +387,7 @@ def lcp_tbl_ppcd2_rinit(tbl, r, m, q):
 def lcp_tbl_ppcd2_init_Mq(tbl, Mq):
 	for r in range(len(Mq)): lcp_tbl_ppcd2_rinit(tbl, r, Mq[r][:-1], Mq[r][-1])
 def lcp_tbl_ppcd2_create_Mq(Mq): 
-	tbl = lcp_tbl_ppcd2_create(len(Mq[0])-1); lcp_tbl_ppcd2_init_Mq(tbl, Mq); return tbl;
+	tbl = lcp_tbl_ppcd2_create(len(Mq[0])-1, len(Mq)); lcp_tbl_ppcd2_init_Mq(tbl, Mq); return tbl;
 def lcp_tbl_ppcd2_compl(tbl, xi):
 	return (xi +  tbl['n']) % (2*tbl['n'])
 
@@ -430,48 +431,49 @@ def lcp_solve_ppcd2_tableau(tbl, opts = {}):
 	# Dantzig-Cottle Principal Pivoting Method, Murty p.276.
 	# Processes P, PSD matrices.
 	#
-	#TODO: lexi
+	# TODO: lexi
 	#
-	M = tbl['M']; n = tbl['n']; qoff = lcp_tbl_off(tbl, 'q'); boff = lcp_tbl_off(tbl, 'b');
-	lb = [g_num(0)]*(2*n); tbl['lb'] = lb; 
+	M = tbl['M']; n = tbl['n']; nrows = tbl['nrows']; qoff = lcp_tbl_off(tbl, 'q'); boff = lcp_tbl_off(tbl, 'b');
+	lb = [g_num(0)]*(nrows+n); tbl['lb'] = lb; 
 	maxit = opts.get('maxit', 0); it = 0; status = 1;
-	lbda = g_num(int(math.ceil(min(M[x][qoff] for x in range(n)) - 1)))
+	lbda = g_num(int(math.ceil(min(M[x][qoff] for x in range(nrows)) - 1)))
 	tbl['lbda'] = lbda
-	#print 'lbda', lbda
+	lcp_tbl_print_M(tbl)
+	print 'lbda', lbda
 	while (status == 1 and (maxit == 0 or it < maxit)):
 		it = it + 1
-		if all(M[x][qoff] >= 0 for x in range(n)): # Success 
+		if all(M[x][qoff] >= 0 for x in range(nrows)): # Success 
 			status = 2; break;
 		# Determine distinguished
 		r_disting = -1; i_disting = -1;
-		r_disting = next((x for x in range(n) if M[x][boff] < 0), -1)
+		r_disting = next((x for x in range(nrows) if M[x][boff] < 0), -1)
 		if (r_disting != -1):
 			i_disting = tbl['L'][r_disting]; i_driv = lcp_tbl_pp_compl(tbl, i_disting);
 		else:
 			first_lbda = next((x for x in range(len(lb)) if lb[x] == lbda), -1)
-			if (first_lbda == -1) or (all(M[x][qoff] >= 0 for x in range(n))):
+			if (first_lbda == -1) or (all(M[x][qoff] >= 0 for x in range(nrows))):
 				status = 2; break;
 			i_disting = first_lbda; i_driv = i_disting;
 			# Pivot-less one-step major cycle
 			if 0:
 				print 'disting', lcp_tbl_lbl(tbl, i_disting)
 				is_blocked = False
-				for ri in range(n):
+				for ri in range(nrows):
 					change = lcp_tbl_ppcd2_block_change(tbl, ri, i_driv)
 					if (change[1] and (change[1] + lbda) < 0):
 						is_blocked = True
 						break
 				if (not is_blocked):
-					for ri in range(n):
+					for ri in range(nrows):
 						M[ri][boff] += M[ri][i_driv]*lbda # or is it -=
 					lb[i_driv] = g_num(0)
 					r_disting = -1
-		#print 'disting', lcp_tbl_lbl(tbl, i_disting), 'driving', lcp_tbl_lbl(tbl, i_driv)
+		print 'disting', lcp_tbl_lbl(tbl, i_disting), 'driving', lcp_tbl_lbl(tbl, i_driv)
 		while (status == 1 and (maxit == 0 or it < maxit)):
 			it = it + 1
 			# Determine blocking
 			r_block = -1; driv_change = None; block_val = None; # TODO: lexi
-			for ri in range(n):
+			for ri in range(nrows):
 				change = lcp_tbl_ppcd2_block_change(tbl, ri, i_driv)
 				if change[1] and ((r_block == -1) or (change[1] < driv_change)):
 					r_block = ri; driv_change = change[1]; block_val = change[2];
@@ -479,7 +481,7 @@ def lcp_solve_ppcd2_tableau(tbl, opts = {}):
 				disting_change = lcp_tbl_ppcd2_block_change(tbl, r_disting, i_driv)
 				if disting_change[0] and ((r_block == -1) or (disting_change[0] < driv_change)):
 					r_block = r_disting; driv_change = disting_change[0]; block_val = disting_change[2];
-			#print 'drive:', lcp_tbl_lbl(tbl, i_driv), driv_change, block_val, driv_change+lb[i_driv]
+			print 'drive:', lcp_tbl_lbl(tbl, i_driv), driv_change, block_val, driv_change+lb[i_driv] if (not driv_change is None) else None
 			if (r_block == -1):
 				status = 0; break;
 			# Pivot
@@ -488,7 +490,7 @@ def lcp_solve_ppcd2_tableau(tbl, opts = {}):
 			if (r_disting == -1):
 				r_disting = r_block
 			opt_print('{}. pvt: {}-{}, {}'.format(it, r_block,i_driv, lcp_tbl_lbls_str(tbl, tbl['L'])), opts)
-			#lcp_tbl_print_M(tbl); vec_print(tbl['lb']);
+			lcp_tbl_print_M(tbl); vec_print(tbl['lb']);
 			# Decide next operation
 			if (i_block != i_disting):
 				i_driv = lcp_tbl_pp_compl(tbl, i_block) 
@@ -508,26 +510,23 @@ def lcp_tbl_cpa_struct(n):
 			'z0': lcp_tbl_struct(1, (2*n), (2*n), 'z0', '-en'), 
 			'q': lcp_tbl_struct(1, (2*n)+1, (2*n)+1, 'q', 0)}
 
-def lcp_tbl_cpa_create(n): 
-	return lcp_tbl_create(n, lcp_tbl_cpa_struct(n))
-
+def lcp_tbl_cpa_create(n,nrows): 
+	return lcp_tbl_create(n, lcp_tbl_cpa_struct(n), nrows)
 # solve w-Mz=q
 def lcp_tbl_cpa_rinit(tbl, r, m, q):
 	mat_rput(tbl['M'], r, lcp_tbl_off(tbl, 'z'), vec_neg(m))
 	tbl['M'][r][lcp_tbl_off(tbl, 'q')] = q
-
 # solve w-Mz=q
 def lcp_tbl_cpa_init_Mq(tbl, Mq):
 	for r in range(len(Mq)): lcp_tbl_cpa_rinit(tbl, r, Mq[r][:-1], Mq[r][-1])
-
 def lcp_tbl_cpa_create_Mq(Mq): 
-	tbl = lcp_tbl_cpa_create(len(Mq[0])-1); lcp_tbl_cpa_init_Mq(tbl, Mq); return tbl;
+	tbl = lcp_tbl_cpa_create(len(Mq[0])-1, len(Mq)); lcp_tbl_cpa_init_Mq(tbl, Mq); return tbl;
 
 def lcp_solve_cpa_tableau(tbl, opts = {}):
 	# Complementary Pivot Algorithm, Murty p.66, opt. p.81
 	#
 	#Initialization, p.71
-	#mat_print(tbl['M'], '')
+	#mat_print(tbl['M'])
 	status = 1
 	r,qr = vec_argmin2(lcp_tbl_col(tbl, 'q'))
 	if (qr >= 0):
@@ -538,7 +537,7 @@ def lcp_solve_cpa_tableau(tbl, opts = {}):
 		dropped = tbl['L'][r];
 		lcp_tbl_pivot(tbl, r, c); 
 		opt_print('0. pvt: {}-{}, {}'.format(r,c, lcp_tbl_lbls_str(tbl, tbl['L'])), opts)
-		#mat_print(tbl['M'], '')	
+		#mat_print(tbl['M'])	
 	maxit = opts.get('maxit', 0); it = 0; 
 	while (status == 1 and (maxit == 0 or it < maxit)):
 		it = it + 1
@@ -548,14 +547,14 @@ def lcp_solve_cpa_tableau(tbl, opts = {}):
 			status = 2; break;
 		M = tbl['M']
 		c = lcp_tbl_pp_compl(tbl, dropped)
-		r_cands = [x for x in range(tbl['n']) if M[x][c] > 0]
+		r_cands = [x for x in range(tbl['nrows']) if M[x][c] > 0]
 		if (len(r_cands) == 0): # Failure, p.68
 			status = 0; break;
 		r = lcp_tbl_leaving(tbl, r_cands, c, opts)
 		dropped = tbl['L'][r]; 
 		lcp_tbl_pivot(tbl, r, c); 
 		opt_print('{}. pvt: {}-{}, {}'.format(it, r,c, lcp_tbl_lbls_str(tbl, tbl['L'])), opts)
-		#mat_print(tbl['M'], '');
+		#mat_print(tbl['M']);
 	if (status == 2):
 		tbl['sol'] = lcp_tbl_solution(tbl, ['z'])
 	else:	
@@ -564,31 +563,39 @@ def lcp_solve_cpa_tableau(tbl, opts = {}):
 
 def mlcp_to_lcp_Mq(Mq, bounds, subst):
 	# TODO: handle unbounded variables using a phase 1 algorithm that drives them 
-	# to basic variables, trying both directions 
-	# (splitting each unbounded into 2, then choosing the one can be a succesful driver)
+	# to basic variables, trying both directions, ending with an almost-compl basis.
+	# (splitting each unbounded into 2, then choosing the one that can be a successful driver)
 	N = []
 	for bi in xrange(len(bounds)):
 		b = bounds[bi]
-		if (b[0]):
+		if not (b[0] is None):
 			subst[bi] = [g_num(1), b[0]]
 			for ri in xrange(len(Mq)):
-				Mq[ri][-1] += Mq[ri][bi]*b[0]
-			if (b[1]): 
+				Mq[ri][-1] -= Mq[ri][bi]*b[0]
+			if not (b[1] is None):
 				N.append(bi)
-		elif (b[1]):
+		elif not (b[1] is None):
 			subst[bi] = [g_num(-1), b[1]]
 			for ri in xrange(len(Mq)):
 				Mq[ri][-1] -= Mq[ri][bi]*b[1]
 				Mq[ri][bi] = -Mq[ri][bi]
-	new_Mq = mat_create(len(Mq)+len(N), len(bounds)+len(N), g_num(0))
-	mat_copy_to(Mq, new_Mq)
-	mat_swapc(new_Mq, len(bounds), len(new_Mq)-1)
+	cMq = mat_create(len(Mq)+len(N), len(bounds)+len(N)+1, g_num(0))
+	mat_copy_to(Mq, cMq)
+	mat_swapc(cMq, len(bounds), len(cMq[0])-1)
 	off = [len(Mq), len(bounds)]
-	for i in len(N):
+	for i in range(len(N)):
 		bi = N[i]
-		new_Mq[off[0]+i][bi] = g_num(1)
-		new_Mq[off[0]+i][off[1]+1] = g_num(1)
-		new_Mq[off[0]+i][-1] = bounds[bi][1]-bounds[bi][0]
+		cMq[off[0]+i][bi] = g_num(1)
+		cMq[off[0]+i][off[1]+i] = g_num(1)
+		cMq[off[0]+i][-1] = bounds[bi][1]-bounds[bi][0]
+	return cMq	
+
+def mlcp_subst_sol(n, lcp_sol, subst):
+	mlcp_sol = []
+	for i in range(n):
+		mlcp_sol.append(lcp_sol[i] * subst[i][0] + subst[i][1])
+	return mlcp_sol	
+
 
 def get_test_Mq(test):
 	Mq_tbl = {
@@ -671,6 +678,13 @@ def get_test_Mq(test):
 			[0, -1, 2, -3],
 			[2, 0, -2, 6],
 			[-1, 1, 0, -1],
+		],
+		'test 1':
+		[
+			[-1, 0, 4],
+			[0, 1, 16],
+			#[4, 1, 0],
+			#[-4, -1, 0],
 		]
 	}
 	return Mq_tbl[test]
@@ -702,23 +716,77 @@ def test_ppcd2(tests, opts = {}):
 		lcp_solve_ppcd2_tableau(tbl, opts)
 		vec_print(tbl['sol'])
 
-if 0:
-	tbl = lcp_tbl_pp_create_Mq(mat_rational([ [-1, 1, -1, 3], [-1, 1, -1, 5], [-1, -1, -1, 9] ]) )
-	mat_print(tbl['M']); lcp_tbl_pivot(tbl, 2, 5); mat_print(tbl['M']);
-if 0: test_ppm1(['Murty p.255'], {'maxit':20, 'log':True})
-if 0: test_ppm1(['Murty p.261'], {'maxit':10, 'log':False})
-if 0: test_ppm1(['Murty p.262'], {'maxit':10, 'log':True})
-if 0: test_ppm1(['Murty p.265'], {'maxit':10, 'log':True})
-if 0: test_cpa(['Murty p.77'], {'maxit':20, 'log':True})
-if 0: test_cpa(['Murty p.79'], {'maxit':4, 'log':True})
-if 0: test_cpa(['Murty p.79 (mod)'], {'maxit':4, 'log':True})
-if 0: test_cpa(['Murty p.81'], {'maxit':20, 'log':True})
-if 0: test_cpa(['Murty p.83'], {'maxit':10, 'log':True, 'no-lex':True}); test_cpa('Murty p.83', {'maxit':10, 'log':True}); 
-if 0: test_cpa(['Murty p.97'], {'maxit':20, 'log':True})
-if 0: test_cpa(['Murty p.107'], {'maxit':20, 'log':True})
-if 0: test_ppcd1(['Murty p.255'], {'maxit':20, 'log':True})
-if 0: test_ppcd1(['Murty p.261'], {'maxit':20, 'log':True})
-if 0: test_ppcd1(['Murty p.262'], {'maxit':20, 'log':True})
-if 0: test_ppcd2(['Murty p.255', 'Murty p.261', 'Murty p.262'], {'maxit':20, 'log':False})
-if 1: test_ppcd2(['Cottle p.258'], {'maxit':20, 'log':True})
-if 0: test_ppcd2(['Murty p.265'], {'maxit':20, 'log':True})
+def run_tests():
+	if 0:
+		tbl = lcp_tbl_pp_create_Mq(mat_rational([ [-1, 1, -1, 3], [-1, 1, -1, 5], [-1, -1, -1, 9] ]) )
+		mat_print(tbl['M']); lcp_tbl_pivot(tbl, 2, 5); mat_print(tbl['M']);
+	if 0: test_ppm1(['Murty p.255'], {'maxit':20, 'log':True})
+	if 0: test_ppm1(['Murty p.261'], {'maxit':10, 'log':False})
+	if 0: test_ppm1(['Murty p.262'], {'maxit':10, 'log':True})
+	if 0: test_ppm1(['Murty p.265'], {'maxit':10, 'log':True})
+	if 0: test_cpa(['Murty p.77'], {'maxit':20, 'log':True})
+	if 0: test_cpa(['Murty p.79'], {'maxit':4, 'log':True})
+	if 0: test_cpa(['Murty p.79 (mod)'], {'maxit':4, 'log':True})
+	if 0: test_cpa(['Murty p.81'], {'maxit':20, 'log':True})
+	if 0: test_cpa(['Murty p.83'], {'maxit':10, 'log':True, 'no-lex':True}); test_cpa('Murty p.83', {'maxit':10, 'log':True}); 
+	if 0: test_cpa(['Murty p.97'], {'maxit':20, 'log':True})
+	if 0: test_cpa(['Murty p.107'], {'maxit':20, 'log':True})
+	if 0: test_ppcd1(['Murty p.255'], {'maxit':20, 'log':True})
+	if 0: test_ppcd1(['Murty p.261'], {'maxit':20, 'log':True})
+	if 0: test_ppcd1(['Murty p.262'], {'maxit':20, 'log':True})
+	if 0: test_ppcd2(['Murty p.255', 'Murty p.261', 'Murty p.262'], {'maxit':20, 'log':False})
+	if 0: test_ppcd2(['Cottle p.258'], {'maxit':20, 'log':True})
+	if 0: test_ppcd2(['Murty p.265'], {'maxit':20, 'log':True})
+	if 1: 
+		bounds = [[-4, -2], [0, None]]; subst = [None]*len(bounds)
+		Mq = get_test_Mq('test 1')
+		cMq = mlcp_to_lcp_Mq(mat_rational(Mq), bounds, subst)
+		mat_print(cMq)
+		tbl = lcp_tbl_ppcd2_create_Mq( mat_rational(cMq) )
+		lcp_solve_ppcd2_tableau(tbl, {})
+		#tbl = lcp_tbl_cpa_create_Mq( mat_rational(cMq) )
+		#lcp_solve_cpa_tableau(tbl, {})
+		vec_print(tbl['sol'])
+		vec_print(mlcp_subst_sol(tbl['n'], tbl['sol'], subst))
+		
+if len(sys.argv) == 1:
+	run_tests()
+else:	
+	fip = 1 + (sys.argv.index('-in') if '-in' in sys.argv else -2)
+	fop = 1 + (sys.argv.index('-out') if '-out' in sys.argv else -2)
+	alg = 1 + (sys.argv.index('-alg') if '-alg' in sys.argv else -2)
+	alg = 'ppcd2' if alg == -1 else sys.argv[alg]
+	with open(fip, 'r') as fi: 
+		def read_bound(b): return None if 'inf' in b else float(b)
+		mode = 'n'; Mq = []; bounds = [];
+		for line in fi:
+			if mode == 'n':
+				n = int(line)
+				mode = 'Mq'
+			elif mode == 'Mq':
+				M.append([float(x) for x in line.split(',')])
+				if (len(M) == n):
+					mode = 'bds'
+			elif mode == 'bds':
+				bd = line.split(',')
+				bounds.append(read_bound(bd[0], bd[1]))
+	subst = [None]*len(bounds)
+	cMq = mlcp_to_lcp_Mq(Mq, bounds, subst)
+
+	if alg == 'cpa':
+		tbl = lcp_tbl_cpa_create_Mq(cMq)
+		lcp_solve_cpa_tableau(tbl, {})
+	elif alg == 'ppm1':
+		tbl = lcp_tbl_pp_create_Mq(cMq)
+		lcp_solve_ppm1_tableau(tbl, {})	
+	elif alg == 'ppcd1':
+		tbl = lcp_tbl_pp_create_Mq(cMq)
+		lcp_solve_ppcd1_tableau(tbl, {})		
+	else:
+		tbl = lcp_tbl_ppcd2_create_Mq(cMq)
+		lcp_solve_ppcd2_tableau(tbl, {})
+
+	sol = ()
+	if tbl['sol'] is not None: 
+		sol = mlcp_subst_sol(tbl['n'], tbl['sol'], subst)
+	with open(fop, 'w') as fo: fo.write(','.join(sol))
