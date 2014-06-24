@@ -4,6 +4,7 @@ import itertools
 import copy
 import fractions
 import operator
+import ctypes
 
 def g_num_default(x):
 	return float(x)
@@ -71,6 +72,11 @@ def mat_identity(r,c):
 	for i in range(r):
 		M[i][i] = g_num(1)
 	return M
+def mat_to_vec(M):
+	v = []
+	for r in M:
+		v.extend(r)
+	return v	
 def mat_block_identity(M, r,c, n):
 	for i in range(n): 
 		for j in range(n):
@@ -867,8 +873,33 @@ def run_tests():
 		mat_print(cMq)
 		
 
+def solve_mlcp_cdll_mprog(Mq, bounds, opts = {}):
+	def ctypes_flist(l): cltype = ctypes.c_float*len(l); return cltype(*l);
+	def conv_bound_lo(b): return float('-inf') if b is None else float(b)
+	def conv_bound_hi(b): return float('inf') if b is None else float(b)
+	lib = ctypes.cdll.LoadLibrary('D:/jad/depots/sandy1/depot/Other/Personal/Jad.Nohra/Lab/mprog/out/mprog_dll.dll')
+	#print lib.multiply(2, 2)
+	n = mat_rows(Mq)
+	A = mat_to_vec(mat_block_implode(Mq, [n], [n, 1])[0][0])
+	b = vec_neg(mat_col(Mq, n))
+	lo = [conv_bound_lo(x[0]) for x in bounds]
+	hi = [conv_bound_hi(x[1]) for x in bounds]
+	csol = ctypes_flist([0]*2)
+	if opts.get('log', False):
+		print A,b,lo,hi
+	#solved = lib.solveOdeDantzigLCP(2, ctypes_flist([1.0, 2.0, 3.0, 4.0]), ctypes_flist([1,-1]), ctypes_flist([1, float('inf')]), ctypes_flist([1, float('inf')]), csol)
+	solved = lib.solveOdeDantzigLCP(n, ctypes_flist(A), ctypes_flist(b), ctypes_flist(lo), ctypes_flist(hi), csol)
+	sol = [float(x) for x in csol]
+	if opts.get('log', False):
+		print solved, sol
+	if not solved:
+		sol = []
+	return sol
+
 def solve_mlcp(Mq, bounds, opts = {}):
 	algo = opts.get('algo', 'cpa')
+	if algo == 'ode':
+		return solve_mlcp_cdll_mprog(Mq, bounds, opts)
 	subst = [None]*len(bounds)
 	cMq = mlcp_to_lcp_Mq(Mq, bounds, subst)
 	if opts.get('log', False):
