@@ -804,9 +804,6 @@ def get_test_Mq(test):
 	}
 	return Mq_tbl[test]
 
-if 1:
-	g_num = g_num_rational
-
 def test_ppm1(tests, opts = {}):
 	for test in tests:
 		tbl = lcp_tbl_pp_create_Mq( mat_rational(get_test_Mq(test)) )
@@ -869,7 +866,51 @@ def run_tests():
 		cMq = mlcp_to_lcp_Mq2(mat_rational(Mq), bounds, subst)
 		mat_print(cMq)
 		
-def solve_file(fin, fout, algo, opts):
+
+def solve_mlcp(Mq, bounds, opts = {}):
+	algo = opts.get('algo', 'cpa')
+	subst = [None]*len(bounds)
+	cMq = mlcp_to_lcp_Mq(Mq, bounds, subst)
+	if opts.get('log', False):
+		mat_print(Mq)
+		mat_print(cMq)
+		print subst
+	if algo == 'cpa':
+		tbl = lcp_tbl_cpa_create_Mq(cMq)
+		lcp_solve_cpa_tableau(tbl, opts)
+	elif algo == 'ppm1':
+		tbl = lcp_tbl_pp_create_Mq(cMq)
+		lcp_solve_ppm1_tableau(tbl, opts)	
+	elif algo == 'ppcd1':
+		tbl = lcp_tbl_pp_create_Mq(cMq)
+		lcp_solve_ppcd1_tableau(tbl, opts)		
+	else:
+		tbl = lcp_tbl_ppcd2_create_Mq(cMq)
+		lcp_solve_ppcd2_tableau(tbl, opts)
+	sol = []
+	if len(tbl['sol']) > 0: 
+		sol = mlcp_subst_sol(Mq, tbl['sol'], subst)
+	if opts.get('log', False):
+		vec_print(tbl['sol'])
+		vec_print(sol)
+	return sol	
+
+def solve_mlcp_lists(n, list_M, list_q, list_lo, list_hi, mul_q, opts = {}):
+	def conv_bound(b): return None if (float('inf') == b or float('-inf') == b) else float(b)
+	Mq = mat_create(n, n+1, None)
+	bounds = [None]*n
+	li = 0
+	for ri in range(n):
+		for ci in range(n):
+			Mq[ri][ci] = list_M[ri*n+ci]
+		Mq[ri][n] = mul_q*list_q[ri]
+	li = 0
+	for ri in range(n):
+		bounds[ri] = [conv_bound(list_lo[ri]), conv_bound(list_hi[ri])]
+	return solve_mlcp(Mq, bounds, opts)	
+	
+
+def solve_mlcp_file(fin, fout, opts = {}):
 	with open(fin, 'r') as fi: 
 		def read_bound(b): return None if 'inf' in b else float(b)
 		def read_bounds(b): return [read_bound(b[0]), read_bound(b[1])]
@@ -888,34 +929,11 @@ def solve_file(fin, fout, algo, opts):
 			elif mode == 'bds':
 				bd = line.split(',')
 				bounds.append(read_bounds(bd))
-	subst = [None]*len(bounds)
-	cMq = mlcp_to_lcp_Mq(Mq, bounds, subst)
-	#cMq = mlcp_to_lcp_Mq2(Mq, bounds, subst)
-	if opts.get('log', False):
-		mat_print(cMq)
-		print subst
-	if algo == 'cpa':
-		tbl = lcp_tbl_cpa_create_Mq(cMq)
-		lcp_solve_cpa_tableau(tbl, opts)
-	elif algo == 'ppm1':
-		tbl = lcp_tbl_pp_create_Mq(cMq)
-		lcp_solve_ppm1_tableau(tbl, opts)	
-	elif algo == 'ppcd1':
-		tbl = lcp_tbl_pp_create_Mq(cMq)
-		lcp_solve_ppcd1_tableau(tbl, opts)		
-	else:
-		tbl = lcp_tbl_ppcd2_create_Mq(cMq)
-		lcp_solve_ppcd2_tableau(tbl, opts)
-	sol = ()
-	if len(tbl['sol']) > 0: 
-		print tbl['sol']
-		sol = mlcp_subst_sol(Mq, tbl['sol'], subst)
+	sol = solve_mlcp(Mq, bounds, opts)
 	if (fout is not None):	
 		with open(fout, 'w') as fo: fo.write(','.join([str(x) for x in sol]))
 	else:
 		vec_print(sol)
-
-
 
 if 0:
 	M = [
@@ -935,17 +953,19 @@ if 0:
 	print MM
 	MM = mat_block_explode(BM, [2, 2], [2, 3])
 	print MM
-elif len(sys.argv) == 1:
-	run_tests()
-else:	
-	g_num = g_num_default
-	fip = 1 + (sys.argv.index('-in') if '-in' in sys.argv else -2)
-	fop = 1 + (sys.argv.index('-out') if '-out' in sys.argv else -2)
-	algo = 1 + (sys.argv.index('-algo') if '-algo' in sys.argv else -2)
-	log = '-log' in sys.argv
-	if fip >= 0:
-		fip = sys.argv[fip] if fip >= 0 else None
-		fop = sys.argv[fop] if fop >= 0 else None
-		algo = sys.argv[algo] if algo >= 0 else 'ppcd2'
-		opts = {'log':log}
-		solve_file(fip, fop, algo, opts)
+elif  hasattr(sys, 'argv'):
+	if '-tests' in sys.argv:
+		g_num = g_num_rational
+		run_tests()
+	elif '-in' in sys.argv:
+		g_num = g_num_default
+		fip = 1 + (sys.argv.index('-in') if '-in' in sys.argv else -2)
+		fop = 1 + (sys.argv.index('-out') if '-out' in sys.argv else -2)
+		algo = 1 + (sys.argv.index('-algo') if '-algo' in sys.argv else -2)
+		log = '-log' in sys.argv
+		if fip >= 0:
+			fip = sys.argv[fip] if fip >= 0 else None
+			fop = sys.argv[fop] if fop >= 0 else None
+			algo = sys.argv[algo] if algo >= 0 else 'cpa'
+			opts = {'log':log, 'algo':algo}
+			solve_mlcp_file(fip, fop, opts)
