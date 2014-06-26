@@ -637,36 +637,36 @@ def lcp_solve_cpa_tableau(tbl, opts = {}):
 		tbl['sol'] = []
 	return (status == 2)
 
-def mlcp_to_lcp_Mq(Mq, bounds, subst):
-	# TODO: handle unbounded variables using a phase 1 algorithm that drives them 
-	# to basic variables, trying both directions, ending with an almost-compl basis.
-	# (splitting each unbounded into 2, then choosing the one that can be a successful driver)
-	N = []
-	for bi in xrange(len(bounds)):
-		b = bounds[bi]
-		if b[0] is not None:
-			subst[bi] = [g_num(1), b[0]]
-			for ri in xrange(len(Mq)):
-				Mq[ri][-1] -= Mq[ri][bi]*b[0]
-			if b[1] is not None:
-				N.append(bi)
-		elif b[1] is not None:
-			subst[bi] = [g_num(-1), b[1]]
-			for ri in xrange(len(Mq)):
-				Mq[ri][-1] -= Mq[ri][bi]*b[1]
-				Mq[ri][bi] = -Mq[ri][bi]
-	cMq = mat_create(len(Mq)+len(N), len(bounds)+len(N)+1, g_num(0))
-	mat_copy_to(Mq, cMq)
-	mat_swapc(cMq, len(bounds), len(cMq[0])-1)
-	off = [len(Mq), len(bounds)]
-	for i in range(len(N)):
-		bi = N[i]
-		#cMq[off[0]+i][bi] = g_num(1)
-		#cMq[off[0]+i][off[1]+i] = g_num(1)
-		cMq[off[0]+i][bi] = g_num(-1)
-		cMq[i][off[1]+i] = g_num(1)
-		cMq[off[0]+i][-1] = bounds[bi][1]-bounds[bi][0]
-	return cMq	
+# def mlcp_to_lcp_Mq_old(Mq, bounds, subst):
+# 	# TODO: handle unbounded variables using a phase 1 algorithm that drives them 
+# 	# to basic variables, trying both directions, ending with an almost-compl basis.
+# 	# (splitting each unbounded into 2, then choosing the one that can be a successful driver)
+# 	N = []
+# 	for bi in xrange(len(bounds)):
+# 		b = bounds[bi]
+# 		if b[0] is not None:
+# 			subst[bi] = [g_num(1), b[0]]
+# 			for ri in xrange(len(Mq)):
+# 				Mq[ri][-1] -= Mq[ri][bi]*b[0]
+# 			if b[1] is not None:
+# 				N.append(bi)
+# 		elif b[1] is not None:
+# 			subst[bi] = [g_num(-1), b[1]]
+# 			for ri in xrange(len(Mq)):
+# 				Mq[ri][-1] -= Mq[ri][bi]*b[1]
+# 				Mq[ri][bi] = -Mq[ri][bi]
+# 	cMq = mat_create(len(Mq)+len(N), len(bounds)+len(N)+1, g_num(0))
+# 	mat_copy_to(Mq, cMq)
+# 	mat_swapc(cMq, len(bounds), len(cMq[0])-1)
+# 	off = [len(Mq), len(bounds)]
+# 	for i in range(len(N)):
+# 		bi = N[i]
+# 		#cMq[off[0]+i][bi] = g_num(1)
+# 		#cMq[off[0]+i][off[1]+i] = g_num(1)
+# 		cMq[off[0]+i][bi] = g_num(-1)
+# 		cMq[i][off[1]+i] = g_num(1)
+# 		cMq[off[0]+i][-1] = bounds[bi][1]-bounds[bi][0]
+# 	return cMq	
 
 def mlcp_subst_sol(Mq, lcp_sol, subst):
 	n = len(Mq[0])-1
@@ -675,8 +675,11 @@ def mlcp_subst_sol(Mq, lcp_sol, subst):
 		mlcp_sol.append(lcp_sol[i] * subst[i][0] + subst[i][1])
 	return mlcp_sol	
 
-def mlcp_to_lcp_Mq2(Mq, bounds, subst):
+def mlcp_to_lcp_Mq(Mq, bounds, subst):
 	# Extension to Lemke, Judice. With the sign fix of the erratum: -[qj3 + Mj3j3 * bj3]
+	# TODO: handle unbounded variables using a phase 1 algorithm that drives them 
+ 	# to basic variables, trying both directions, ending with an almost-compl basis.
+ 	# (splitting each unbounded into 2, then choosing the one that can be a successful driver)
 	def convertJ(Mq, J1, J2, J3, bj1, bj3):
 		def mat_copy2(M):
 			return mat_copy(M) if not mat_is_empty(M) else [[]]	
@@ -894,7 +897,7 @@ def run_tests():
 	if 1: 
 		bounds = [[-4, -2], [0, None]]; subst = [None]*len(bounds)
 		Mq = get_test_Mq('test 1')
-		cMq = mlcp_to_lcp_Mq2(mat_rational(Mq), bounds, subst)
+		cMq = mlcp_to_lcp_Mq(mat_rational(Mq), bounds, subst)
 		mat_print(cMq)
 		
 
@@ -926,13 +929,10 @@ def solve_mlcp(Mq, bounds, opts = {}):
 	if algo == 'ode':
 		return solve_mlcp_cdll_mprog(Mq, bounds, opts)
 	subst = [None]*len(bounds)
-	subst2 = [None]*len(bounds)
-	cMq2 = mlcp_to_lcp_Mq2(mat_copy(Mq), vec_copy(bounds), subst2)
 	cMq = mlcp_to_lcp_Mq(Mq, bounds, subst)
 	if opts.get('log', False):
 		print 'Mq'; mat_print(Mq)
 		print 'cMq'; mat_print(cMq); print subst;
-		print 'cMq2'; mat_print(cMq2); print subst2;
 	if algo == 'cpa':
 		tbl = lcp_tbl_cpa_create_Mq(cMq)
 		lcp_solve_cpa_tableau(tbl, opts)
