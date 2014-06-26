@@ -637,37 +637,6 @@ def lcp_solve_cpa_tableau(tbl, opts = {}):
 		tbl['sol'] = []
 	return (status == 2)
 
-# def mlcp_to_lcp_Mq_old(Mq, bounds, subst):
-# 	# TODO: handle unbounded variables using a phase 1 algorithm that drives them 
-# 	# to basic variables, trying both directions, ending with an almost-compl basis.
-# 	# (splitting each unbounded into 2, then choosing the one that can be a successful driver)
-# 	N = []
-# 	for bi in xrange(len(bounds)):
-# 		b = bounds[bi]
-# 		if b[0] is not None:
-# 			subst[bi] = [g_num(1), b[0]]
-# 			for ri in xrange(len(Mq)):
-# 				Mq[ri][-1] -= Mq[ri][bi]*b[0]
-# 			if b[1] is not None:
-# 				N.append(bi)
-# 		elif b[1] is not None:
-# 			subst[bi] = [g_num(-1), b[1]]
-# 			for ri in xrange(len(Mq)):
-# 				Mq[ri][-1] -= Mq[ri][bi]*b[1]
-# 				Mq[ri][bi] = -Mq[ri][bi]
-# 	cMq = mat_create(len(Mq)+len(N), len(bounds)+len(N)+1, g_num(0))
-# 	mat_copy_to(Mq, cMq)
-# 	mat_swapc(cMq, len(bounds), len(cMq[0])-1)
-# 	off = [len(Mq), len(bounds)]
-# 	for i in range(len(N)):
-# 		bi = N[i]
-# 		#cMq[off[0]+i][bi] = g_num(1)
-# 		#cMq[off[0]+i][off[1]+i] = g_num(1)
-# 		cMq[off[0]+i][bi] = g_num(-1)
-# 		cMq[i][off[1]+i] = g_num(1)
-# 		cMq[off[0]+i][-1] = bounds[bi][1]-bounds[bi][0]
-# 	return cMq	
-
 def mlcp_subst_sol(Mq, lcp_sol, subst):
 	n = len(Mq[0])-1
 	mlcp_sol = []
@@ -689,12 +658,15 @@ def mlcp_to_lcp_Mq(Mq, bounds, subst):
 			return mat_neg(M) if not mat_is_empty(M) else mat_copy2(M)
 		def mat_mulv2(M, v):
 			return mat_mulv(M, v) if not mat_is_empty(M) and not vec_is_empty(v) else []
+		def mat_transp2(M):
+			return mat_transp(M) if not mat_is_empty(M) else [[]]		
 		j1 = len(J1); j2 = len(J2); j3 = len(J3);
 		irblocks = [J1, J2, J3]; icblocks = [J1, J2, J3, [len(Mq[0])-1]];
 		BMq = mat_block_implode2(Mq, irblocks, icblocks)
-		#print BMq[0][0], BMq[0][1], BMq[0][2]
-		#print BMq[1][0], BMq[1][1], BMq[1][2]
-		#print BMq[2][0], BMq[2][1], BMq[2][2]
+		#print J1, J2, J3
+		#print BMq[0][0], BMq[0][1], BMq[0][2], BMq[0][-1]
+		#print BMq[1][0], BMq[1][1], BMq[1][2], BMq[1][-1]
+		#print BMq[2][0], BMq[2][1], BMq[2][2], BMq[2][-1]
 		cBMq = mat_create(4, 5, None)
 		cBMq[0][0] = mat_copy2(BMq[0][0]); cBMq[0][1] = mat_copy2(BMq[0][1]); cBMq[0][2] = mat_neg2(BMq[0][2]);
 		cBMq[0][3] = mat_identity(j1, j1)
@@ -707,8 +679,13 @@ def mlcp_to_lcp_Mq(Mq, bounds, subst):
 		cBMq[2][-1] = mat_neg2(mat_add2(BMq[2][-1], [mat_mulv2(BMq[2][2], bj3)]))
 		cBMq[3][0] = mat_neg2(mat_identity(j1, j1))
 		cBMq[3][1] = mat_zero(j1, j2); cBMq[3][2] = mat_zero(j1, j3); cBMq[3][3] = mat_zero(j1, j1)
-		cBMq[3][-1] = [vec_copy(bj1)]
+		cBMq[3][-1] = mat_transp2([vec_copy(bj1)])
+		#print cBMq[0][0], cBMq[0][1], cBMq[0][2], cBMq[0][3], cBMq[0][-1]
+		#print cBMq[1][0], cBMq[1][1], cBMq[1][2], cBMq[1][3], cBMq[1][-1]
+		#print cBMq[2][0], cBMq[2][1], cBMq[2][2], cBMq[2][3], cBMq[2][-1]
+		#print cBMq[3][0], cBMq[3][1], cBMq[3][2], cBMq[3][3], cBMq[3][-1]
 		erblocks = [j1, j2, j3, j1]; ecblocks = [j1, j2, j3, j1, 1];
+		#print erblocks, ecblocks
 		return mat_block_explode(cBMq, erblocks, ecblocks)
 	# working copies
 	bounds = vec_copy(bounds)
