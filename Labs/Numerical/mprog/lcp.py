@@ -721,7 +721,7 @@ def mlcp_to_lcp_Mq(Mq, bounds, subst):
 				bounds[bi][1] -= a; bounds[bi][0] -= a;
 		elif b[1] is not None:
 			subst[bi] = [g_num(-1), bounds[bi][1]]
-	# map		
+	# classify		
 	G = []; J1 = []; J2 = []; J3 = []; bj1 = []; bj3 = [];
 	for bi in xrange(len(bounds)):
 		b = bounds[bi]
@@ -946,8 +946,9 @@ def solve_mlcp(Mq, bounds, opts = {}):
 		sol = mlcp_subst_sol(Mq, tbl['sol'], subst)
 	if opts.get('log', False) or opts.get('blip', False):
 		if 'it' in tbl: print tbl['it'], 'iters'
+	if opts.get('log', False):
 		vec_print(tbl['sol'])
-		vec_print(sol)
+		vec_print(sol)	
 	return sol	
 
 def solve_mlcp_lists(n, list_M, list_q, list_lo, list_hi, mul_q, clamp, opts = {}):
