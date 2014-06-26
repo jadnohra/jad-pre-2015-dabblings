@@ -182,6 +182,14 @@ def mat_add(M, N):
 		for j in range(c1):
 			rs[j] = rm[j]+rn[j]
 	return S	
+def mat_add_transp(M, Nt):
+	r1 = len(M);c1 = len(M[0]);
+	S = mat_create(r1, c1, None)
+	for i in range(r1):
+		rm = M[i]; rs = S[i];
+		for j in range(c1):
+			rs[j] = rm[j]+Nt[j][i]
+	return S	
 def mat_sub(M, N):
 	r1 = len(M);c1 = len(M[0]);
 	S = mat_create(r1, c1, None)
@@ -406,6 +414,7 @@ def lcp_solve_ppm1_tableau(tbl, opts = {}):
 		tbl['sol'] = lcp_tbl_solution(tbl,['z'])
 	else:	
 		tbl['sol'] = []
+	tbl['it'] = it	
 	return (status == 2)
 
 def lcp_solve_ppcd1_tableau(tbl, opts = {}):
@@ -438,6 +447,7 @@ def lcp_solve_ppcd1_tableau(tbl, opts = {}):
 		tbl['sol'] = lcp_tbl_solution(tbl,['z'])
 	else:	
 		tbl['sol'] = []
+	tbl['it'] = it	
 	return (status == 2)
 
 
@@ -575,6 +585,7 @@ def lcp_solve_ppcd2_tableau(tbl, opts = {}):
 		tbl['sol'] = lcp_tbl_solution(tbl,['z'])
 	else:	
 		tbl['sol'] = []
+	tbl['it'] = it	
 	return (status == 2)
 
 def lcp_tbl_cpa_struct(n):
@@ -635,6 +646,7 @@ def lcp_solve_cpa_tableau(tbl, opts = {}):
 		tbl['sol'] = lcp_tbl_solution(tbl, ['z'])
 	else:	
 		tbl['sol'] = []
+	tbl['it'] = it
 	return (status == 2)
 
 def mlcp_subst_sol(Mq, lcp_sol, subst):
@@ -652,8 +664,12 @@ def mlcp_to_lcp_Mq(Mq, bounds, subst):
 	def convertJ(Mq, J1, J2, J3, bj1, bj3):
 		def mat_copy2(M):
 			return mat_copy(M) if not mat_is_empty(M) else [[]]	
-		def mat_add2(M, N):
-			return mat_add(M, N) if not mat_is_empty(N) and not mat_is_empty(M) else mat_copy2(M)
+		def mat_add_transp2(M, N):
+			#print mat_dims(M), mat_dims(N)
+			#if (mat_dims(M) != mat_dims(N)):
+			#	print M, mat_dims(M)
+			#	print N, mat_dims(N)
+			return mat_add_transp(M, N) if not mat_is_empty(N) and not mat_is_empty(M) else mat_copy2(M)
 		def mat_neg2(M):
 			return mat_neg(M) if not mat_is_empty(M) else mat_copy2(M)
 		def mat_mulv2(M, v):
@@ -670,13 +686,13 @@ def mlcp_to_lcp_Mq(Mq, bounds, subst):
 		cBMq = mat_create(4, 5, None)
 		cBMq[0][0] = mat_copy2(BMq[0][0]); cBMq[0][1] = mat_copy2(BMq[0][1]); cBMq[0][2] = mat_neg2(BMq[0][2]);
 		cBMq[0][3] = mat_identity(j1, j1)
-		cBMq[0][-1] = mat_add2(BMq[0][-1], [mat_mulv2(BMq[0][2], bj3)])
+		cBMq[0][-1] = mat_add_transp2(BMq[0][-1], [mat_mulv2(BMq[0][2], bj3)])
 		cBMq[1][0] = mat_copy2(BMq[1][0]); cBMq[1][1] = mat_copy2(BMq[1][1]); cBMq[1][2] = mat_neg2(BMq[1][2]);
 		cBMq[1][3] = mat_zero(j2, j1)
-		cBMq[1][-1] = mat_add2(BMq[1][-1], [mat_mulv2(BMq[1][2], bj3)])
+		cBMq[1][-1] = mat_add_transp2(BMq[1][-1], [mat_mulv2(BMq[1][2], bj3)])
 		cBMq[2][0] = mat_neg2(BMq[2][0]); cBMq[2][1] = mat_neg2(BMq[2][1]); cBMq[2][2] = mat_copy2(BMq[2][2]);
 		cBMq[2][3] = mat_zero(j3, j1)
-		cBMq[2][-1] = mat_neg2(mat_add2(BMq[2][-1], [mat_mulv2(BMq[2][2], bj3)]))
+		cBMq[2][-1] = mat_neg2(mat_add_transp2(BMq[2][-1], [mat_mulv2(BMq[2][2], bj3)]))
 		cBMq[3][0] = mat_neg2(mat_identity(j1, j1))
 		cBMq[3][1] = mat_zero(j1, j2); cBMq[3][2] = mat_zero(j1, j3); cBMq[3][3] = mat_zero(j1, j1)
 		cBMq[3][-1] = mat_transp2([vec_copy(bj1)])
@@ -903,12 +919,14 @@ def solve_mlcp_cdll_mprog(Mq, bounds, opts = {}):
 
 def solve_mlcp(Mq, bounds, opts = {}):
 	algo = opts.get('algo', 'cpa')
+	if opts.get('log', False):
+		print 'algo', algo
+		print 'Mq'; mat_print(Mq)
 	if algo == 'ode':
 		return solve_mlcp_cdll_mprog(Mq, bounds, opts)
 	subst = [None]*len(bounds)
 	cMq = mlcp_to_lcp_Mq(Mq, bounds, subst)
 	if opts.get('log', False):
-		print 'Mq'; mat_print(Mq)
 		print 'cMq'; mat_print(cMq); print subst;
 	if algo == 'cpa':
 		tbl = lcp_tbl_cpa_create_Mq(cMq)
@@ -925,7 +943,8 @@ def solve_mlcp(Mq, bounds, opts = {}):
 	sol = []
 	if len(tbl['sol']) > 0: 
 		sol = mlcp_subst_sol(Mq, tbl['sol'], subst)
-	if opts.get('log', False):
+	if opts.get('log', False) or opts.get('blip', False):
+		if 'it' in tbl: print tbl['it'], 'iters'
 		vec_print(tbl['sol'])
 		vec_print(sol)
 	return sol	
@@ -1004,10 +1023,10 @@ elif  hasattr(sys, 'argv'):
 		fip = 1 + (sys.argv.index('-in') if '-in' in sys.argv else -2)
 		fop = 1 + (sys.argv.index('-out') if '-out' in sys.argv else -2)
 		algo = 1 + (sys.argv.index('-algo') if '-algo' in sys.argv else -2)
-		log = '-log' in sys.argv
+		log = '-log' in sys.argv; blip = '-blip' in sys.argv;
 		if fip >= 0:
 			fip = sys.argv[fip] if fip >= 0 else None
 			fop = sys.argv[fop] if fop >= 0 else None
 			algo = sys.argv[algo] if algo >= 0 else 'cpa'
-			opts = {'log':log, 'algo':algo}
+			opts = {'log':log, 'blip':blip, 'algo':algo}
 			solve_mlcp_file(fip, fop, opts)
