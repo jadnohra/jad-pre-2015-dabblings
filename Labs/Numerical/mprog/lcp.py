@@ -905,14 +905,15 @@ def solve_mlcp_cdll_mprog(Mq, bounds, opts = {}):
 	b = vec_neg(mat_col(Mq, n))
 	lo = [conv_bound_lo(x[0]) for x in bounds]
 	hi = [conv_bound_hi(x[1]) for x in bounds]
-	csol = ctypes_flist([0]*2)
+	csol = ctypes_flist([0]*n)
 	if opts.get('log', False):
 		print A,b,lo,hi
 	#solved = lib.solveOdeDantzigLCP(2, ctypes_flist([1.0, 2.0, 3.0, 4.0]), ctypes_flist([1,-1]), ctypes_flist([1, float('inf')]), ctypes_flist([1, float('inf')]), csol)
 	solved = lib.solveOdeDantzigLCP(n, ctypes_flist(A), ctypes_flist(b), ctypes_flist(lo), ctypes_flist(hi), csol)
 	sol = [float(x) for x in csol]
 	if opts.get('log', False):
-		print solved, sol
+		print 'solved:', solved
+		print sol
 	if not solved:
 		sol = []
 	return sol
