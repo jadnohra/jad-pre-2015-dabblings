@@ -39,6 +39,8 @@ def vec_is_empty(v):
 	return vec_dim(v) == 0
 def vec_copy(a):
 	return [x for x in a]
+def vec_transfer(a, b):
+	for i in range(len(a)): b[i] = a[i] 
 def vec_neg(a):
 	return [-x for x in a]
 def vec_add(a,b):
@@ -674,7 +676,7 @@ def mlcp_subst_sol(Mq, lcp_sol, subst):
 	return mlcp_sol	
 
 def mlcp_to_lcp_Mq2(Mq, bounds, subst):
-	# Extension to Lemke, Judice.
+	# Extension to Lemke, Judice. With the sign fix of the erratum: -[qj3 + Mj3j3 * bj3]
 	def convertJ(Mq, J1, J2, J3, bj1, bj3):
 		def mat_copy2(M):
 			return mat_copy(M) if not mat_is_empty(M) else [[]]	
@@ -687,10 +689,9 @@ def mlcp_to_lcp_Mq2(Mq, bounds, subst):
 		j1 = len(J1); j2 = len(J2); j3 = len(J3);
 		irblocks = [J1, J2, J3]; icblocks = [J1, J2, J3, [len(Mq[0])-1]];
 		BMq = mat_block_implode2(Mq, irblocks, icblocks)
-		print BMq[0][0], BMq[0][1], BMq[0][2]
-		print BMq[1][0], BMq[1][1], BMq[1][2]
-		print BMq[2][0], BMq[2][1], BMq[2][2]
-
+		#print BMq[0][0], BMq[0][1], BMq[0][2]
+		#print BMq[1][0], BMq[1][1], BMq[1][2]
+		#print BMq[2][0], BMq[2][1], BMq[2][2]
 		cBMq = mat_create(4, 5, None)
 		cBMq[0][0] = mat_copy2(BMq[0][0]); cBMq[0][1] = mat_copy2(BMq[0][1]); cBMq[0][2] = mat_neg2(BMq[0][2]);
 		cBMq[0][3] = mat_identity(j1, j1)
@@ -706,10 +707,24 @@ def mlcp_to_lcp_Mq2(Mq, bounds, subst):
 		cBMq[3][-1] = [vec_copy(bj1)]
 		erblocks = [j1, j2, j3, j1]; ecblocks = [j1, j2, j3, j1, 1];
 		return mat_block_explode(cBMq, erblocks, ecblocks)
-	# subst	
-	for b in bounds:
-		if b[0] is not None:	
-			b[0] = g_num(0)
+	# working copies
+	bounds = vec_copy(bounds)
+	Mq = mat_copy(Mq)
+	# preprocess
+	id_subst = [g_num(1), g_num(0)]
+	for i in range(len(subst)):
+		subst[i] = id_subst
+	for bi in xrange(len(bounds)):
+		b = bounds[bi]
+		if b[0] is not None and b[1] is not None:
+			if b[0] != 0:
+				a = bounds[bi][0]
+				subst[bi] = [g_num(1), a]
+				for ri in range(len(Mq)):
+					Mq[ri][-1] += Mq[ri][bi]*a
+				bounds[bi][1] -= a; bounds[bi][0] -= a;
+		elif b[1] is not None:
+			subst[bi] = [g_num(-1), bounds[bi][1]]
 	# map		
 	G = []; J1 = []; J2 = []; J3 = []; bj1 = []; bj3 = [];
 	for bi in xrange(len(bounds)):
@@ -722,8 +737,10 @@ def mlcp_to_lcp_Mq2(Mq, bounds, subst):
 			J3.append(bi); bj3.append(b[1]);
 		else:
 			G.append(bi)
+	# handle unbounded
 	if (len(G) > 0):
 		return None
+	# convert	
 	return convertJ(Mq, J1, J2, J3, bj1, bj3)
 
 def get_test_Mq(test):
@@ -909,13 +926,13 @@ def solve_mlcp(Mq, bounds, opts = {}):
 	if algo == 'ode':
 		return solve_mlcp_cdll_mprog(Mq, bounds, opts)
 	subst = [None]*len(bounds)
-	cMq2 = mlcp_to_lcp_Mq2(mat_copy(Mq), vec_copy(bounds), vec_copy(subst))
+	subst2 = [None]*len(bounds)
+	cMq2 = mlcp_to_lcp_Mq2(mat_copy(Mq), vec_copy(bounds), subst2)
 	cMq = mlcp_to_lcp_Mq(Mq, bounds, subst)
 	if opts.get('log', False):
 		print 'Mq'; mat_print(Mq)
-		print 'cMq'; mat_print(cMq)
-		print 'cMq2'; mat_print(cMq2)
-		print subst
+		print 'cMq'; mat_print(cMq); print subst;
+		print 'cMq2'; mat_print(cMq2); print subst2;
 	if algo == 'cpa':
 		tbl = lcp_tbl_cpa_create_Mq(cMq)
 		lcp_solve_cpa_tableau(tbl, opts)
