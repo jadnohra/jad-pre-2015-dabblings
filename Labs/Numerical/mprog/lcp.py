@@ -35,6 +35,8 @@ def vec_create(n,v):
 	return [v]*n
 def vec_dim(v):
 	return len(v)
+def vec_is_empty(v):
+	return vec_dim(v) == 0
 def vec_copy(a):
 	return [x for x in a]
 def vec_neg(a):
@@ -677,23 +679,29 @@ def mlcp_to_lcp_Mq2(Mq, bounds, subst):
 		def mat_copy2(M):
 			return mat_copy(M) if not mat_is_empty(M) else [[]]	
 		def mat_add2(M, N):
-			return mat_add(M, N) if not mat_is_empty(N) else mat_copy2(M)
+			return mat_add(M, N) if not mat_is_empty(N) and not mat_is_empty(M) else mat_copy2(M)
 		def mat_neg2(M):
 			return mat_neg(M) if not mat_is_empty(M) else mat_copy2(M)
+		def mat_mulv2(M, v):
+			return mat_mulv(M, v) if not mat_is_empty(M) and not vec_is_empty(v) else []
 		j1 = len(J1); j2 = len(J2); j3 = len(J3);
 		irblocks = [J1, J2, J3]; icblocks = [J1, J2, J3, [len(Mq[0])-1]];
 		BMq = mat_block_implode2(Mq, irblocks, icblocks)
+		print BMq[0][0], BMq[0][1], BMq[0][2]
+		print BMq[1][0], BMq[1][1], BMq[1][2]
+		print BMq[2][0], BMq[2][1], BMq[2][2]
+
 		cBMq = mat_create(4, 5, None)
 		cBMq[0][0] = mat_copy2(BMq[0][0]); cBMq[0][1] = mat_copy2(BMq[0][1]); cBMq[0][2] = mat_neg2(BMq[0][2]);
 		cBMq[0][3] = mat_identity(j1, j1)
-		cBMq[0][-1] = mat_add2(BMq[0][-1], [mat_mulv(BMq[0][2], bj3)])
+		cBMq[0][-1] = mat_add2(BMq[0][-1], [mat_mulv2(BMq[0][2], bj3)])
 		cBMq[1][0] = mat_copy2(BMq[1][0]); cBMq[1][1] = mat_copy2(BMq[1][1]); cBMq[1][2] = mat_neg2(BMq[1][2]);
 		cBMq[1][3] = mat_zero(j2, j1)
-		cBMq[1][-1] = mat_add2(BMq[1][-1], [mat_mulv(BMq[1][2], bj3)])
+		cBMq[1][-1] = mat_add2(BMq[1][-1], [mat_mulv2(BMq[1][2], bj3)])
 		cBMq[2][0] = mat_neg2(BMq[2][0]); cBMq[2][1] = mat_neg2(BMq[2][1]); cBMq[2][2] = mat_copy2(BMq[2][2]);
 		cBMq[2][3] = mat_zero(j3, j1)
-		cBMq[2][-1] = mat_add2(BMq[2][-1], [mat_mulv(BMq[2][2], bj3)])
-		cBMq[3][0] = mat_neg(mat_identity(j1, j1))
+		cBMq[2][-1] = mat_neg2(mat_add2(BMq[2][-1], [mat_mulv2(BMq[2][2], bj3)]))
+		cBMq[3][0] = mat_neg2(mat_identity(j1, j1))
 		cBMq[3][1] = mat_zero(j1, j2); cBMq[3][2] = mat_zero(j1, j3); cBMq[3][3] = mat_zero(j1, j1)
 		cBMq[3][-1] = [vec_copy(bj1)]
 		erblocks = [j1, j2, j3, j1]; ecblocks = [j1, j2, j3, j1, 1];
@@ -901,10 +909,12 @@ def solve_mlcp(Mq, bounds, opts = {}):
 	if algo == 'ode':
 		return solve_mlcp_cdll_mprog(Mq, bounds, opts)
 	subst = [None]*len(bounds)
+	cMq2 = mlcp_to_lcp_Mq2(mat_copy(Mq), vec_copy(bounds), vec_copy(subst))
 	cMq = mlcp_to_lcp_Mq(Mq, bounds, subst)
 	if opts.get('log', False):
-		mat_print(Mq)
-		mat_print(cMq)
+		print 'Mq'; mat_print(Mq)
+		print 'cMq'; mat_print(cMq)
+		print 'cMq2'; mat_print(cMq2)
 		print subst
 	if algo == 'cpa':
 		tbl = lcp_tbl_cpa_create_Mq(cMq)
