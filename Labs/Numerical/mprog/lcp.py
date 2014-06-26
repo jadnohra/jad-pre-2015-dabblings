@@ -692,9 +692,9 @@ def mlcp_to_lcp_Mq(Mq, bounds, subst):
 		j1 = len(J1); j2 = len(J2); j3 = len(J3);
 		irblocks = [J1, J2, J3]; icblocks = [J1, J2, J3, [len(Mq[0])-1]];
 		BMq = mat_block_implode2(Mq, irblocks, icblocks)
-		print BMq[0][0], BMq[0][1], BMq[0][2]
-		print BMq[1][0], BMq[1][1], BMq[1][2]
-		print BMq[2][0], BMq[2][1], BMq[2][2]
+		#print BMq[0][0], BMq[0][1], BMq[0][2]
+		#print BMq[1][0], BMq[1][1], BMq[1][2]
+		#print BMq[2][0], BMq[2][1], BMq[2][2]
 		cBMq = mat_create(4, 5, None)
 		cBMq[0][0] = mat_copy2(BMq[0][0]); cBMq[0][1] = mat_copy2(BMq[0][1]); cBMq[0][2] = mat_neg2(BMq[0][2]);
 		cBMq[0][3] = mat_identity(j1, j1)
@@ -930,7 +930,6 @@ def solve_mlcp(Mq, bounds, opts = {}):
 		return solve_mlcp_cdll_mprog(Mq, bounds, opts)
 	subst = [None]*len(bounds)
 	cMq = mlcp_to_lcp_Mq(Mq, bounds, subst)
-	print cMq; print subst;
 	if opts.get('log', False):
 		print 'Mq'; mat_print(Mq)
 		print 'cMq'; mat_print(cMq); print subst;
@@ -971,7 +970,6 @@ def solve_mlcp_lists(n, list_M, list_q, list_lo, list_hi, mul_q, clamp, opts = {
 		Mq[ri][n] = mul_q*list_q[ri]
 	li = 0
 	bclamp =  [-clamp, clamp] if clamp else [None, None]
-	print bclamp
 	for ri in range(n):
 		bounds[ri] = [conv_bound(list_lo[ri], bclamp), conv_bound(list_hi[ri], bclamp)]
 	return solve_mlcp(Mq, bounds, opts)	
