@@ -975,23 +975,28 @@ def solve_mlcp_lists(n, list_M, list_q, list_lo, list_hi, mul_q, clamp, opts = {
 
 def solve_mlcp_file(fin, fout, opts = {}):
 	with open(fin, 'r') as fi: 
-		def read_bound(b): return None if 'inf' in b else float(b)
-		def read_bounds(b): return [read_bound(b[0]), read_bound(b[1])]
+		def read_bound(b, clamp): return clamp if 'inf' in b else float(b)
+		def read_bounds(b, bclamp): return [read_bound(b[0], bclamp[0]), read_bound(b[1], bclamp[1])]
 		mode = 'pref'; Mq = []; bounds = [];
+		n = 0; bclamp = [None, None];
 		for line in fi:
 			line = "".join(line.split())
 			if mode == 'pref':
 				mode = 'n'
 			elif mode == 'n':
 				n = int(line)
-				mode = 'Mq'
+				mode = 'clamp'
+			elif mode == 'clamp':
+				clamp = float(line)
+				bclamp =  [-clamp, clamp] if clamp else [None, None]
+				mode = 'Mq'	
 			elif mode == 'Mq':
 				Mq.append([float(x) for x in line.split(',')])
 				if (len(Mq) == n):
 					mode = 'bds'
 			elif mode == 'bds':
 				bd = line.split(',')
-				bounds.append(read_bounds(bd))
+				bounds.append(read_bounds(bd, bclamp))
 	sol = solve_mlcp(Mq, bounds, opts)
 	if (fout is not None):	
 		with open(fout, 'w') as fo: fo.write(','.join([str(x) for x in sol]))
