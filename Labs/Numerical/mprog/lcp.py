@@ -6,6 +6,7 @@ import fractions
 import operator
 import ctypes
 import os
+import traceback
 
 def g_num_default(x):
 	return float(x)
@@ -1169,7 +1170,11 @@ def solve_mlcp_dir(din, opts = {}):
 		for file in files:
 			i = i + 1
 			fp = os.path.join(subdir,file)
-			sol = solve_mlcp_file(fp, opts)
+			sol = None
+			try:
+				sol = solve_mlcp_file(fp, opts)
+			except Exception:
+				print traceback.format_exc()
 			if (sol is None or len(sol) == 0):
 				fail = fail + 1
 				print 'x {}'.format(fp)
