@@ -1176,7 +1176,7 @@ def solve_mlcp_dir(din, opts = {}):
 	
 	for algo in algos:
 		start = time.time() 
-		
+
 		opts['algo'] = algo
 		if len(algos) > 1:
 			opts['no_clamp'] = (algo == 'cpa_ext1')
@@ -1185,6 +1185,8 @@ def solve_mlcp_dir(din, opts = {}):
 
 		iln = 0; i = 0; fail = 0;
 		for subdir, dirs, files in os.walk(din):
+			if (subdir.endswith('_')):
+				continue
 			iln = 0;
 			if verbose: print '\n' if i != 0 else '', subdir
 			for file in files:
