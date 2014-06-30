@@ -709,12 +709,13 @@ def lcp_solve_cpa_ext1_tableau(tbl, ubrange, opts = {}):
 	tbl['it'] = it
 	return (status == 2)
 
-#subst is [type,i,scale,add]
+#subst is [index,scale,add]
 def mlcp_subst_sol(Mq, lcp_sol, subst):
 	n = len(Mq[0])-1
 	mlcp_sol = []
 	for i in range(n):
-		mlcp_sol.append(lcp_sol[i] * subst[i][0] + subst[i][1])
+		xi,s,a = subst[i]
+		mlcp_sol.append(lcp_sol[xi] * s + a)
 	return mlcp_sol	
 
 def mlcp_to_lcp_Mq_convertJ(Mq, J1, J2, J3, bj1, bj3):
@@ -770,35 +771,44 @@ def mlcp_to_lcp_Mq(Mq, bounds, subst):
 	bounds = vec_copy(bounds)
 	Mq = mat_copy(Mq)
 	# preprocess
-	id_subst = [g_num(1), g_num(0)]
+	type_g = 0; type_j1 = 1; type_j2 = 2; type_j3 = 3;
+	subst_info = [None]*len(subst)
 	for i in range(len(subst)):
-		subst[i] = id_subst
+		subst[i] = [-1, g_num(1), g_num(0)]
 	for bi in xrange(len(bounds)):
 		b = bounds[bi]
 		if b[0] is not None and b[1] is not None:
 			if b[0] != 0:
 				a = bounds[bi][0]
-				subst[bi] = [g_num(1), a]
+				subst[bi] = [-1, g_num(1), a]
 				for ri in range(len(Mq)):
 					Mq[ri][-1] += Mq[ri][bi]*a
 				bounds[bi][1] -= a; bounds[bi][0] -= a;
 		elif b[1] is not None:
-			subst[bi] = [g_num(-1), bounds[bi][1]]
+			subst[bi] = [-1, g_num(-1), bounds[bi][1]]
 	# classify		
 	G = []; J1 = []; J2 = []; J3 = []; bj1 = []; bj3 = [];
 	for bi in xrange(len(bounds)):
 		b = bounds[bi]
 		if b[0] is not None and b[1] is not None:
+			subst_info[bi] = [type_j1, len(J1)]
 			J1.append(bi); bj1.append(b[1]);
 		elif b[0] is not None:
+			subst_info[bi] = [type_j2, len(J2)]
 			J2.append(bi)
 		elif b[1] is not None:
+			subst_info[bi] = [type_j3, len(J3)]
 			J3.append(bi); bj3.append(b[1]);
 		else:
+			subst_info[bi] = [type_g, len(G)]
 			G.append(bi)
 	# handle unbounded
 	if (len(G) > 0):
 		return None
+	# set substitutions	offsets
+	type_offsets = [0, len(G), len(G)+len(J1), len(G)+len(J1)+len(J2)]
+	for bi in xrange(len(subst)):
+		subst[bi][0] = type_offsets[subst_info[bi][0]] + subst_info[bi][1]
 	# convert	
 	return mlcp_to_lcp_Mq_convertJ(Mq, J1, J2, J3, bj1, bj3)
 
@@ -813,39 +823,49 @@ def mlcp_to_lcp_Mq_ext1(Mq, bounds, subst):
 	bounds = vec_copy(bounds)
 	Mq = mat_copy(Mq)
 	# preprocess
-	id_subst = [g_num(1), g_num(0)]
+	type_g = 0; type_j1 = 1; type_j2 = 2; type_j3 = 3;
+	subst_info = [None]*len(subst)
 	for i in range(len(subst)):
-		subst[i] = id_subst
+		subst[i] = [-1, g_num(1), g_num(0)]
 	for bi in xrange(len(bounds)):
 		b = bounds[bi]
 		if b[0] is not None and b[1] is not None:
 			if b[0] != 0:
 				a = bounds[bi][0]
-				subst[bi] = [g_num(1), a]
+				subst[bi] = [-1, g_num(1), a]
 				for ri in range(len(Mq)):
 					Mq[ri][-1] += Mq[ri][bi]*a
 				bounds[bi][1] -= a; bounds[bi][0] -= a;
 		elif b[1] is not None:
-			subst[bi] = [g_num(-1), bounds[bi][1]]
+			subst[bi] = [-1, g_num(-1), bounds[bi][1]]
 	# classify		
 	G = []; J1 = []; J2 = []; J3 = []; bj1 = []; bj3 = [];
 	for bi in xrange(len(bounds)):
 		b = bounds[bi]
 		if b[0] is not None and b[1] is not None:
+			subst_info[bi] = [type_j1, len(J1)]
 			J1.append(bi); bj1.append(b[1]);
 		elif b[0] is not None:
+			subst_info[bi] = [type_j2, len(J2)]
 			J2.append(bi)
 		elif b[1] is not None:
+			subst_info[bi] = [type_j3, len(J3)]
 			J3.append(bi); bj3.append(b[1]);
 		else:
+			subst_info[bi] = [type_g, len(G)]
 			G.append(bi)
-	# append G to J2, starting at ui
-	un = 0; ui = -1;
-	if (len(G) > 0):
-		un = len(G); ui = len(J1)+len(J2);
-		J2.extend(G)
+	# transfer G to end J2
+	un = len(G); ui = len(J1)+len(J2); g_off_j2 = len(J2);
+	ubrange = [ui, ui+un] if un else [-1, -1]
+	for bi in G:
+		subst_info[bi] = [type_j2, g_off_j2+subst_info[bi][1]]
+	J2.extend(G); G = [];
+	# set substitutions	offsets
+	type_offsets = [0, len(G), len(G)+len(J1), len(G)+len(J1)+len(J2)]
+	for bi in xrange(len(subst)):
+		subst[bi][0] = type_offsets[subst_info[bi][0]] + subst_info[bi][1]
 	# convert	
-	return (mlcp_to_lcp_Mq_convertJ(Mq, J1, J2, J3, bj1, bj3), [ui, ui+un])
+	return (mlcp_to_lcp_Mq_convertJ(Mq, J1, J2, J3, bj1, bj3), ubrange)
 
 def get_test_Mq(test):
 	Mq_tbl = {
