@@ -101,8 +101,12 @@ struct WindowData
 		}
 		if (1)
 		{
-			scene.physWorld.addRBody( v_z(), v_z(), 1*6 );
-			scene.physWorld.addRBody( v_z(), v_z(), 2 );
+			//scene.physWorld.addRBody( v_z(), v_z(), 1*6 );
+			//scene.physWorld.addRBody( v_z(), v_z(), 2 );
+
+			scene.physWorld.addRBody( v_z(), v_z(), 6 );
+			scene.physWorld.addRBody( v_z(), v_z(), 10/*9*/ );
+
 			//scene.physWorld.addRBody( v_z(), muls(u_i(), 0.2f), 0 );
 			
 		}
@@ -153,10 +157,12 @@ void drawScene(WindowData& wd, Scene& scene)
 				//printf("0x%x,0x%x\n", f2h(wd.cursor(0)), f2h(wd.cursor(1)));
 
 				const RShape& shape1 = w.rshapes[b1->shape];
-				const RShape& shape2 = w.rshapes[0];
+				const RShape& shape2 = w.rshapes[11];
 				//const RShape& shape2 = w.rshapes[b2->shape];
 
-				draw_circle(painty, wd.cursor, Rl(0.2), u_ijk());
+				//draw_circle(painty, wd.cursor, Rl(0.2), u_ijk());
+				draw_convex(painty, m2, shape2.v, shape2.count, shape2.r, u_ijk());
+				
 				if (0)
 				{
 					gjk::Out_gjk_distance out = gjk::gjk_distance(w.gjk, m1, shape1.v, shape1.count, shape1.r, m2, shape2.v, shape2.count, shape2.r, 1.e-5f);
@@ -184,7 +190,7 @@ void drawScene(WindowData& wd, Scene& scene)
 				}
 			}
 
-			if (true && w.rbodies.size >= 2)
+			if (false && w.rbodies.size >= 2)
 			{
 				RBody* b1 = w.rbodies.at(0);
 				RBody* b2 = w.rbodies.at(1);
@@ -328,7 +334,7 @@ namespace glfwHandler
 	{
 		WindowData& wd = *(WindowData*) glfwGetWindowUserPointer(window);
 		float off = (float) (oy * 0.05);
-		if (wd.scale + off > 0.0f) 
+		if (wd.scale + off > 1.e-3f) 
 		{
 			wd.scale += off;
 		}
