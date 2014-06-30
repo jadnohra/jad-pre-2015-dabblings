@@ -1165,13 +1165,15 @@ def solve_mlcp_file(fin, opts = {}):
 	return solve_mlcp(Mq, bounds, opts)
 
 def solve_mlcp_dir(din, opts = {}):
-	algos = [];
+	algos = []
 	if ('algo' in opts):
 		algos = [opts['algo']]
 	else:
-		algos = ['ode', 'cpa_ext1', 'cpa']
+		algos = ['cpa', 'cpa_ext1', 'ode']
+	
+	verbose = len(algos) == 1
+
 	for algo in algos:
-		
 		opts['algo'] = algo
 		if len(algos) > 1:
 			opts['no_clamp'] = (algo == 'cpa_ext1')
@@ -1181,7 +1183,7 @@ def solve_mlcp_dir(din, opts = {}):
 		iln = 0; i = 0; fail = 0;
 		for subdir, dirs, files in os.walk(din):
 			iln = 0;
-			print '\n' if i != 0 else '', subdir
+			if verbose: print '\n' if i != 0 else '', subdir
 			for file in files:
 				fp = os.path.join(subdir,file)
 				if (os.path.splitext(fp)[1] == '.txt'):
@@ -1194,11 +1196,12 @@ def solve_mlcp_dir(din, opts = {}):
 						print traceback.format_exc()
 					if (sol is None or len(sol) == 0):
 						fail = fail + 1
-						print ' {}!! '.format(fp),
+						if verbose: print ' {}!! '.format(fp),
 					else:
-						print '.',
-						if (iln%64 == 0): print ''
-		print ''
+						if verbose: 
+							print '.', 
+							if (iln%64 == 0): print ''
+		if verbose: print ''
 		print 'Passed {}, Failed {}'.format(i-fail, fail)
 
 
