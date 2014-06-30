@@ -7,6 +7,7 @@ import operator
 import ctypes
 import os
 import traceback
+import time
 
 def g_num_default(x):
 	return float(x)
@@ -1172,8 +1173,10 @@ def solve_mlcp_dir(din, opts = {}):
 		algos = ['cpa', 'cpa_ext1', 'ode']
 	
 	verbose = len(algos) == 1
-
+	
 	for algo in algos:
+		start = time.time() 
+		
 		opts['algo'] = algo
 		if len(algos) > 1:
 			opts['no_clamp'] = (algo == 'cpa_ext1')
@@ -1202,7 +1205,7 @@ def solve_mlcp_dir(din, opts = {}):
 							print '.', 
 							if (iln%64 == 0): print ''
 		if verbose: print ''
-		print 'Passed {}, Failed {}'.format(i-fail, fail)
+		print 'Passed {}, Failed {} in {} secs.'.format(i-fail, fail, time.time() - start)
 
 
 if 0:
