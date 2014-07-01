@@ -1,0 +1,8 @@
+Z:\Personal\Lab\Numerical\mprog>python lcp.py -in data3                                        algo: cpa                                                                                       opts: {'blip': False, 'algo': 'cpa', 'log': False, 'no_clamp': False}                           
+Passed 3437, Failed 0 in 969.065000057 secs.                                                    
+algo: cpa_ext1                                                                                  
+opts: {'blip': False, 'algo': 'cpa_ext1', 'log': False, 'no_clamp': True}                       
+Passed 3437, Failed 0 in 69.1150000095 secs.                                                    
+algo: ode                                                                                       
+opts: {'blip': False, 'algo': 'ode', 'log': False, 'no_clamp': False}                           
+Passed 2875, Failed 562 in 6.26900005341 secs.  
