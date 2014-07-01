@@ -652,7 +652,7 @@ def lcp_solve_cpa_tableau(tbl, opts = {}):
 	tbl['it'] = it
 	return (status == 2)
 
-def lcp_presolve_cpa_ext1_tableau(tbl, ubrange, opts = {}):
+def lcp_presolve_naive_cpa_ext1_tableau(tbl, ubrange, opts = {}):
 	# TODO: Use a proper phase-1 simplex to handle consistent degeneracy.
 	n = tbl['n']; z0off = lcp_tbl_off(tbl, 'z0'); zoff = lcp_tbl_off(tbl, 'z');
 	for i in range(ubrange[0], ubrange[1]):
@@ -661,10 +661,68 @@ def lcp_presolve_cpa_ext1_tableau(tbl, ubrange, opts = {}):
 		lcp_tbl_print_M(tbl)
 	for i in range(ubrange[0], ubrange[1]):
 		c = zoff+i; r = i;
+		if (tbl['M'][r][c] == 0):
+			return False
 		lcp_tbl_pivot(tbl, r, c)
 		#opt_print('*pvt: {}-{}, {}'.format(r,c, lcp_tbl_lbls_str(tbl, tbl['L'])), opts)
 	if opts.get('log', False):
 		lcp_tbl_print_M(tbl)
+	return True	
+
+def lcp_presolve_cpa_ext1_tableau_simplex1(tbl, ubrange, opts = {}):
+	z0off = lcp_tbl_off(tbl, 'z0'); zoff = lcp_tbl_off(tbl, 'z');
+	# make feasible
+	active_rows = range(ubrange[0], ubrange[1])
+	pc = z0off; pr = min(active_rows, key=lambda x: tbl['M'][x][zoff]); 
+	lcp_tbl_pivot(tbl, pr, pc)
+	# optimize (until z0=0)
+	it = 0
+	maxit = opts.get('maxit', 0)
+	while (it < maxit or maxit <= 0):
+		it = it + 1
+		pc = max(active_rows, key=lambda x: tbl['M'][x][zoff]);
+		if (tbl['M'][-1][pc] <= 0):
+			return True
+		r_cands = [x for x in active_rows if tbl['M'][x][pc] > 0]	
+		pr = lcp_tbl_leaving(tbl, r_cands, pc, opts);	
+		if (pr == -1):
+			opt_print('*** unbounded', opts); return False
+		lcp_tbl_pivot(tbl, pr, pc)
+		if opts.get('log', False):
+			lcp_tbl_print_M(tbl)
+	opt_print('*** maxiter', opts); return False
+
+def lcp_presolve_cpa_ext1_tableau(tbl, ubrange, opts = {}):
+	# A simplex phase-1 to handle consistent degeneracy.
+	# Conveniently use z0 as the auxiliary variable and zero it when done.
+	if (ubrange[0] < 0):
+		return True
+	n = tbl['n']; z0off = lcp_tbl_off(tbl, 'z0'); zoff = lcp_tbl_off(tbl, 'z');
+	if opts.get('log', False):
+		lcp_tbl_print_M(tbl)
+	# eliminate z0 from bounded 	
+	for i in itertools.chain(xrange(ubrange[0]), range(ubrange[1], n)): 
+		tbl['M'][i][z0off] = g_num(0)
+	# simplex
+	# add a row for the objective function
+	tbl['M'].append([g_num(0)]*len(tbl['M'][0])); tbl['M'][-1][z0off] = g_num(-1);
+	tbl['L'].append(-1)
+	if opts.get('log', False):
+		lcp_tbl_print_M(tbl)
+	solved = lcp_presolve_cpa_ext1_tableau_simplex1(tbl, ubrange)
+	if opts.get('log', False):
+		lcp_tbl_print_M(tbl)	
+	# remove the row for the objective function
+	del tbl['M'][-1]
+	# eliminate z0 from unbounded
+	for i in range(ubrange[0], ubrange[1]):
+		tbl['M'][i][z0off] = g_num(0)
+	# restore z0 to bounded
+	for i in itertools.chain(xrange(ubrange[0]), range(ubrange[1], n)): 
+		tbl['M'][i][z0off] = g_num(-1)	
+	if opts.get('log', False):
+		lcp_tbl_print_M(tbl)
+	return solved	
 
 def lcp_solve_cpa_ext1_tableau(tbl, ubrange, opts = {}):
 	# Complementary Pivot Algorithm, Murty p.66, opt. p.81
@@ -768,9 +826,6 @@ def mlcp_to_lcp_Mq_convertJ(Mq, J1, J2, J3, bj1, bj3):
 
 def mlcp_to_lcp_Mq(Mq, bounds, subst):
 	# Extension to Lemke, Judice. With the sign fix of the erratum: -[qj3 + Mj3j3 * bj3]
-	# TODO: handle unbounded variables using a phase 1 algorithm that drives them 
- 	# to basic variables, trying both directions, ending with an almost-compl basis.
- 	# (splitting each unbounded into 2, then choosing the one that can be a successful driver)
 	# working copies
 	bounds = vec_copy(bounds)
 	Mq = mat_copy(Mq)
@@ -817,7 +872,7 @@ def mlcp_to_lcp_Mq(Mq, bounds, subst):
 	return mlcp_to_lcp_Mq_convertJ(Mq, J1, J2, J3, bj1, bj3)
 
 def mlcp_to_lcp_Mq_ext1(Mq, bounds, subst):
-	# Extension to mlcp_to_lcp_Mq.
+	# Extension to mlcp_to_lcp_Mq, handling unbounded variables.
 	# Unbounded variables are included with non-negative variables (the set J2), pivoted in,
 	# and excluded from blocking by a trivial simple lemke extension.
 	# The first part of J2 is regular, while the second holds the unbounded variables starting 
@@ -1083,21 +1138,25 @@ def solve_mlcp(Mq, bounds, opts = {}):
 	if algo == 'ode':
 		return solve_mlcp_cdll_mprog(Mq, bounds, opts)
 	subst = [None]*len(bounds)
-	if algo == 'cpa_ext1':
+	if algo.startswith('cpa_ext1'):
 		(cMq,ubrange) = mlcp_to_lcp_Mq_ext1(Mq, bounds, subst)
 	else:
 		cMq = mlcp_to_lcp_Mq(Mq, bounds, subst)
 	if opts.get('log', False):
 		print 'cMq'; mat_print(cMq); print subst;
-		if algo == 'cpa_ext1':
+		if algo.startswith('cpa_ext1'):
 			print 'ubrange', ubrange
 	if algo == 'cpa':
 		tbl = lcp_tbl_cpa_create_Mq(cMq)
 		lcp_solve_cpa_tableau(tbl, opts)
 	elif algo == 'cpa_ext1':
 		tbl = lcp_tbl_cpa_create_Mq(cMq)
-		lcp_presolve_cpa_ext1_tableau(tbl, ubrange, opts)	
-		lcp_solve_cpa_ext1_tableau(tbl, ubrange, opts)	
+		if (lcp_presolve_naive_cpa_ext1_tableau(tbl, ubrange, opts)):
+			lcp_solve_cpa_ext1_tableau(tbl, ubrange, opts)	
+	elif algo == 'cpa_ext1b':
+		tbl = lcp_tbl_cpa_create_Mq(cMq)
+		if (lcp_presolve_cpa_ext1_tableau(tbl, ubrange, opts)):
+			lcp_solve_cpa_ext1_tableau(tbl, ubrange, opts)			
 	elif algo == 'ppm1':
 		tbl = lcp_tbl_pp_create_Mq(cMq)
 		lcp_solve_ppm1_tableau(tbl, opts)	
@@ -1108,7 +1167,7 @@ def solve_mlcp(Mq, bounds, opts = {}):
 		tbl = lcp_tbl_ppcd2_create_Mq(cMq)
 		lcp_solve_ppcd2_tableau(tbl, opts)
 	sol = []
-	if len(tbl['sol']) > 0: 
+	if tbl.get('sol', None) and len(tbl['sol']) > 0: 
 		sol = mlcp_subst_sol(Mq, tbl['sol'], subst)
 	if opts.get('log', False) or opts.get('blip', False):
 		if 'it' in tbl: print tbl['it'], 'iters'
@@ -1179,7 +1238,7 @@ def solve_mlcp_dir(din, opts = {}):
 
 		opts['algo'] = algo
 		if len(algos) > 1:
-			opts['no_clamp'] = (algo == 'cpa_ext1')
+			opts['no_clamp'] = (algo.startswith('cpa_ext1'))
 		print 'algo:', algo	
 		print 'opts:', opts	
 
