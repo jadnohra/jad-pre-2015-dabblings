@@ -143,10 +143,10 @@ def mat_block_implode(M, rblocks, cblocks):
 	BM = mat_create(len(rblocks), len(cblocks), None)
 	roff = 0; bri = 0;
 	for b_rows in rblocks:
-		coff = 0; cri = 0;
+		coff = 0; bci = 0;
 		for b_cols in cblocks:
-			BM[bri][cri] = mat_extract_block(M, roff, b_rows, coff, b_cols)
-			coff += b_cols; cri += 1;
+			BM[bri][bci] = mat_extract_block(M, roff, b_rows, coff, b_cols)
+			coff += b_cols; bci += 1;
 		roff += b_rows; bri += 1;
 	return BM	
 def mat_block_explode(BM, rblocks, cblocks):
@@ -300,6 +300,7 @@ def lcp_tbl_leaving_topmost(tbl, r_cands, col):
 	return ratios[0][0]
 
 def lcp_tbl_leaving_lexi(tbl, r_cands, col):
+	# TODO. this is completely wrong, see Murty, p.68,80,81, 
 	M = tbl['M']; qoff = lcp_tbl_off(tbl, 'q');
 	ratios = sorted([ [ri, M[ri][qoff]/M[ri][col]] for ri in r_cands ], key=lambda x: x[1])
 	if (len(ratios) <= 1 or ratios[0][1] != ratios[1][1]):
@@ -652,8 +653,8 @@ def lcp_solve_cpa_tableau(tbl, opts = {}):
 	tbl['it'] = it
 	return (status == 2)
 
-def lcp_presolve_naive_cpa_ext1_tableau(tbl, ubrange, opts = {}):
-	# TODO: Use a proper phase-1 simplex to handle consistent degeneracy.
+def lcp_presolve_cpa_ext1_tableau(tbl, ubrange, opts = {}):
+	# TODO: handle singularity properly
 	n = tbl['n']; z0off = lcp_tbl_off(tbl, 'z0'); zoff = lcp_tbl_off(tbl, 'z');
 	for i in range(ubrange[0], ubrange[1]):
 		tbl['M'][i][z0off] = g_num(0)
@@ -668,61 +669,6 @@ def lcp_presolve_naive_cpa_ext1_tableau(tbl, ubrange, opts = {}):
 	if opts.get('log', False):
 		lcp_tbl_print_M(tbl)
 	return True	
-
-def lcp_presolve_cpa_ext1_tableau_simplex1(tbl, ubrange, opts = {}):
-	z0off = lcp_tbl_off(tbl, 'z0'); zoff = lcp_tbl_off(tbl, 'z');
-	# make feasible
-	active_rows = range(ubrange[0], ubrange[1])
-	pc = z0off; pr = min(active_rows, key=lambda x: tbl['M'][x][zoff]); 
-	lcp_tbl_pivot(tbl, pr, pc)
-	# optimize (until z0=0)
-	it = 0
-	maxit = opts.get('maxit', 0)
-	while (it < maxit or maxit <= 0):
-		it = it + 1
-		pc = max(active_rows, key=lambda x: tbl['M'][x][zoff]);
-		if (tbl['M'][-1][pc] <= 0):
-			return True
-		r_cands = [x for x in active_rows if tbl['M'][x][pc] > 0]	
-		pr = lcp_tbl_leaving(tbl, r_cands, pc, opts);	
-		if (pr == -1):
-			opt_print('*** unbounded', opts); return False
-		lcp_tbl_pivot(tbl, pr, pc)
-		if opts.get('log', False):
-			lcp_tbl_print_M(tbl)
-	opt_print('*** maxiter', opts); return False
-
-def lcp_presolve_cpa_ext1_tableau(tbl, ubrange, opts = {}):
-	# A simplex phase-1 to handle consistent degeneracy.
-	# Conveniently use z0 as the auxiliary variable and zero it when done.
-	if (ubrange[0] < 0):
-		return True
-	n = tbl['n']; z0off = lcp_tbl_off(tbl, 'z0'); zoff = lcp_tbl_off(tbl, 'z');
-	if opts.get('log', False):
-		lcp_tbl_print_M(tbl)
-	# eliminate z0 from bounded 	
-	for i in itertools.chain(xrange(ubrange[0]), range(ubrange[1], n)): 
-		tbl['M'][i][z0off] = g_num(0)
-	# simplex
-	# add a row for the objective function
-	tbl['M'].append([g_num(0)]*len(tbl['M'][0])); tbl['M'][-1][z0off] = g_num(-1);
-	tbl['L'].append(-1)
-	if opts.get('log', False):
-		lcp_tbl_print_M(tbl)
-	solved = lcp_presolve_cpa_ext1_tableau_simplex1(tbl, ubrange)
-	if opts.get('log', False):
-		lcp_tbl_print_M(tbl)	
-	# remove the row for the objective function
-	del tbl['M'][-1]
-	# eliminate z0 from unbounded
-	for i in range(ubrange[0], ubrange[1]):
-		tbl['M'][i][z0off] = g_num(0)
-	# restore z0 to bounded
-	for i in itertools.chain(xrange(ubrange[0]), range(ubrange[1], n)): 
-		tbl['M'][i][z0off] = g_num(-1)	
-	if opts.get('log', False):
-		lcp_tbl_print_M(tbl)
-	return solved	
 
 def lcp_solve_cpa_ext1_tableau(tbl, ubrange, opts = {}):
 	# Complementary Pivot Algorithm, Murty p.66, opt. p.81
@@ -1077,18 +1023,20 @@ def run_tests():
 	if 0: test_cpa(['Murty p.79'], {'maxit':4, 'log':True})
 	if 0: test_cpa(['Murty p.79 (mod)'], {'maxit':4, 'log':True})
 	if 0: test_cpa(['Murty p.81'], {'maxit':20, 'log':True})
-	if 0: test_cpa(['Murty p.83'], {'maxit':10, 'log':True, 'no-lex':True}); test_cpa('Murty p.83', {'maxit':10, 'log':True}); 
+	if 0: test_cpa(['Murty p.81'], {'maxit':20, 'log':True, 'no-lex':True})
+	if 0: test_cpa(['Murty p.83'], {'maxit':10, 'log':True, 'no-lex':True}); 
+	if 0: test_cpa(['Murty p.83'], {'maxit':10, 'log':True}); 
 	if 0: test_cpa(['Murty p.97'], {'maxit':20, 'log':True})
 	if 0: test_cpa(['Murty p.107'], {'maxit':20, 'log':True})
 	if 0: test_cpa(['Murty p.2'], {'maxit':20, 'log':True})
-	if 1: test_cpa(['test 2'], {'maxit':20, 'log':True})
+	if 0: test_cpa(['test 2'], {'maxit':20, 'log':True})
 	if 0: test_ppcd1(['Murty p.255'], {'maxit':20, 'log':True})
 	if 0: test_ppcd1(['Murty p.261'], {'maxit':20, 'log':True})
 	if 0: test_ppcd1(['Murty p.262'], {'maxit':20, 'log':True})
 	if 0: test_ppcd2(['Murty p.255', 'Murty p.261', 'Murty p.262'], {'maxit':20, 'log':False})
 	if 0: test_ppcd2(['Cottle p.258'], {'maxit':20, 'log':True})
 	if 0: test_ppcd2(['Murty p.265'], {'maxit':20, 'log':True})
-	if 0: 
+	if 1: 
 		bounds = [[-4, -2], [0, None]]; subst = [None]*len(bounds)
 		Mq = get_test_Mq('test 1')
 		cMq = mlcp_to_lcp_Mq(mat_rational(Mq), bounds, subst)
@@ -1099,7 +1047,7 @@ def run_tests():
 		#lcp_solve_cpa_tableau(tbl, {})
 		vec_print(tbl['sol'])
 		vec_print(mlcp_subst_sol(Mq, tbl['sol'], subst))
-	if 1: 
+	if 0: 
 		bounds = [[-4, -2], [0, None]]; subst = [None]*len(bounds)
 		Mq = get_test_Mq('test 1')
 		cMq = mlcp_to_lcp_Mq(mat_rational(Mq), bounds, subst)
@@ -1110,18 +1058,32 @@ def solve_mlcp_cdll_mprog(Mq, bounds, opts = {}):
 	def ctypes_flist(l): cltype = ctypes.c_float*len(l); return cltype(*l);
 	def conv_bound_lo(b): return float('-inf') if b is None else float(b)
 	def conv_bound_hi(b): return float('inf') if b is None else float(b)
-	lib = ctypes.cdll.LoadLibrary('D:/jad/depots/sandy1/depot/Other/Personal/Jad.Nohra/Lab/mprog/out/mprog_dll.dll')
-	#print lib.multiply(2, 2)
+	
+	algo = opts.get('algo', 'cdll_ode')
+	
 	n = mat_rows(Mq)
-	A = mat_to_vec(mat_block_implode(Mq, [n], [n, 1])[0][0])
-	b = vec_neg(mat_col(Mq, n))
-	lo = [conv_bound_lo(x[0]) for x in bounds]
-	hi = [conv_bound_hi(x[1]) for x in bounds]
 	csol = ctypes_flist([0]*n)
-	if opts.get('log', False):
-		print A,b,lo,hi
-	#solved = lib.solveOdeDantzigLCP(2, ctypes_flist([1.0, 2.0, 3.0, 4.0]), ctypes_flist([1,-1]), ctypes_flist([1, float('inf')]), ctypes_flist([1, float('inf')]), csol)
-	solved = lib.solveOdeDantzigLCP(n, ctypes_flist(A), ctypes_flist(b), ctypes_flist(lo), ctypes_flist(hi), csol)
+	solved = False
+
+	mprog_dll_path = 'D:/jad/depots/sandy1/depot/Other/Personal/Jad.Nohra/Lab/mprog/out/mprog_dll.dll'
+	
+	if (algo == 'cdll_ode'):
+		lib = ctypes.cdll.LoadLibrary(mprog_dll_path)
+		A = mat_to_vec(mat_block_implode(Mq, [n], [n, 1])[0][0])
+		b = vec_neg(mat_col(Mq, n))
+		lo = [conv_bound_lo(x[0]) for x in bounds]
+		hi = [conv_bound_hi(x[1]) for x in bounds]
+		if opts.get('log', False):
+			print A,b,lo,hi
+		solved = lib.solveOdeDantzigLCP(n, ctypes_flist(A), ctypes_flist(b), ctypes_flist(lo), ctypes_flist(hi), csol)
+	elif (algo == 'cdll_cpa_ext'):	
+		lib = ctypes.cdll.LoadLibrary(mprog_dll_path)
+		flat_Mq = mat_to_vec(Mq)
+		flat_bounds = [x for bound in bounds for x in [conv_bound_lo(bound[0]), conv_bound_hi(bound[1])]]
+		if opts.get('log', False):
+			print flat_bounds
+		solved = lib.solveJadCpaExtTbl(n, ctypes_flist(flat_Mq), ctypes_flist(flat_bounds), csol, opts.get('log', False))	
+
 	sol = [float(x) for x in csol]
 	if opts.get('log', False):
 		print 'solved:', solved
@@ -1130,12 +1092,13 @@ def solve_mlcp_cdll_mprog(Mq, bounds, opts = {}):
 		sol = []
 	return sol
 
+
 def solve_mlcp(Mq, bounds, opts = {}):
 	algo = opts.get('algo', 'cpa')
 	if opts.get('log', False):
 		print 'algo', algo
 		print 'Mq'; mat_print(Mq)
-	if algo == 'ode':
+	if algo.startswith('cdll'):
 		return solve_mlcp_cdll_mprog(Mq, bounds, opts)
 	subst = [None]*len(bounds)
 	if algo.startswith('cpa_ext1'):
@@ -1151,12 +1114,8 @@ def solve_mlcp(Mq, bounds, opts = {}):
 		lcp_solve_cpa_tableau(tbl, opts)
 	elif algo == 'cpa_ext1':
 		tbl = lcp_tbl_cpa_create_Mq(cMq)
-		if (lcp_presolve_naive_cpa_ext1_tableau(tbl, ubrange, opts)):
-			lcp_solve_cpa_ext1_tableau(tbl, ubrange, opts)	
-	elif algo == 'cpa_ext1b':
-		tbl = lcp_tbl_cpa_create_Mq(cMq)
 		if (lcp_presolve_cpa_ext1_tableau(tbl, ubrange, opts)):
-			lcp_solve_cpa_ext1_tableau(tbl, ubrange, opts)			
+			lcp_solve_cpa_ext1_tableau(tbl, ubrange, opts)	
 	elif algo == 'ppm1':
 		tbl = lcp_tbl_pp_create_Mq(cMq)
 		lcp_solve_ppm1_tableau(tbl, opts)	
@@ -1229,7 +1188,7 @@ def solve_mlcp_dir(din, opts = {}):
 	if ('algo' in opts):
 		algos = [opts['algo']]
 	else:
-		algos = ['cpa', 'cpa_ext1', 'ode']
+		algos = ['cpa', 'cpa_ext1', 'cdll_ode']
 	
 	verbose = len(algos) == 1
 	
@@ -1237,6 +1196,7 @@ def solve_mlcp_dir(din, opts = {}):
 		start = time.time() 
 
 		opts['algo'] = algo
+		#opts['no-lex'] = True
 		if len(algos) > 1:
 			opts['no_clamp'] = (algo.startswith('cpa_ext1'))
 		print 'algo:', algo	
