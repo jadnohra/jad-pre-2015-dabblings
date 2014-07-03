@@ -313,7 +313,7 @@ def lcp_tbl_leaving_lexi(tbl, r_cands, col):
 	return lex_ratios[0][0]
 
 def lcp_tbl_leaving(tbl, r_cands, col, opts):
-	if opts.get('no-lex', False):
+	if opts.get('no_lex', False):
 		return lcp_tbl_leaving_topmost(tbl, r_cands, col)
 	else:	
 		 return lcp_tbl_leaving_lexi(tbl, r_cands, col)
@@ -1023,8 +1023,8 @@ def run_tests():
 	if 0: test_cpa(['Murty p.79'], {'maxit':4, 'log':True})
 	if 0: test_cpa(['Murty p.79 (mod)'], {'maxit':4, 'log':True})
 	if 0: test_cpa(['Murty p.81'], {'maxit':20, 'log':True})
-	if 0: test_cpa(['Murty p.81'], {'maxit':20, 'log':True, 'no-lex':True})
-	if 0: test_cpa(['Murty p.83'], {'maxit':10, 'log':True, 'no-lex':True}); 
+	if 0: test_cpa(['Murty p.81'], {'maxit':20, 'log':True, 'no_lex':True})
+	if 0: test_cpa(['Murty p.83'], {'maxit':10, 'log':True, 'no_lex':True}); 
 	if 0: test_cpa(['Murty p.83'], {'maxit':10, 'log':True}); 
 	if 0: test_cpa(['Murty p.97'], {'maxit':20, 'log':True})
 	if 0: test_cpa(['Murty p.107'], {'maxit':20, 'log':True})
@@ -1059,14 +1059,14 @@ def solve_mlcp_cdll_mprog(Mq, bounds, opts = {}):
 	def conv_bound_lo(b): return float('-inf') if b is None else float(b)
 	def conv_bound_hi(b): return float('inf') if b is None else float(b)
 	
-	algo = opts.get('algo', 'cdll_ode')
+	algo = opts.get('algo', '')
 	
 	n = mat_rows(Mq)
 	csol = ctypes_flist([0]*n)
 	solved = False
 
 	mprog_dll_path = 'D:/jad/depots/sandy1/depot/Other/Personal/Jad.Nohra/Lab/mprog/out/mprog_dll.dll'
-	
+
 	if (algo == 'cdll_ode'):
 		lib = ctypes.cdll.LoadLibrary(mprog_dll_path)
 		A = mat_to_vec(mat_block_implode(Mq, [n], [n, 1])[0][0])
@@ -1083,6 +1083,8 @@ def solve_mlcp_cdll_mprog(Mq, bounds, opts = {}):
 		if opts.get('log', False):
 			print flat_bounds
 		solved = lib.solveJadCpaExtTbl(n, ctypes_flist(flat_Mq), ctypes_flist(flat_bounds), csol, opts.get('log', False))	
+	else:
+		print 'No such algorithm! ({})'.format(algo)
 
 	sol = [float(x) for x in csol]
 	if opts.get('log', False):
@@ -1094,7 +1096,7 @@ def solve_mlcp_cdll_mprog(Mq, bounds, opts = {}):
 
 
 def solve_mlcp(Mq, bounds, opts = {}):
-	algo = opts.get('algo', 'cpa')
+	algo = opts.get('algo', '')
 	if opts.get('log', False):
 		print 'algo', algo
 		print 'Mq'; mat_print(Mq)
@@ -1122,9 +1124,11 @@ def solve_mlcp(Mq, bounds, opts = {}):
 	elif algo == 'ppcd1':
 		tbl = lcp_tbl_pp_create_Mq(cMq)
 		lcp_solve_ppcd1_tableau(tbl, opts)		
-	else:
+	elif algo == 'ppcd2':
 		tbl = lcp_tbl_ppcd2_create_Mq(cMq)
 		lcp_solve_ppcd2_tableau(tbl, opts)
+	else:
+		print 'No such algorithm! ({})'.format(algo)
 	sol = []
 	if tbl.get('sol', None) and len(tbl['sol']) > 0: 
 		sol = mlcp_subst_sol(Mq, tbl['sol'], subst)
@@ -1181,6 +1185,7 @@ def solve_mlcp_file(fin, opts = {}):
 			elif mode == 'bds':
 				bd = line.split(',')
 				bounds.append(read_bounds(bd, bclamp))
+				if (len(bounds) == n): break
 	return solve_mlcp(Mq, bounds, opts)
 
 def solve_mlcp_dir(din, opts = {}):
@@ -1196,7 +1201,7 @@ def solve_mlcp_dir(din, opts = {}):
 		start = time.time() 
 
 		opts['algo'] = algo
-		#opts['no-lex'] = True
+		#opts['no_lex'] = True
 		if len(algos) > 1:
 			opts['no_clamp'] = (algo.startswith('cpa_ext1'))
 		print 'algo:', algo	
@@ -1254,7 +1259,7 @@ elif hasattr(sys, 'argv'):
 	elif '-test' in sys.argv:
 		g_num = g_num_rational
 		algo = 1 + (sys.argv.index('-algo') if '-algo' in sys.argv else -2)
-		algo = sys.argv[algo] if algo >= 0 else 'cpa'
+		algo = sys.argv[algo] if algo >= 0 else ''
 		test = 1 + (sys.argv.index('-test') if '-test' in sys.argv else -2)
 		test = sys.argv[test] if (test >= 0 and test < len(sys.argv)) else 'test 1'
 		opts = {'log':True, 'algo':algo}
@@ -1264,11 +1269,11 @@ elif hasattr(sys, 'argv'):
 		fip = 1 + (sys.argv.index('-in') if '-in' in sys.argv else -2)
 		fop = 1 + (sys.argv.index('-out') if '-out' in sys.argv else -2)
 		algo = 1 + (sys.argv.index('-algo') if '-algo' in sys.argv else -2)
-		log = '-log' in sys.argv; blip = '-blip' in sys.argv; no_clamp = '-no_clamp' in sys.argv;
+		log = '-log' in sys.argv; blip = '-blip' in sys.argv; no_clamp = '-no_clamp' in sys.argv; no_lex = '-no_lex' in sys.argv;
 		if fip >= 0:
 			fip = sys.argv[fip] if fip >= 0 else None
 			fop = sys.argv[fop] if fop >= 0 else None
-			opts = {'log':log, 'blip':blip, 'no_clamp':no_clamp}
+			opts = {'log':log, 'blip':blip, 'no_clamp':no_clamp, 'no_lex':no_lex}
 			if algo >= 0:
 				opts['algo'] = sys.argv[algo]
 			if (os.path.isdir(fip)):
