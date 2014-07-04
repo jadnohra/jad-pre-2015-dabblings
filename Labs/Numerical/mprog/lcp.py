@@ -378,11 +378,11 @@ def lcp_tbl_solution(tbl, lbls, str=False):
 def lcp_tbl_print_M(tbl):
 	M = tbl['M']; L = tbl['L'];
 	head = [['']+lcp_tbl_lbls(tbl, range(len(M[0])))]
-	#list = [[lcp_tbl_lbl(tbl, L[r])]+[str(x) for x in M[r]] for r in range(len(M))]
-	list = [[lcp_tbl_lbl(tbl, L[r])]+[str(M[r][ci]) for ci in range(len(M[r])-1, len(M[r]))] for r in range(len(M))]
+	list = [[lcp_tbl_lbl(tbl, L[r])]+[str(x) for x in M[r]] for r in range(len(M))]
+	#list = [[lcp_tbl_lbl(tbl, L[r])]+[str(M[r][ci]) for ci in range(len(M[r])-1, len(M[r]))] for r in range(len(M))]
 	head.extend(list)
-	#print_tab(head)
-	print_tab(list)
+	print_tab(head)
+	#print_tab(list)
 
 def lcp_tbl_pp_struct(n):
 	return {'w': lcp_tbl_struct(n, 0, n-1, 'w', 'id'), 
