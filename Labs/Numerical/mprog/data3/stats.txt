@@ -1,4 +1,6 @@
-Z:\Personal\Lab\Numerical\mprog>python lcp.py -in data3                                        algo: cpa                                                                                       opts: {'blip': False, 'algo': 'cpa', 'log': False, 'no_clamp': False}                           
+Z:\Personal\Lab\Numerical\mprog>python lcp.py -in data3                                       
+algo: cpa                                                                                       
+opts: {'blip': False, 'algo': 'cpa', 'log': False, 'no_clamp': False}                           
 Passed 3437, Failed 0 in 969.065000057 secs.                                                    
 algo: cpa_ext1                                                                                  
 opts: {'blip': False, 'algo': 'cpa_ext1', 'log': False, 'no_clamp': True}                       
@@ -6,3 +8,20 @@ Passed 3437, Failed 0 in 69.1150000095 secs.
 algo: ode                                                                                       
 opts: {'blip': False, 'algo': 'ode', 'log': False, 'no_clamp': False}                           
 Passed 2875, Failed 562 in 6.26900005341 secs.  
+
+
+Z:\Personal\Lab\Numerical\mprog>python lcp.py -in D:/temp/data_all -algo cpa_ext1 -no_lex -no_clamp
+algo: cpa_ext1
+opts: {'log': False, 'no_lex': True, 'blip': False, 'algo': 'cpa_ext1', 'cdll_dbl': False, 'no_clamp': True} 
+Passed 4238, Failed 0 in 120.924000025 secs.
+Z:\Personal\Lab\Numerical\mprog>python lcp.py -in D:/temp/data_all -algo cdll_cpa_ext -no_lex -no_clamp
+algo: cdll_cpa_ext                                                                                                                                                                                                                  opts: {'log': False, 'no_lex': True, 'blip': False, 'algo': 'cdll_cpa_ext', 'cdll_dbl': False, 'no_clamp': True}  
+Passed 4238, Failed 0 in 6.41199994087 secs. 
+ -cdll_dbl 
+Passed 4238, Failed 0 in 6.31599998474 secs.
+Z:\Personal\Lab\Numerical\mprog>python lcp.py -in D:/temp/data_all -algo cdll_ode -no_lex -no_clamp
+algo: cdll_ode                     
+opts: {'log': False, 'no_lex': True, 'blip': False, 'algo': 'cdll_ode', 'cdll_dbl': False, 'no_clamp': True}  
+Passed 4201, Failed 37 in 13.0669999123 secs. 
+ -cdll_dbl  
+Passed 4187, Failed 51 in 7.04800009727 secs. 
