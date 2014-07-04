@@ -378,9 +378,11 @@ def lcp_tbl_solution(tbl, lbls, str=False):
 def lcp_tbl_print_M(tbl):
 	M = tbl['M']; L = tbl['L'];
 	head = [['']+lcp_tbl_lbls(tbl, range(len(M[0])))]
-	list = [[lcp_tbl_lbl(tbl, L[r])]+[str(x) for x in M[r]] for r in range(len(M))]
+	#list = [[lcp_tbl_lbl(tbl, L[r])]+[str(x) for x in M[r]] for r in range(len(M))]
+	list = [[lcp_tbl_lbl(tbl, L[r])]+[str(M[r][ci]) for ci in range(len(M[r])-1, len(M[r]))] for r in range(len(M))]
 	head.extend(list)
-	print_tab(head)
+	#print_tab(head)
+	print_tab(list)
 
 def lcp_tbl_pp_struct(n):
 	return {'w': lcp_tbl_struct(n, 0, n-1, 'w', 'id'), 
@@ -696,7 +698,6 @@ def lcp_solve_cpa_ext1_tableau(tbl, ubrange, opts = {}):
 			lcp_tbl_print_M(tbl)
 	maxit = opts.get('maxit', 0); it = 0; 
 	while (status == 1 and (maxit == 0 or it < maxit)):
-		it = it + 1
 		L = tbl['L']; q = lcp_tbl_col(tbl, 'q'); z0i = lcp_tbl_off(tbl, 'z0');
 		z0r = L.index(z0i) if z0i in L else None
 		if (z0r is None or q[z0r] == 0): # Success, p.74
@@ -705,6 +706,7 @@ def lcp_solve_cpa_ext1_tableau(tbl, ubrange, opts = {}):
 		r_cands = [x for x in active_rows if tbl['M'][x][c] > 0]
 		if (len(r_cands) == 0): # Failure, p.68
 			status = 0; break;
+		it = it + 1
 		r = lcp_tbl_leaving(tbl, r_cands, c, opts); dropped = tbl['L'][r]; 
 		lcp_tbl_pivot(tbl, r, c); 
 		opt_print('{}. pvt: {}-{}, {}'.format(it, r,c, lcp_tbl_lbls_str(tbl, tbl['L'])), opts)
@@ -1056,13 +1058,16 @@ def run_tests():
 
 def solve_mlcp_cdll_mprog(Mq, bounds, opts = {}):
 	def ctypes_flist(l): cltype = ctypes.c_float*len(l); return cltype(*l);
+	def ctypes_dlist(l): cltype = ctypes.c_double*len(l); return cltype(*l);
 	def conv_bound_lo(b): return float('-inf') if b is None else float(b)
 	def conv_bound_hi(b): return float('inf') if b is None else float(b)
 	
 	algo = opts.get('algo', '')
+	cdll_dbl = opts.get('cdll_dbl', False)
+	ctypes_list = ctypes_dlist if cdll_dbl else ctypes_flist
 	
 	n = mat_rows(Mq)
-	csol = ctypes_flist([0]*n)
+	csol = ctypes_list([0]*n)
 	solved = False
 
 	mprog_dll_path = 'D:/jad/depots/sandy1/depot/Other/Personal/Jad.Nohra/Lab/mprog/out/mprog_dll.dll'
@@ -1075,14 +1080,16 @@ def solve_mlcp_cdll_mprog(Mq, bounds, opts = {}):
 		hi = [conv_bound_hi(x[1]) for x in bounds]
 		if opts.get('log', False):
 			print A,b,lo,hi
-		solved = lib.solveOdeDantzigLCP(n, ctypes_flist(A), ctypes_flist(b), ctypes_flist(lo), ctypes_flist(hi), csol)
+		lib_func = lib.solveOdeDantzigLCP_dbl if cdll_dbl else lib.solveOdeDantzigLCP_flt
+		solved = lib_func(n, ctypes_list(A), ctypes_list(b), ctypes_list(lo), ctypes_list(hi), csol)
 	elif (algo == 'cdll_cpa_ext'):	
 		lib = ctypes.cdll.LoadLibrary(mprog_dll_path)
 		flat_Mq = mat_to_vec(Mq)
 		flat_bounds = [x for bound in bounds for x in [conv_bound_lo(bound[0]), conv_bound_hi(bound[1])]]
 		if opts.get('log', False):
 			print flat_bounds
-		solved = lib.solveJadCpaExtTbl(n, ctypes_flist(flat_Mq), ctypes_flist(flat_bounds), csol, opts.get('log', False))	
+		lib_func = lib.solveJadCpaExtTbl_dbl if cdll_dbl else lib.solveJadCpaExtTbl_flt	
+		solved = lib_func(n, ctypes_list(flat_Mq), ctypes_list(flat_bounds), csol, opts.get('log', False))	
 	else:
 		print 'No such algorithm! ({})'.format(algo)
 
@@ -1269,11 +1276,13 @@ elif hasattr(sys, 'argv'):
 		fip = 1 + (sys.argv.index('-in') if '-in' in sys.argv else -2)
 		fop = 1 + (sys.argv.index('-out') if '-out' in sys.argv else -2)
 		algo = 1 + (sys.argv.index('-algo') if '-algo' in sys.argv else -2)
-		log = '-log' in sys.argv; blip = '-blip' in sys.argv; no_clamp = '-no_clamp' in sys.argv; no_lex = '-no_lex' in sys.argv;
+		log = '-log' in sys.argv; blip = '-blip' in sys.argv; 
+		no_clamp = '-no_clamp' in sys.argv; no_lex = '-no_lex' in sys.argv; 
+		cdll_dbl = '-cdll_dbl' in sys.argv;
 		if fip >= 0:
 			fip = sys.argv[fip] if fip >= 0 else None
 			fop = sys.argv[fop] if fop >= 0 else None
-			opts = {'log':log, 'blip':blip, 'no_clamp':no_clamp, 'no_lex':no_lex}
+			opts = {'log':log, 'blip':blip, 'no_clamp':no_clamp, 'no_lex':no_lex, 'cdll_dbl':cdll_dbl}
 			if algo >= 0:
 				opts['algo'] = sys.argv[algo]
 			if (os.path.isdir(fip)):
