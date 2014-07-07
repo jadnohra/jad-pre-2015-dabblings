@@ -1083,7 +1083,7 @@ def solve_mlcp_cdll_mprog(Mq, bounds, opts = {}):
 		if opts.get('log', 0) >= LogDbg:
 			print A,b,lo,hi
 		lib_func = lib.solveOdeDantzigLCP_dbl if cdll_dbl else lib.solveOdeDantzigLCP_flt
-		solved = lib_func(n, ctypes_list(A), ctypes_list(b), ctypes_list(lo), ctypes_list(hi), csol)
+		solved = lib_func(n, ctypes_list(A), ctypes_list(b), ctypes_list(lo), ctypes_list(hi), csol, opts.get('log', 0))
 	elif (algo == 'cdll_cpa_ext'):	
 		lib = ctypes.cdll.LoadLibrary(mprog_dll_path)
 		flat_Mq = mat_to_vec(Mq)
@@ -1091,7 +1091,7 @@ def solve_mlcp_cdll_mprog(Mq, bounds, opts = {}):
 		if opts.get('log', 0) >= LogDbg:
 			print flat_bounds
 		lib_func = lib.solveJadCpaExtTbl_dbl if cdll_dbl else lib.solveJadCpaExtTbl_flt	
-		solved = lib_func(n, ctypes_list(flat_Mq), ctypes_list(flat_bounds), csol, not opts.get('no_perturb', False), opts.get('log', 0))	
+		solved = lib_func(n, ctypes_list(flat_Mq), ctypes_list(flat_bounds), csol, opts.get('maxit', 0), not opts.get('no_perturb', False), opts.get('log', 0))	
 	else:
 		print 'No such algorithm! ({})'.format(algo)
 
@@ -1278,6 +1278,7 @@ elif hasattr(sys, 'argv'):
 		fip = 1 + (sys.argv.index('-in') if '-in' in sys.argv else -2)
 		fop = 1 + (sys.argv.index('-out') if '-out' in sys.argv else -2)
 		algo = 1 + (sys.argv.index('-algo') if '-algo' in sys.argv else -2)
+		maxit = 1 + (sys.argv.index('-maxit') if '-maxit' in sys.argv else -2)
 		log_dbg = '-log_dbg' in sys.argv; log_blip = '-log_blip' in sys.argv; 
 		log = 0; log = LogBlip if log_blip else log; log = LogDbg if log_dbg else log; 
 		no_clamp = '-no_clamp' in sys.argv; no_lex = '-no_lex' in sys.argv; no_perturb = '-no_perturb' in sys.argv; 
@@ -1288,6 +1289,8 @@ elif hasattr(sys, 'argv'):
 			opts = {'log':log, 'no_clamp':no_clamp, 'no_lex':no_lex, 'no_perturb':no_perturb, 'cdll_dbl':cdll_dbl}
 			if algo >= 0:
 				opts['algo'] = sys.argv[algo]
+			if maxit >= 0:
+				opts['maxit'] = int(sys.argv[maxit])
 			if (os.path.isdir(fip)):
 				solve_mlcp_dir(fip, opts)
 			else:
