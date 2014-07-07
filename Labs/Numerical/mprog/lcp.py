@@ -20,11 +20,13 @@ def print_tab(list, pref='', sep=' ', post=''):
         print pref + sep.join("{:>{}}".format(x, col_width[i]) for i,x in enumerate(line)) + post
 def mat_print(M):
 	print_tab([[str(x) for x in M[r]] for r in range(len(M))])
+
+LogBlip = 1; LogDbg = 2;
 def log_print(str, log = True):
 	if (log):
 		print str	
 def opt_print(str, opt = {}):
- 	log_print(str, opt.get('log', False))
+ 	log_print(str, opt.get('log', 0))
 def vec_str(v):
 		return '({})'.format(', '.join(str(x) for x in v))	
 def vec_print(v, log = True):
@@ -525,7 +527,7 @@ def lcp_solve_ppcd2_tableau(tbl, opts = {}):
 	maxit = opts.get('maxit', 0); it = 0; status = 1;
 	lbda = g_num(int(math.ceil(min(M[x][qoff] for x in range(nrows)) - 1)))
 	tbl['lbda'] = lbda
-	if opts.get('log', False):
+	if opts.get('log', 0) >= LogDbg:
 		lcp_tbl_print_M(tbl); 
 	opt_print('lbda {}'.format(lbda), opts)	
 	while (status == 1 and (maxit == 0 or it < maxit)):
@@ -556,7 +558,7 @@ def lcp_solve_ppcd2_tableau(tbl, opts = {}):
 						M[ri][boff] += M[ri][i_driv]*lbda # or is it -=
 					lb[i_driv] = g_num(0)
 					r_disting = -1
-		if opts.get('log', False):			
+		if opts.get('log', 0) >= LogDbg:
 			print 'disting', lcp_tbl_lbl(tbl, i_disting), 'driving', lcp_tbl_lbl(tbl, i_driv)
 		while (status == 1 and (maxit == 0 or it < maxit)):
 			it = it + 1
@@ -570,7 +572,7 @@ def lcp_solve_ppcd2_tableau(tbl, opts = {}):
 				disting_change = lcp_tbl_ppcd2_block_change(tbl, r_disting, i_driv)
 				if disting_change[0] and ((r_block == -1) or (disting_change[0] < driv_change)):
 					r_block = r_disting; driv_change = disting_change[0]; block_val = disting_change[2];
-			if opts.get('log', False):
+			if opts.get('log', 0) >= LogDbg:
 				print 'drive:', lcp_tbl_lbl(tbl, i_driv), driv_change, block_val, driv_change+lb[i_driv] if (not driv_change is None) else None
 			if (r_block == -1):
 				status = 0; break;
@@ -580,7 +582,7 @@ def lcp_solve_ppcd2_tableau(tbl, opts = {}):
 			if (r_disting == -1):
 				r_disting = r_block
 			opt_print('{}. pvt: {}-{}, {}'.format(it, r_block,i_driv, lcp_tbl_lbls_str(tbl, tbl['L'])), opts)
-			if opts.get('log', False):
+			if opts.get('log', 0) >= LogDbg:
 				lcp_tbl_print_M(tbl); vec_print(tbl['lb']);
 			# Decide next operation
 			if (i_block != i_disting):
@@ -618,7 +620,7 @@ def lcp_solve_cpa_tableau(tbl, opts = {}):
 	# Complementary Pivot Algorithm, Murty p.66, opt. p.81
 	#
 	#Initialization, p.71
-	if opts.get('log', False):
+	if opts.get('log', 0) >= LogDbg:
 		lcp_tbl_print_M(tbl)
 	status = 1
 	r,qr = vec_argmin2(lcp_tbl_col(tbl, 'q'))
@@ -630,7 +632,7 @@ def lcp_solve_cpa_tableau(tbl, opts = {}):
 		dropped = tbl['L'][r];
 		lcp_tbl_pivot(tbl, r, c); 
 		opt_print('0. pvt: {}-{}, {}'.format(r,c, lcp_tbl_lbls_str(tbl, tbl['L'])), opts)
-		if opts.get('log', False):
+		if opts.get('log', 0) >= LogDbg:
 			lcp_tbl_print_M(tbl)
 	maxit = opts.get('maxit', 0); it = 0; 
 	while (status == 1 and (maxit == 0 or it < maxit)):
@@ -646,7 +648,7 @@ def lcp_solve_cpa_tableau(tbl, opts = {}):
 		r = lcp_tbl_leaving(tbl, r_cands, c, opts); dropped = tbl['L'][r]; 
 		lcp_tbl_pivot(tbl, r, c); 
 		opt_print('{}. pvt: {}-{}, {}'.format(it, r,c, lcp_tbl_lbls_str(tbl, tbl['L'])), opts)
-		if opts.get('log', False):
+		if opts.get('log', 0) >= LogDbg:
 			lcp_tbl_print_M(tbl)
 	if (status == 2):
 		tbl['sol'] = lcp_tbl_solution(tbl, ['z'])
@@ -660,7 +662,7 @@ def lcp_presolve_cpa_ext1_tableau(tbl, ubrange, opts = {}):
 	n = tbl['n']; z0off = lcp_tbl_off(tbl, 'z0'); zoff = lcp_tbl_off(tbl, 'z');
 	for i in range(ubrange[0], ubrange[1]):
 		tbl['M'][i][z0off] = g_num(0)
-	if opts.get('log', False):
+	if opts.get('log', 0) >= LogDbg:
 		lcp_tbl_print_M(tbl)
 	for i in range(ubrange[0], ubrange[1]):
 		c = zoff+i; r = i;
@@ -668,7 +670,7 @@ def lcp_presolve_cpa_ext1_tableau(tbl, ubrange, opts = {}):
 			return False
 		lcp_tbl_pivot(tbl, r, c)
 		#opt_print('*pvt: {}-{}, {}'.format(r,c, lcp_tbl_lbls_str(tbl, tbl['L'])), opts)
-	if opts.get('log', False):
+	if opts.get('log', 0) >= LogDbg:
 		lcp_tbl_print_M(tbl)
 	return True	
 
@@ -678,7 +680,7 @@ def lcp_solve_cpa_ext1_tableau(tbl, ubrange, opts = {}):
 	#
 	# Initialization, p.71
 	#print ubrange
-	if opts.get('log', False):
+	if opts.get('log', 0) >= LogDbg:
 		lcp_tbl_print_M(tbl)
 	status = 1
 	active_rows = [x for x in range(tbl['nrows']) if not m_is_between(x, ubrange[0], ubrange[1])]
@@ -694,7 +696,7 @@ def lcp_solve_cpa_ext1_tableau(tbl, ubrange, opts = {}):
 		dropped = tbl['L'][r];
 		lcp_tbl_pivot(tbl, r, c); 
 		opt_print('0. pvt: {}-{}, {}'.format(r,c, lcp_tbl_lbls_str(tbl, tbl['L'])), opts)
-		if opts.get('log', False):
+		if opts.get('log', 0) >= LogDbg:
 			lcp_tbl_print_M(tbl)
 	maxit = opts.get('maxit', 0); it = 0; 
 	while (status == 1 and (maxit == 0 or it < maxit)):
@@ -710,7 +712,7 @@ def lcp_solve_cpa_ext1_tableau(tbl, ubrange, opts = {}):
 		r = lcp_tbl_leaving(tbl, r_cands, c, opts); dropped = tbl['L'][r]; 
 		lcp_tbl_pivot(tbl, r, c); 
 		opt_print('{}. pvt: {}-{}, {}'.format(it, r,c, lcp_tbl_lbls_str(tbl, tbl['L'])), opts)
-		if opts.get('log', False):
+		if opts.get('log', 0) >= LogDbg:
 			lcp_tbl_print_M(tbl)
 	if (status == 2):
 		tbl['sol'] = lcp_tbl_solution(tbl, ['z'])
@@ -1017,27 +1019,27 @@ def run_tests():
 	if 0:
 		tbl = lcp_tbl_pp_create_Mq(mat_rational([ [-1, 1, -1, 3], [-1, 1, -1, 5], [-1, -1, -1, 9] ]) )
 		mat_print(tbl['M']); lcp_tbl_pivot(tbl, 2, 5); mat_print(tbl['M']);
-	if 0: test_ppm1(['Murty p.255'], {'maxit':20, 'log':True})
-	if 0: test_ppm1(['Murty p.261'], {'maxit':10, 'log':False})
-	if 0: test_ppm1(['Murty p.262'], {'maxit':10, 'log':True})
-	if 0: test_ppm1(['Murty p.265'], {'maxit':10, 'log':True})
-	if 0: test_cpa(['Murty p.77'], {'maxit':20, 'log':True})
-	if 0: test_cpa(['Murty p.79'], {'maxit':4, 'log':True})
-	if 0: test_cpa(['Murty p.79 (mod)'], {'maxit':4, 'log':True})
-	if 0: test_cpa(['Murty p.81'], {'maxit':20, 'log':True})
-	if 0: test_cpa(['Murty p.81'], {'maxit':20, 'log':True, 'no_lex':True})
-	if 0: test_cpa(['Murty p.83'], {'maxit':10, 'log':True, 'no_lex':True}); 
-	if 0: test_cpa(['Murty p.83'], {'maxit':10, 'log':True}); 
-	if 0: test_cpa(['Murty p.97'], {'maxit':20, 'log':True})
-	if 0: test_cpa(['Murty p.107'], {'maxit':20, 'log':True})
-	if 0: test_cpa(['Murty p.2'], {'maxit':20, 'log':True})
-	if 0: test_cpa(['test 2'], {'maxit':20, 'log':True})
-	if 0: test_ppcd1(['Murty p.255'], {'maxit':20, 'log':True})
-	if 0: test_ppcd1(['Murty p.261'], {'maxit':20, 'log':True})
-	if 0: test_ppcd1(['Murty p.262'], {'maxit':20, 'log':True})
-	if 0: test_ppcd2(['Murty p.255', 'Murty p.261', 'Murty p.262'], {'maxit':20, 'log':False})
-	if 0: test_ppcd2(['Cottle p.258'], {'maxit':20, 'log':True})
-	if 0: test_ppcd2(['Murty p.265'], {'maxit':20, 'log':True})
+	if 0: test_ppm1(['Murty p.255'], {'maxit':20, 'log':LogDbg})
+	if 0: test_ppm1(['Murty p.261'], {'maxit':10, 'log':0})
+	if 0: test_ppm1(['Murty p.262'], {'maxit':10, 'log':LogDbg})
+	if 0: test_ppm1(['Murty p.265'], {'maxit':10, 'log':LogDbg})
+	if 0: test_cpa(['Murty p.77'], {'maxit':20, 'log':LogDbg})
+	if 0: test_cpa(['Murty p.79'], {'maxit':4, 'log':LogDbg})
+	if 0: test_cpa(['Murty p.79 (mod)'], {'maxit':4, 'log':LogDbg})
+	if 0: test_cpa(['Murty p.81'], {'maxit':20, 'log':LogDbg})
+	if 0: test_cpa(['Murty p.81'], {'maxit':20, 'log':LogDbg, 'no_lex':True})
+	if 0: test_cpa(['Murty p.83'], {'maxit':10, 'log':LogDbg, 'no_lex':True}); 
+	if 0: test_cpa(['Murty p.83'], {'maxit':10, 'log':LogDbg}); 
+	if 0: test_cpa(['Murty p.97'], {'maxit':20, 'log':LogDbg})
+	if 0: test_cpa(['Murty p.107'], {'maxit':20, 'log':LogDbg})
+	if 0: test_cpa(['Murty p.2'], {'maxit':20, 'log':LogDbg})
+	if 0: test_cpa(['test 2'], {'maxit':20, 'log':LogDbg})
+	if 0: test_ppcd1(['Murty p.255'], {'maxit':20, 'log':LogDbg})
+	if 0: test_ppcd1(['Murty p.261'], {'maxit':20, 'log':LogDbg})
+	if 0: test_ppcd1(['Murty p.262'], {'maxit':20, 'log':LogDbg})
+	if 0: test_ppcd2(['Murty p.255', 'Murty p.261', 'Murty p.262'], {'maxit':20, 'log':0})
+	if 0: test_ppcd2(['Cottle p.258'], {'maxit':20, 'log':LogDbg})
+	if 0: test_ppcd2(['Murty p.265'], {'maxit':20, 'log':LogDbg})
 	if 1: 
 		bounds = [[-4, -2], [0, None]]; subst = [None]*len(bounds)
 		Mq = get_test_Mq('test 1')
@@ -1078,7 +1080,7 @@ def solve_mlcp_cdll_mprog(Mq, bounds, opts = {}):
 		b = vec_neg(mat_col(Mq, n))
 		lo = [conv_bound_lo(x[0]) for x in bounds]
 		hi = [conv_bound_hi(x[1]) for x in bounds]
-		if opts.get('log', False):
+		if opts.get('log', 0) >= LogDbg:
 			print A,b,lo,hi
 		lib_func = lib.solveOdeDantzigLCP_dbl if cdll_dbl else lib.solveOdeDantzigLCP_flt
 		solved = lib_func(n, ctypes_list(A), ctypes_list(b), ctypes_list(lo), ctypes_list(hi), csol)
@@ -1086,15 +1088,15 @@ def solve_mlcp_cdll_mprog(Mq, bounds, opts = {}):
 		lib = ctypes.cdll.LoadLibrary(mprog_dll_path)
 		flat_Mq = mat_to_vec(Mq)
 		flat_bounds = [x for bound in bounds for x in [conv_bound_lo(bound[0]), conv_bound_hi(bound[1])]]
-		if opts.get('log', False):
+		if opts.get('log', 0) >= LogDbg:
 			print flat_bounds
 		lib_func = lib.solveJadCpaExtTbl_dbl if cdll_dbl else lib.solveJadCpaExtTbl_flt	
-		solved = lib_func(n, ctypes_list(flat_Mq), ctypes_list(flat_bounds), csol, opts.get('log', False))	
+		solved = lib_func(n, ctypes_list(flat_Mq), ctypes_list(flat_bounds), csol, not opts.get('no_perturb', False), opts.get('log', 0))	
 	else:
 		print 'No such algorithm! ({})'.format(algo)
 
 	sol = [float(x) for x in csol]
-	if opts.get('log', False):
+	if opts.get('log', 0) >= LogDbg:
 		print 'solved:', solved
 		print sol
 	if not solved:
@@ -1104,7 +1106,7 @@ def solve_mlcp_cdll_mprog(Mq, bounds, opts = {}):
 
 def solve_mlcp(Mq, bounds, opts = {}):
 	algo = opts.get('algo', '')
-	if opts.get('log', False):
+	if opts.get('log', 0) >= LogDbg:
 		print 'algo', algo
 		print 'Mq'; mat_print(Mq)
 	if algo.startswith('cdll'):
@@ -1114,7 +1116,7 @@ def solve_mlcp(Mq, bounds, opts = {}):
 		(cMq,ubrange) = mlcp_to_lcp_Mq_ext1(Mq, bounds, subst)
 	else:
 		cMq = mlcp_to_lcp_Mq(Mq, bounds, subst)
-	if opts.get('log', False):
+	if opts.get('log', 0) >= LogDbg:
 		print 'cMq'; mat_print(cMq); print subst;
 		if algo.startswith('cpa_ext1'):
 			print 'ubrange', ubrange
@@ -1139,9 +1141,9 @@ def solve_mlcp(Mq, bounds, opts = {}):
 	sol = []
 	if tbl.get('sol', None) and len(tbl['sol']) > 0: 
 		sol = mlcp_subst_sol(Mq, tbl['sol'], subst)
-	if opts.get('log', False) or opts.get('blip', False):
+	if opts.get('log', 0) >= LogDbg:
 		if 'it' in tbl: print tbl['it'], 'iters'
-	if opts.get('log', False):
+	if opts.get('log', 0) >= LogDbg:
 		vec_print(tbl['sol'])
 		vec_print(sol)	
 	return sol	
@@ -1269,20 +1271,21 @@ elif hasattr(sys, 'argv'):
 		algo = sys.argv[algo] if algo >= 0 else ''
 		test = 1 + (sys.argv.index('-test') if '-test' in sys.argv else -2)
 		test = sys.argv[test] if (test >= 0 and test < len(sys.argv)) else 'test 1'
-		opts = {'log':True, 'algo':algo}
+		opts = {'log':LogDbg, 'algo':algo}
 		test_algo([test], opts)
 	elif '-in' in sys.argv:
 		g_num = g_num_default
 		fip = 1 + (sys.argv.index('-in') if '-in' in sys.argv else -2)
 		fop = 1 + (sys.argv.index('-out') if '-out' in sys.argv else -2)
 		algo = 1 + (sys.argv.index('-algo') if '-algo' in sys.argv else -2)
-		log = '-log' in sys.argv; blip = '-blip' in sys.argv; 
-		no_clamp = '-no_clamp' in sys.argv; no_lex = '-no_lex' in sys.argv; 
+		log_dbg = '-log_dbg' in sys.argv; log_blip = '-log_blip' in sys.argv; 
+		log = 0; log = LogBlip if log_blip else log; log = LogDbg if log_dbg else log; 
+		no_clamp = '-no_clamp' in sys.argv; no_lex = '-no_lex' in sys.argv; no_perturb = '-no_perturb' in sys.argv; 
 		cdll_dbl = '-cdll_dbl' in sys.argv;
 		if fip >= 0:
 			fip = sys.argv[fip] if fip >= 0 else None
 			fop = sys.argv[fop] if fop >= 0 else None
-			opts = {'log':log, 'blip':blip, 'no_clamp':no_clamp, 'no_lex':no_lex, 'cdll_dbl':cdll_dbl}
+			opts = {'log':log, 'no_clamp':no_clamp, 'no_lex':no_lex, 'no_perturb':no_perturb, 'cdll_dbl':cdll_dbl}
 			if algo >= 0:
 				opts['algo'] = sys.argv[algo]
 			if (os.path.isdir(fip)):
