@@ -32,12 +32,18 @@ def vec_str(v):
 def vec_print(v, log = True):
 	print vec_str(v) if log else 0
 
+def m_max(a, b):
+	return a if a >= b else b
+def m_abs(v):
+	return v if v >= 0 else -v
 def m_isgn(v):
 	return int(math.copysign(1, v))
 def m_ineg(v):
 	return 1 if v < 0 else 0
 def m_is_between(x, a, b):
 	return x >= a and x <= b
+def m_is_between_strict(x, a, b):
+	return x > a and x < b
 def vec_create(n,v):
 	return [v]*n
 def vec_dim(v):
@@ -58,6 +64,11 @@ def vec_muls(a,s):
 	return [x*s for x in a]	
 def vec_divs(a,s):
 	return [x/s for x in a]		
+def vec_dot(a,b):
+	d = g_num(0) 
+	for i in range(len(a)): 
+		d += a[i]*b[i] 
+	return d
 def vec_argmin2(v):
 	return min(enumerate(v), key=operator.itemgetter(1)); 
 def vec_argmax2(v):
@@ -730,6 +741,37 @@ def mlcp_subst_sol(Mq, lcp_sol, subst):
 		mlcp_sol.append(lcp_sol[xi] * s + a)
 	return mlcp_sol	
 
+def calc_Mq_slack(Mq, sol):
+	sol_1 = vec_copy(sol); sol_1.append(g_num(1));
+	return mat_mulv(Mq, sol_1)
+
+def mlcp_sol_err(Mq, sol, bounds):
+	def conv_bound_lo(b): return float('-inf') if b is None else float(b)
+	def conv_bound_hi(b): return float('inf') if b is None else float(b)
+	w = calc_Mq_slack(Mq, sol)
+	err = [float(0), float(0), float(0), float(0)]
+	for i in range(len(sol)):
+		b = [conv_bound_lo(bounds[i][0]), conv_bound_hi(bounds[i][1])]
+		e1 = float(0); e2 = float(0)
+		if m_is_between_strict(sol[i], b[0], b[1]):
+			e1 = math.fabs(float(w[i]))
+		elif sol[i]	<= b[0]:
+			e1 = float(b[0]-sol[i])
+			if (w[i] < 0):
+				e2 = float(-w[i])
+		elif sol[i]	>= b[1]:
+			e1 = float(sol[i]-b[1])		
+			if (w[i] > 0):
+				e2 = float(w[i])
+		err[0] = m_max(err[0], e1); err[1] = m_max(err[1], e2); 
+		err[2] += e1*e1; err[3] += e2*e2;
+	err[2] = math.sqrt(err[2]); err[3] = math.sqrt(err[3])
+	return err
+
+def lcp_sol_err(Mq, sol, bounds):
+	bounds = [0,None]*len(sol)
+	return mlcp_sol_err(Mq, sol, bounds)
+
 def mlcp_to_lcp_Mq_convertJ(Mq, J1, J2, J3, bj1, bj3):
 	def mat_copy2(M):
 		return mat_copy(M) if not mat_is_empty(M) else [[]]	
@@ -1101,6 +1143,9 @@ def solve_mlcp_cdll_mprog(Mq, bounds, opts = {}):
 		print sol
 	if not solved:
 		sol = []
+	else:
+		if opts.get('err', False):	
+			print 'err', mlcp_sol_err(Mq, sol, bounds)	
 	return sol
 
 
@@ -1141,6 +1186,8 @@ def solve_mlcp(Mq, bounds, opts = {}):
 	sol = []
 	if tbl.get('sol', None) and len(tbl['sol']) > 0: 
 		sol = mlcp_subst_sol(Mq, tbl['sol'], subst)
+		if opts.get('err', False):	
+			print 'err', mlcp_sol_err(Mq, sol, bounds)
 	if opts.get('log', 0) >= LogDbg:
 		if 'it' in tbl: print tbl['it'], 'iters'
 	if opts.get('log', 0) >= LogDbg:
@@ -1282,11 +1329,11 @@ elif hasattr(sys, 'argv'):
 		log_dbg = '-log_dbg' in sys.argv; log_blip = '-log_blip' in sys.argv; 
 		log = 0; log = LogBlip if log_blip else log; log = LogDbg if log_dbg else log; 
 		no_clamp = '-no_clamp' in sys.argv; no_lex = '-no_lex' in sys.argv; no_perturb = '-no_perturb' in sys.argv; 
-		cdll_dbl = '-cdll_dbl' in sys.argv;
+		cdll_dbl = '-cdll_dbl' in sys.argv; err = '-err' in sys.argv;
 		if fip >= 0:
 			fip = sys.argv[fip] if fip >= 0 else None
 			fop = sys.argv[fop] if fop >= 0 else None
-			opts = {'log':log, 'no_clamp':no_clamp, 'no_lex':no_lex, 'no_perturb':no_perturb, 'cdll_dbl':cdll_dbl}
+			opts = {'log':log, 'no_clamp':no_clamp, 'no_lex':no_lex, 'no_perturb':no_perturb, 'cdll_dbl':cdll_dbl, 'err':err}
 			if algo >= 0:
 				opts['algo'] = sys.argv[algo]
 			if maxit >= 0:
