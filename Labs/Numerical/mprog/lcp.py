@@ -8,6 +8,7 @@ import ctypes
 import os
 import traceback
 import time
+import struct
 
 def g_num_default(x):
 	return float(x)
@@ -1217,14 +1218,16 @@ def solve_mlcp_lists(n, list_M, list_q, list_lo, list_hi, mul_q, clamp, opts = {
 	return solve_mlcp(Mq, bounds, opts)	
 	
 def solve_mlcp_file(fin, opts = {}):
+	def h2f(x): return struct.unpack('!f', x.zfill(8).decode('hex'))[0]
 	with open(fin, 'r') as fi: 
 		def read_bound(b, clamp): return clamp if 'inf' in b else float(b)
 		def read_bounds(b, bclamp): return [read_bound(b[0], bclamp[0]), read_bound(b[1], bclamp[1])]
-		mode = 'pref'; Mq = []; bounds = [];
+		mode = 'pref'; Mq = []; bounds = []; hex = False;
 		n = 0; bclamp = [None, None];
 		for line in fi:
 			line = "".join(line.split())
 			if mode == 'pref':
+				hex = 'hex' in line
 				mode = 'n'
 			elif mode == 'n':
 				n = int(line)
@@ -1235,7 +1238,10 @@ def solve_mlcp_file(fin, opts = {}):
 				if opts.get('no_clamp', False): bclamp = [None, None]
 				mode = 'Mq'	
 			elif mode == 'Mq':
-				Mq.append([float(x) for x in line.split(',')])
+				if (hex):
+					Mq.append([float(h2f(x)) for x in line.split(',')])
+				else:	
+					Mq.append([float(x) for x in line.split(',')])
 				if (len(Mq) == n):
 					mode = 'bds'
 			elif mode == 'bds':
@@ -1288,7 +1294,6 @@ def solve_mlcp_dir(din, opts = {}):
 							if (iln%64 == 0): print ''
 		if verbose: print ''
 		print 'Passed {}, Failed {} in {} secs.'.format(i-fail, fail, time.time() - start)
-
 
 if 0:
 	M = [
