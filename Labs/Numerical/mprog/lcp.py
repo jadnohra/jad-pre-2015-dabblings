@@ -33,6 +33,8 @@ def vec_str(v):
 def vec_print(v, log = True):
 	print vec_str(v) if log else 0
 
+def m_min(a, b):
+	return a if a <= b else b
 def m_max(a, b):
 	return a if a >= b else b
 def m_abs(v):
@@ -45,6 +47,8 @@ def m_is_between(x, a, b):
 	return x >= a and x <= b
 def m_is_between_strict(x, a, b):
 	return x > a and x < b
+def m_len2(v1, v2):
+	return math.sqrt(v1*v1+v2*v2)
 def vec_create(n,v):
 	return [v]*n
 def vec_dim(v):
@@ -192,7 +196,14 @@ def mat_neg(M):
 		rm = M[i]; rn = N[i];
 		for j in range(c1):
 			rn[j] = -rm[j]
-	return N		
+	return N	
+def mat_divs(M, s):
+	r1 = len(M);c1 = len(M[0]);
+	N = mat_create(r1, c1, None)
+	for i in range(r1):
+		for j in range(c1):
+			N[i][j] = M[i][j]/s
+	return N			
 def mat_add(M, N):
 	r1 = len(M);c1 = len(M[0]);
 	S = mat_create(r1, c1, None)
@@ -746,27 +757,76 @@ def calc_Mq_slack(Mq, sol):
 	sol_1 = vec_copy(sol); sol_1.append(g_num(1));
 	return mat_mulv(Mq, sol_1)
 
+def mlcp_sol_row_err(z, w, b):
+	d1=0; d2=0; d3=0;
+	lo,hi = b[0], b[1]
+	if (lo is not None):
+		if (w >= 0):
+			d1 = m_abs(z-lo)
+		else:
+			d1 = m_len2(z-lo, w)
+	if (hi is not None):
+		if (w <= 0):
+			d3 = m_abs(z-hi)
+		else:
+			d1 = m_len2(z-hi, w)
+	if (lo is not None and z < lo):
+		d2 = m_len2(z-lo, w)
+	elif (hi is not None and z > hi):
+		d2 = m_len2(z-hi, w)	
+	else:
+		d2 = m_abs(w)	
+	return m_min(m_min(d1, d2), d3)
+
+def mat_det(M, r = 0):
+	n = len(M); det = 0;
+	if (n == 1): 
+		return M[0][0]
+	rblk = [x for x in range(n) if x != 0]
+	for ci in range(n):
+		cblk = [x for x in range(n) if x != ci]
+		B = mat_block_implode2(M, [rblk], [cblk])[0][0]
+		det += M[0][ci] * mat_det(B, r+1) * math.pow(-1, ci)
+	return det	
+
+def mat_adj(M):
+	n = len(M); 
+	A = mat_create(n, n, 0)
+	for ri in range(n):
+		rblk = [x for x in range(n) if x != ri]
+		for ci in range(n):
+			cblk = [x for x in range(n) if x != ci]
+			B = mat_block_implode2(M, [rblk], [cblk])[0][0]
+			A[ri][ci] = mat_det(B) * math.pow(-1, ri+ci)
+	return A		
+		
+def mat_adj_inv(M):
+	det = mat_det(M)
+	if (det == 0):
+		return None
+	A = mat_adj(M)	
+	return mat_divs(mat_transp(A), det)
+
+def mat_condition(M):
+	iM = mat_adj_inv(M)
+	return sum([m_abs(x) for x in M[0]]) * sum([m_abs(x) for x in iM[0]])
+
+def lcp_Mq_condition(Mq):
+	n = len(Mq)
+	M = mat_create(n,n,0)
+	for i in range(n): 
+		for j in range(n): 
+			M[i][j] = Mq[i][j]
+	return mat_condition(M)
+	
 def mlcp_sol_err(Mq, sol, bounds):
-	def conv_bound_lo(b): return float('-inf') if b is None else float(b)
-	def conv_bound_hi(b): return float('inf') if b is None else float(b)
 	w = calc_Mq_slack(Mq, sol)
-	err = [float(0), float(0), float(0), float(0)]
+	print 'w', [[i, w[i]] for i in range(len(sol))]
+	err = [float(0), float(0)]
 	for i in range(len(sol)):
-		b = [conv_bound_lo(bounds[i][0]), conv_bound_hi(bounds[i][1])]
-		e1 = float(0); e2 = float(0)
-		if m_is_between_strict(sol[i], b[0], b[1]):
-			e1 = math.fabs(float(w[i]))
-		elif sol[i]	<= b[0]:
-			e1 = float(b[0]-sol[i])
-			if (w[i] < 0):
-				e2 = float(-w[i])
-		elif sol[i]	>= b[1]:
-			e1 = float(sol[i]-b[1])		
-			if (w[i] > 0):
-				e2 = float(w[i])
-		err[0] = m_max(err[0], e1); err[1] = m_max(err[1], e2); 
-		err[2] += e1*e1; err[3] += e2*e2;
-	err[2] = math.sqrt(err[2]); err[3] = math.sqrt(err[3])
+		e = mlcp_sol_row_err(sol[i], w[i], bounds[i])
+		err[0] = m_max(err[0], e); err[1] += e*e; 
+	err[1] = math.sqrt(err[1])
 	return err
 
 def lcp_sol_err(Mq, sol, bounds):
@@ -1142,6 +1202,7 @@ def solve_mlcp_cdll_mprog(Mq, bounds, opts = {}):
 	if opts.get('log', 0) >= LogDbg:
 		print 'solved:', solved
 		print sol
+		#print ['{}. {}'.format(i, sol[i]) for i in range(len(sol))]
 	if not solved:
 		sol = []
 	else:
@@ -1151,6 +1212,7 @@ def solve_mlcp_cdll_mprog(Mq, bounds, opts = {}):
 
 
 def solve_mlcp(Mq, bounds, opts = {}):
+	print 'cond', lcp_Mq_condition(Mq)
 	algo = opts.get('algo', '')
 	if opts.get('log', 0) >= LogDbg:
 		print 'algo', algo
@@ -1220,8 +1282,8 @@ def solve_mlcp_lists(n, list_M, list_q, list_lo, list_hi, mul_q, clamp, opts = {
 def solve_mlcp_file(fin, opts = {}):
 	def h2f(x): return struct.unpack('!f', x.zfill(8).decode('hex'))[0]
 	with open(fin, 'r') as fi: 
-		def read_bound(b, clamp): return clamp if 'inf' in b else float(b)
-		def read_bounds(b, bclamp): return [read_bound(b[0], bclamp[0]), read_bound(b[1], bclamp[1])]
+		def read_bound(b, clamp, hex): return clamp if 'inf' in b else (float(h2f(b)) if hex else float(b) )
+		def read_bounds(b, bclamp, hex): return [read_bound(b[0], bclamp[0], hex), read_bound(b[1], bclamp[1], hex)]
 		mode = 'pref'; Mq = []; bounds = []; hex = False;
 		n = 0; bclamp = [None, None];
 		for line in fi:
@@ -1238,15 +1300,12 @@ def solve_mlcp_file(fin, opts = {}):
 				if opts.get('no_clamp', False): bclamp = [None, None]
 				mode = 'Mq'	
 			elif mode == 'Mq':
-				if (hex):
-					Mq.append([float(h2f(x)) for x in line.split(',')])
-				else:	
-					Mq.append([float(x) for x in line.split(',')])
+				Mq.append([ (float(h2f(x)) if hex else float(x)) for x in line.split(',')])
 				if (len(Mq) == n):
 					mode = 'bds'
 			elif mode == 'bds':
 				bd = line.split(',')
-				bounds.append(read_bounds(bd, bclamp))
+				bounds.append(read_bounds(bd, bclamp, hex))
 				if (len(bounds) == n): break
 	return solve_mlcp(Mq, bounds, opts)
 
@@ -1295,60 +1354,52 @@ def solve_mlcp_dir(din, opts = {}):
 		if verbose: print ''
 		print 'Passed {}, Failed {} in {} secs.'.format(i-fail, fail, time.time() - start)
 
-if 0:
-	M = [
-		[1, -1, -1, -1, 3],
-		[-1, 1, -1, -1, 5],
-		[1, 1, 2, 0, -9],
-		[1, 1, 0, 2, -5]
-	]
-	BM = mat_block_implode(M, [2, 2], [2, 3])
-	print BM
-	MM = mat_block_explode(BM, [2, 2], [2, 3])
-	print MM
-
-	BM = mat_block_implode2(M, [[0,3], [1,2]], [[0,1], [2,4,3]])
-	print BM
-	MM = mat_block_explode2(BM, [[0,3], [1,2]], [[0,1], [2,4,3]])
-	print MM
-	MM = mat_block_explode(BM, [2, 2], [2, 3])
-	print MM
-elif hasattr(sys, 'argv'):
-	if '-tests' in sys.argv:
-		g_num = g_num_rational
-		run_tests()
-	elif '-test' in sys.argv:
-		g_num = g_num_rational
-		algo = 1 + (sys.argv.index('-algo') if '-algo' in sys.argv else -2)
-		algo = sys.argv[algo] if algo >= 0 else ''
-		test = 1 + (sys.argv.index('-test') if '-test' in sys.argv else -2)
-		test = sys.argv[test] if (test >= 0 and test < len(sys.argv)) else 'test 1'
-		opts = {'log':LogDbg, 'algo':algo}
-		test_algo([test], opts)
-	elif '-in' in sys.argv:
-		g_num = g_num_default
-		fip = 1 + (sys.argv.index('-in') if '-in' in sys.argv else -2)
-		fop = 1 + (sys.argv.index('-out') if '-out' in sys.argv else -2)
-		algo = 1 + (sys.argv.index('-algo') if '-algo' in sys.argv else -2)
-		maxit = 1 + (sys.argv.index('-maxit') if '-maxit' in sys.argv else -2)
-		log_dbg = '-log_dbg' in sys.argv; log_blip = '-log_blip' in sys.argv; 
-		log = 0; log = LogBlip if log_blip else log; log = LogDbg if log_dbg else log; 
-		no_clamp = '-no_clamp' in sys.argv; no_lex = '-no_lex' in sys.argv; no_perturb = '-no_perturb' in sys.argv; 
-		cdll_dbl = '-cdll_dbl' in sys.argv; err = '-err' in sys.argv;
-		if fip >= 0:
-			fip = sys.argv[fip] if fip >= 0 else None
-			fop = sys.argv[fop] if fop >= 0 else None
-			opts = {'log':log, 'no_clamp':no_clamp, 'no_lex':no_lex, 'no_perturb':no_perturb, 'cdll_dbl':cdll_dbl, 'err':err}
-			if algo >= 0:
-				opts['algo'] = sys.argv[algo]
-			if maxit >= 0:
-				opts['maxit'] = int(sys.argv[maxit])
-			if (os.path.isdir(fip)):
-				solve_mlcp_dir(fip, opts)
-			else:
-				sol = solve_mlcp_file(fip, opts)
-				if (fop is not None):	
-					with open(fop, 'w') as fo: fo.write(','.join([str(x) for x in sol]))
+def main():
+	if 0:
+		M = [
+				[1, 2, 3],
+				[0, 1, 4],
+				[5, 6, 0],
+			]
+		print '>>>', mat_det(M), mat_adj_inv(M), mat_condition(M)
+		return 1
+	if hasattr(sys, 'argv'):
+		if '-tests' in sys.argv:
+			g_num = g_num_rational
+			run_tests()
+		elif '-test' in sys.argv:
+			g_num = g_num_rational
+			algo = 1 + (sys.argv.index('-algo') if '-algo' in sys.argv else -2)
+			algo = sys.argv[algo] if algo >= 0 else ''
+			test = 1 + (sys.argv.index('-test') if '-test' in sys.argv else -2)
+			test = sys.argv[test] if (test >= 0 and test < len(sys.argv)) else 'test 1'
+			opts = {'log':LogDbg, 'algo':algo}
+			test_algo([test], opts)
+		elif '-in' in sys.argv:
+			g_num = g_num_default
+			fip = 1 + (sys.argv.index('-in') if '-in' in sys.argv else -2)
+			fop = 1 + (sys.argv.index('-out') if '-out' in sys.argv else -2)
+			algo = 1 + (sys.argv.index('-algo') if '-algo' in sys.argv else -2)
+			maxit = 1 + (sys.argv.index('-maxit') if '-maxit' in sys.argv else -2)
+			log_dbg = '-log_dbg' in sys.argv; log_blip = '-log_blip' in sys.argv; 
+			log = 0; log = LogBlip if log_blip else log; log = LogDbg if log_dbg else log; 
+			no_clamp = '-no_clamp' in sys.argv; no_lex = '-no_lex' in sys.argv; no_perturb = '-no_perturb' in sys.argv; 
+			cdll_dbl = '-cdll_dbl' in sys.argv; err = '-err' in sys.argv;
+			if fip >= 0:
+				fip = sys.argv[fip] if fip >= 0 else None
+				fop = sys.argv[fop] if fop >= 0 else None
+				opts = {'log':log, 'no_clamp':no_clamp, 'no_lex':no_lex, 'no_perturb':no_perturb, 'cdll_dbl':cdll_dbl, 'err':err}
+				if algo >= 0:
+					opts['algo'] = sys.argv[algo]
+				if maxit >= 0:
+					opts['maxit'] = int(sys.argv[maxit])
+				if (os.path.isdir(fip)):
+					solve_mlcp_dir(fip, opts)
 				else:
-					vec_print(sol)
-				
+					sol = solve_mlcp_file(fip, opts)
+					if (fop is not None):	
+						with open(fop, 'w') as fo: fo.write(','.join([str(x) for x in sol]))
+					else:
+						vec_print(sol)
+						#print ['{}. {}'.format(i, sol[i]) for i in range(len(sol))]
+main()					
