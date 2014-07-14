@@ -272,6 +272,37 @@ def mat_diagInv(M):
 	for i in range(r):
 		I[i] = [g_num(0)]*c; I[i][i] = g_num(1)/M[i][i];
 	return I
+def mat_det(M, r = 0):
+	n = len(M); det = 0;
+	if (n == 1): 
+		return M[0][0]
+	rblk = [x for x in range(n) if x != 0]
+	for ci in range(n):
+		cblk = [x for x in range(n) if x != ci]
+		B = mat_block_implode2(M, [rblk], [cblk])[0][0]
+		det += M[0][ci] * mat_det(B, r+1) * math.pow(-1, ci)
+	return det	
+def mat_adj(M):
+	n = len(M); 
+	A = mat_create(n, n, 0)
+	for ri in range(n):
+		rblk = [x for x in range(n) if x != ri]
+		for ci in range(n):
+			cblk = [x for x in range(n) if x != ci]
+			B = mat_block_implode2(M, [rblk], [cblk])[0][0]
+			A[ri][ci] = mat_det(B) * math.pow(-1, ri+ci)
+	return A		
+		
+def mat_adj_inv(M):
+	det = mat_det(M)
+	if (det == 0):
+		return None
+	A = mat_adj(M)	
+	return mat_divs(mat_transp(A), det)
+
+def mat_condition(M):
+	iM = mat_adj_inv(M)
+	return sum([m_abs(x) for x in M[0]]) * sum([m_abs(x) for x in iM[0]])	
 
 def g_num_rational(x):
 	return fractions.Fraction(str(x))
@@ -778,39 +809,6 @@ def mlcp_sol_row_err(z, w, b):
 		d2 = m_abs(w)	
 	return m_min(m_min(d1, d2), d3)
 
-def mat_det(M, r = 0):
-	n = len(M); det = 0;
-	if (n == 1): 
-		return M[0][0]
-	rblk = [x for x in range(n) if x != 0]
-	for ci in range(n):
-		cblk = [x for x in range(n) if x != ci]
-		B = mat_block_implode2(M, [rblk], [cblk])[0][0]
-		det += M[0][ci] * mat_det(B, r+1) * math.pow(-1, ci)
-	return det	
-
-def mat_adj(M):
-	n = len(M); 
-	A = mat_create(n, n, 0)
-	for ri in range(n):
-		rblk = [x for x in range(n) if x != ri]
-		for ci in range(n):
-			cblk = [x for x in range(n) if x != ci]
-			B = mat_block_implode2(M, [rblk], [cblk])[0][0]
-			A[ri][ci] = mat_det(B) * math.pow(-1, ri+ci)
-	return A		
-		
-def mat_adj_inv(M):
-	det = mat_det(M)
-	if (det == 0):
-		return None
-	A = mat_adj(M)	
-	return mat_divs(mat_transp(A), det)
-
-def mat_condition(M):
-	iM = mat_adj_inv(M)
-	return sum([m_abs(x) for x in M[0]]) * sum([m_abs(x) for x in iM[0]])
-
 def lcp_Mq_condition(Mq):
 	n = len(Mq)
 	M = mat_create(n,n,0)
@@ -1212,7 +1210,7 @@ def solve_mlcp_cdll_mprog(Mq, bounds, opts = {}):
 
 
 def solve_mlcp(Mq, bounds, opts = {}):
-	print 'cond', lcp_Mq_condition(Mq)
+	#print 'cond', lcp_Mq_condition(Mq)
 	algo = opts.get('algo', '')
 	if opts.get('log', 0) >= LogDbg:
 		print 'algo', algo
