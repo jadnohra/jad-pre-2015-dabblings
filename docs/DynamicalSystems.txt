@@ -1,0 +1,195 @@
+Bullet vs. ODE, opinions.
+	http://bulletphysics.org/Bullet/phpBB3/viewtopic.php?f=9&t=5033&p=18398l
+	http://code.google.com/p/bullet/issues/detail?id=152
+	http://code.google.com/p/bullet/issues/detail?id=33
+	http://bulletphysics.org/Bullet/phpBB3/viewtopic.php?t=9496
+
+Motor control (except for zero velocity) should not happen within solver
+	http://books.google.de/books?id=MnOOnHJwVVQC&pg=PA202&lpg=PA202&dq=robotic+arm+servo+control+theory	
+
+
+Rb becomes point mass for one frame, masa determined by orient/vel/inert-tensor
+
+----------- 
+
+Research pt: is perturb resp for limit misbehav? What are the ther. Effects. Can we warm up unperturbed with perturbed?
+
+----------- Solver mixing
+* Can we not use 'static' forces when mixing solvers (ignore the Painleve paradox, or fix by perturbation?), that is, in one frame (substep), for one run of a direct solver, then one run of the iterative solver, resolve the whole direct solver constraint system affected, and not just the direct body affected, by doing force calculations, that do not need a time intervale (no impulse), warm starting from the direct solver results. 
+Can this be a method? using a perturbed direct solver to bypass the painleve paradox.
+A search provides the not directly related, but possibly useful for Painleve paradox intuition article:Investigation of Painlevé's paradox and dynamic jamming during mechanism sliding motion (http://tx.technion.ac.il/~izi/publications/Painleve_paper_RCD2014.pdf)
+
+-----------
+
+Next for hkds is crane, or vehicles (KMW). For LCP: interior methods.
+
+-----------
+
+http://www.fsiforum.cz/upload/soubory/databaze-predmetu/RME/49280122570502.pdf
+
+http://www.chemecomp.com/MWR/
+
+My rule when I'm reviewing papers, or teaching students, is that you first have to solve problems whose solution you know. Of course, those will be simpler than the one you want to solve. So, when you solve the more complicated one, you must solve it on at least three meshes, each more dense than the one before, to show that the key results do not change significantly (define significant!) from mesh to mesh. Otherwise you are looking at a combination of solution and error, and don't know which. This is the philosophy I use in my book, Intro.to Chemical Engineering Computing, Wiley, 2012. See www.ChemEComp.com. Of course, if you can compute error bounds you know, but that is usually only possible for simple problems. I treat that, too, at www.ChemEComp.com/MWR. 
+
+---------
+
+
+http://edulibs.org/conjugate-gradient-solver-c-code/
+http://edulibs.org/get_paper.php?id=3178656
+
+---------
+
+http://www.mcs.anl.gov/petsc/
+
+---------
+
+Parallel mlcp system, except for dyn/dyn contacts (revalc systems iter), and other explicit rules
+
+---------
+
+Make all masses equal, run 1 iter, partition on weak interactions to mlcp systems!!!!???? 
+Or similar. Test converg, or run parallel 1-iter-random order, etc?? Find 'easy points'
+
+Since we are gather ctraints! Partition into systems when indep!!!. For the rest, optimize with sparsity?!
+
+--------
+
+Hybrid: pbd ragdoll! 
+pdb hybrid in general! after auto-analysis to see where it applies...
+
+http://i31www.ira.uka.de/~jbender/Papers/CASA2014.pdf
+
+-------
+
+Do not forget shake.
+
+In Silico Single-Molecule Manipulation of DNA with Rigid
+Body Dynamics
+
+http://www.ploscompbiol.org/article/fetchObject.action?uri=info%3Adoi%2F10.1371%2Fjournal.pcbi.1003456&representation=PDF
+
+References the Shake algorithm, which seems to be exactly: use the jacobian directions from the future unconstrained frames, luckily with analysis:
+
+http://www.isds.duke.edu/~scs/Courses/Stat376/Papers/Constraints/Shake1977.pdf
+
+Numerical integration of the Cartesian Equations of Motion of a System with Constraints: Molecular Dynamics of n-Alkanes
+
+It is time to reorganize our online/offline notes on all of this.
+
+A product?!?!?!
+
+----------
+
+The jacobian must be solved for as well!?!?!?!?
+
+
+---------
+
+http://siconos.gforge.inria.fr/
+
+-------
+
+Add the spider, strandbeast, etc. from this: http://www.graphics.rwth-aachen.de/media/papers/cr_paper1263.pdf
+
+-------
+Calculate time step+ solver mixing depending on scene! Body sizes, vels, etc etc (difficult: discret error, etc.) 
+
+-------
+ODE: motor+limit uses a hack, but the problem should actually be solvable, is the issue a singularity like the one discussed in: 'A Numerically Robust LCP Solver for Simulating Articulated Rigid Bodies in Contact'?
+(Probably the pivot choice is a problem due to almost parallel lines, implement a fix. Also why are the lines not exact parall?)
+
+* Implement valve-control limits (similar to the KMW digger), which are actually more stable numerically.
+
+-------
+ODE issues and robotics
+ - http://robotics.cs.tamu.edu/dshell/papers/simpar2010ode.pdf
+ - http://autsys.aalto.fi/en/attach/SpacePartner/Heiskanen_Development_2008.pdf
+ - google: robotic simulator ode physics library problems
+
+------
+ * Remember note about 'arch/mech' content creation/consulting
+
+
+----- More CM
+ - http://www8.cs.umu.se/education/examina/Rapporter/SeuglingRolin.pdf (http://www.bulletphysics.org/Bullet/phpBB3/viewtopic.php?f=4&t=755&sid=136da7d4fce69ef487a37faf4393f2be)
+ - http://comments.gmane.org/gmane.comp.lib.ode/16681
+ - http://scholar.google.com/scholar?q=class+of+asynchronous+parallel+multi+splitting+relaxation+methods+for+the+large+sparse+linear+complementarity+problems&hl=en&as_sdt=0&as_vis=1&oi=scholart&sa=X&ei=yyQ7U8CuCoWYtQaC8IFA&ved=0CCoQgQMwAA
+ - http://citeseerx.ist.psu.edu/viewdoc/download?doi=10.1.1.98.366&rep=rep1&type=pdf
+
+------ make dis an integral part of hkds. Including 'contact sphere' and 'external impulse' emulation.
+	- rendering and prediction analysis of dis data: dis: https://github.com/mbostock/d3/wiki
+	- http://www.revolutionanalytics.com/r-language-resources
+	- Crucial: positional configurator, stability max per constr, apply pt impulses (contact pert), self contact pert.
+	- Some of dis virtual classes should be in dsl scripts.
+	- The measure of stability will have to be ad-hok, number + inf mean unstable? Instead of variance use linear approx of local maxima pts.
+	- Types of predicted 'stable behavior'
+	- add num. Stabil analysis: stable, asympt stable, by doing perturbations!!! Important. (see ITPA)
+	- note: bias acts as the small excitations in oscillators!
+
+
+------- history of modellica (and dae)	
+	- https://cw.felk.cvut.cz/wiki/_media/courses/a6m33mos/tiller_introductiontophysicalmodelingwithmodelica.pdf
+	- https://modelica.org/events/modelica2006/Proceedings/sessions/Session2d2.pdf
+	- http://www.maplesoft.com/documentation_center/online_manuals/modelica/Modelica_Mechanics_MultiBody_Parts.html
+	- http://books.google.de/books/about/Fractional_Analysis.html?id=zGSsizXTvKQC&redir_esc=y
+	- http://www.cds.caltech.edu/archive/help/uploads/wiki/files/12/Lecture3and4.pdf
+	- Modeling of MBS using relative variables often much faster: capable of real-time simulation of complex models
+	- http://www.bausch-gall.de/Tutorial8_Multibody_Heckmann.pdf
+	- https://openmodelica.org/svn/OpenModelica/trunk/SimulationRuntime/cpp/Solver/
+	- https://openmodelica.org
+	- https://modelica.org/events/workshop2000/proceedings/Schiela.pdf
+	- https://cw.felk.cvut.cz/wiki/_media/courses/a6m33mos/whitepaper-designofhybridmodelica.pdf
+	- https://www.google.com/search?q=modelica+imixed&ie=utf-8&oe=utf-8&aq=t&rls=org.mozilla:en-US:official&client=firefox-a&channel=fflb
+
+------ Medical
+
+	- http://caehealthcare.com/eng/surgical-simulators/endovr
+	- https://www.google.com/search?q=surgery+simulation+market&ie=utf-8&oe=utf-8&aq=t&rls=org.mozilla:en-US:official&client=firefox-a&channel=sb
+	- http://www.kmimediagroup.com/military-medical-veterans-affairs-forum/articles/187-military-medical-veterans-affairs-forum/mmt-2009-volume-13-issue-4/1759-medical-training-20-sp-300
+	- http://metropolis.scienze.univr.it/xron/
+	- http://www.slideshare.net/rheinl271/medical-simulation-industry-overview-technet-2012
+	- http://blenderartists.org/forum/archive/index.php/t-301095.html
+	- http://www.carolinashealthcare.org/laparascopic-box-trainers-simulation-equipment
+
+
+------- LCP research
+* An efficient automatic alt. to perturb/lexi for factorization implementations.
+* Symbolico-numerical algo.
+* Fix Judice's erratum.
+* We know a lot more about possible sources of singularity, we can maybe even remove these sources and/or prioritize them. This will make the algorithms approach iterative robustness.
+* Is it possible to create a simple specific cycle trap given our extra knowledge about the system?
+* Can perturbation also be used to handle singulariy in syst-of-eq solving? Think of parallel lines that are perturbed.
+* Solve limits with cpa, then motors with ppcd2 or some sign (for limits) preserving algo
+* 'Warm start' : knowing the basis try to reach that first with min pivots?
+* Cant we presolve and solve in parallel??
+* http://link.springer.com/chapter/10.1007/BFb0120781  (Robust implementation of Lemke's method for the linear complementarity problem)
+ ( found publically at http://www.thetomlins.org/John/robust_lemke.pdf)
+* - Check this statement 'In double precision, a direct solver can easily handle condition numbers of 10^12 at least, according to numerical  analysis)'
+* <toolkit> PGS + subspace minimization iterations (An Algorithm for the Approximate and Fast Solution of Linear Complementarity Problems)
+* <toolkit> PGS + precondition (Schur complement) (from cables, Rigid Body Cable for Virtual Environments)
+* <toolkit> Conjugate Gradient 
+* <toolkit> (parallel?) Krylov subspaces: (Using Krylov Subspace and Spectral Methods for Solving
+Complementarity Problems in Many-Body Contact Dynamics Simulation)
+
+
+----- LCP in several open source dynamics packages
+ - http://www.gams.com/dd/docs/solvers/path.pdf
+ - http://www.gams.com
+ - http://www.opentissue.org/svn/OpenTissue/archieve/grid3d/unsupported/OpenTissue/math/lcp/
+ - https://code.google.com/p/rpi-matlab-simulator/
+
+------- System Parade
+* Fixed join chandelier (like the ones at the 'Stabi')
+
+------- Misc
+* Dsl a product!
+* Find stud. For mini mobile? Game: the machines.
+* Undercut algx prices.
+
+------- Roadmap / KMW
+* must be able to solve lh944 unadapted, without perturb.
+* Hkds learning mode for common probs!
+* The khds 6dof will have procedural ang lim support + conjunction/combination thereof
+* handle precision cycling problems! (currently by using dbl and maxit) (see data5/fail_5076_requires_dbl.txt)
+	- Implement Robust Lemke, test it on our failure case.
+	- Check this statement 'In double precision, a direct solver can easily handle condition numbers of 10^12 at least, according to numerical  analysis)'
