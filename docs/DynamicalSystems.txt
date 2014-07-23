@@ -164,13 +164,26 @@ ODE issues and robotics
 * Cant we presolve and solve in parallel??
 * http://link.springer.com/chapter/10.1007/BFb0120781  (Robust implementation of Lemke's method for the linear complementarity problem)
  ( found publically at http://www.thetomlins.org/John/robust_lemke.pdf)
+* Stability of the linear complementarity problem at a solution point (HA Cu Duong)
 * - Check this statement 'In double precision, a direct solver can easily handle condition numbers of 10^12 at least, according to numerical  analysis)'
 * <toolkit> PGS + subspace minimization iterations (An Algorithm for the Approximate and Fast Solution of Linear Complementarity Problems)
 * <toolkit> PGS + precondition (Schur complement) (from cables, Rigid Body Cable for Virtual Environments)
 * <toolkit> Conjugate Gradient 
 * <toolkit> (parallel?) Krylov subspaces: (Using Krylov Subspace and Spectral Methods for Solving
 Complementarity Problems in Many-Body Contact Dynamics Simulation)
+* <toolkit> Projected Gradient LCP: R. Andreani, J. J. Júdice, J. M. Martínez and J. Patrício, A projected-gradient interior-point algorithm for complementarity problems
+	- Matrix market! http://math.nist.gov/MatrixMarket/, http://www.netlib.org/
+* <toolkit> LCP+matrix splitting (On Iterative Solution for Linear Complementarity Problem with an $H_{+}$-Matrix, A. Hadjidimos)	
+* silly/old? the class/canonical form of rbs mlcp matrices.
+* <toolkit> (Demmel, A supernodal approach to sparse partial pivoting) (SuperLu)
 
+
+
+-------- LCP research*
+* S. M. Robinson, Generalized equations and their solutions, Part I: Basic theory, Mathematical rogramming Study 10 (1979) 128–141.
+* S. M. Robinson, Some continuity properties of polyhedral multifunctions, Mathematical Programming Study 14 (1981) 206–214.
+* Huynh The Phung, A Geometrical Approach to the Linear Complementarity Problem
+* Observations on a class of nasty linear complementarity problems
 
 ----- LCP in several open source dynamics packages
  - http://www.gams.com/dd/docs/solvers/path.pdf
@@ -185,6 +198,7 @@ Complementarity Problems in Many-Body Contact Dynamics Simulation)
 * Dsl a product!
 * Find stud. For mini mobile? Game: the machines.
 * Undercut algx prices.
+* WOF keyboard mapper!!! (KMW ...)
 
 ------- Roadmap / KMW
 * must be able to solve lh944 unadapted, without perturb.
@@ -193,3 +207,7 @@ Complementarity Problems in Many-Body Contact Dynamics Simulation)
 * handle precision cycling problems! (currently by using dbl and maxit) (see data5/fail_5076_requires_dbl.txt)
 	- Implement Robust Lemke, test it on our failure case.
 	- Check this statement 'In double precision, a direct solver can easily handle condition numbers of 10^12 at least, according to numerical  analysis)'
+* Fix pertrub algo: not pert+=1, but per*=2 or per/=2, to make sure too big or too small numbers still get pertrubed apart! or add failsafe fail. (eq_count not decreasing!)	
+* For contact friction, (Numerical methods for nonsmooth mechanical systems, Lecture 3) is a very good reference.	
+* hkds: degenerate hints, lin eq and also lcp. Very imp for independ of iter solv
+* better control of exporting within solver mixing (especiall hkp)
