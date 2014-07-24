@@ -1,0 +1,49 @@
+About Us
+GE Global Research – Europe employs approximately 200 engineers and scientists from more than 30 different countries. Our scientists and technologists come from a variety of disciplines and backgrounds, including chemistry, physics, mathematics, engineering, sciences and materials research.
+Located in the heart of southern Germany, Global Research – Europe sits on the Garching campus of the Technical University of Munich. This creates a unique blend for our scientists to be in a university setting, while performing research in a world-class industrial lab that is dedicated to bringing new technologies to market. The facility also operates closely with technology teams at GE businesses across the globe, ensuring effective transition of breakthrough innovations from the lab into advanced products and services. Within the R&D community, the center maintains close partnerships with numerous universities, research institutions and technology companies in Germany and abroad.
+Current research at the facility focuses on automated manufacturing of composite parts, waste heat recovery for industrial and power applications, grid integration of renewable energies, molecular imaging for cancer diagnostics, high power electronics for stationary and mobile applications and advanced compressor technologies.
+
+Relocation Expenses
+No
+
+Role Summary/Purpose
+As a Senior Engineer / Principal Engineer you will lead a team of researchers in the area of applying formal methods and related tools to the development, validation and certification of safety-critical embedded software for aerospace, rail, healthcare and energy applications. You will act as a thought leader and consultant to our business units. You will influence and interact with standardization and certification bodies as well as government agencies.
+
+Essential Responsibilities
+You will lead a team of researchers and collaborate with GE business units to define, mature and demonstrate new technologies and processes that lead to efficiency improvements in the development, verification and validation of safety-critical software and systems. Applications are focused on avionics, but are expected to expand to rail signaling, medical imaging and electrical power generation.
+
+Your key responsibilities will include:
+- Provide technical leadership and guidance to a global team of researchers, and interact with GE business units.
+- Provide though leadership to innovate and apply new technologies, tools and processes in the development and certification of safety-critical systems.
+- Propose new concepts to develop requirements, behavioral models and formal properties from text-based requirements.
+- Lead the generation of intellectual property in your area.
+- Interact with standardization and certification bodies.
+- Interact with government agencies and help influence and shape their vision around formal methods.
+- Acquire funding for R&D programs from GE business units and from government agencies (e.g. EU Commission).
+- Keep abreast of advances on formal methods in industry and in the scientific community.
+- Document and communicate your results in reports, conference papers, and presentations to all levels of management.
+
+Qualifications/Requirements
+- Ph.D. in Computer Science, Computer Engineering or a related discipline with at least 5 years of relevant work experience (or Master's degree with at least 10 years relevant work experience)
+- Core technical expertise and demonstrated thought leadership with applying formal methods to the analysis, verification and validation of safety critical software and systems.
+- Proven ability to secure funding for R&D projects (internal or external).
+- Proficiency in real-time software development.
+- Proficiency in state-of-the-art model checking tools (e.g. YICES, Z3, ACL2, SPIN, UPPAAL) and static analysis software tools (e.g. Polyspace, Coverity).
+- Expertise in DO-178C and the Formal Methods and Model Based Development supplements (or comparable standards or guidelines from other industries).
+- Excellent academic track record (please submit publication list with your resume).
+- Willingness to travel internationally to meet with GE businesses and with government and certification agencies.
+- Strong interpersonal and leadership skills in a team-oriented, international environment.
+- Self-starter able to work with minimal supervision.
+- Global mindset and customer focus.
+- Strong analytical skills.
+- Open, creative and flexible.
+- Can-do attitude.
+- Fluency in English.
+
+Desired Characteristics
+- Experience in applying formal methods in an industrial setting, e.g. in the aerospace, rail, or automotive industry.
+- Experience in working with certification and standardization bodies and government agencies (e.g. EASA, EU Commission).
+- Experience developing flight certified applications.
+- Expertise in complex system composition, architecture and analysis.
+- Experience developing Verification and Validation tools.
+- Basic knowledge of German is an advantage, but not required.
