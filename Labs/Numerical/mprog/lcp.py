@@ -817,10 +817,10 @@ def solve_mlcp_sor(Mq, bounds, out, opts = {}):
 		print 'dom', dom
 		print 'vdom', [Mq[i][dom[i]] for i in range(n)]
 	relax = opts.get('relax', g_num(1)); relax2 = g_num(1) - relax;
-	thresh = opts.get('conv', 0.0); 
+	thresh_conv = opts.get('thresh_conv', 0.0); 
+	thresh_err = opts.get('thresh_err', 0.0); 
+	thresh_maxit = opts.get('thresh_maxit', 0); 
 	maxit = opts.get('maxit', 0); 
-	if (thresh == 0.0 and maxit == 0):
-		maxit = 10
 	status = 1; it = 0; conv = 0.0;
 	while (status == 1 and (maxit == 0 or it < maxit)):
 		it = it + 1
@@ -835,17 +835,24 @@ def solve_mlcp_sor(Mq, bounds, out, opts = {}):
 		if opts.get('log', 0) >= LogDbg:
 			vec_print(z)
 		conv = math.sqrt(conv)	
-		if (conv <= thresh):
-			status = 2
+		if (thresh_conv != 0.0):
+			if (conv <= thresh_conv):
+				status = 2
+		if (thresh_err != 0.0):
+			err = mlcp_sol_err(Mq, z[:-1], bounds)
+			if (err[1] <= thresh_err):
+				status = 2
+		if (thresh_maxit != 0):
+			if (it >= thresh_maxit):
+				status = 2
 	out['sol'] = z[:-1]
 	if opts.get('err', False):	
 		print 'err', mlcp_sol_err(Mq, out['sol'], bounds)	
 	if opts.get('log', 0) >= LogBlip:
 		print 'iter: {}, conv: {}'.format(it, conv)
-	if (opts.get('maxit', 0) != 0 and opts.get('conv', 0.0) != 0.0 and conv > thresh):
+	if (status != 2):
 		out['sol'] = []
-		return False
-	return True
+	return (status == 2)
 
 #subst is [index,scale,add]
 def mlcp_subst_sol(Mq, lcp_sol, subst):
@@ -861,7 +868,7 @@ def calc_Mq_slack(Mq, sol):
 	return mat_mulv(Mq, sol_1)
 
 def mlcp_sol_row_err(z, w, b):
-	d1=0; d2=0; d3=0;
+	d1=float('inf'); d2=float('inf'); d3=float('inf');
 	lo,hi = b[0], b[1]
 	if (lo is not None):
 		if (w >= 0):
@@ -872,7 +879,7 @@ def mlcp_sol_row_err(z, w, b):
 		if (w <= 0):
 			d3 = m_abs(z-hi)
 		else:
-			d1 = m_len2(z-hi, w)
+			d3 = m_len2(z-hi, w)
 	if (lo is not None and z < lo):
 		d2 = m_len2(z-lo, w)
 	elif (hi is not None and z > hi):
@@ -1455,7 +1462,9 @@ def main():
 			algo = 1 + (sys.argv.index('-algo') if '-algo' in sys.argv else -2)
 			maxit = 1 + (sys.argv.index('-maxit') if '-maxit' in sys.argv else -2)
 			relax = 1 + (sys.argv.index('-relax') if '-relax' in sys.argv else -2)
-			conv = 1 + (sys.argv.index('-conv') if '-conv' in sys.argv else -2)
+			thresh_conv = 1 + (sys.argv.index('-thresh_conv') if '-thresh_conv' in sys.argv else -2)
+			thresh_err = 1 + (sys.argv.index('-thresh_err') if '-thresh_err' in sys.argv else -2)
+			thresh_maxit = 1 + (sys.argv.index('-thresh_maxit') if '-thresh_maxit' in sys.argv else -2)
 			log_dbg = '-log_dbg' in sys.argv; log_blip = '-log_blip' in sys.argv; natural = '-natural' in sys.argv;
 			log = 0; log = LogBlip if log_blip else log; log = LogDbg if log_dbg else log; 
 			no_clamp = '-no_clamp' in sys.argv; no_lex = '-no_lex' in sys.argv; no_perturb = '-no_perturb' in sys.argv; 
@@ -1470,8 +1479,12 @@ def main():
 					opts['maxit'] = int(sys.argv[maxit])
 				if relax >= 0:
 					opts['relax'] = float(sys.argv[relax])	
-				if conv >= 0:
-					opts['conv'] = float(sys.argv[conv])		
+				if thresh_conv >= 0:
+					opts['thresh_conv'] = float(sys.argv[thresh_conv])		
+				if thresh_err >= 0:
+					opts['thresh_err'] = float(sys.argv[thresh_err])			
+				if thresh_maxit >= 0:
+					opts['thresh_maxit'] = int(sys.argv[thresh_maxit])				
 				if (os.path.isdir(fip)):
 					solve_mlcp_dir(fip, opts)
 				else:
