@@ -56,7 +56,7 @@ def vec_dim(v):
 def vec_is_empty(v):
 	return vec_dim(v) == 0
 def vec_copy(a):
-	return [x for x in a]
+	return [copy.deepcopy(x) for x in a]
 def vec_transfer(a, b):
 	for i in range(len(a)): b[i] = a[i] 
 def vec_neg(a):
@@ -128,7 +128,7 @@ def mat_copy(M):
 	for i in range(r1):
 		rm = M[i]; rn = N[i]
 		for j in range(c1):
-			rn[j] = rm[j]
+			rn[j] = copy.deepcopy(rm[j])
 	return N		
 def mat_copy_to(M, N):
 	r1 = len(M);c1 = len(M[0]);
@@ -778,11 +778,44 @@ def lcp_solve_cpa_ext1_tableau(tbl, ubrange, opts = {}):
 def solve_mlcp_sor(Mq, bounds, out, opts = {}):
 	n = len(Mq)
 	z = [g_num(0)]*(n+1); z[-1] = g_num(1);
-	dom = [0]*n; rest = range(n);
+	dom = [-1]*n; rest = range(n);
+	natural = opts.get('natural', False);
+	if (natural):
+		dom = range(n)
+	else:
+		# Set obvious dominants 
+		for ri in range(n):
+			els = sorted([[ci, Mq[ri][ci]] for ci in rest], cmp=lambda x,y: m_isgn(m_abs(y[1])-m_abs(x[1])))
+			if (len(els) == 1 or els[0][1] != els[1][1]):
+				dom[ri] = els[0][0]
+				rest.remove(dom[ri])
+		# Set rest dominants 		
+		for ri in range(n):
+			if (dom[ri] == -1):
+				els = sorted([[ci, Mq[ri][ci]] for ci in rest], cmp=lambda x,y: m_isgn(m_abs(y[1])-m_abs(x[1])))
+				dom[ri] = els[0][0]
+				rest.remove(dom[ri])
+	# Try to handle zero diagonals, or fail
 	for ri in range(n):
-		els = sorted([[ci, Mq[ri][ci]] for ci in rest], cmp=lambda x,y: m_isgn(y[1]-x[1]))
-		dom[ri] = els[0][0]
-		rest.remove(dom[ri])
+		ci = dom[ri]
+		if (Mq[ri][ci] == 0.0):
+			swaps = []
+			for rj in range(n):
+				cj = dom[rj]
+				if (Mq[rj][ci] != 0.0 and Mq[ri][cj] != 0.0):
+					swaps.append([rj, m_abs(Mq[ri][cj])])
+			if (len(swaps) > 0):
+				swaps = sorted(swaps, cmp=lambda x,y: m_isgn(y[1]-x[1]))
+				swap = swaps[1][0]	if len(swaps) > 1 else swaps[0][0]
+				t = dom[ri]; dom[ri] = dom[swap]; dom[swap] = t;
+			else:
+				if opts.get('log', 0) > 0:
+					out['sol'] = []
+					print 'Failed to rearrange for non-zero diagonal'
+				return False	
+	if opts.get('log', 0) >= LogDbg:
+		print 'dom', dom
+		print 'vdom', [Mq[i][dom[i]] for i in range(n)]
 	relax = opts.get('relax', g_num(1)); relax2 = g_num(1) - relax;
 	thresh = opts.get('conv', 0.0); 
 	maxit = opts.get('maxit', 0); 
@@ -809,6 +842,9 @@ def solve_mlcp_sor(Mq, bounds, out, opts = {}):
 		print 'err', mlcp_sol_err(Mq, out['sol'], bounds)	
 	if opts.get('log', 0) >= LogBlip:
 		print 'iter: {}, conv: {}'.format(it, conv)
+	if (opts.get('maxit', 0) != 0 and opts.get('conv', 0.0) != 0.0 and conv > thresh):
+		out['sol'] = []
+		return False
 	return True
 
 #subst is [index,scale,add]
@@ -843,6 +879,7 @@ def mlcp_sol_row_err(z, w, b):
 		d2 = m_len2(z-hi, w)	
 	else:
 		d2 = m_abs(w)	
+	#print '>>', d1,d2,d3	
 	return m_min(m_min(d1, d2), d3)
 
 def lcp_Mq_condition(Mq):
@@ -859,6 +896,7 @@ def mlcp_sol_err(Mq, sol, bounds):
 	err = [float(0), float(0)]
 	for i in range(len(sol)):
 		e = mlcp_sol_row_err(sol[i], w[i], bounds[i])
+		#print i,e, sol[i], w[i], bounds[i]
 		err[0] = m_max(err[0], e); err[1] += e*e; 
 	err[1] = math.sqrt(err[1])
 	return err
@@ -1418,14 +1456,14 @@ def main():
 			maxit = 1 + (sys.argv.index('-maxit') if '-maxit' in sys.argv else -2)
 			relax = 1 + (sys.argv.index('-relax') if '-relax' in sys.argv else -2)
 			conv = 1 + (sys.argv.index('-conv') if '-conv' in sys.argv else -2)
-			log_dbg = '-log_dbg' in sys.argv; log_blip = '-log_blip' in sys.argv; 
+			log_dbg = '-log_dbg' in sys.argv; log_blip = '-log_blip' in sys.argv; natural = '-natural' in sys.argv;
 			log = 0; log = LogBlip if log_blip else log; log = LogDbg if log_dbg else log; 
 			no_clamp = '-no_clamp' in sys.argv; no_lex = '-no_lex' in sys.argv; no_perturb = '-no_perturb' in sys.argv; 
 			cdll_dbl = '-cdll_dbl' in sys.argv; err = '-err' in sys.argv;
 			if fip >= 0:
 				fip = sys.argv[fip] if fip >= 0 else None
 				fop = sys.argv[fop] if fop >= 0 else None
-				opts = {'log':log, 'no_clamp':no_clamp, 'no_lex':no_lex, 'no_perturb':no_perturb, 'cdll_dbl':cdll_dbl, 'err':err}
+				opts = {'log':log, 'no_clamp':no_clamp, 'no_lex':no_lex, 'no_perturb':no_perturb, 'cdll_dbl':cdll_dbl, 'err':err, 'natural':natural}
 				if algo >= 0:
 					opts['algo'] = sys.argv[algo]
 				if maxit >= 0:
