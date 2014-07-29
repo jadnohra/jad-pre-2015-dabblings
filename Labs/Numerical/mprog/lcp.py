@@ -784,20 +784,31 @@ def solve_mlcp_sor(Mq, bounds, out, opts = {}):
 		dom[ri] = els[0][0]
 		rest.remove(dom[ri])
 	relax = opts.get('relax', g_num(1)); relax2 = g_num(1) - relax;
-	status = 1; maxit = opts.get('maxit', 1); it = 0; 
+	thresh = opts.get('conv', 0.0); 
+	maxit = opts.get('maxit', 0); 
+	if (thresh == 0.0 and maxit == 0):
+		maxit = 10
+	status = 1; it = 0; conv = 0.0;
 	while (status == 1 and (maxit == 0 or it < maxit)):
 		it = it + 1
+		conv = 0.0
 		for ri in range(n):
 			ci = dom[ri]; pzi = z[ci]; z[ci] = g_num(0);
 			d = ((-vec_dot(Mq[ri], z))/Mq[ri][ci])
 			z[ci] = (relax2 * pzi) + (relax * d)
 			z[ci] = m_max(z[ci], bounds[ci][0]) if bounds[ci][0] is not None else z[ci]
 			z[ci] = m_min(z[ci], bounds[ci][1]) if bounds[ci][1] is not None else z[ci]
+			conv = conv + (z[ci]-pzi)**2
 		if opts.get('log', 0) >= LogDbg:
 			vec_print(z)
+		conv = math.sqrt(conv)	
+		if (conv <= thresh):
+			status = 2
 	out['sol'] = z[:-1]
 	if opts.get('err', False):	
 		print 'err', mlcp_sol_err(Mq, out['sol'], bounds)	
+	if opts.get('log', 0) >= LogBlip:
+		print 'iter: {}, conv: {}'.format(it, conv)
 	return True
 
 #subst is [index,scale,add]
@@ -1405,6 +1416,8 @@ def main():
 			fop = 1 + (sys.argv.index('-out') if '-out' in sys.argv else -2)
 			algo = 1 + (sys.argv.index('-algo') if '-algo' in sys.argv else -2)
 			maxit = 1 + (sys.argv.index('-maxit') if '-maxit' in sys.argv else -2)
+			relax = 1 + (sys.argv.index('-relax') if '-relax' in sys.argv else -2)
+			conv = 1 + (sys.argv.index('-conv') if '-conv' in sys.argv else -2)
 			log_dbg = '-log_dbg' in sys.argv; log_blip = '-log_blip' in sys.argv; 
 			log = 0; log = LogBlip if log_blip else log; log = LogDbg if log_dbg else log; 
 			no_clamp = '-no_clamp' in sys.argv; no_lex = '-no_lex' in sys.argv; no_perturb = '-no_perturb' in sys.argv; 
@@ -1417,6 +1430,10 @@ def main():
 					opts['algo'] = sys.argv[algo]
 				if maxit >= 0:
 					opts['maxit'] = int(sys.argv[maxit])
+				if relax >= 0:
+					opts['relax'] = float(sys.argv[relax])	
+				if conv >= 0:
+					opts['conv'] = float(sys.argv[conv])		
 				if (os.path.isdir(fip)):
 					solve_mlcp_dir(fip, opts)
 				else:
