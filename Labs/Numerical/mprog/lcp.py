@@ -775,6 +775,31 @@ def lcp_solve_cpa_ext1_tableau(tbl, ubrange, opts = {}):
 	tbl['it'] = it
 	return (status == 2)
 
+def solve_mlcp_sor(Mq, bounds, out, opts = {}):
+	n = len(Mq)
+	z = [g_num(0)]*(n+1); z[-1] = g_num(1);
+	dom = [0]*n; rest = range(n);
+	for ri in range(n):
+		els = sorted([[ci, Mq[ri][ci]] for ci in rest], cmp=lambda x,y: m_isgn(y[1]-x[1]))
+		dom[ri] = els[0][0]
+		rest.remove(dom[ri])
+	relax = opts.get('relax', g_num(1)); relax2 = g_num(1) - relax;
+	status = 1; maxit = opts.get('maxit', 1); it = 0; 
+	while (status == 1 and (maxit == 0 or it < maxit)):
+		it = it + 1
+		for ri in range(n):
+			ci = dom[ri]; pzi = z[ci]; z[ci] = g_num(0);
+			d = ((-vec_dot(Mq[ri], z))/Mq[ri][ci])
+			z[ci] = (relax2 * pzi) + (relax * d)
+			z[ci] = m_max(z[ci], bounds[ci][0]) if bounds[ci][0] is not None else z[ci]
+			z[ci] = m_min(z[ci], bounds[ci][1]) if bounds[ci][1] is not None else z[ci]
+		if opts.get('log', 0) >= LogDbg:
+			vec_print(z)
+	out['sol'] = z[:-1]
+	if opts.get('err', False):	
+		print 'err', mlcp_sol_err(Mq, out['sol'], bounds)	
+	return True
+
 #subst is [index,scale,add]
 def mlcp_subst_sol(Mq, lcp_sol, subst):
 	n = len(Mq[0])-1
@@ -819,7 +844,7 @@ def lcp_Mq_condition(Mq):
 	
 def mlcp_sol_err(Mq, sol, bounds):
 	w = calc_Mq_slack(Mq, sol)
-	print 'w', [[i, w[i]] for i in range(len(sol))]
+	#print 'w', [[i, w[i]] for i in range(len(sol))]
 	err = [float(0), float(0)]
 	for i in range(len(sol)):
 		e = mlcp_sol_row_err(sol[i], w[i], bounds[i])
@@ -1158,7 +1183,6 @@ def run_tests():
 		cMq = mlcp_to_lcp_Mq(mat_rational(Mq), bounds, subst)
 		mat_print(cMq)
 		
-
 def solve_mlcp_cdll_mprog(Mq, bounds, opts = {}):
 	def ctypes_flist(l): cltype = ctypes.c_float*len(l); return cltype(*l);
 	def ctypes_dlist(l): cltype = ctypes.c_double*len(l); return cltype(*l);
@@ -1217,6 +1241,8 @@ def solve_mlcp(Mq, bounds, opts = {}):
 		print 'Mq'; mat_print(Mq)
 	if algo.startswith('cdll'):
 		return solve_mlcp_cdll_mprog(Mq, bounds, opts)
+	elif algo.startswith('sor'):
+		out = {'sol':[]}; solve_mlcp_sor(Mq, bounds, out, opts); return out['sol'];
 	subst = [None]*len(bounds)
 	if algo.startswith('cpa_ext1'):
 		(cMq,ubrange) = mlcp_to_lcp_Mq_ext1(Mq, bounds, subst)
