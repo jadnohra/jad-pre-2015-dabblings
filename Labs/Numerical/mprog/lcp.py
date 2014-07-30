@@ -775,44 +775,48 @@ def lcp_solve_cpa_ext1_tableau(tbl, ubrange, opts = {}):
 	tbl['it'] = it
 	return (status == 2)
 
-def solve_mlcp_sor(Mq, bounds, out, opts = {}):
+def solve_mlcp_psor(Mq, bounds, out, opts = {}):
 	n = len(Mq)
 	z = [g_num(0)]*(n+1); z[-1] = g_num(1);
 	dom = [-1]*n; rest = range(n);
-	natural = opts.get('natural', False);
-	if (natural):
+	arrange = opts.get('arrange', 0);
+	if (arrange == 0):
 		dom = range(n)
 	else:
-		# Set obvious dominants 
-		for ri in range(n):
-			els = sorted([[ci, Mq[ri][ci]] for ci in rest], cmp=lambda x,y: m_isgn(m_abs(y[1])-m_abs(x[1])))
-			if (len(els) == 1 or els[0][1] != els[1][1]):
-				dom[ri] = els[0][0]
-				rest.remove(dom[ri])
-		# Set rest dominants 		
-		for ri in range(n):
-			if (dom[ri] == -1):
+		if (arrange >= 2):
+			# Set obvious dominants 
+			for ri in range(n):
 				els = sorted([[ci, Mq[ri][ci]] for ci in rest], cmp=lambda x,y: m_isgn(m_abs(y[1])-m_abs(x[1])))
-				dom[ri] = els[0][0]
-				rest.remove(dom[ri])
-	# Try to handle zero diagonals, or fail
-	for ri in range(n):
-		ci = dom[ri]
-		if (Mq[ri][ci] == 0.0):
-			swaps = []
-			for rj in range(n):
-				cj = dom[rj]
-				if (Mq[rj][ci] != 0.0 and Mq[ri][cj] != 0.0):
-					swaps.append([rj, m_abs(Mq[ri][cj])])
-			if (len(swaps) > 0):
-				swaps = sorted(swaps, cmp=lambda x,y: m_isgn(y[1]-x[1]))
-				swap = swaps[1][0]	if len(swaps) > 1 else swaps[0][0]
-				t = dom[ri]; dom[ri] = dom[swap]; dom[swap] = t;
-			else:
-				if opts.get('log', 0) > 0:
-					out['sol'] = []
-					print 'Failed to rearrange for non-zero diagonal'
-				return False	
+				if (len(els) == 1 or els[0][1] != els[1][1]):
+					dom[ri] = els[0][0]
+					rest.remove(dom[ri])
+			# Set rest dominants 		
+			for ri in range(n):
+				if (dom[ri] == -1):
+					els = sorted([[ci, Mq[ri][ci]] for ci in rest], cmp=lambda x,y: m_isgn(m_abs(y[1])-m_abs(x[1])))
+					dom[ri] = els[0][0]
+					rest.remove(dom[ri])
+		else:
+			dom = range(n)			
+		if (arrange >= 1):			
+			# Try to handle zero diagonals, or fail
+			for ri in range(n):
+				ci = dom[ri]
+				if (Mq[ri][ci] == 0.0):
+					swaps = []
+					for rj in range(n):
+						cj = dom[rj]
+						if (Mq[rj][ci] != 0.0 and Mq[ri][cj] != 0.0):
+							swaps.append([rj, m_abs(Mq[ri][cj])])
+					if (len(swaps) > 0):
+						swaps = sorted(swaps, cmp=lambda x,y: m_isgn(y[1]-x[1]))
+						swap = swaps[1][0]	if len(swaps) > 1 else swaps[0][0]
+						t = dom[ri]; dom[ri] = dom[swap]; dom[swap] = t;
+					else:
+						if opts.get('log', 0) > 0:
+							out['sol'] = []
+							print 'Failed to rearrange for non-zero diagonal'
+						return False	
 	if opts.get('log', 0) >= LogDbg:
 		print 'dom', dom
 		print 'vdom', [Mq[i][dom[i]] for i in range(n)]
@@ -840,6 +844,7 @@ def solve_mlcp_sor(Mq, bounds, out, opts = {}):
 				status = 2
 		if (thresh_err != 0.0):
 			err = mlcp_sol_err(Mq, z[:-1], bounds)
+			print 'e1', err[1]
 			if (err[1] <= thresh_err):
 				status = 2
 		if (thresh_maxit != 0):
@@ -1247,6 +1252,7 @@ def solve_mlcp_cdll_mprog(Mq, bounds, opts = {}):
 	
 	algo = opts.get('algo', '')
 	cdll_dbl = opts.get('cdll_dbl', False)
+	ctype = ctypes.c_double if cdll_dbl else ctypes.c_float
 	ctypes_list = ctypes_dlist if cdll_dbl else ctypes_flist
 	
 	n = mat_rows(Mq)
@@ -1273,6 +1279,15 @@ def solve_mlcp_cdll_mprog(Mq, bounds, opts = {}):
 			print flat_bounds
 		lib_func = lib.solveJadCpaExtTbl_dbl if cdll_dbl else lib.solveJadCpaExtTbl_flt	
 		solved = lib_func(n, ctypes_list(flat_Mq), ctypes_list(flat_bounds), csol, opts.get('maxit', 0), not opts.get('no_perturb', False), opts.get('log', 0))	
+	elif (algo == 'cdll_psor'):	
+		lib = ctypes.cdll.LoadLibrary(mprog_dll_path)
+		flat_Mq = mat_to_vec(Mq)
+		flat_bounds = [x for bound in bounds for x in [conv_bound_lo(bound[0]), conv_bound_hi(bound[1])]]
+		if opts.get('log', 0) >= LogDbg:
+			print flat_bounds
+		lib_func = lib.solveJadPsor_dbl if cdll_dbl else lib.solveJadPsor_flt	
+		z0 = ctypes_list([0]*n)
+		solved = lib_func(n, ctypes_list(flat_Mq), ctypes_list(flat_bounds), z0, csol, opts.get('arrange', 0), opts.get('maxit', 0), opts.get('thresh_maxit', 0), ctype(opts.get('thresh_conv', 0.0)), ctype(opts.get('thresh_err', 0.0)), opts.get('log', 0))	
 	else:
 		print 'No such algorithm! ({})'.format(algo)
 
@@ -1297,8 +1312,8 @@ def solve_mlcp(Mq, bounds, opts = {}):
 		print 'Mq'; mat_print(Mq)
 	if algo.startswith('cdll'):
 		return solve_mlcp_cdll_mprog(Mq, bounds, opts)
-	elif algo.startswith('sor'):
-		out = {'sol':[]}; solve_mlcp_sor(Mq, bounds, out, opts); return out['sol'];
+	elif algo.startswith('psor'):
+		out = {'sol':[]}; solve_mlcp_psor(Mq, bounds, out, opts); return out['sol'];
 	subst = [None]*len(bounds)
 	if algo.startswith('cpa_ext1'):
 		(cMq,ubrange) = mlcp_to_lcp_Mq_ext1(Mq, bounds, subst)
@@ -1462,6 +1477,7 @@ def main():
 			algo = 1 + (sys.argv.index('-algo') if '-algo' in sys.argv else -2)
 			maxit = 1 + (sys.argv.index('-maxit') if '-maxit' in sys.argv else -2)
 			relax = 1 + (sys.argv.index('-relax') if '-relax' in sys.argv else -2)
+			arrange = 1 + (sys.argv.index('-arrange') if '-arrange' in sys.argv else -2)
 			thresh_conv = 1 + (sys.argv.index('-thresh_conv') if '-thresh_conv' in sys.argv else -2)
 			thresh_err = 1 + (sys.argv.index('-thresh_err') if '-thresh_err' in sys.argv else -2)
 			thresh_maxit = 1 + (sys.argv.index('-thresh_maxit') if '-thresh_maxit' in sys.argv else -2)
@@ -1472,13 +1488,15 @@ def main():
 			if fip >= 0:
 				fip = sys.argv[fip] if fip >= 0 else None
 				fop = sys.argv[fop] if fop >= 0 else None
-				opts = {'log':log, 'no_clamp':no_clamp, 'no_lex':no_lex, 'no_perturb':no_perturb, 'cdll_dbl':cdll_dbl, 'err':err, 'natural':natural}
+				opts = {'log':log, 'no_clamp':no_clamp, 'no_lex':no_lex, 'no_perturb':no_perturb, 'cdll_dbl':cdll_dbl, 'err':err}
 				if algo >= 0:
 					opts['algo'] = sys.argv[algo]
 				if maxit >= 0:
 					opts['maxit'] = int(sys.argv[maxit])
 				if relax >= 0:
 					opts['relax'] = float(sys.argv[relax])	
+				if arrange >= 0:
+					opts['arrange'] = int(sys.argv[arrange])
 				if thresh_conv >= 0:
 					opts['thresh_conv'] = float(sys.argv[thresh_conv])		
 				if thresh_err >= 0:
