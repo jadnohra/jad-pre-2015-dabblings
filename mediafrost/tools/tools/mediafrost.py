@@ -101,8 +101,8 @@ fs_source_filters = [
 					FsMountPointFilter(True, 'Cam_Canon_Eos550D_1', 'Eos550D','Eos550D', 'EOS_DIGITAL', '16', ''), 
 					FsMountPointFilter(True, 'Vid_Panasonic_HDCSD90_1', 'Panasonic','Video', 'CAM_SD', '32', ''),
 					FsMountPointFilter(True, 'test_fs_in', 'test_fs_in','test_fs_in', 'Apple_HFS', '790', 'Users/nohra/Jad/mediafrost/tools/test/in'), 
-					FsMountPointFilter(True, 'test_fs_in1', 'test_fs_in1','test_fs_in1', 'Apple_HFS', '790', 'Users/nohra/Jad/mediafrost/tools/test/in1'), 
-
+					FsMountPointFilter(True, 'test_fs_in1', 'test_fs_in1','test_fs_in1', 'Apple_HFS', '790', 'Users/nohra/Jad/mediafrost/tools/test/in1'),
+					FsMountPointFilter(True, 'Cam_Lumix_DmcTz7_1', 'Lumix','Lumix', 'Lumix', '8', ''),
 				]
 fs_target_filters = [ 
 					FsMountPointFilter(True, 'test_fs_out', 'test_fs_out','test_fs_out', 'Apple_HFS', '790', 'Users/nohra/Jad/mediafrost/tools/test/out'), 
