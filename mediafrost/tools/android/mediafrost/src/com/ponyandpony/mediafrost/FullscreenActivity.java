@@ -384,6 +384,7 @@ public class FullscreenActivity extends Activity {
 			}
 
 			byte[] peek(int length) {
+				Log.v("Testing", String.format("peek0 length:%d arrays:%d off:%d total:%d", length, m_arrays.size(), m_offset, m_totalLength));
 				byte[] outBytes = new byte[length];
 				int leftBytes = length;
 				int arrIndex = 0;
@@ -391,12 +392,14 @@ public class FullscreenActivity extends Activity {
 				while (leftBytes > 0) {
 					byte[] readBytes = m_arrays.get(arrIndex);
 					int readCount = Math.min(leftBytes, readBytes.length);
-					System.arraycopy(readBytes, offset, outBytes, length
-							- leftBytes, readCount);
+					Log.v("Testing", String.format("peek1 left:%d offs:%d offd:%d cnt:%d", leftBytes, offset, length-leftBytes, readCount));
+					
+					System.arraycopy(readBytes, offset, outBytes, length - leftBytes, readCount);
 					leftBytes -= readCount;
 					arrIndex++;
 					offset = 0;
 				}
+				Log.v("Testing", "peek2");
 				return outBytes;
 			}
 
@@ -455,7 +458,7 @@ public class FullscreenActivity extends Activity {
 				
 				
 				Socket sock = new Socket();
-				sock.connect(new InetSocketAddress(mSettings.server, mSettings.port), 2500);
+				sock.connect(new InetSocketAddress(mSettings.server, mSettings.port), 2501);
 				if (sock.isConnected()) {
 					logStatus(String.format("Connected to %s", sock
 							.getRemoteSocketAddress().toString()));
@@ -517,13 +520,11 @@ public class FullscreenActivity extends Activity {
 								do {
 									consumed = false;
 
-									if (bufCmd.available() >= cmdFrequest
-											.length() + fidLen
+									if ((bufCmd.available() >= (cmdFrequest.length() + fidLen))
 											&& bufCmd.startsWith(cmdFrequest)) {
 										bufCmd.skip(cmdFrequest.length());
 										byte[] fidBytes = bufCmd.read(fidLen);
-										String fid = new String(fidBytes,
-												"US-ASCII");
+										String fid = new String(fidBytes,"US-ASCII");
 										requestedFids.add(fid);
 										// Log.v("Testing",
 										// String.format("Requested %s [%d].",
@@ -593,10 +594,8 @@ public class FullscreenActivity extends Activity {
 									do {
 										consumed = false;
 
-										if (bufCmd.available() >= cmdSuccess
-												.length() + codeLen
-												&& bufCmd
-														.startsWith(cmdSuccess)) {
+										if ((bufCmd.available() >= (cmdSuccess.length() + codeLen))
+												&& bufCmd.startsWith(cmdSuccess)) {
 											bufCmd.skip(cmdSuccess.length());
 											byte[] codeBytes = bufCmd
 													.read(codeLen);
