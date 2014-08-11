@@ -391,7 +391,7 @@ public class FullscreenActivity extends Activity {
 				int offset = m_offset;
 				while (leftBytes > 0) {
 					byte[] readBytes = m_arrays.get(arrIndex);
-					int readCount = Math.min(leftBytes, readBytes.length);
+					int readCount = Math.min(leftBytes, readBytes.length-offset);
 					Log.v("Testing", String.format("peek1 left:%d offs:%d offd:%d cnt:%d", leftBytes, offset, length-leftBytes, readCount));
 					
 					System.arraycopy(readBytes, offset, outBytes, length - leftBytes, readCount);
@@ -446,6 +446,7 @@ public class FullscreenActivity extends Activity {
 		}
 
 		public void run() {
+			Socket sock = null;
 			try {
 				
 				{
@@ -457,7 +458,7 @@ public class FullscreenActivity extends Activity {
 				}
 				
 				
-				Socket sock = new Socket();
+				sock = new Socket();
 				sock.connect(new InetSocketAddress(mSettings.server, mSettings.port), 2501);
 				if (sock.isConnected()) {
 					logStatus(String.format("Connected to %s", sock
@@ -623,10 +624,34 @@ public class FullscreenActivity extends Activity {
 				}
 
 			} catch(IOException e1) {
+				
+				
+				
 				logStatus(e1.toString());
+				
+				try
+				{
+					sock.close();
+					logStatus("Failed (Exception).");
+				}
+				catch(Exception e2)
+				{
+					logStatus(Log.getStackTraceString(e2));
+				}
+				
 			} catch (Exception e) {
 				//TODO: file and byte percentage bars or text
 				logStatus(Log.getStackTraceString(e));
+				
+				try
+				{
+					sock.close();
+					logStatus("Failed (Exception).");
+				}
+				catch(Exception e2)
+				{
+					logStatus(Log.getStackTraceString(e2));
+				}
 			}
 			mTimerHandler.removeCallbacks(mTimerRunnable);
 			stopProgress();
