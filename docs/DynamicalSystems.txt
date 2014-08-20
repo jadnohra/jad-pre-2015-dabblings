@@ -176,7 +176,7 @@ Complementarity Problems in Many-Body Contact Dynamics Simulation)
 * <toolkit> LCP+matrix splitting (On Iterative Solution for Linear Complementarity Problem with an $H_{+}$-Matrix, A. Hadjidimos)	
 * silly/old? the class/canonical form of rbs mlcp matrices.
 * <toolkit> (Demmel, A supernodal approach to sparse partial pivoting) (SuperLu)
-
+* Better to 'choose at random' instead of broken perturb
 
 
 -------- LCP research*
@@ -191,6 +191,9 @@ Complementarity Problems in Many-Body Contact Dynamics Simulation)
  - http://www.opentissue.org/svn/OpenTissue/archieve/grid3d/unsupported/OpenTissue/math/lcp/
  - https://code.google.com/p/rpi-matlab-simulator/
 
+------- LCP Trivialities
+ * Of course we can warm start pvt methods!
+
 ------- System Parade
 * Fixed join chandelier (like the ones at the 'Stabi')
 
@@ -199,15 +202,122 @@ Complementarity Problems in Many-Body Contact Dynamics Simulation)
 * Find stud. For mini mobile? Game: the machines.
 * Undercut algx prices.
 * WOF keyboard mapper!!! (KMW ...)
+* pyHavok!
+* Phys revealer: inert, damp,max,...
+
+------- Delegate
+* Multi-threading accums
+* Multi-threading logging
+* Transparent Hvk mem hook, consistent mem mgmt
+* Structure tweak&bake
+* clearTypeFromReal
+* Stat trace (performant)
+* Blocking: more performant iteration over blocks
+* Integrate 'live connect' into havok
+* Bucket contact manifold
+* Hkds block viewer
+* Clean:
+	- hkdsSolver.h, this not a 'solver'
+	- don't split files when it is not needed
+	- don't use serial, use embedded json, config per group, global config, etc.
+	- keep hkp, hknp, support transparent and more
+	- keep self-containment, eg: blocks, etc.
+	- keep math style, the main ver is not for experiments, a copy can be.
+	- Remove asserts, use paranoia and arg. (HK_WARN_ONCE_ON_DEBUG_IF) (isMlcpNumeric)
+	- Remove HK_TIME_CODE_BLOCK's use perf monitor mode
+	- hkReal currStep, hkReal microStepBatch are integers! remove sctx.substep'Scale'.
+	- Revert isMlcpNumeric instead of meaningless'isOK':
+	- mprog::Number
+	- hkds live multiplaform,multithread (sockets, etc.)
+		- cleanup PUBLIC/INTERNAL for use in demos
+	- build system variants of hkdsCompileConfig
+	- optimize ghost for almost free performance: dirty flag update once per frame.
+		- hkds frame callback
+	- rip out: void hkMonitorStream::TimerCommand::setTime(), rip out  HK_TIMER_BEGIN... (use non macro code)
+		then make a nicer stats / live interface, while also keeping hkMonitorSteam supported with a config arg
+	- remove the added 'int numMlcp;'
+	- mlcp database in hkds python script
+	- dis and contacts, dis and solver mixing
+	- undo the filter_caching in solver.cpp, or at least fix it such that we can also run without, to change the order of solvers for testing.
+
+* Hkds force readout + robot muscle demo
+* group demo + group merge demo + live perf, etc.
+
+
+------- Hkds
+* sor friction, also, better penetration recovery: contacts in complicated heightfield
+* Hkds implement the rationals: it is very different if we round numbers at end of op. Vs. At end of frame / algo!!!
+	 - Isnt it mostly about mem mgt?!?!
+* P4,hkds lab
+* Prel. test: python rationals on non-baby-sitted model!
+* Robotic arm soft contact screw or pull manipulator
+* algo steps: e.g: solve group1 (system+normal contact), then feed into group2-iter: (system+normal contact+friction)
+* better control over 'rhs' neccessitates split impulse and/or projection. enabling it by default causes undesirable oscillations (e.g: drop a lh944 with this enabled for ang motor!)
+	- for now this is remedied with a hold-pos motor controller.
+* Dis extension into 'oscillation testing': how fast do we stop oscillating and go to a stable state, including hybrid setups:
+	- see the need for enabling rhs for the lh944!!!
+	- more precise control over stabilization bias (now disabled for ang motors, but enabled for other things...), until we use proj/split.
+		- for now this is remedied with a hold-pos motor controller.
+* Fwd: Hkds does 2d natively: motorbike vehicle testbed	
+
+------- Analytical dynamics
+* Best coord sys for the job?
+* Pos ctraints are garbage, (Damp grave corrections? nah)
+
 
 ------- Roadmap / KMW
+* Solve lin-sys separatly! and faster!
 * must be able to solve lh944 unadapted, without perturb.
 * Hkds learning mode for common probs!
 * The khds 6dof will have procedural ang lim support + conjunction/combination thereof
 * handle precision cycling problems! (currently by using dbl and maxit) (see data5/fail_5076_requires_dbl.txt)
 	- Implement Robust Lemke, test it on our failure case.
-	- Check this statement 'In double precision, a direct solver can easily handle condition numbers of 10^12 at least, according to numerical  analysis)'
-* Fix pertrub algo: not pert+=1, but per*=2 or per/=2, to make sure too big or too small numbers still get pertrubed apart! or add failsafe fail. (eq_count not decreasing!)	
+	- Check this statement 'In double precision, a direct solver can easily handle condition numbers of 10^12 at least, according to numerical  analysis)
+* Fix pertrub algo: not pert+=1, but per*=2 or per/=2, to make sure too big or too small numbers still get pertrubed apart! or add failsafe fail. (eq_count not decreasing!).
 * For contact friction, (Numerical methods for nonsmooth mechanical systems, Lecture 3) is a very good reference.	
 * hkds: degenerate hints, lin eq and also lcp. Very imp for independ of iter solv
 * better control of exporting within solver mixing (especiall hkp)
+* Hkds: soft grip as compliance test
+* Solver mixing test: mr skinny legs
+* Important! Why does spinning the differ with the mouse increase dramatically mlcp err. Is it the condition number? or q? or?
+* Fallback: warm start? Nope, when the direct solver fails, we have a reason to distrust its last solution.
+* Hybrid monster, minimizing bandwidth, allowing time based quality.
+* Use schema goto wiring for more hkds indepence?
+* Redo the math of all bias in all constraints
+* Free direct solver from tau/damp coupling.
+* Fallback: pgs toolkit
+* list1
+	- Hkds: imp pgs parallel + fallback! + conv. Setting.
+	- Mechanical neighbor matrix? Modif inertias, recover forcres using bias?
+	- Hkds: call it block solving! With specif. Algo choice
+	- Hkds: block scheduling. Also check theory!
+	- Contact force squash (soft)
+	- Hkds: digger vs giant breakable ragdoll.
+	- Include squash in dig&rag demo
+	- Hkds: break and squash alt. : wof limbo!
+	- Hkds: perma squash, or split impls.
+	- Hkds: heightfield perma squash
+	- hkds: bagger, that's the biggest: http://www.takraf.com/en/Products/Mining_Equipments/bucketwheelexcavator.htm
+	- bagger: http://facta.junis.ni.ac.rs/walep/walep2004/walep2004-13.pdf
+	- hkds: ForgeFX
+	- hkds: http://www.catsimulators.com/simulators/
+	- excavator 'shows'
+		- hkds: exc. show: https://www.youtube.com/watch?v=Je9FEuzVn_k
+		- https://www.youtube.com/watch?v=5nUXL3GOFn0
+		- https://www.youtube.com/watch?v=nSobKUwt5nU
+		- https://www.youtube.com/watch?v=QatxJuKD8yc
+		- https://www.youtube.com/watch?v=CeIlPanfbvs
+		- https://www.youtube.com/watch?v=5Uy1T_jbM94
+		- https://www.youtube.com/watch?v=wn_wif-NorU
+		- https://www.youtube.com/watch?v=tf7W7Mruums
+	- excavator tipping
+		- http://www.swri.org/4org/d07/learning/immersive/equipop.htm
+		- https://www.youtube.com/watch?v=KCRHVe0HHMU
+		- https://www.youtube.com/watch?v=g1mB93XBnZ4
+		- https://www.youtube.com/watch?v=l6sWeluSf2U
+		- http://www.iaarc.org/publications/fulltext/Static_compensation_ZMP_algorithm_preventing_tips-over_of_a_tele-operation_excavator.pdf
+	- crane tipping
+		- https://smartech.gatech.edu/bitstream/handle/1853/37162/fujioka_daichi_201012_mast.pdf
+	- excacator counterweight
+		- http://www.bllc.net/HardHatSamples/Excavator_Instructors_Notes.pdf
+		- http://www.iinte.edu.pl/pdf/200907s58.pdf	
