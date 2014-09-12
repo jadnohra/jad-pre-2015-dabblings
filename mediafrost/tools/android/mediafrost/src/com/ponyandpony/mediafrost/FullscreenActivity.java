@@ -19,6 +19,7 @@ import java.util.List;
 
 import android.annotation.TargetApi;
 import android.app.Activity;
+import android.app.NotificationManager;
 import android.os.Build;
 import android.os.Bundle;
 import android.os.Environment;
@@ -41,6 +42,7 @@ import android.content.Intent;
 import android.content.SharedPreferences;
 import android.net.Uri;
 import android.database.Cursor;
+import android.support.v4.app.NotificationCompat;
 import android.text.format.Time;
 import android.util.Log;
 import android.content.Context;
@@ -52,6 +54,9 @@ public class FullscreenActivity extends Activity {
 		TextView activity;
 		TextView console;
 		ProgressBar progress;
+		ProgressBar progress1;
+		ProgressBar progress2;
+		ProgressBar progress3;
 		Button backup;
 	};
 
@@ -127,6 +132,12 @@ public class FullscreenActivity extends Activity {
 			mStatusTextViews.progress = (ProgressBar) findViewById(R.id.progressBar1);
 			mStatusTextViews.progress.setVisibility(View.INVISIBLE);
 			mStatusTextViews.backup = (Button) findViewById(R.id.dummy_button);
+			mStatusTextViews.progress1 = (ProgressBar) findViewById(R.id.progressBar2);
+			mStatusTextViews.progress1.setVisibility(View.INVISIBLE);
+			mStatusTextViews.progress2 = (ProgressBar) findViewById(R.id.progressBar3);
+			mStatusTextViews.progress2.setVisibility(View.INVISIBLE);
+			mStatusTextViews.progress3 = (ProgressBar) findViewById(R.id.progressBar4);
+			mStatusTextViews.progress3.setVisibility(View.INVISIBLE);
 		}
 
 		{
@@ -224,6 +235,7 @@ public class FullscreenActivity extends Activity {
 		}
 	};
 
+	
 	View.OnTouchListener mTouchListener = new View.OnTouchListener() {
 		@Override
 		public boolean onTouch(View view, MotionEvent motionEvent) {
@@ -251,7 +263,13 @@ public class FullscreenActivity extends Activity {
 						mStatusTextViews.console.setText("Connecting ...");
 						mStatusTextViews.time.setText("00:00:00");
 						mStatusTextViews.activity.setText("Connecting...");
-						mStatusTextViews.progress.setVisibility(View.VISIBLE);
+						//mStatusTextViews.progress.setVisibility(View.VISIBLE);
+						mStatusTextViews.progress1.setVisibility(View.VISIBLE);
+						mStatusTextViews.progress1.setProgress(0);
+						mStatusTextViews.progress2.setVisibility(View.VISIBLE);
+						mStatusTextViews.progress2.setProgress(0);
+						//mStatusTextViews.progress3.setVisibility(View.VISIBLE);
+						//mStatusTextViews.progress3.setProgress(0);
 
 						NetworkThreadSettings settings = new NetworkThreadSettings();
 						String address[] = getSetting(context, "Server", null).split(":");
@@ -296,6 +314,7 @@ public class FullscreenActivity extends Activity {
 		NetworkThreadSettings mSettings;
 		Handler mMessageHandler;
 		List<String> mImages;
+		long mTotalByteCount;
 		StatusTextViews mStatusTextViews;
 		Handler mTimerHandler;
 		Runnable mTimerRunnable;
@@ -384,7 +403,7 @@ public class FullscreenActivity extends Activity {
 			}
 
 			byte[] peek(int length) {
-				Log.v("Testing", String.format("peek0 length:%d arrays:%d off:%d total:%d", length, m_arrays.size(), m_offset, m_totalLength));
+				//Log.v("Testing", String.format("peek0 length:%d arrays:%d off:%d total:%d", length, m_arrays.size(), m_offset, m_totalLength));
 				byte[] outBytes = new byte[length];
 				int leftBytes = length;
 				int arrIndex = 0;
@@ -392,14 +411,14 @@ public class FullscreenActivity extends Activity {
 				while (leftBytes > 0) {
 					byte[] readBytes = m_arrays.get(arrIndex);
 					int readCount = Math.min(leftBytes, readBytes.length-offset);
-					Log.v("Testing", String.format("peek1 left:%d offs:%d offd:%d cnt:%d", leftBytes, offset, length-leftBytes, readCount));
+					//Log.v("Testing", String.format("peek1 left:%d offs:%d offd:%d cnt:%d", leftBytes, offset, length-leftBytes, readCount));
 					
 					System.arraycopy(readBytes, offset, outBytes, length - leftBytes, readCount);
 					leftBytes -= readCount;
 					arrIndex++;
 					offset = 0;
 				}
-				Log.v("Testing", "peek2");
+				//Log.v("Testing", "peek2");
 				return outBytes;
 			}
 
@@ -412,7 +431,7 @@ public class FullscreenActivity extends Activity {
 			void debug(int length) throws UnsupportedEncodingException {
 				byte[] dbgBytes = peek(Math.min(available(), length));
 				String dbgStr = new String(dbgBytes, "US-ASCII");
-				Log.v("Testing", String.format("PeekBuf: [%s]", dbgStr));
+				//Log.v("Testing", String.format("PeekBuf: [%s]", dbgStr));
 			}
 		};
 
@@ -421,6 +440,36 @@ public class FullscreenActivity extends Activity {
 				view.post(new Runnable() {
 					public void run() {
 						view.setText(str);
+					}
+				});
+		}
+		
+		void setProgress(final ProgressBar bar, final int percentage)
+		{
+			if (bar != null)
+				bar.post(new Runnable() {
+					public void run() {
+						bar.setProgress(Math.max(5, percentage));
+					}
+				});
+		}
+		
+		void openProgress(final ProgressBar bar)
+		{
+			if (bar != null)
+				bar.post(new Runnable() {
+					public void run() {
+						bar.setProgress(5);
+					}
+				});
+		}
+		
+		void closeProgress(final ProgressBar bar)
+		{
+			if (bar != null)
+				bar.post(new Runnable() {
+					public void run() {
+						bar.setProgress(100);
 					}
 				});
 		}
@@ -439,12 +488,30 @@ public class FullscreenActivity extends Activity {
 		}
 
 		void logStatus(final String str) {
-			Log.v("Testing", str);
+			//Log.v("Testing", str);
 			mStatusText = String.format("%s\n%s", mStatusText, str);
 			setText(mStatusTextViews.activity, str);
 			setText(mStatusTextViews.console, mStatusText);
 		}
 
+		void logNotify(int success)
+		{
+			if (true)
+			{
+				NotificationCompat.Builder builder =
+					    new NotificationCompat.Builder(FullscreenActivity.this)
+					    .setSmallIcon(R.drawable.ic_launcher)
+					    .setContentTitle("Mediafrost")
+					    .setContentText(success > 0 ? "Backup succeeded." : "Backup failed.");
+	
+				long pattern[] = {500, 500, 500};
+				builder.setVibrate(pattern);
+				builder.setLights(0xFFFFFFFF,500,3000);
+				NotificationManager notifyMgr =  (NotificationManager) getSystemService(NOTIFICATION_SERVICE);
+				notifyMgr.notify(1, builder.build());
+			}
+		}
+		
 		public void run() {
 			Socket sock = null;
 			try {
@@ -476,14 +543,27 @@ public class FullscreenActivity extends Activity {
 						imageCount = 0;
 					}
 					
+					logStatus("Calculating total bytes ...");
+					
+					
+
+					mTotalByteCount = 0;
+					for (int i = 0; i < imageCount; i++) {
+						String filePath = mImages.get(i);
+						long bytes = new File(filePath).length();
+						mTotalByteCount += bytes;
+					}
+					
+					HashMap<String, Integer> fidMap = new HashMap<String, Integer>();
 					logStatus(String.format("Senging %d fids ...", imageCount));
 					sock.getOutputStream().write("/start".getBytes("US-ASCII"));
 					
-					HashMap<String, Integer> fidMap = new HashMap<String, Integer>();
-
+					openProgress(mStatusTextViews.progress1);
+					float prog1 = 0.0f;
 					for (int i = 0; i < imageCount; i++) {
 						String filePath = mImages.get(i);
-						String fileName = new File(filePath).getName();
+						File file = new File(filePath);
+						String fileName = file.getName();
 
 						setText(mStatusTextViews.activity,
 								String.format("Hashing %s (%d/%d)", fileName, i+1, imageCount));
@@ -492,7 +572,13 @@ public class FullscreenActivity extends Activity {
 						sock.getOutputStream().write(
 								String.format("/fid:%s:%s", fileName, fid)
 										.getBytes("US-ASCII"));
+						float lprog1 = prog1;
+						prog1 += ((100.0f * (float)(file.length()))/((float) mTotalByteCount));
+						if ((int) lprog1 != (int) prog1)
+							setProgress(mStatusTextViews.progress1, (int) prog1);
 					}
+					closeProgress(mStatusTextViews.progress1);
+					
 					sock.getOutputStream()
 							.write("/fidend".getBytes("US-ASCII"));
 					sock.getOutputStream().flush();
@@ -542,9 +628,12 @@ public class FullscreenActivity extends Activity {
 							}
 						}
 					}
+					
+					openProgress(mStatusTextViews.progress2);
 					if (requestedFids.size() > 0) {
 						logStatus(String.format("Sending %d files ...",
 								requestedFids.size()));
+						float prog2 = 0.0f;
 						for (int i = 0; i < requestedFids.size(); i++) {
 							String fid = requestedFids.get(i);
 							int index = fidMap.get(fid).intValue();
@@ -560,13 +649,21 @@ public class FullscreenActivity extends Activity {
 									String.format("/fdata:%s:%d:", fid,
 											fileSize).getBytes("US-ASCII"));
 
-							byte[] buffer = new byte[16*1024];
+							byte[] buffer = new byte[64*1024];
 							int read = 0;
 							while ((read = fileInputStream.read(buffer, 0,
 									buffer.length)) != -1)
+							{
 								sock.getOutputStream().write(buffer, 0, read);
+								float lprog2 = prog2;
+								prog2 += ((100.0f * (float)(read))/((float) mTotalByteCount));
+								if ((int) lprog2 != (int) prog2	)
+									setProgress(mStatusTextViews.progress2, (int) prog2);
+							}
 							fileInputStream.close();
+							
 						}
+						closeProgress(mStatusTextViews.progress2);
 						sock.getOutputStream().write(
 								"/fdataend".getBytes("US-ASCII"));
 						sock.getOutputStream().flush();
@@ -605,6 +702,10 @@ public class FullscreenActivity extends Activity {
 
 											logStatus(String.format(
 													"Success: %s", code));
+											logNotify(code.equals("1") ? 1 : 0);
+											
+									
+											
 											consumed = true;
 										} else if (bufCmd.startsWith(cmdEnd)) {
 											requesting = false;
@@ -625,7 +726,7 @@ public class FullscreenActivity extends Activity {
 
 			} catch(IOException e1) {
 				
-				
+				logNotify(0);
 				
 				logStatus(e1.toString());
 				
@@ -640,7 +741,8 @@ public class FullscreenActivity extends Activity {
 				}
 				
 			} catch (Exception e) {
-				//TODO: file and byte percentage bars or text
+				logNotify(0);
+				
 				logStatus(Log.getStackTraceString(e));
 				
 				try
@@ -653,6 +755,8 @@ public class FullscreenActivity extends Activity {
 					logStatus(Log.getStackTraceString(e2));
 				}
 			}
+			
+			
 			mTimerHandler.removeCallbacks(mTimerRunnable);
 			stopProgress();
 		}
@@ -666,7 +770,7 @@ public class FullscreenActivity extends Activity {
 			FileInputStream fileInputStream = new FileInputStream(file);
 
 			DigestInputStream dis = new DigestInputStream(fileInputStream, md);
-			byte[] buffer = new byte[16*1024];
+			byte[] buffer = new byte[64*1024];
 			while (dis.read(buffer, 0, buffer.length) != -1) {
 			}
 			dis.close();

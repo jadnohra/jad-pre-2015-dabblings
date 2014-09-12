@@ -28,6 +28,8 @@ fs_cache_filters = [ frost.FsMountPointFilter(True, 'test_fs_cache', 'test_fs_ca
 fs_cache_sources = frost.fsFilterMounts(fs_mounts, fs_cache_filters)
 
 perfile = ('-perfile' in sys.argv)
+dbg = ('-dbg' in sys.argv)
+dbg2 =('-dbg2' in sys.argv)
 
 
 port = 24107
@@ -81,11 +83,13 @@ sock.listen(1)
 def recvConnBytes(conn, bufsize, totalsize, sleep, processFunc):	
 	leftsize = totalsize
 	serving = True
+	if (dbg2):
+		print ' >dbg2',
 	while serving and (leftsize > 0):
 		try:
 			recvsize = min(leftsize, bufsize)
 			bytes = conn.recv(recvsize)
-			if not recv:
+			if not bytes:
 				serving = False
 				conn.close()
 				break
@@ -98,8 +102,14 @@ def recvConnBytes(conn, bufsize, totalsize, sleep, processFunc):
 				serving = False
 				conn.close()
 				break
+		#print ' >dbg1',  (recv[:128] + '..') if len(recv) > 128 else recv
 		processFunc(conn, bytes)
 		leftsize = leftsize - len(bytes)
+		if (dbg2):
+			print '{} ({}),'.format(leftsize, len(bytes)),
+	if (dbg2):
+		print ''
+
 
 
 def recvProcessWriteFile(fileOut):
@@ -136,7 +146,7 @@ while 1:
 
 	while serving:
 		try:
-			recv = conn.recv(16*1024)
+			recv = conn.recv(64*1024)
 			if not recv:
 				serving = False
 				conn.close()
@@ -150,136 +160,153 @@ while 1:
 				conn.close()
 				break
 
+		if (dbg):
+			if (not conn_buf.startswith(cmd_fdata)):
+				print ' >dbg1',  (recv[:128] + '..') if len(recv) > 128 else recv
+				print ' >dbg2',  (conn_buf[:128] + '..') if len(conn_buf) > 128 else conn_buf
 		conn_buf = conn_buf + recv
 
-		if (conn_buf.startswith(cmd_start)):
-			print 'Receving fids...'
-			conn_buf = conn_buf[len(cmd_start):]
+		recurse_process = True
+		while recurse_process:
 
-		if (conn_buf.startswith(cmd_end)):
-			conn_buf = conn_buf[len(cmd_end):]
-			conn.close()
-			serving = False
+			if (conn_buf.startswith(cmd_start)):
+				print 'Recieving fids...'
+				conn_buf = conn_buf[len(cmd_start):]
 
-			if (not session is None):
-				frost.bkpEndSession(session)
-
-		if (conn_buf.startswith(cmd_fid)):
-			cmd_splt = conn_buf.split(':', 2)
-			if (len(cmd_splt) == 3):
-				cmd_hdr_size = len(cmd_splt[0]) + 1 + len(cmd_splt[1]) + 1 
-				total_len = cmd_hdr_size + fid_len
-				if (len(conn_buf) >= total_len):
-					cmd_data = conn_buf[cmd_hdr_size:total_len]
-					conn_buf = conn_buf[total_len:]	
-					fid = cmd_data
-					file_name = cmd_splt[1]
-					if (perfile):
-						print 'fid',file_name,cmd_data
-					session_fid.append(fid); session_fname.append(file_name);
-
-		if (conn_buf.startswith(cmd_fidend)):
-			print 'Analyzing fids...'
-			conn_buf = conn_buf[len(cmd_fidend):]
-
-			findices = frost.fiGenUniqueIndices(session_fname)
-
-			targets = fs_targets
-			test_bootstrap = ('-bootstrap' in sys.argv)
-			session = frost.bkpStartSession(frost.self_test_db, test_bootstrap, 'remote_testing')
-			frost.bkpPrepareTargetTables(session, targets)
-
-			target_tbls = []
-			fi_lists = session_fi_lists
-
-			for target in targets:
-				target_tbls.append(frost.dbMakePointFidTableName(target.filter.id))
-				fi_lists.append([])
-
-			for fid,fname,fuind in zip(session_fid, session_fname, findices):
-				funame = frost.fiGenUniqueName(fname, fuind)	
-				for target,tbl,fi_list in zip(targets, target_tbls, fi_lists):
-					file_exists = frost.bkpExistsFileId(session, fid, tbl)
-					if (not file_exists):
-						fpath = os.path.join(self_test_cache, funame)
-						session_request_fid[fid] = fpath
-						fi_list.append(frost.NewFileInfo(fpath, fid, 0))
-						rel = '--->'
-					else:
-						rel = 'in'
-					if (perfile):	
-						print '{} {} {}'.format(funame, rel, target.filter.long_descr)
-						
-				
-			if (len(session_request_fid) > 0):
-				print 'Requesting files...'	
-				for fid in session_request_fid.iterkeys():
-					if (perfile):
-						print 'Requesting {}...'.format(fid)
-					conn.send('/frequest:{}'.format(fid))
-				conn.sendall('/frequestend')	
-				print 'Caching files...'
-			else:
-				print 'Nothing to do'
-				serving = False
-				conn.sendall('/frequestend')
+			elif (conn_buf.startswith(cmd_end)):
+				conn_buf = conn_buf[len(cmd_end):]
 				conn.close()
-				
-		if (conn_buf.startswith(cmd_fdata)):
-			cmd_splt = conn_buf.split(':', 3)
-			if (len(cmd_splt) == 4):
-				file_size = int(cmd_splt[2])
-				if (not did_print_file_size):	
-					if (perfile):
-						print 'reading {} file bytes ...'.format(file_size)
-					did_print_file_size = True
-				cmd_hdr_size = len(cmd_splt[0]) + 1 + len(cmd_splt[1]) + 1 + len(cmd_splt[2]) + 1 
-				total_len = cmd_hdr_size + file_size
-				avail_len = len(conn_buf)
-				file_fid = cmd_splt[1]
-				file_path = session_request_fid[file_fid]
-				with open(file_path, 'wb') as output:
-					cmd_data = conn_buf[cmd_hdr_size:total_len]
-					output.write(cmd_data)
-					if (avail_len >= total_len):
-						conn_buf = conn_buf[total_len:]
-					else:
-						conn_buf = ''
-						leftsize = total_len - avail_len
-						func = recvProcessWriteFile(output)
-						recvConnBytes(conn, 64*1024, leftsize, 0, func)
+				serving = False
 
-					if (perfile):
-						print 'wrote', file_name
-					did_print_file_size = False					
+				if (not session is None):
+					frost.bkpEndSession(session)
 
-		if (conn_buf.startswith(cmd_fdataend)):
-			print 'Backing up...'	
-			conn_buf = conn_buf[len(cmd_fdataend):]
+			elif (conn_buf.startswith(cmd_fid)):
+				cmd_splt = conn_buf.split(':', 2)
+				if (len(cmd_splt) == 3):
+					cmd_hdr_size = len(cmd_splt[0]) + 1 + len(cmd_splt[1]) + 1 
+					total_len = cmd_hdr_size + fid_len
+					if (len(conn_buf) >= total_len):
+						cmd_data = conn_buf[cmd_hdr_size:total_len]
+						conn_buf = conn_buf[total_len:]	
+						fid = cmd_data
+						file_name = cmd_splt[1]
+						if (perfile):
+							print 'fid',file_name,cmd_data
+						session_fid.append(fid); session_fname.append(file_name);
 
-			source = fs_cache_sources[0]
-			nfi_dict = {}
-			for target,list in zip(fs_targets, session_fi_lists):
-				nfi_dict[(source, target)] = list
-
-			try:
-				success = frost.bkpBackupFs(session, fs_cache_sources, fs_targets, nfi_dict)
-			except:
-				print traceback.format_exc()
-				success = False
-
-			if (success):
-				code = 1
-			else:
-				code = 0
-			print 'Success: {}'.format(code)	
-			
-			conn.send('/success:{}'.format(code))
-			conn.sendall(cmd_end)
-			serving = False
-			conn.close()
+			elif (conn_buf.startswith(cmd_fidend)):
+				print 'Analyzing fids...'
+				conn_buf = conn_buf[len(cmd_fidend):]
 	
+				findices = frost.fiGenUniqueIndices(session_fname)
+	
+				targets = fs_targets
+				test_bootstrap = ('-bootstrap' in sys.argv)
+				no_db = ('-no_db' in sys.argv)
+				if not no_db:
+					session = frost.bkpStartSession(frost.self_test_db, test_bootstrap, 'remote_testing')
+				else:
+					session = frost.bkpStartSession(None, True, 'remote_testing')
+				frost.bkpPrepareTargetTables(session, targets)
+	
+				target_tbls = []
+				fi_lists = session_fi_lists
+	
+				for target in targets:
+					target_tbls.append(frost.dbMakePointFidTableName(target.filter.id))
+					fi_lists.append([])
+	
+				for fid,fname,fuind in zip(session_fid, session_fname, findices):
+					funame = frost.fiGenUniqueName(fname, fuind)	
+					for target,tbl,fi_list in zip(targets, target_tbls, fi_lists):
+						file_exists = frost.bkpExistsFileId(session, fid, tbl)
+						if (not file_exists):
+							fpath = os.path.join(self_test_cache, funame)
+							session_request_fid[fid] = fpath
+							fi_list.append(frost.NewFileInfo(fpath, fid, 0))
+							rel = '--->'
+						else:
+							rel = 'in'
+						if (perfile):	
+							print '{} {} {}'.format(funame, rel, target.filter.long_descr)
+							
+					
+				if (len(session_request_fid) > 0):
+					print 'Requesting files...'	
+					for fid in session_request_fid.iterkeys():
+						if (perfile):
+							print 'Requesting {}...'.format(fid)
+						conn.send('/frequest:{}'.format(fid))
+					conn.sendall('/frequestend')	
+					print 'Caching files...'
+				else:
+					print 'Nothing to do'
+					serving = False
+					conn.sendall('/frequestend')
+					conn.close()
+					
+			elif (conn_buf.startswith(cmd_fdata)):
+				cmd_splt = conn_buf.split(':', 3)
+				if (len(cmd_splt) == 4):
+					file_size = int(cmd_splt[2])
+					if (not did_print_file_size):	
+						if (perfile):
+							print 'reading {} file bytes ...'.format(file_size)
+						did_print_file_size = True
+					cmd_hdr_size = len(cmd_splt[0]) + 1 + len(cmd_splt[1]) + 1 + len(cmd_splt[2]) + 1 
+					total_len = cmd_hdr_size + file_size
+					avail_len = len(conn_buf)
+					file_fid = cmd_splt[1]
+					file_path = session_request_fid[file_fid]
+					with open(file_path, 'wb') as output:
+						cmd_data = conn_buf[cmd_hdr_size:total_len]
+						output.write(cmd_data)
+						if (avail_len >= total_len):
+							conn_buf = conn_buf[total_len:]
+						else:
+							conn_buf = ''
+							leftsize = total_len - avail_len
+							func = recvProcessWriteFile(output)
+							recvConnBytes(conn, 64*1024, leftsize, 0, func)
+	
+						if (perfile):
+							print 'wrote', file_name
+						did_print_file_size = False
+	
+	
+			elif (conn_buf.startswith(cmd_fdataend)):
+				print 'Backing up...'	
+				conn_buf = conn_buf[len(cmd_fdataend):]
+	
+				source = fs_cache_sources[0]
+				nfi_dict = {}
+				for target,list in zip(fs_targets, session_fi_lists):
+					nfi_dict[(source, target)] = list
+	
+				try:
+					success = frost.bkpBackupFs(session, fs_cache_sources, fs_targets, nfi_dict)
+				except:
+					print traceback.format_exc()
+					success = False
+	
+				if (success):
+					code = 1
+				else:
+					code = 0
+				print 'Success: {}'.format(code)	
+				
+				conn.send('/success:{}'.format(code))
+				conn.sendall(cmd_end)
+				serving = False
+				conn.close()
+			
+			else:
+				recurse_process = False
+				if (dbg and len(conn_buf) > 0):
+					print ' >dbg?', (conn_buf[:75] + '..') if len(conn_buf) > 75 else conn_buf
+		
 	conn.close()
-
+	
 conn.close()
 sock.close()

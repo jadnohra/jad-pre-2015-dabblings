@@ -216,13 +216,16 @@ def dbBootstrap(conn):
 	conn.commit()
 
 def bkpStartSession(dbPath, bootstrap = False, descr = ''):
-	if (bootstrap):
-		os.remove(dbPath)	
-	else:	
-		if (not os.path.isfile(dbPath)):
-			return None
+	if (dbPath is not None):
+		if (bootstrap):
+			os.remove(dbPath)	
+		else:	
+			if (not os.path.isfile(dbPath)):
+				return None
+		conn = sqlite3.connect(dbPath)
+	else:
+		conn = sqlite3.connect(':memory:')
 
-	conn = sqlite3.connect(dbPath)
 	if conn is None:
 		return None
 	
