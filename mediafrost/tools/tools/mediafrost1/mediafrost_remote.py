@@ -12,6 +12,7 @@ self_path = os.path.realpath(__file__)
 self_dir = os.path.dirname(self_path)
 self_cache = os.path.join(self_dir, 'cache')
 self_test_out = os.path.join(self_dir, 'test_out')
+self_db = os.path.join(self_dir, 'mediafrost.db')
 
 if (not os.path.isdir(self_cache)):
 	os.makedirs(self_cache)
@@ -26,9 +27,6 @@ fs_targets = frost.fsFilterMounts(fs_mounts, frost.fs_target_filters)
 use_ui = ('-ui' in sys.argv)
 if use_ui:
 	frost.bkpUiChooseStoragePoints(fs_sources, fs_targets)
-
-if (not os.path.isdir(self_test_cache)):
-	os.mkdir(self_test_cache)
 
 fs_cache_filters = [ frost.FsMountPointFilter(True, 'fs_cache', 'fs_cache','fs_cache', '/dev/root', '0', self_cache) ]
 fs_cache_sources = frost.fsFilterMounts(fs_mounts, fs_cache_filters)
@@ -239,7 +237,7 @@ while 1:
 				no_db = ('-no_db' in sys.argv)
 				if (not no_db):
 					bootstrap = ('-bootstrap' in sys.argv)
-					dbPath = frost.self_test_db
+					dbPath = self_db
 					if ('-db' in sys.argv):
 						dbPath = sys.argv[sys.argv.index('-db')+1]
 						if (not os.path.isfile(dbPath)):
@@ -261,7 +259,7 @@ while 1:
 					for target,tbl,fi_list in zip(targets, target_tbls, fi_lists):
 						file_exists = frost.bkpExistsFileId(session, fid, tbl)
 						if (not file_exists):
-							fpath = os.path.join(self_test_cache, funame)
+							fpath = os.path.join(self_cache, funame)
 							session_request_fid[fid] = fpath
 							fi_list.append(frost.NewFileInfo(fpath, fid, 0))
 							rel = '--->'
