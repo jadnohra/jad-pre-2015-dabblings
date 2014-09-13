@@ -41,9 +41,18 @@ fs_cache_filters = [ frost.FsMountPointFilter(True, 'fs_cache', 'fs_cache','fs_c
 fs_cache_sources = frost.fsFilterMounts(fs_mounts, fs_cache_filters)
 
 
+def Linux_ipAddresses():
+	ret = []
+	out = subprocess.Popen(['ip', 'addr', 'show'], stdout=subprocess.PIPE).stdout.read()
+	for line in iter(out.splitlines()):
+		data = line.split()
+		if (data[0] == 'inet'):
+			ip = data[1].split('/')[0]
+			if (ip not in ret):
+				ret.append(ip)
+	return ret
 
-
-def ip_addresses():
+def _ipAddresses():
 	addrList = socket.getaddrinfo(socket.gethostname(), None)
 	ipList=[]
 	for item in addrList:
@@ -53,6 +62,15 @@ def ip_addresses():
 			ipList.append(ip)
 	return ipList 
 
+def ipAddresses():
+	sys = platform.system().lower()
+	if ('darwin' in sys):
+		return _ipAddresses()
+	if ('linux' in sys):
+		return Linux_ipAddresses()
+	return None	
+
+
 port = 24107
 if ('-port' in sys.argv):
 	port = int(sys.argv[int(sys.argv.index('-port')+1)])
@@ -60,7 +78,7 @@ address = ''
 if ('-address' in sys.argv):
 	address = sys.argv[sys.argv.index('-address')+1]
 elif use_ui:
-	ip_list = ip_addresses()
+	ip_list = ipAddresses()
 	if dbg3:
 		print 'ip_addresses', ip_list
 	if (len(ip_list) == 1):
