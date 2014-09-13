@@ -173,6 +173,7 @@ def recvProcessWriteFile(fileOut):
     return write
 
 
+session_count = 0
 while 1:
 	sys.stdout.write('Listening on {}:{} ...\n'.format(address, port))
 	sock.setblocking(1)
@@ -196,6 +197,7 @@ while 1:
 	session_fname = []
 	session_fi_lists = []
 	session_request_fid = {}
+	session_count = session_count + 1
 
 	while serving:
 		try:
@@ -256,6 +258,8 @@ while 1:
 	
 				findices = frost.fiGenUniqueIndices(session_fname)
 	
+
+				session_name = 'mediafrost_remote_{}'.format(session_count)
 				targets = fs_targets
 				no_db = ('-no_db' in sys.argv)
 				if (not no_db):
@@ -263,11 +267,11 @@ while 1:
 					dbPath = self_db
 					if ('-db' in sys.argv):
 						dbPath = sys.argv[sys.argv.index('-db')+1]
-						if (not os.path.isfile(dbPath)):
-							bootstrap = True
-					session = frost.bkpStartSession(dbPath, bootstrap, 'remote_testing')
+					if (not os.path.isfile(dbPath)):
+						bootstrap = True
+					session = frost.bkpStartSession(dbPath, bootstrap, session_name)
 				else:
-					session = frost.bkpStartSession(None, True, 'remote_testing')
+					session = frost.bkpStartSession(None, True, session_name)
 				frost.bkpPrepareTargetTables(session, targets)
 	
 				target_tbls = []
