@@ -48,6 +48,7 @@ def ip_addresses():
 	ipList=[]
 	for item in addrList:
 		ip = item[4][0]
+		print ip
 		if (len(ip.split('.')) == 4 and (ip not in ipList)):
 			ipList.append(ip)
 	return ipList 
