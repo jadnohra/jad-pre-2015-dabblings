@@ -52,6 +52,8 @@ def Linux_ipAddresses():
 			ip = data[1].split('/')[0]
 			if (ip not in ret):
 				ret.append(ip)
+	if (len(ret) > 1 and '127.0.0.1' in ret):
+		ret.pop('127.0.0.1')
 	return ret
 
 def _ipAddresses():
