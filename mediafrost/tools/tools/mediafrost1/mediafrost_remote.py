@@ -101,26 +101,16 @@ sock.bind((address, port))
 
 main_thread = threading.current_thread()
 
-# http://tobilehman.com/blog/2013/03/10/make-a-computer-controlled-light-switch-with-a-raspberry-pi/
-# https://learn.adafruit.com/adafruits-raspberry-pi-lesson-13-power-control/software
-# http://www.adafruit.com/products/1516
-
 def discoveryRun(port, msg):
 	ANY = '0.0.0.0'
 	MCAST_ADDR = '224.168.2.9'
 	MCAST_PORT = 1600	
 	sys.stdout.write('Discovery on port {} ...\n'.format(MCAST_PORT))
-	#create a UDP socket
 	sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM, socket.IPPROTO_UDP)
-	#allow multiple sockets to use the same PORT number
 	sock.setsockopt(socket.SOL_SOCKET,socket.SO_REUSEADDR,1)
-	#Bind to the port that we know will receive multicast data
 	sock.bind((ANY,MCAST_PORT))
-	#tell the kernel that we are a multicast socket
 	sock.setsockopt(socket.IPPROTO_IP, socket.IP_MULTICAST_TTL, 255)
-	#Tell the kernel that we want to add ourselves to a multicast group
 	#The address for the multicast group is the third param
-	status = sock.setsockopt(socket.IPPROTO_IP,
 	socket.IP_ADD_MEMBERSHIP,
 	socket.inet_aton(MCAST_ADDR) + socket.inet_aton(ANY));
 
