@@ -16,7 +16,7 @@ self_test_out = os.path.join(self_dir, 'test_out')
 os.makedirs(self_cache)
 os.makedirs(self_test_out)
 
-fs_target_filters = [ FsMountPointFilter(True, 'test_fs_out', 'test_fs_out','test_fs_out', '/dev/root', '0', self_test_out) ]
+fs_target_filters = [ frost.FsMountPointFilter(True, 'test_fs_out', 'test_fs_out','test_fs_out', '/dev/root', '0', self_test_out) ]
 
 fs_mounts = frost.fsFindMounts()
 fs_sources = []
