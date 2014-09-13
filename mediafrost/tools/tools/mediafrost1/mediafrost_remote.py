@@ -110,7 +110,7 @@ def discoveryRun(port, msg):
 	sock.setsockopt(socket.SOL_SOCKET,socket.SO_REUSEADDR,1)
 	sock.bind((ANY,MCAST_PORT))
 	sock.setsockopt(socket.IPPROTO_IP, socket.IP_MULTICAST_TTL, 255)
-	#The address for the multicast group is the third param
+	status = sock.setsockopt(socket.IPPROTO_IP,
 	socket.IP_ADD_MEMBERSHIP,
 	socket.inet_aton(MCAST_ADDR) + socket.inet_aton(ANY));
 
