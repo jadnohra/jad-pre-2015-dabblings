@@ -85,7 +85,7 @@ def fsFindMounts():
 	if ('darwin' in sys):
 		return OSX_fsFindMounts()
 	if ('linux' in sys):
-		return Linux_fsFindMount()
+		return Linux_fsFindMounts()
 	return None	
 
 def fsFilterMounts(mounts, filters):
