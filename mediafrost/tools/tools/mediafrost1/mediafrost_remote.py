@@ -128,6 +128,7 @@ def fsAmEnd(automounts, status):
 def fsBeginSession():
 	global fs_am_status
 	global fs_am_targets
+	global fs_manual_targets
 	fs_am_status = fsAmBegin(fs_ams)
 	fs_am_targets = frost.fsFilterMounts(fs_mounts, fs_am_filters, warn)
 	fs_targets = fs_manual_targets + fs_am_targets
@@ -204,8 +205,8 @@ else:
 		address = ip_list[choice]
 
 if (dry):
-	fsBeginSession()
-	print 'Automounted (-dry):', [t.dir for t in fs_am_targets]
+	fs_targets = fsBeginSession()
+	print 'Automounted (-dry):', [t.dir for t in fs_targets]
 	fsEndSession()
 	exit(0)
 else:
@@ -320,6 +321,7 @@ while 1:
 	session_count = session_count + 1
 
 	session_fs_targets = fsBeginSession()
+	print 'Session targets::', [t.dir for t in session_fs_targets]
 
 	#conn.sendall('/info:{}'.format(self_cache_size))
 	while serving:
