@@ -22,6 +22,7 @@ self_db = os.path.join(self_dir, 'mediafrost.db')
 
 warn = ('-warn' in sys.argv)
 dry = ('-dry' in sys.argv)
+scan = ('-scan' in sys.argv)
 perfile = ('-perfile' in sys.argv)
 dbg = ('-dbg' in sys.argv)
 dbg2 =('-dbg2' in sys.argv)
@@ -62,11 +63,11 @@ else:
 FsAutoMount = namedtuple('FsAutoMount', 'filter uuid local_path')
 fs_am_filters = 	[
                     	frost.FsMountPointFilter(True, 'fs_back1', 'Vault_Jad','Vault_Jad', '/dev/root', '1000', os.path.join(self_mount,'vault_jad/Temp1')),
-                    	frost.FsMountPointFilter(True, 'fs_back2', 'Vault_Lena','Vault_Lena', '/dev/root', '1000', os.path.join(self_mount,'vault_lena/Vault/mediafrost')),
+                    	frost.FsMountPointFilter(True, 'fs_back2', 'Vault_Lena','Vault_Lena', '/dev/root', '1000', os.path.join(self_mount,'vault_lena/Temp1')),
                 	]
 fs_ams = [
 			FsAutoMount(fs_am_filters[0], '150B-2565', 'vault_jad'),
-			FsAutoMount(fs_am_filters[1], '?', 'vault_lena'),
+			FsAutoMount(fs_am_filters[1], '1101-1163', 'vault_lena'),
 		] 
 fs_am_status = {}
 fs_am_targets = []
@@ -80,7 +81,7 @@ def fsAmScan():
 	out = subprocess.Popen(['ls', '-laF', '/dev/disk/by-uuid/'], stdout=subprocess.PIPE).stdout.read()
 	for line in iter(out.splitlines()):
 		data = line.split()
-		if ((len(data)>3) and (data[-2] == '->') and ('/sda' in data[-1])):
+		if ((len(data)>3) and (data[-2] == '->') and ('/sd' in data[-1])):
 			cands[data[-3]] = '/dev/' + data[-1].split('/')[-1]
 	return cands	
 
@@ -205,6 +206,9 @@ else:
 		address = ip_list[choice]
 
 if (dry):
+	if (scan):
+		am_scan = fsAmScan()
+		print 'Scanned (-scan): ', am_scan
 	fs_targets = fsBeginSession()
 	print 'Automounted (-dry):', [t.dir for t in fs_targets]
 	fsEndSession()
@@ -321,7 +325,7 @@ while 1:
 	session_count = session_count + 1
 
 	session_fs_targets = fsBeginSession()
-	print 'Session targets::', [t.dir for t in session_fs_targets]
+	print 'Session targets:', [t.dir for t in session_fs_targets]
 
 	#conn.sendall('/info:{}'.format(self_cache_size))
 	while serving:
