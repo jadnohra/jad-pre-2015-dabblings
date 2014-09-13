@@ -88,7 +88,7 @@ def fsFindMounts():
 		return Linux_fsFindMounts()
 	return None	
 
-def fsFilterMounts(mounts, filters):
+def fsFilterMounts(mounts, filters, warn):
 	print 'Filtering file system mounts...'
 
 	ret = []
@@ -106,8 +106,8 @@ def fsFilterMounts(mounts, filters):
 				checkdir = os.path.join(chosen_mount.path, filters[i].dir)
 				if (os.path.isdir(checkdir)):
 					ret.append(FsStoragePoint(i, filters[i], chosen_mount.disk, chosen_mount.mount, chosen_mount.path, filters[i].dir))
-				else:
-					print 'Missing directory:', checkdir 
+				elif (warn):
+					print 'Warning: Missing directory', checkdir 
 	return ret
 			
 def fsGetPointPath(point):

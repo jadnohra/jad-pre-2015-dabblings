@@ -20,6 +20,7 @@ self_mount = os.path.join(self_dir, 'mount')
 self_test_out = os.path.join(self_dir, 'test_out')
 self_db = os.path.join(self_dir, 'mediafrost.db')
 
+warn = ('-warn' in sys.argv)
 dry = ('-dry' in sys.argv)
 perfile = ('-perfile' in sys.argv)
 dbg = ('-dbg' in sys.argv)
@@ -60,14 +61,15 @@ else:
 
 FsAutoMount = namedtuple('FsAutoMount', 'filter uuid local_path')
 fs_am_filters = 	[
-                    	frost.FsMountPointFilter(True, 'fs_back1', 'Vault_Jad','Vault_Jad', 'VAULT_JAD', '1000', os.path.join(self_mount,'m0/Vault/mediafrost')),
-                    	frost.FsMountPointFilter(True, 'fs_back2', 'Vault_Lena','Vault_Lena', 'VAULT_LENA', '1000', os.path.join(self_mount,'m1/Vault/mediafrost')),
+                    	frost.FsMountPointFilter(True, 'fs_back1', 'Vault_Jad','Vault_Jad', '/dev/root', '1000', os.path.join(self_mount,'vault_jad/Temp1')),
+                    	frost.FsMountPointFilter(True, 'fs_back2', 'Vault_Lena','Vault_Lena', '/dev/root', '1000', os.path.join(self_mount,'vault_lena/Vault/mediafrost')),
                 	]
 fs_ams = [
-			FsAutoMount(fs_am_filters[0], '150B-2565', 'm0'),
-			FsAutoMount(fs_am_filters[1], '?', 'm1'),
+			FsAutoMount(fs_am_filters[0], '150B-2565', 'vault_jad'),
+			FsAutoMount(fs_am_filters[1], '?', 'vault_lena'),
 		] 
 fs_am_status = {}
+fs_am_targets = []
 
 def fsAmScan():
 	#lsusb
@@ -98,7 +100,7 @@ def fsAmMount(am, dev, checkdir):
 	mpath = os.path.join(self_mount, am.local_path)
 	if (not os.path.isdir(mpath)):
 		os.makedirs(mpath)
-	out = subprocess.Popen(['sudo', 'mount', dev, mpath], stderr=subprocess.PIPE).stderr.read()
+	out = subprocess.Popen(['sudo', 'mount', '-o', 'uid=pi,gid=pi', dev, mpath], stderr=subprocess.PIPE).stderr.read()
 	if (len(out)):
 		print 'Warning:', out	
 	if os.path.isdir(checkdir):
@@ -123,19 +125,31 @@ def fsAmEnd(automounts, status):
 		fsAmUnmount(dev)
 	fsAmPowerDown()
 
+def fsBeginSession():
+	global fs_am_status
+	global fs_am_targets
+	fs_am_status = fsAmBegin(fs_ams)
+	fs_am_targets = frost.fsFilterMounts(fs_mounts, fs_am_filters, warn)
+	fs_targets = fs_manual_targets + fs_am_targets
+	return fs_targets
+
+def fsEndSession():
+	global fs_am_status
+	fsAmEnd(fs_ams, fs_am_status)
+	fs_am_status = {}
+
 fs_mounts = frost.fsFindMounts()
 if dbg3:
-	print 'fs_mounts:', fs_mounts	
-fs_sources = []
-fs_targets = frost.fsFilterMounts(fs_mounts, fs_target_filters)
+	print 'fs_mounts:', fs_mounts
+fs_manual_targets = frost.fsFilterMounts(fs_mounts, fs_target_filters, warn)
 if dbg3:
-	print 'fs_targets:', fs_targets	
+	print 'fs_manual_targets:', fs_manual_targets	
 use_ui = ('-ui' in sys.argv)
 if use_ui:
-	frost.bkpUiChooseStoragePoints(fs_sources, fs_targets)
+	frost.bkpUiChooseStoragePoints([], fs_manual_targets)
 
 fs_cache_filters = [ frost.FsMountPointFilter(True, 'fs_cache', 'fs_cache','fs_cache', '/dev/root', '0', self_cache) ]
-fs_cache_sources = frost.fsFilterMounts(fs_mounts, fs_cache_filters)
+fs_cache_sources = frost.fsFilterMounts(fs_mounts, fs_cache_filters, True)
 
 
 def Linux_ipAddresses():
@@ -190,10 +204,12 @@ else:
 		address = ip_list[choice]
 
 if (dry):
-	fs_am_status = fsAmBegin(fs_ams)
-	print 'Automounted (-dry):', fs_am_status
-	fsAmEnd(fs_ams, fs_am_status)
+	fsBeginSession()
+	print 'Automounted (-dry):', [t.dir for t in fs_am_targets]
+	fsEndSession()
 	exit(0)
+else:
+	print 'Test', fsAmScan()
 
 sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
 #print 'Binding to {}:{}'.format(address, port)
@@ -275,9 +291,10 @@ def recvProcessWriteFile(fileOut):
 
 session_count = 0
 while 1:
+	fsEndSession()
 	if (not reset_cache()):
 		print 'Not enough disk cache space to continue.'
-		exit(0)	
+		exit(0)		
 	sys.stdout.write('Listening on {}:{} ...\n'.format(address, port))
 	sock.setblocking(1)
 	conn, addr = sock.accept()
@@ -301,6 +318,8 @@ while 1:
 	session_fi_lists = []
 	session_request_fid = {}
 	session_count = session_count + 1
+
+	session_fs_targets = fsBeginSession()
 
 	#conn.sendall('/info:{}'.format(self_cache_size))
 	while serving:
@@ -364,7 +383,7 @@ while 1:
 	
 
 				session_name = 'mediafrost_remote_{}'.format(session_count)
-				targets = fs_targets
+				targets = session_fs_targets
 				no_db = ('-no_db' in sys.argv)
 				if (not no_db):
 					bootstrap = ('-bootstrap' in sys.argv)
@@ -449,13 +468,14 @@ while 1:
 				print 'Backing up...'	
 				conn_buf = conn_buf[len(cmd_fdataend):]
 	
+				targets = session_fs_targets
 				source = fs_cache_sources[0]
 				nfi_dict = {}
-				for target,list in zip(fs_targets, session_fi_lists):
+				for target,list in zip(targets, session_fi_lists):
 					nfi_dict[(source, target)] = list
 	
 				try:
-					success = frost.bkpBackupFs(session, fs_cache_sources, fs_targets, nfi_dict)
+					success = frost.bkpBackupFs(session, fs_cache_sources, targets, nfi_dict)
 				except:
 					print traceback.format_exc()
 					success = False
