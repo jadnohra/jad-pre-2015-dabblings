@@ -78,14 +78,14 @@ def ipAddresses():
 port = 24107
 if ('-port' in sys.argv):
 	port = int(sys.argv[int(sys.argv.index('-port')+1)])
-address = ''
+address = '127.0.0.1'
 if ('-address' in sys.argv):
 	address = sys.argv[sys.argv.index('-address')+1]
-elif use_ui:
+else:
 	ip_list = ipAddresses()
 	if dbg3:
 		print 'ip_addresses', ip_list
-	if (len(ip_list) == 1):
+	if (len(ip_list) == 1 or (not use_ui)):
 		address = ip_list[0]
 	else:
 		index = 0
