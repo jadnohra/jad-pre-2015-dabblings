@@ -32,6 +32,9 @@ def reset_cache():
 	statvfs = os.statvfs(self_cache)
 	self_cache_size = statvfs.f_frsize*statvfs.f_bavail
 	self_cache_size = self_cache_size-1024*1024*128
+	if self_cache_size <= 1024*1024*256:
+		self_cache_size = 0
+	return (self_cache_size > 0)
 
 def nice_bytes(bytes):
 	a = ['bytes', 'KB.', 'MB.', 'GB.']
@@ -42,7 +45,7 @@ def nice_bytes(bytes):
 
 reset_cache()
 print '{} of disk cache available.'.format(nice_bytes(self_cache_size))
-if self_cache_size <= 1024*1024*256:
+if self_cache_size <= 0:
 	exit(0)
 
 if (not os.path.isdir(self_test_out)):
@@ -200,6 +203,9 @@ def recvProcessWriteFile(fileOut):
 
 session_count = 0
 while 1:
+	if (not reset_cache()):
+		print 'Not enough disk cache space to continue.'
+		exit(0)	
 	sys.stdout.write('Listening on {}:{} ...\n'.format(address, port))
 	sock.setblocking(1)
 	conn, addr = sock.accept()
