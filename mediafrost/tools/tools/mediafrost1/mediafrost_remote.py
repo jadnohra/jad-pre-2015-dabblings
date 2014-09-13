@@ -29,7 +29,7 @@ fs_mounts = frost.fsFindMounts()
 if dbg:
 	print 'fs_mounts:', fs_mounts	
 fs_sources = []
-fs_targets = frost.fsFilterMounts(fs_mounts, frost.fs_target_filters)
+fs_targets = frost.fsFilterMounts(fs_mounts, fs_target_filters)
 if dbg:
 	print 'fs_targets:', fs_targets	
 use_ui = ('-ui' in sys.argv)
