@@ -2,6 +2,7 @@ package com.ponyandpony.mediafrost;
 
 import java.io.File;
 import java.io.FileInputStream;
+import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.InterruptedIOException;
@@ -12,11 +13,14 @@ import java.net.InetSocketAddress;
 import java.net.Socket;
 import java.security.DigestInputStream;
 import java.security.MessageDigest;
+import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Calendar;
 import java.util.HashMap;
 import java.util.List;
-
+import java.util.Random;
+import android.annotation.SuppressLint;
 import android.annotation.TargetApi;
 import android.app.Activity;
 import android.app.NotificationManager;
@@ -42,7 +46,21 @@ import android.content.Intent;
 import android.content.SharedPreferences;
 import android.net.Uri;
 import android.database.Cursor;
+import android.graphics.Bitmap;
+import android.graphics.BitmapFactory;
+import android.graphics.Canvas;
+import android.graphics.Color;
+import android.graphics.Matrix;
+import android.graphics.Paint;
+import android.graphics.Paint.Align;
+import android.graphics.Paint.Style;
+import android.graphics.Rect;
+import android.graphics.Typeface;
+import android.graphics.drawable.BitmapDrawable;
 import android.support.v4.app.NotificationCompat;
+import android.text.Layout.Alignment;
+import android.text.StaticLayout;
+import android.text.TextPaint;
 import android.text.format.Time;
 import android.util.Log;
 import android.content.Context;
@@ -58,6 +76,7 @@ public class FullscreenActivity extends Activity {
 		ProgressBar progress2;
 		ProgressBar progress3;
 		Button backup;
+		Button cancel;
 	};
 
 	ViewFlipper mViewFlipper;
@@ -71,6 +90,7 @@ public class FullscreenActivity extends Activity {
 	};
 	Status mStatus;
 	int mWorkCount;
+	NetworkThread mWorkThread;
 
 	static public String getSetting(Context context, String key, String dft) 
 	{ 
@@ -99,7 +119,8 @@ public class FullscreenActivity extends Activity {
 		}
 		
 		setContentView(R.layout.activity_fullscreen);
-		findViewById(R.id.dummy_button).setOnTouchListener(mTouchListener);
+		findViewById(R.id.backup_button).setOnTouchListener(mTouchListener);
+		findViewById(R.id.cancel_button).setOnTouchListener(mTouchListener);
 		mViewFlipper = (ViewFlipper) findViewById(R.id.viewFlipper1);
 		mViewFlipper.setOnTouchListener(new ActivitySwipeDetector(this));
 
@@ -129,15 +150,17 @@ public class FullscreenActivity extends Activity {
 			mStatusTextViews.activity.setTextAppearance(this,
 					android.R.style.TextAppearance_Medium);
 			mStatusTextViews.console = (TextView) findViewById(R.id.consoleView2);
-			mStatusTextViews.progress = (ProgressBar) findViewById(R.id.progressBar1);
-			mStatusTextViews.progress.setVisibility(View.INVISIBLE);
-			mStatusTextViews.backup = (Button) findViewById(R.id.dummy_button);
+			//mStatusTextViews.progress = (ProgressBar) findViewById(R.id.progressBar1);
+			//mStatusTextViews.progress.setVisibility(View.INVISIBLE);
+			mStatusTextViews.backup = (Button) findViewById(R.id.backup_button);
+			mStatusTextViews.cancel = (Button) findViewById(R.id.cancel_button);
+			mStatusTextViews.cancel.setVisibility(View.INVISIBLE);
 			mStatusTextViews.progress1 = (ProgressBar) findViewById(R.id.progressBar2);
 			mStatusTextViews.progress1.setVisibility(View.INVISIBLE);
 			mStatusTextViews.progress2 = (ProgressBar) findViewById(R.id.progressBar3);
 			mStatusTextViews.progress2.setVisibility(View.INVISIBLE);
-			mStatusTextViews.progress3 = (ProgressBar) findViewById(R.id.progressBar4);
-			mStatusTextViews.progress3.setVisibility(View.INVISIBLE);
+			//mStatusTextViews.progress3 = (ProgressBar) findViewById(R.id.progressBar4);
+			//mStatusTextViews.progress3.setVisibility(View.INVISIBLE);
 		}
 
 		{
@@ -240,7 +263,7 @@ public class FullscreenActivity extends Activity {
 		@Override
 		public boolean onTouch(View view, MotionEvent motionEvent) {
 
-			if (view.getId() == R.id.dummy_button) {
+			if (view.getId() == R.id.backup_button) {
 				Context context = view.getContext();
 				if (motionEvent.getAction() == MotionEvent.ACTION_DOWN) {
 					
@@ -264,6 +287,7 @@ public class FullscreenActivity extends Activity {
 						mStatusTextViews.time.setText("00:00:00");
 						mStatusTextViews.activity.setText("Connecting...");
 						//mStatusTextViews.progress.setVisibility(View.VISIBLE);
+						mStatusTextViews.cancel.setVisibility(View.VISIBLE);
 						mStatusTextViews.progress1.setVisibility(View.VISIBLE);
 						mStatusTextViews.progress1.setProgress(0);
 						mStatusTextViews.progress2.setVisibility(View.VISIBLE);
@@ -278,12 +302,25 @@ public class FullscreenActivity extends Activity {
 						settings.minFiles = Integer.parseInt(getSetting(context, "MinFiles"));
 						settings.maxFiles = Integer.parseInt(getSetting(context, "MaxFiles"));
 						NetworkThread thread = new NetworkThread(mThreadMessageHandler, settings, images, mStatusTextViews);
+						mWorkThread = thread;
 						thread.start();
 					}
 					return true;
 				}
 			}
-
+			else if (view.getId() == R.id.cancel_button) {
+			
+				if (mWorkThread != null && mWorkThread.mSocket != null)
+				{
+					try
+					{
+						mWorkThread.mCancel = 1;
+						mWorkThread.mSocket.close();
+					} catch (Exception e)
+					{}
+				}
+			}
+			
 			return false;
 		}
 	};
@@ -297,6 +334,7 @@ public class FullscreenActivity extends Activity {
 			{
 				FullscreenActivity.this.mStatus = Status.Idle;
 				FullscreenActivity.this.mStatusTextViews.backup.setEnabled(true);
+				FullscreenActivity.this.mWorkThread = null;
 			}
 		}
 	};
@@ -319,6 +357,8 @@ public class FullscreenActivity extends Activity {
 		Handler mTimerHandler;
 		Runnable mTimerRunnable;
 		String mStatusText;
+		Socket mSocket;
+		int mCancel;
 
 		NetworkThread(Handler messageHandler, NetworkThreadSettings settings, List<String> images, StatusTextViews statusTextViews) {
 			mMessageHandler = messageHandler;
@@ -326,6 +366,7 @@ public class FullscreenActivity extends Activity {
 			mImages = images;
 			mStatusTextViews = statusTextViews;
 			mStatusText = "";
+			mCancel = 0;
 
 			mTimerHandler = new Handler();
 			final NetworkThread mThis = this;
@@ -475,10 +516,13 @@ public class FullscreenActivity extends Activity {
 		}
 
 		void stopProgress() {
-			if (mStatusTextViews.progress != null)
-				mStatusTextViews.progress.post(new Runnable() {
+			if (mStatusTextViews.progress1 != null)
+				mStatusTextViews.progress1.post(new Runnable() {
 					public void run() {
-						mStatusTextViews.progress.setVisibility(View.INVISIBLE);
+						//mStatusTextViews.progress.setVisibility(View.INVISIBLE);
+						mStatusTextViews.progress1.setVisibility(View.INVISIBLE);
+						mStatusTextViews.progress2.setVisibility(View.INVISIBLE);
+						mStatusTextViews.cancel.setVisibility(View.INVISIBLE);
 					}
 				});
 			if (mMessageHandler != null)
@@ -494,7 +538,7 @@ public class FullscreenActivity extends Activity {
 			setText(mStatusTextViews.console, mStatusText);
 		}
 
-		void logNotify(int success)
+		void logNotify(final String str)
 		{
 			if (true)
 			{
@@ -502,7 +546,7 @@ public class FullscreenActivity extends Activity {
 					    new NotificationCompat.Builder(FullscreenActivity.this)
 					    .setSmallIcon(R.drawable.ic_launcher)
 					    .setContentTitle("Mediafrost")
-					    .setContentText(success > 0 ? "Backup succeeded." : "Backup failed.");
+					    .setContentText(str);
 	
 				long pattern[] = {500, 500, 500};
 				builder.setVibrate(pattern);
@@ -516,20 +560,48 @@ public class FullscreenActivity extends Activity {
 			Socket sock = null;
 			try {
 				
+				String server = mSettings.server; int port = mSettings.port;
+				
 				{
-					byte[] buffer = "hello".getBytes();
+					logStatus("Discovering ...");
 					DatagramSocket dsock = new DatagramSocket(2600);
-					DatagramPacket packet = new DatagramPacket(buffer, buffer.length, new InetSocketAddress("255.255.255.255", 1600));
-					dsock.send(packet);
+					
+					{
+						byte[] buffer = "/mediafrost:discover".getBytes();
+						DatagramPacket packet = new DatagramPacket(buffer, buffer.length, new InetSocketAddress("255.255.255.255", 1600));
+						dsock.send(packet);
+					}
+					{
+						byte[] buffer = "255.255.255.255:88888888".getBytes();
+						DatagramPacket packet = new DatagramPacket(buffer, buffer.length, new InetSocketAddress("255.255.255.255", 1600));
+						dsock.setSoTimeout(1500);
+						try
+						{
+							dsock.receive(packet);
+							String msg = new String(packet.getData(), 0, packet.getLength());
+							String[] words = msg.split(":");
+							server = words[0];
+							port = Integer.parseInt(words[1]);
+							logStatus(String.format("Discovered %s:%d", server, port));
+						}
+						catch(IOException e1) {
+							logStatus("Discovery failed");
+						}
+						catch (Exception e2) {
+							logStatus(Log.getStackTraceString(e2));
+							logStatus("Discovery failed");
+						}
+					}
+					
 					dsock.close();
 				}
 				
 				
 				sock = new Socket();
-				sock.connect(new InetSocketAddress(mSettings.server, mSettings.port), 2501);
+				mSocket = sock;
+				sock.connect(new InetSocketAddress(server, port), 1600);
 				if (sock.isConnected()) {
-					logStatus(String.format("Connected to %s", sock
-							.getRemoteSocketAddress().toString()));
+					logStatus(String.format("Connected to %s", sock.getRemoteSocketAddress().toString()));
 					
 					int imageCount = mImages.size();
 					if (imageCount > mSettings.maxFiles)
@@ -544,8 +616,6 @@ public class FullscreenActivity extends Activity {
 					}
 					
 					logStatus("Calculating total bytes ...");
-					
-					
 
 					mTotalByteCount = 0;
 					for (int i = 0; i < imageCount; i++) {
@@ -554,33 +624,34 @@ public class FullscreenActivity extends Activity {
 						mTotalByteCount += bytes;
 					}
 					
-					HashMap<String, Integer> fidMap = new HashMap<String, Integer>();
-					logStatus(String.format("Senging %d fids ...", imageCount));
 					sock.getOutputStream().write("/start".getBytes("US-ASCII"));
 					
-					openProgress(mStatusTextViews.progress1);
-					float prog1 = 0.0f;
-					for (int i = 0; i < imageCount; i++) {
-						String filePath = mImages.get(i);
-						File file = new File(filePath);
-						String fileName = file.getName();
-
-						setText(mStatusTextViews.activity,
-								String.format("Hashing %s (%d/%d)", fileName, i+1, imageCount));
-						String fid = genMD5Hash(filePath);
-						fidMap.put(fid, Integer.valueOf(i));
-						sock.getOutputStream().write(
-								String.format("/fid:%s:%s", fileName, fid)
-										.getBytes("US-ASCII"));
-						float lprog1 = prog1;
-						prog1 += ((100.0f * (float)(file.length()))/((float) mTotalByteCount));
-						if ((int) lprog1 != (int) prog1)
-							setProgress(mStatusTextViews.progress1, (int) prog1);
+					HashMap<String, Integer> fidMap = new HashMap<String, Integer>();
+					logStatus(String.format("Senging %d fids ...", imageCount));
+					{
+						openProgress(mStatusTextViews.progress1);
+						float prog1 = 0.0f;
+						for (int i = 0; i < imageCount; i++) {
+							String filePath = mImages.get(i);
+							File file = new File(filePath);
+							String fileName = file.getName();
+	
+							setText(mStatusTextViews.activity,
+									String.format("Hashing %s (%d/%d)", fileName, i+1, imageCount));
+							String fid = genMD5Hash(filePath);
+							fidMap.put(fid, Integer.valueOf(i));
+							sock.getOutputStream().write(
+									String.format("/fid:%s:%s", fileName, fid)
+											.getBytes("US-ASCII"));
+							float lprog1 = prog1;
+							prog1 += ((100.0f * (float)(file.length()))/((float) mTotalByteCount));
+							if ((int) lprog1 != (int) prog1)
+								setProgress(mStatusTextViews.progress1, (int) prog1);
+						}
+						closeProgress(mStatusTextViews.progress1);
 					}
-					closeProgress(mStatusTextViews.progress1);
 					
-					sock.getOutputStream()
-							.write("/fidend".getBytes("US-ASCII"));
+					sock.getOutputStream().write("/fidend".getBytes("US-ASCII"));
 					sock.getOutputStream().flush();
 
 					ArrayList<String> requestedFids = new ArrayList<String>();
@@ -645,9 +716,7 @@ public class FullscreenActivity extends Activity {
 							FileInputStream fileInputStream = new FileInputStream(
 									file);
 							int fileSize = fileInputStream.available();
-							sock.getOutputStream().write(
-									String.format("/fdata:%s:%d:", fid,
-											fileSize).getBytes("US-ASCII"));
+							sock.getOutputStream().write(String.format("/fdata:%s:%d:", fid, fileSize).getBytes("US-ASCII"));
 
 							byte[] buffer = new byte[64*1024];
 							int read = 0;
@@ -664,8 +733,7 @@ public class FullscreenActivity extends Activity {
 							
 						}
 						closeProgress(mStatusTextViews.progress2);
-						sock.getOutputStream().write(
-								"/fdataend".getBytes("US-ASCII"));
+						sock.getOutputStream().write("/fdataend".getBytes("US-ASCII"));
 						sock.getOutputStream().flush();
 
 						logStatus("Waiting for backup ...");
@@ -695,17 +763,28 @@ public class FullscreenActivity extends Activity {
 										if ((bufCmd.available() >= (cmdSuccess.length() + codeLen))
 												&& bufCmd.startsWith(cmdSuccess)) {
 											bufCmd.skip(cmdSuccess.length());
-											byte[] codeBytes = bufCmd
-													.read(codeLen);
-											String code = new String(codeBytes,
-													"US-ASCII");
+											byte[] codeBytes = bufCmd.read(codeLen);
+											String code = new String(codeBytes,"US-ASCII");
 
-											logStatus(String.format(
-													"Success: %s", code));
-											logNotify(code.equals("1") ? 1 : 0);
+											logStatus(String.format("Success: %s", code));
 											
-									
-											
+											if (code.equals("1"))
+											{
+												logNotify(String.format("Backup succeeded, %d files.", requestedFids.size()));
+												
+												if (requestedFids.size() > 0)
+												{
+													String fid = requestedFids.get(requestedFids.size()-1);
+													int index = fidMap.get(fid).intValue();
+													String filePath = mImages.get(index);
+													stampSuccess(FullscreenActivity.this, filePath);
+												}
+											}
+											else
+											{
+												logNotify("Backup failed.");	
+											}
+															
 											consumed = true;
 										} else if (bufCmd.startsWith(cmdEnd)) {
 											requesting = false;
@@ -726,7 +805,7 @@ public class FullscreenActivity extends Activity {
 
 			} catch(IOException e1) {
 				
-				logNotify(0);
+				
 				
 				logStatus(e1.toString());
 				
@@ -740,8 +819,11 @@ public class FullscreenActivity extends Activity {
 					logStatus(Log.getStackTraceString(e2));
 				}
 				
+				if (mCancel == 0)
+					logNotify("Backup failed.");
+				
 			} catch (Exception e) {
-				logNotify(0);
+				
 				
 				logStatus(Log.getStackTraceString(e));
 				
@@ -754,8 +836,9 @@ public class FullscreenActivity extends Activity {
 				{
 					logStatus(Log.getStackTraceString(e2));
 				}
+				if (mCancel == 0)
+					logNotify("Backup failed.");
 			}
-			
 			
 			mTimerHandler.removeCallbacks(mTimerRunnable);
 			stopProgress();
@@ -795,6 +878,66 @@ public class FullscreenActivity extends Activity {
 		return String.valueOf(path.toLowerCase().hashCode());
 	}
 	
+	static String CamFolder = "/DCIM/Camera";
+	
+	private static Bitmap createStampBitmap(int w, int h, String text) 
+	{
+		Bitmap b = Bitmap.createBitmap(w, h, Bitmap.Config.ARGB_8888);
+		Canvas c = new Canvas(b);
+		Paint paint = new Paint();
+		c.drawColor(Color.TRANSPARENT);
+	    paint.setTextSize(40);
+	    paint.setTextScaleX(1.f);
+	    paint.setAlpha(0);
+	    paint.setAntiAlias(true);
+	    paint.setColor(Color.GREEN);
+	    Rect bounds = new Rect();
+	    paint.getTextBounds(text,0,text.length(),bounds);
+	    float scale =  (float) w / (1.25f * (float) bounds.width());
+	    paint.setTextSize((int) ((float) paint.getTextSize() * scale));
+	    c.drawText(text, w/2-bounds.width()/2, h/2, paint);
+	    return b;
+	}
+
+	private static Bitmap stampOverlay(Bitmap bmp1, Bitmap bmp2) {
+	    Bitmap bmOverlay = Bitmap.createBitmap(bmp1.getWidth(), bmp1.getHeight(), bmp1.getConfig());
+	    Canvas canvas = new Canvas(bmOverlay);
+	    canvas.drawBitmap(bmp1, new Matrix(), null);
+	    canvas.drawBitmap(bmp2, 0, 0, null);
+	    return bmOverlay;
+	}
+	
+	@SuppressLint("SimpleDateFormat")
+	public static void stampSuccess(Context context, String iconInputFilePath)
+	{
+		final String folder = Environment.getExternalStorageDirectory().toString() + CamFolder;
+	
+        String date = new SimpleDateFormat("dd-MM-yyyy").format(Calendar.getInstance().getTime());
+		
+		Bitmap iconBmp = BitmapFactory.decodeFile(iconInputFilePath);
+		Bitmap textBmp = createStampBitmap(iconBmp.getWidth(), iconBmp.getHeight(), String.format("- Mediafrost (%s) -", date));
+		Bitmap stampBmp = stampOverlay(iconBmp, textBmp);
+	    Random generator = new Random();
+	    File file; String fpath;
+	    do
+	    {
+	    	String fname = "mediafrost_stamp-"+ generator.nextInt() +".jpg"; 
+	    	fpath = folder + "/" + fname;
+	    	file = new File (fpath);
+	    } while (file.exists());
+	    
+	    try {
+	           FileOutputStream out = new FileOutputStream(file);
+	           stampBmp.compress(Bitmap.CompressFormat.JPEG, 50, out);
+	           out.flush();
+	           out.close();
+	           context.sendBroadcast(new Intent(Intent.ACTION_MEDIA_SCANNER_SCAN_FILE, Uri.parse("file://" + fpath)));
+
+	    } catch (Exception e) {
+	           e.printStackTrace();
+	    }
+	}
+	
 	public static void getMediaFiles(Context context, String proj, String buck, Uri uri, List<String> out) {
 
 		try {
@@ -802,7 +945,7 @@ public class FullscreenActivity extends Activity {
 			final String[] projection = { proj  };
 			final String selection = buck + " = ?";
 			final String CAMERA_IMAGE_BUCKET_NAME = Environment
-					.getExternalStorageDirectory().toString() + "/DCIM/Camera";
+					.getExternalStorageDirectory().toString() + CamFolder;
 			final String CAMERA_IMAGE_BUCKET_ID = getBucketId(CAMERA_IMAGE_BUCKET_NAME);
 			final String[] selectionArgs = { CAMERA_IMAGE_BUCKET_ID };
 			final Cursor cursor = context.getContentResolver().query(

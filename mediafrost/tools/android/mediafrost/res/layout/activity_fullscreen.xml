@@ -21,7 +21,7 @@
             android:orientation="vertical" >
 
             <Button
-                android:id="@+id/dummy_button"
+                android:id="@+id/backup_button"
                 style="?metaButtonBarButtonStyle"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
@@ -54,7 +54,7 @@
                 android:focusable="false"
                 android:focusableInTouchMode="false" />
             
-            <ProgressBar
+            <!-->ProgressBar
                 android:id="@+id/progressBar4"
                 style="?android:attr/progressBarStyleHorizontal"
                 android:layout_width="match_parent"
@@ -70,7 +70,21 @@
                 android:layout_height="wrap_content"
                 android:layout_margin="5dp"
                 android:layout_weight="1"
-                android:minHeight="60dip" />
+                android:minHeight="60dip" /-->
+             
+              <Button
+                  android:id="@+id/cancel_button"
+                  style="?metaButtonBarButtonStyle"
+                  android:layout_width="match_parent"
+                  android:layout_height="wrap_content"
+                  android:layout_weight="1"
+                  android:background="@color/black_overlay"
+                  android:minHeight="0dp"
+                  android:minWidth="0dp"
+                  android:padding="10dp"
+                  android:text="@string/button_cancel"
+                  android:textSize="24sp"
+                  android:textStyle="normal" />
             
         </LinearLayout>
 

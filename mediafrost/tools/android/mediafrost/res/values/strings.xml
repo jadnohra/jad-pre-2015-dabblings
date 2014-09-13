@@ -2,9 +2,8 @@
 <resources>
 
     <string name="app_name">Mediafrost</string>
-     <string name="app_vname">Mediafrost (1.0.5)</string>
-    <string name="dummy_button">Dummy Button</string>
-    <string name="dummy_content">DUMMY\nCONTENT</string>
+     <string name="app_vname">Mediafrost (1.0.6)</string>
     <string name="button_backup">Backup</string>
+    <string name="button_cancel">Cancel</string>
 
 </resources>

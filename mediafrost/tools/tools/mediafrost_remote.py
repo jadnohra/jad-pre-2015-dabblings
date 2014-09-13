@@ -17,8 +17,8 @@ self_test_cache =  os.path.join(os.path.join(self_dir, 'test'), 'cache')
 fs_mounts = frost.fsFindMounts()
 fs_sources = []
 fs_targets = frost.fsFilterMounts(fs_mounts, frost.fs_target_filters)
-choose_targets = ('-ui' in sys.argv)
-if choose_targets:
+use_ui = ('-ui' in sys.argv)
+if use_ui:
 	frost.bkpUiChooseStoragePoints(fs_sources, fs_targets)
 
 if (not os.path.isdir(self_test_cache)):
@@ -32,12 +32,35 @@ dbg = ('-dbg' in sys.argv)
 dbg2 =('-dbg2' in sys.argv)
 
 
+def ip_addresses():
+	addrList = socket.getaddrinfo(socket.gethostname(), None)
+	ipList=[]
+	for item in addrList:
+		ip = item[4][0]
+		if (len(ip.split('.')) == 4 and (ip not in ipList)):
+			ipList.append(ip)
+	return ipList 
+
 port = 24107
 if ('-port' in sys.argv):
 	port = int(sys.argv[int(sys.argv.index('-port')+1)])
+address = ''
+if ('-address' in sys.argv):
+	address = sys.argv[sys.argv.index('-address')+1]
+elif use_ui:
+	ip_list = ip_addresses()
+	if (len(ip_list) == 1):
+		address = ip_list[0]
+	else:
+		for ip in ip_list:
+			print '{}. {}'.format(index, ip); index = index + 1;
+		input_str = raw_input('Choose ip: '); choice = int(input_str)-1;
+		address = ip_list[ip]
+
 
 sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-sock.bind(('', port))
+#print 'Binding to {}:{}'.format(address, port)
+sock.bind((address, port))
 
 main_thread = threading.current_thread()
 
@@ -45,11 +68,11 @@ main_thread = threading.current_thread()
 # https://learn.adafruit.com/adafruits-raspberry-pi-lesson-13-power-control/software
 # http://www.adafruit.com/products/1516
 
-def discoveryRun(port):
-	print 'discovery'
+def discoveryRun(port, msg):
 	ANY = '0.0.0.0'
 	MCAST_ADDR = '224.168.2.9'
-	MCAST_PORT = 1600
+	MCAST_PORT = 1600	
+	sys.stdout.write('Discovery on port {} ...\n'.format(MCAST_PORT))
 	#create a UDP socket
 	sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM, socket.IPPROTO_UDP)
 	#allow multiple sockets to use the same PORT number
@@ -73,10 +96,13 @@ def discoveryRun(port):
 		except socket.error, e:
 			pass
 		else:
-			print 'Discovery request from', addr
+			print 'Discovery request from', addr, data
+			if (data == '/mediafrost:discover'):
+				sock.sendto(msg, addr)
 
-threading.Thread(target = discoveryRun, args = (port, )).start()	
-
+if ('-no_discovery' not in sys.argv and (len(address) != 0 and address != '0.0.0.0')):
+	threading.Thread(target = discoveryRun, args = (port, '{}:{}'.format(address, port))).start()
+	#time.sleep(1)
 sock.listen(1)
 
 
@@ -121,7 +147,7 @@ def recvProcessWriteFile(fileOut):
 
 
 while 1:
-	print 'Listening on', port, '...'
+	sys.stdout.write('Listening on {}:{} ...\n'.format(address, port))
 	sock.setblocking(1)
 	conn, addr = sock.accept()
 
@@ -194,6 +220,8 @@ while 1:
 						if (perfile):
 							print 'fid',file_name,cmd_data
 						session_fid.append(fid); session_fname.append(file_name);
+				else:
+					recurse_process = False
 
 			elif (conn_buf.startswith(cmd_fidend)):
 				print 'Analyzing fids...'
@@ -202,10 +230,15 @@ while 1:
 				findices = frost.fiGenUniqueIndices(session_fname)
 	
 				targets = fs_targets
-				test_bootstrap = ('-bootstrap' in sys.argv)
 				no_db = ('-no_db' in sys.argv)
-				if not no_db:
-					session = frost.bkpStartSession(frost.self_test_db, test_bootstrap, 'remote_testing')
+				if (not no_db):
+					bootstrap = ('-bootstrap' in sys.argv)
+					dbPath = frost.self_test_db
+					if ('-db' in sys.argv):
+						dbPath = sys.argv[sys.argv.index('-db')+1]
+						if (not os.path.isfile(dbPath)):
+							bootstrap = True
+					session = frost.bkpStartSession(dbPath, bootstrap, 'remote_testing')
 				else:
 					session = frost.bkpStartSession(None, True, 'remote_testing')
 				frost.bkpPrepareTargetTables(session, targets)
@@ -273,6 +306,8 @@ while 1:
 						if (perfile):
 							print 'wrote', file_name
 						did_print_file_size = False
+				else:
+					process_recurse = False
 	
 	
 			elif (conn_buf.startswith(cmd_fdataend)):

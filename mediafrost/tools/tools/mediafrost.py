@@ -218,7 +218,8 @@ def dbBootstrap(conn):
 def bkpStartSession(dbPath, bootstrap = False, descr = ''):
 	if (dbPath is not None):
 		if (bootstrap):
-			os.remove(dbPath)	
+			if (os.path.isfile(dbPath)):
+				os.remove(dbPath)	
 		else:	
 			if (not os.path.isfile(dbPath)):
 				return None
