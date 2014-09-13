@@ -90,7 +90,7 @@ elif use_ui:
 		for ip in ip_list:
 			print '{}. {}'.format(index, ip); index = index + 1;
 		input_str = raw_input('Choose ip: '); choice = int(input_str)-1;
-		address = ip_list[ip]
+		address = ip_list[choice]
 
 
 sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
