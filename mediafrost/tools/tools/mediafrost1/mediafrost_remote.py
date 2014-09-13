@@ -86,6 +86,7 @@ elif use_ui:
 	if (len(ip_list) == 1):
 		address = ip_list[0]
 	else:
+		index = 0
 		for ip in ip_list:
 			print '{}. {}'.format(index, ip); index = index + 1;
 		input_str = raw_input('Choose ip: '); choice = int(input_str)-1;
