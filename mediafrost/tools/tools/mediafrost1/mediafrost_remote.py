@@ -17,6 +17,7 @@ self_db = os.path.join(self_dir, 'mediafrost.db')
 perfile = ('-perfile' in sys.argv)
 dbg = ('-dbg' in sys.argv)
 dbg2 =('-dbg2' in sys.argv)
+dbg3 = ('-dbg3' in sys.argv)
 
 if (not os.path.isdir(self_cache)):
 	os.makedirs(self_cache)
@@ -26,11 +27,11 @@ if (not os.path.isdir(self_test_out)):
 fs_target_filters = [ frost.FsMountPointFilter(True, 'test_fs_out', 'test_fs_out','test_fs_out', '/dev/root', '0', self_test_out) ]
 
 fs_mounts = frost.fsFindMounts()
-if dbg:
+if dbg3:
 	print 'fs_mounts:', fs_mounts	
 fs_sources = []
 fs_targets = frost.fsFilterMounts(fs_mounts, fs_target_filters)
-if dbg:
+if dbg3:
 	print 'fs_targets:', fs_targets	
 use_ui = ('-ui' in sys.argv)
 if use_ui:
@@ -59,6 +60,8 @@ if ('-address' in sys.argv):
 	address = sys.argv[sys.argv.index('-address')+1]
 elif use_ui:
 	ip_list = ip_addresses()
+	if dbg3:
+		print 'ip_addresses', ip_list
 	if (len(ip_list) == 1):
 		address = ip_list[0]
 	else:
