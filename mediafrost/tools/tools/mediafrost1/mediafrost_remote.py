@@ -10,9 +10,13 @@ import mediafrost as frost
 
 self_path = os.path.realpath(__file__)
 self_dir = os.path.dirname(self_path)
-self_test_cache =  os.path.join(os.path.join(self_dir, 'test'), 'cache')
+self_cache = os.path.join(self_dir, 'cache')
+self_test_out = os.path.join(self_dir, 'test_out')
 
-#frost.printDiskInfo()
+os.makedirs(self_cache)
+os.makedirs(self_test_out)
+
+fs_target_filters = [ FsMountPointFilter(True, 'test_fs_out', 'test_fs_out','test_fs_out', '/dev/root', '0', self_test_out) ]
 
 fs_mounts = frost.fsFindMounts()
 fs_sources = []
@@ -24,7 +28,7 @@ if use_ui:
 if (not os.path.isdir(self_test_cache)):
 	os.mkdir(self_test_cache)
 
-fs_cache_filters = [ frost.FsMountPointFilter(True, 'test_fs_cache', 'test_fs_cache','test_fs_cache', 'Apple_HFS', '790', self_test_cache) ]
+fs_cache_filters = [ frost.FsMountPointFilter(True, 'fs_cache', 'fs_cache','fs_cache', '/dev/root', '0', self_cache) ]
 fs_cache_sources = frost.fsFilterMounts(fs_mounts, fs_cache_filters)
 
 perfile = ('-perfile' in sys.argv)
