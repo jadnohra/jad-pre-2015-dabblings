@@ -30,6 +30,8 @@ if dbg:
 	print 'fs_mounts:', fs_mounts	
 fs_sources = []
 fs_targets = frost.fsFilterMounts(fs_mounts, frost.fs_target_filters)
+if dbg:
+	print 'fs_targets:', fs_targets	
 use_ui = ('-ui' in sys.argv)
 if use_ui:
 	frost.bkpUiChooseStoragePoints(fs_sources, fs_targets)
