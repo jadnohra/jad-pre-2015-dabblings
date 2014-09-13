@@ -7,12 +7,14 @@ import time
 import threading
 import platform
 import subprocess
+import shutil
 from sets import Set
 import mediafrost as frost
 
 self_path = os.path.realpath(__file__)
 self_dir = os.path.dirname(self_path)
 self_cache = os.path.join(self_dir, 'cache')
+self_cache_size = 0
 self_test_out = os.path.join(self_dir, 'test_out')
 self_db = os.path.join(self_dir, 'mediafrost.db')
 
@@ -21,10 +23,31 @@ dbg = ('-dbg' in sys.argv)
 dbg2 =('-dbg2' in sys.argv)
 dbg3 = ('-dbg3' in sys.argv)
 
-if (not os.path.isdir(self_cache)):
+def reset_cache():
+	global self_cache
+	global self_cache_size
+	if (os.path.isdir(self_cache)):
+		shutil.rmtree(self_cache)
 	os.makedirs(self_cache)
+	statvfs = os.statvfs(self_cache)
+	self_cache_size = statvfs.f_frsize*statvfs.f_bavail
+	self_cache_size = self_cache_size-1024*1024*128
+
+def nice_bytes(bytes):
+	a = ['bytes', 'KB.', 'MB.', 'GB.']
+	r = float(bytes); i = 0; 
+	while (i<len(a) and  (r/1024.0 > 1.0)):	
+		r = r / 1024.0; i=i+1;
+	return '{:.2f} {}'.format(r, a[i])
+
+reset_cache()
+print '{} of disk cache available.'.format(nice_bytes(self_cache_size))
+if self_cache_size <= 1024*1024*256:
+	exit(0)
+
 if (not os.path.isdir(self_test_out)):
 	os.makedirs(self_test_out)
+
 
 fs_target_filters = [ frost.FsMountPointFilter(True, 'test_fs_out', 'test_fs_out','test_fs_out', '/dev/root', '0', self_test_out) ]
 
@@ -94,6 +117,8 @@ else:
 		input_str = raw_input('Choose ip: '); choice = int(input_str)-1;
 		address = ip_list[choice]
 
+if ('-dry' in sys.argv):
+	exit(0)
 
 sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
 #print 'Binding to {}:{}'.format(address, port)
