@@ -76,7 +76,7 @@ def Linux_fsFindMounts():
 	out = subprocess.Popen(['df'], stdout=subprocess.PIPE).stdout.read()
 	for line in iter(out.splitlines()):
 		data = line.split()
-		if (data[0].startswith('/dev/' and data[-1]=='/'):
+		if (data[0].startswith('/dev/') and data[-1]=='/'):
 			ret.append(FsMountPoint(data[0], data[0], data[-1], data[0]))
 	return ret
 
