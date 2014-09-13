@@ -12,6 +12,7 @@ import tarfile
 import shutil
 import datetime
 import math
+import platform
 
 self_path = os.path.realpath(__file__)
 self_dir = os.path.dirname(self_path)
@@ -42,7 +43,7 @@ self_test_in = os.path.join(self_dir, 'test/in')
 def printDiskInfo():
 	print subprocess.Popen(['diskutil', 'list'], stdout=subprocess.PIPE).stdout.read()
 
-def fsGetMountPath(mount):
+def OSX_fsGetMountPath(mount):
 	info = subprocess.Popen(['mount'], stdout=subprocess.PIPE).stdout.read()
 	for line in iter(info.splitlines()):
 		data = line.split()
@@ -51,7 +52,7 @@ def fsGetMountPath(mount):
 	return None	
 
 
-def fsFindMounts():
+def OSX_fsFindMounts():
 	print 'Finding file system mounts...'
 	
 	ret = []
@@ -63,11 +64,29 @@ def fsFindMounts():
 		else:
 			data = line.split()
 			mount_name = '/dev/' + data[-1]
-			mount_path = fsGetMountPath(mount_name)
+			mount_path = OSX_fsGetMountPath(mount_name)
 			if (mount_path != None):
 				ret.append(FsMountPoint(disk_name, mount_name, mount_path, line))
 	return ret
 
+def Linux_fsFindMounts():
+	print 'Finding file system mounts...'
+
+	ret = []
+	out = subprocess.Popen(['df'], stdout=subprocess.PIPE).stdout.read()
+	for line in iter(out.splitlines()):
+		data = line.split()
+		if (data[0].startswith('/dev/' and data[-1]=='/'):
+			ret.append(FsMountPoint(data[0], data[0], data[-1], data[0]))
+	return ret
+
+def fsFindMounts():
+	sys = platform.system().lower()
+	if ('darwin' in sys):
+		return OSX_fsFindMounts()
+	if ('linux' in sys):
+		return Linux_fsFindMount()
+	return None	
 
 def fsFilterMounts(mounts, filters):
 	print 'Filtering file system mounts...'
