@@ -9,15 +9,18 @@ import platform
 import subprocess
 import shutil
 from sets import Set
+from collections import namedtuple
 import mediafrost as frost
 
 self_path = os.path.realpath(__file__)
 self_dir = os.path.dirname(self_path)
 self_cache = os.path.join(self_dir, 'cache')
 self_cache_size = 0
+self_mount = os.path.join(self_dir, 'mount')
 self_test_out = os.path.join(self_dir, 'test_out')
 self_db = os.path.join(self_dir, 'mediafrost.db')
 
+dry = ('-dry' in sys.argv)
 perfile = ('-perfile' in sys.argv)
 dbg = ('-dbg' in sys.argv)
 dbg2 =('-dbg2' in sys.argv)
@@ -48,11 +51,77 @@ print '{} of disk cache available.'.format(nice_bytes(self_cache_size))
 if self_cache_size <= 0:
 	exit(0)
 
-if (not os.path.isdir(self_test_out)):
-	os.makedirs(self_test_out)
+if ('-test_out' in sys.argv):
+	if (not os.path.isdir(self_test_out)):
+		os.makedirs(self_test_out)
+	fs_target_filters = [ frost.FsMountPointFilter(True, 'test_fs_out', 'test_fs_out','test_fs_out', '/dev/root', '0', self_test_out) ]
+else:
+	fs_target_filters = []
 
+FsAutoMount = namedtuple('FsAutoMount', 'filter uuid local_path')
+fs_am_filters = 	[
+                    	frost.FsMountPointFilter(True, 'fs_back1', 'Vault_Jad','Vault_Jad', 'VAULT_JAD', '1000', os.path.join(self_mount,'m0/Vault/mediafrost')),
+                    	frost.FsMountPointFilter(True, 'fs_back2', 'Vault_Lena','Vault_Lena', 'VAULT_LENA', '1000', os.path.join(self_mount,'m1/Vault/mediafrost')),
+                	]
+fs_ams = [
+			FsAutoMount(fs_am_filters[0], '150B-2565', 'm0'),
+			FsAutoMount(fs_am_filters[1], '?', 'm1'),
+		] 
+fs_am_status = {}
 
-fs_target_filters = [ frost.FsMountPointFilter(True, 'test_fs_out', 'test_fs_out','test_fs_out', '/dev/root', '0', self_test_out) ]
+def fsAmScan():
+	#lsusb
+	print 'Scanning auto-mounts...'	 
+	if (not os.path.isdir(self_mount)):
+		os.makedirs(self_mount)
+	cands = {}
+	out = subprocess.Popen(['ls', '-laF', '/dev/disk/by-uuid/'], stdout=subprocess.PIPE).stdout.read()
+	for line in iter(out.splitlines()):
+		data = line.split()
+		if ((len(data)>3) and (data[-2] == '->') and ('/sda' in data[-1])):
+			cands[data[-3]] = '/dev/' + data[-1].split('/')[-1]
+	return cands	
+
+def fsAmPowerUp():
+	return 0
+
+def fsAmPowerDown():
+	return 0
+
+def fsAmUnmount(dev, ignore=False):
+	out = subprocess.Popen(['sudo', 'umount', dev], stderr=subprocess.PIPE).stderr.read()
+	if ((not ignore) and (len(out))):
+		print 'Warning:', out
+
+def fsAmMount(am, dev, checkdir):
+	fsAmUnmount(dev, True)
+	mpath = os.path.join(self_mount, am.local_path)
+	if (not os.path.isdir(mpath)):
+		os.makedirs(mpath)
+	out = subprocess.Popen(['sudo', 'mount', dev, mpath], stderr=subprocess.PIPE).stderr.read()
+	if (len(out)):
+		print 'Warning:', out	
+	if os.path.isdir(checkdir):
+		return True
+	print 'Mounting {} failed due to {}'.format(am.filter.descr, checkdir) 
+	fsAmUnmount(dev)
+	return False
+
+def fsAmBegin(automounts):
+	fsAmPowerUp()
+	cands = fsAmScan()
+	status = {}
+	for am in automounts:
+		if (am.uuid in cands):
+			dev = cands[am.uuid]
+			if (fsAmMount(am, dev, am.filter.dir)):
+				status[am.uuid] = dev
+	return status	
+
+def fsAmEnd(automounts, status):
+	for dev in status.values():
+		fsAmUnmount(dev)
+	fsAmPowerDown()
 
 fs_mounts = frost.fsFindMounts()
 if dbg3:
@@ -120,7 +189,10 @@ else:
 		input_str = raw_input('Choose ip: '); choice = int(input_str)-1;
 		address = ip_list[choice]
 
-if ('-dry' in sys.argv):
+if (dry):
+	fs_am_status = fsAmBegin(fs_ams)
+	print 'Automounted (-dry):', fs_am_status
+	fsAmEnd(fs_ams, fs_am_status)
 	exit(0)
 
 sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
@@ -230,6 +302,7 @@ while 1:
 	session_request_fid = {}
 	session_count = session_count + 1
 
+	#conn.sendall('/info:{}'.format(self_cache_size))
 	while serving:
 		try:
 			recv = conn.recv(64*1024)

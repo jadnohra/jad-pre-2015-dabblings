@@ -103,11 +103,11 @@ def fsFilterMounts(mounts, filters):
 					return []
 			if (len(matching_mounts) == 1):
 				chosen_mount = matching_mounts[0]
-				dir = os.path.join(chosen_mount.path, filters[i].dir)
-				if (os.path.isdir(dir)):
+				checkdir = os.path.join(chosen_mount.path, filters[i].dir)
+				if (os.path.isdir(checkdir)):
 					ret.append(FsStoragePoint(i, filters[i], chosen_mount.disk, chosen_mount.mount, chosen_mount.path, filters[i].dir))
 				else:
-					print 'Missing directory:', dir 
+					print 'Missing directory:', checkdir 
 	return ret
 			
 def fsGetPointPath(point):
