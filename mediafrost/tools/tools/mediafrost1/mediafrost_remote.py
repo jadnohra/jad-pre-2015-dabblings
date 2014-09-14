@@ -358,7 +358,6 @@ while 1:
 	session_request_fid = {}
 	session_count = session_count + 1
 	session_max_cache = self_cache_size
-	session_needed_cache = 0
 
 	session_fs_targets = fsBeginSession()
 	print 'Session targets:', [t.dir for t in session_fs_targets]
@@ -412,12 +411,9 @@ while 1:
 						fid = cmd_data
 						file_name = cmd_splt[1]
 						file_size = int(cmd_splt[2])
-						session_needed_cache = session_needed_cache + file_size	
-						reject = (session_max_cache > 0 and session_needed_cache > session_max_cache)
 						if (perfile):
-							print 'fid {} {} {} {}'.format(file_name,file_size,fid, '(rejected)' if reject else '')
-						if (not reject):	
-							session_fid.append(fid); session_fname.append(file_name); session_fsize.append(file_size);
+							print 'fid {} {} {}'.format(file_name,file_size,fid)
+						session_fid.append(fid); session_fname.append(file_name); session_fsize.append(file_size);
 				else:
 					recurse_process = False
 
@@ -449,22 +445,30 @@ while 1:
 				for target in targets:
 					target_tbls.append(frost.dbMakePointFidTableName(target.filter.id))
 					fi_lists.append([])
-	
-				for fid,fname,fuind in zip(session_fid, session_fname, findices):
+
+				session_needed_cache = 0
+				for fid,fname,fsize,fuind in zip(session_fid, session_fname, session_fsize, findices):
+					test_needed_cache = session_needed_cache + fsize	
 					funame = frost.fiGenUniqueName(fname, fuind)	
 					for target,tbl,fi_list in zip(targets, target_tbls, fi_lists):
 						file_exists = frost.bkpExistsFileId(session, fid, tbl)
 						if (not file_exists):
-							fpath = os.path.join(self_cache, funame)
-							session_request_fid[fid] = fpath
-							fi_list.append(frost.NewFileInfo(fpath, fid, 0))
-							rel = '--->'
+							session_needed_cache = session_needed_cache + fsize	
+							reject = (session_max_cache > 0 and session_needed_cache > session_max_cache)
+							if (reject):
+								rel = '-(rejected)->'
+							else:	
+								fpath = os.path.join(self_cache, funame)
+								session_request_fid[fid] = fpath
+								fi_list.append(frost.NewFileInfo(fpath, fid, 0))
+								rel = '--->'
 						else:
 							rel = 'in'
+						if (fid in session_request_fid):
+							session_needed_cache = test_needed_cache
 						if (perfile):	
 							print '{} {} {}'.format(funame, rel, target.filter.long_descr)
-							
-					
+	
 				if (len(session_request_fid) > 0):
 					print 'Requesting files...'	
 					for fid in session_request_fid.iterkeys():
