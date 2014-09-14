@@ -389,8 +389,31 @@ while 1:
 		while recurse_process:
 
 			if (conn_buf.startswith(cmd_start)):
-				print 'Recieving fids...'
-				conn_buf = conn_buf[len(cmd_start):]
+				cmd_splt = conn_buf.split(':', 3-1)
+				if ((len(cmd_splt) == 3) and (cmd_splt[-1] == 'eoc')):
+					print 'Recieving fids...'
+					target_miss_count = 0
+					if (len(cmd_splt[1])):
+						req_targets = cmd_splt[1].split(',')
+						print 'Requested targets:', req_targets
+						for t in req_targets:
+							tl = t.lower()
+							found = None
+							for ct in session_fs_targets:
+								if (ct.filter.id.lower() == tl) or (ct.filter.descr.lower() == tl):
+									found = ct; break;
+							if (found is None):
+								target_miss_count = target_miss_count+1
+								print 'Missing requested target:', t
+					if (target_miss_count == 0):
+						conn.sendall('/go')
+					else:
+						conn.send('/frequestend'); conn.send('/success:{}'.format('2'));
+						conn.sendall(cmd_end); serving = False; conn.close();
+					cmd_len = sum(len(x)+1 for x in cmd_splt)-1
+					conn_buf = conn_buf[cmd_len:]
+				else:
+					recurse_process = False
 
 			elif (conn_buf.startswith(cmd_end)):
 				conn_buf = conn_buf[len(cmd_end):]
@@ -480,7 +503,7 @@ while 1:
 				else:
 					print 'Nothing to do'
 					serving = False
-					conn.sendall('/frequestend')
+					conn.send('/frequestend'); conn.sendall('/success:1');
 					conn.close()
 					
 			elif (conn_buf.startswith(cmd_fdata)):
