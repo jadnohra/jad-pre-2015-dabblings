@@ -28,18 +28,29 @@ perfile = ('-perfile' in sys.argv)
 dbg = ('-dbg' in sys.argv)
 dbg2 =('-dbg2' in sys.argv)
 dbg3 = ('-dbg3' in sys.argv)
+lim_cache = 0
+if ('-lim_cache' in sys.argv):
+	lim_cache = int(sys.argv[int(sys.argv.index('-lim_cache')+1)])
+
 
 def reset_cache():
 	global self_cache
 	global self_cache_size
+	global lim_cache
 	if (os.path.isdir(self_cache)):
 		shutil.rmtree(self_cache)
 	os.makedirs(self_cache)
 	statvfs = os.statvfs(self_cache)
 	self_cache_size = statvfs.f_frsize*statvfs.f_bavail
 	self_cache_size = self_cache_size-1024*1024*128
-	if self_cache_size <= 1024*1024*256:
-		self_cache_size = 0
+	if (lim_cache):
+		if self_cache_size > lim_cache:
+			self_cache_size = lim_cache
+		else:
+			self_cache_size = 0
+	else:
+		if self_cache_size <= 1024*1024*256:
+			self_cache_size = 0
 	return (self_cache_size > 0)
 
 def nice_bytes(bytes):
@@ -54,7 +65,9 @@ print '{} of disk cache available.'.format(nice_bytes(self_cache_size))
 if self_cache_size <= 0:
 	exit(0)
 
-if ('-test_out' in sys.argv):
+if ('-test_out' in sys.argv) or ('-ctest_out' in sys.argv):
+	if (os.path.isdir(self_test_out) and ('-ctest_out' in sys.argv)):
+		shutil.rmtree(self_test_out)
 	if (not os.path.isdir(self_test_out)):
 		os.makedirs(self_test_out)
 	fs_target_filters = [ frost.FsMountPointFilter(True, 'test_fs_out', 'test_fs_out','test_fs_out', '/dev/root', '0', self_test_out) ]
@@ -219,9 +232,23 @@ if (dry):
 else:
 	print 'Test', fsAmScan()
 
+def sockBind(sock, address, port, tries):
+	for i in range(tries):
+		try:
+			sock.bind((address, port+i))
+			return port+i
+		except socket.error as e:
+			if (e.args[0] != errno.EADDRINUSE) and (e.args[0] != errno.EACCES):
+				print traceback.format_exc()
+				return -1
+	return -1
+
 sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
 #print 'Binding to {}:{}'.format(address, port)
-sock.bind((address, port))
+port = sockBind(sock, address, port, 10)
+if (port < 0):
+	print 'Failed to bind'
+	exit(0)
 
 main_thread = threading.current_thread()
 
@@ -326,9 +353,12 @@ while 1:
 	session = None
 	session_fid = []
 	session_fname = []
+	session_fsize = []
 	session_fi_lists = []
 	session_request_fid = {}
 	session_count = session_count + 1
+	session_max_cache = self_cache_size
+	session_needed_cache = 0
 
 	session_fs_targets = fsBeginSession()
 	print 'Session targets:', [t.dir for t in session_fs_targets]
@@ -372,18 +402,22 @@ while 1:
 					frost.bkpEndSession(session)
 
 			elif (conn_buf.startswith(cmd_fid)):
-				cmd_splt = conn_buf.split(':', 2)
-				if (len(cmd_splt) == 3):
-					cmd_hdr_size = len(cmd_splt[0]) + 1 + len(cmd_splt[1]) + 1 
+				cmd_splt = conn_buf.split(':', 3)
+				if (len(cmd_splt) == 4):
+					cmd_hdr_size = len(cmd_splt[0]) + 1 + len(cmd_splt[1]) + 1 + len(cmd_splt[2]) + 1  
 					total_len = cmd_hdr_size + fid_len
 					if (len(conn_buf) >= total_len):
 						cmd_data = conn_buf[cmd_hdr_size:total_len]
 						conn_buf = conn_buf[total_len:]	
 						fid = cmd_data
 						file_name = cmd_splt[1]
+						file_size = int(cmd_splt[2])
+						session_needed_cache = session_needed_cache + file_size	
+						reject = (session_max_cache > 0 and session_needed_cache > session_max_cache)
 						if (perfile):
-							print 'fid',file_name,cmd_data
-						session_fid.append(fid); session_fname.append(file_name);
+							print 'fid {} {} {} {}'.format(file_name,file_size,fid, '(rejected)' if reject else '')
+						if (not reject):	
+							session_fid.append(fid); session_fname.append(file_name); session_fsize.append(file_size);
 				else:
 					recurse_process = False
 
