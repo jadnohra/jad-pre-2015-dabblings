@@ -23,6 +23,7 @@ self_db = os.path.join(self_dir, 'mediafrost.db')
 warn = ('-warn' in sys.argv)
 dry = ('-dry' in sys.argv)
 scan = ('-scan' in sys.argv)
+no_am = ('-no_am' in sys.argv)
 perfile = ('-perfile' in sys.argv)
 dbg = ('-dbg' in sys.argv)
 dbg2 =('-dbg2' in sys.argv)
@@ -62,13 +63,15 @@ else:
 
 FsAutoMount = namedtuple('FsAutoMount', 'filter uuid local_path')
 fs_am_filters = 	[
-                    	frost.FsMountPointFilter(True, 'fs_back1', 'Vault_Jad','Vault_Jad', '/dev/root', '1000', os.path.join(self_mount,'vault_jad/Temp1')),
-                    	frost.FsMountPointFilter(True, 'fs_back2', 'Vault_Lena','Vault_Lena', '/dev/root', '1000', os.path.join(self_mount,'vault_lena/Temp1')),
+                    	frost.FsMountPointFilter(True, 'fs_back1', 'Vault_Jad','Vault_Jad', '/dev/root', '1000', os.path.join(self_mount,'vault_jad/Vault/mediafrost')),
+                    	frost.FsMountPointFilter(True, 'fs_back2', 'Vault_Lena','Vault_Lena', '/dev/root', '1000', os.path.join(self_mount,'vault_lena/Vault/mediafrost')),
                 	]
 fs_ams = [
 			FsAutoMount(fs_am_filters[0], '150B-2565', 'vault_jad'),
 			FsAutoMount(fs_am_filters[1], '1101-1163', 'vault_lena'),
 		] 
+if (no_am):
+	fs_am_filters = []; fs_ams = [];
 fs_am_status = {}
 fs_am_targets = []
 
@@ -222,10 +225,10 @@ sock.bind((address, port))
 
 main_thread = threading.current_thread()
 
-def discoveryRun(port, msg):
+def discoveryRun(dport, port, msg):
 	ANY = '0.0.0.0'
 	MCAST_ADDR = '224.168.2.9'
-	MCAST_PORT = 1600	
+	MCAST_PORT = dport
 	sys.stdout.write('Discovery on port {} ...\n'.format(MCAST_PORT))
 	sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM, socket.IPPROTO_UDP)
 	sock.setsockopt(socket.SOL_SOCKET,socket.SO_REUSEADDR,1)
@@ -249,7 +252,10 @@ def discoveryRun(port, msg):
 				sock.sendto(msg, addr)
 
 if ('-no_discovery' not in sys.argv and (len(address) != 0 and address != '0.0.0.0')):
-	threading.Thread(target = discoveryRun, args = (port, '{}:{}'.format(address, port))).start()
+	dport = 1600
+	if ('-dport' in sys.argv):
+		dport = int(sys.argv[int(sys.argv.index('-dport')+1)])
+	threading.Thread(target = discoveryRun, args = (dport, port, '{}:{}'.format(address, port))).start()
 	#time.sleep(1)
 sock.listen(1)
 
