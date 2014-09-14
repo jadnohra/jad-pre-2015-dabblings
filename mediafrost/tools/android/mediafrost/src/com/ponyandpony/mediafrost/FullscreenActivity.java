@@ -108,7 +108,6 @@ public class FullscreenActivity extends Activity {
 	}
 	
 	static public String getSetting(Context context, String key) { return getSetting(context, key, null); }
-	
 	static public String nonEmptySetting(String str, String dft) { if (str == null || str.length() == 0) return dft; return str; }
 	
 	@Override
@@ -123,6 +122,8 @@ public class FullscreenActivity extends Activity {
 			getSetting(this, "MinFiles", "30");
 			getSetting(this, "MaxFiles", "300");
 			getSetting(this, "DiscoveryPort", "1600");
+			getSetting(this, "Targets", "vault_lena,vault_jad");
+			getSetting(this, "UseDate", "Yes");
 		}
 		
 		setContentView(R.layout.activity_fullscreen);
@@ -598,7 +599,7 @@ public class FullscreenActivity extends Activity {
 					{
 						byte[] buffer = "255.255.255.255:88888888".getBytes();
 						DatagramPacket packet = new DatagramPacket(buffer, buffer.length);
-						dsock.setSoTimeout(3000);
+						dsock.setSoTimeout(1700);
 						try
 						{
 							dsock.receive(packet);

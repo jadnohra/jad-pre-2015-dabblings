@@ -2,6 +2,7 @@ package com.ponyandpony.mediafrost;
 
 import android.content.Context;
 import android.os.Bundle;
+import android.preference.CheckBoxPreference;
 import android.preference.EditTextPreference;
 import android.preference.Preference;
 import android.preference.PreferenceActivity;
@@ -15,6 +16,8 @@ public class SettingsActivity extends PreferenceActivity implements Preference.O
 	public EditTextPreference mMaxFiles;
 	public EditTextPreference mTargets;
 	public EditTextPreference mExtras;
+	public EditTextPreference mUseDate;
+	public EditTextPreference mLastDate;
 	
 	EditTextPreference createPreference(String key, String title, boolean useSummaryUpdater)
 	{
@@ -33,6 +36,17 @@ public class SettingsActivity extends PreferenceActivity implements Preference.O
 		return true;
 	}
 	
+	CheckBoxPreference createPreferenceBool(String key, String title)
+	{
+		CheckBoxPreference pref = new CheckBoxPreference(this);
+		pref.setKey(key);
+		pref.setTitle(title); 
+		String setting = FullscreenActivity.getSetting(this, key, "");
+		pref.setSummary(setting); pref.setChecked(setting.equalsIgnoreCase("yes"));
+		return pref;
+	}
+	
+
 	@SuppressWarnings("deprecation")
 	public void onCreate(Bundle savedInstanceState) {
 		super.onCreate(savedInstanceState);
@@ -54,6 +68,10 @@ public class SettingsActivity extends PreferenceActivity implements Preference.O
 			screen.addPreference(mTargets);
 			mExtras = createPreference("Extras", "Extras", true);
 			screen.addPreference(mExtras);
+			mUseDate = createPreference("UseDate", "Use Date", true);
+			screen.addPreference(mUseDate);
+			mLastDate = createPreference("Last Date", "Last Date", true);
+			screen.addPreference(mLastDate);
 		}
 	}
 };
