@@ -60,7 +60,22 @@ elif use_ui:
 
 sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
 #print 'Binding to {}:{}'.format(address, port)
-sock.bind((address, port))
+def sockBind(sock, address, port, tries):
+	for i in range(tries):
+		try:
+			sock.bind((address, port+i))
+			return port+i
+		except socket.error as e:
+			if (e.args[0] != errno.EADDRINUSE) and (e.args[0] != errno.EACCES):
+				print traceback.format_exc()
+				return -1
+	return -1		
+
+port = sockBind(sock, address, port, 10)
+if (port < 0):
+	print 'Failed to bind'
+	exit(0)
+#sock.bind((address, port))
 
 main_thread = threading.current_thread()
 
@@ -167,8 +182,14 @@ while 1:
 	session = None
 	session_fid = []
 	session_fname = []
+	session_fsize = []
 	session_fi_lists = []
 	session_request_fid = {}
+	session_max_cache = 1024*1024*2
+
+	if ('-lim_cache' in sys.argv):
+		session_max_cache = int(sys.argv[int(sys.argv.index('-lim_cache')+1)])
+
 
 	while serving:
 		try:
@@ -208,18 +229,19 @@ while 1:
 					frost.bkpEndSession(session)
 
 			elif (conn_buf.startswith(cmd_fid)):
-				cmd_splt = conn_buf.split(':', 2)
-				if (len(cmd_splt) == 3):
-					cmd_hdr_size = len(cmd_splt[0]) + 1 + len(cmd_splt[1]) + 1 
+				cmd_splt = conn_buf.split(':', 3)
+				if (len(cmd_splt) == 4):
+					cmd_hdr_size = len(cmd_splt[0]) + 1 + len(cmd_splt[1]) + 1 + len(cmd_splt[2]) + 1  
 					total_len = cmd_hdr_size + fid_len
 					if (len(conn_buf) >= total_len):
 						cmd_data = conn_buf[cmd_hdr_size:total_len]
 						conn_buf = conn_buf[total_len:]	
 						fid = cmd_data
 						file_name = cmd_splt[1]
+						file_size = int(cmd_splt[2])
 						if (perfile):
-							print 'fid',file_name,cmd_data
-						session_fid.append(fid); session_fname.append(file_name);
+							print 'fid {} {} {}'.format(file_name,file_size,fid)
+						session_fid.append(fid); session_fname.append(file_name); session_fsize.append(file_size);
 				else:
 					recurse_process = False
 
@@ -250,17 +272,26 @@ while 1:
 					target_tbls.append(frost.dbMakePointFidTableName(target.filter.id))
 					fi_lists.append([])
 	
-				for fid,fname,fuind in zip(session_fid, session_fname, findices):
+				session_needed_cache = 0
+				for fid,fname,fsize,fuind in zip(session_fid, session_fname, session_fsize, findices):
+					test_needed_cache = session_needed_cache + fsize	
 					funame = frost.fiGenUniqueName(fname, fuind)	
 					for target,tbl,fi_list in zip(targets, target_tbls, fi_lists):
 						file_exists = frost.bkpExistsFileId(session, fid, tbl)
 						if (not file_exists):
-							fpath = os.path.join(self_test_cache, funame)
-							session_request_fid[fid] = fpath
-							fi_list.append(frost.NewFileInfo(fpath, fid, 0))
-							rel = '--->'
+							session_needed_cache = session_needed_cache + fsize	
+							reject = (session_max_cache > 0 and session_needed_cache > session_max_cache)
+							if (reject):
+								rel = '-(rejected)->'
+							else:	
+								fpath = os.path.join(self_test_cache, funame)
+								session_request_fid[fid] = fpath
+								fi_list.append(frost.NewFileInfo(fpath, fid, 0))
+								rel = '--->'
 						else:
 							rel = 'in'
+						if (fid in session_request_fid):
+							session_needed_cache = test_needed_cache
 						if (perfile):	
 							print '{} {} {}'.format(funame, rel, target.filter.long_descr)
 							

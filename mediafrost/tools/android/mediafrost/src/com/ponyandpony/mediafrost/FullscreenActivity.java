@@ -653,7 +653,7 @@ public class FullscreenActivity extends Activity {
 							String fid = genMD5Hash(filePath);
 							fidMap.put(fid, Integer.valueOf(i));
 							sock.getOutputStream().write(
-									String.format("/fid:%s:%s", fileName, fid)
+									String.format("/fid:%s:%d:%s", fileName, file.length(), fid)
 											.getBytes("US-ASCII"));
 							float lprog1 = prog1;
 							prog1 += ((100.0f * (float)(file.length()))/((float) mTotalByteCount));
