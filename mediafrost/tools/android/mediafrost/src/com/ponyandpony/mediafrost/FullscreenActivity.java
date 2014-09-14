@@ -283,6 +283,12 @@ public class FullscreenActivity extends Activity {
 
 					if (images.size() > 0) {
 						
+						boolean dbg_stamp = true;
+						if (dbg_stamp)
+						{
+							stampSuccess(FullscreenActivity.this, images.get(0));
+						}
+						
 						mStatusTextViews.console.setText("Connecting ...");
 						mStatusTextViews.time.setText("00:00:00");
 						mStatusTextViews.activity.setText("Connecting...");
@@ -884,18 +890,37 @@ public class FullscreenActivity extends Activity {
 	{
 		Bitmap b = Bitmap.createBitmap(w, h, Bitmap.Config.ARGB_8888);
 		Canvas c = new Canvas(b);
-		Paint paint = new Paint();
-		c.drawColor(Color.TRANSPARENT);
-	    paint.setTextSize(40);
-	    paint.setTextScaleX(1.f);
-	    paint.setAlpha(0);
-	    paint.setAntiAlias(true);
-	    paint.setColor(Color.GREEN);
-	    Rect bounds = new Rect();
-	    paint.getTextBounds(text,0,text.length(),bounds);
-	    float scale =  (float) w / (1.25f * (float) bounds.width());
-	    paint.setTextSize((int) ((float) paint.getTextSize() * scale));
-	    c.drawText(text, w/2-bounds.width()/2, h/2, paint);
+		
+		{
+			c.drawColor(Color.TRANSPARENT);
+		}
+		{
+			Paint paint = new Paint();
+			paint.setStyle(Paint.Style.FILL_AND_STROKE);
+			paint.setColor(0xAA331133);
+			c.drawCircle(w/2, h/2, 0.45f*Math.min(w, h), paint);
+			paint.setStyle(Paint.Style.STROKE);
+			paint.setColor(Color.GREEN);
+			paint.setStrokeWidth(0.03f*Math.min(w, h));
+			c.drawCircle(w/2, h/2, 0.45f*Math.min(w, h), paint);
+		}
+		{
+			Paint paint = new Paint();
+			paint.setTypeface(Typeface.defaultFromStyle(Typeface.BOLD));
+			paint.setTextSize(40);
+		    paint.setTextScaleX(1.f);
+		    paint.setAlpha(0);
+		    paint.setAntiAlias(true);
+		    paint.setColor(Color.GREEN);
+		    paint.setStrokeWidth(24.0f);
+		    Rect bounds = new Rect();
+		    paint.getTextBounds(text,0,text.length(),bounds);
+		    float scale =  (float) w / (1.25f * (float) bounds.width());
+		    paint.setTextSize((int) ((float) paint.getTextSize() * scale));
+		    paint.getTextBounds(text,0,text.length(),bounds);
+		    c.rotate(45.0f, w/2, h/2+bounds.height()/2);
+		    c.drawText(text, w/2-bounds.width()/2, h/2, paint);
+		}
 	    return b;
 	}
 
@@ -907,6 +932,29 @@ public class FullscreenActivity extends Activity {
 	    return bmOverlay;
 	}
 	
+	private static int calculateInSampleSize(BitmapFactory.Options options, int reqWidth, int reqHeight) {
+	    final int height = options.outHeight;
+	    final int width = options.outWidth;
+	    int inSampleSize = 1;
+	    if (height > reqHeight || width > reqWidth) {
+	        while (((height/2) / inSampleSize) > reqHeight
+	                && ((width/2) / inSampleSize) > reqWidth) {
+	            inSampleSize *= 2;
+	        }
+	    }
+	    return inSampleSize;
+	}
+	
+	private static Bitmap decodeSampledFileBitmap(String filePath, int reqWidth, int reqHeight) 
+	{
+	    final BitmapFactory.Options options = new BitmapFactory.Options();
+	    options.inJustDecodeBounds = true;
+	    BitmapFactory.decodeFile(filePath, options);
+	    options.inSampleSize = calculateInSampleSize(options, reqWidth, reqHeight);
+	    options.inJustDecodeBounds = false;
+	    return BitmapFactory.decodeFile(filePath, options);
+	}
+	
 	@SuppressLint("SimpleDateFormat")
 	public static void stampSuccess(Context context, String iconInputFilePath)
 	{
@@ -914,7 +962,7 @@ public class FullscreenActivity extends Activity {
 	
         String date = new SimpleDateFormat("dd-MM-yyyy").format(Calendar.getInstance().getTime());
 		
-		Bitmap iconBmp = BitmapFactory.decodeFile(iconInputFilePath);
+		Bitmap iconBmp = decodeSampledFileBitmap(iconInputFilePath, 320, 320);
 		Bitmap textBmp = createStampBitmap(iconBmp.getWidth(), iconBmp.getHeight(), String.format("- Mediafrost (%s) -", date));
 		Bitmap stampBmp = stampOverlay(iconBmp, textBmp);
 	    Random generator = new Random();
