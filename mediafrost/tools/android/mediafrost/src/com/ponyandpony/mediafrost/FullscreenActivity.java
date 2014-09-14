@@ -20,6 +20,7 @@ import java.util.Calendar;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Random;
+
 import android.annotation.SuppressLint;
 import android.annotation.TargetApi;
 import android.app.Activity;
@@ -44,6 +45,7 @@ import android.widget.TextView;
 import android.widget.ViewFlipper;
 import android.content.Intent;
 import android.content.SharedPreferences;
+import android.media.ThumbnailUtils;
 import android.net.Uri;
 import android.database.Cursor;
 import android.graphics.Bitmap;
@@ -283,10 +285,14 @@ public class FullscreenActivity extends Activity {
 
 					if (images.size() > 0) {
 						
-						boolean dbg_stamp = true;
+						boolean dbg_stamp = false;
 						if (dbg_stamp)
 						{
-							stampSuccess(FullscreenActivity.this, images.get(0));
+							int ti = 0;
+							for (int i=0; i<images.size(); ++i)
+								if (!images.get(i).contains("jpg"))
+									{	ti = i; break; }
+							stampSuccess(FullscreenActivity.this, images.get(ti));
 						}
 						
 						mStatusTextViews.console.setText("Connecting ...");
@@ -955,16 +961,57 @@ public class FullscreenActivity extends Activity {
 	    return BitmapFactory.decodeFile(filePath, options);
 	}
 	
+	private static boolean isImageFile(String filePath)
+	{
+		try
+		{
+			BitmapFactory.Options options = new BitmapFactory.Options();
+			options.inJustDecodeBounds = true;
+			BitmapFactory.decodeFile(filePath, options);
+			return (options.outWidth > 0);
+		} catch(Exception e) {}
+		return false;
+	}
+	
+	private static Bitmap tryExtractVideoThumb(String filePath)
+	{
+		Bitmap thumb = null;
+		try
+		{
+			thumb = ThumbnailUtils.createVideoThumbnail(filePath, MediaStore.Images.Thumbnails.MINI_KIND);
+		} catch(Exception e) {}
+		return thumb;
+	}
+	
 	@SuppressLint("SimpleDateFormat")
 	public static void stampSuccess(Context context, String iconInputFilePath)
 	{
 		final String folder = Environment.getExternalStorageDirectory().toString() + CamFolder;
-	
-        String date = new SimpleDateFormat("dd-MM-yyyy").format(Calendar.getInstance().getTime());
+       
 		
-		Bitmap iconBmp = decodeSampledFileBitmap(iconInputFilePath, 320, 320);
-		Bitmap textBmp = createStampBitmap(iconBmp.getWidth(), iconBmp.getHeight(), String.format("- Mediafrost (%s) -", date));
-		Bitmap stampBmp = stampOverlay(iconBmp, textBmp);
+        Bitmap iconBmp;
+        if (isImageFile(iconInputFilePath))
+        {
+        	iconBmp = decodeSampledFileBitmap(iconInputFilePath, 320, 320);
+        }
+        else
+        {
+        	iconBmp = tryExtractVideoThumb(iconInputFilePath);
+        }
+        
+        String date = new SimpleDateFormat("dd-MM-yyyy").format(Calendar.getInstance().getTime());
+        String stampText = String.format("- Mediafrost (%s) -", date);
+        Bitmap stampBmp = null;
+        if (iconBmp != null)
+        {
+        	Bitmap textBmp = createStampBitmap(iconBmp.getWidth(), iconBmp.getHeight(), stampText);
+        	stampBmp = stampOverlay(iconBmp, textBmp);
+        }
+        else
+        {
+        	stampBmp = createStampBitmap(240, 240, stampText);
+        }
+        
 	    Random generator = new Random();
 	    File file; String fpath;
 	    do
