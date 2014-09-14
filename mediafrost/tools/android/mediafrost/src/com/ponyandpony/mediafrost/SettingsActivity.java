@@ -10,8 +10,11 @@ import android.preference.PreferenceScreen;
 public class SettingsActivity extends PreferenceActivity implements Preference.OnPreferenceChangeListener {
 
 	public EditTextPreference mServer;
+	public EditTextPreference mDiscoveryPort;
 	public EditTextPreference mMinFiles;
 	public EditTextPreference mMaxFiles;
+	public EditTextPreference mTargets;
+	public EditTextPreference mExtras;
 	
 	EditTextPreference createPreference(String key, String title, boolean useSummaryUpdater)
 	{
@@ -39,12 +42,18 @@ public class SettingsActivity extends PreferenceActivity implements Preference.O
 		PreferenceScreen screen = getPreferenceScreen();
 		
 		{
-			mServer = createPreference("Server", "Mediafrost Server Address", true);
+			mServer = createPreference("Server", "Server Address", true);
 			screen.addPreference(mServer);
+			mDiscoveryPort = createPreference("DiscoveryPort", "Discovery Port", true);
+			screen.addPreference(mDiscoveryPort);
 			mMinFiles = createPreference("MinFiles", "Minimum Files to Backup", true);
 			screen.addPreference(mMinFiles);
 			mMaxFiles = createPreference("MaxFiles", "Maximum Files to Backup", true);
 			screen.addPreference(mMaxFiles);
+			mTargets = createPreference("Targets", "Backup Targets", true);
+			screen.addPreference(mTargets);
+			mExtras = createPreference("Extras", "Extras", true);
+			screen.addPreference(mExtras);
 		}
 	}
 };

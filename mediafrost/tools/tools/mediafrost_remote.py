@@ -113,6 +113,7 @@ def discoveryRun(port, msg):
 		else:
 			print 'Discovery request from', addr, data
 			if (data == '/mediafrost:discover'):
+				print 'sent', msg, addr
 				sock.sendto(msg, addr)
 
 if ('-no_discovery' not in sys.argv and (len(address) != 0 and address != '0.0.0.0')):
@@ -217,8 +218,15 @@ while 1:
 		while recurse_process:
 
 			if (conn_buf.startswith(cmd_start)):
-				print 'Recieving fids...'
-				conn_buf = conn_buf[len(cmd_start):]
+				cmd_splt = conn_buf.split(':', 3-1)
+				if ((len(cmd_splt) == 3) and (cmd_splt[-1] == 'eoc')):
+					print 'Recieving fids...'
+					if (len(cmd_splt[1])):
+						print 'Requested targets:', cmd_splt[1].split(',')
+					cmd_len = sum(len(x)+1 for x in cmd_splt)-1
+					conn_buf = conn_buf[cmd_len:]
+				else:
+					recurse_process = False
 
 			elif (conn_buf.startswith(cmd_end)):
 				conn_buf = conn_buf[len(cmd_end):]
@@ -229,7 +237,7 @@ while 1:
 					frost.bkpEndSession(session)
 
 			elif (conn_buf.startswith(cmd_fid)):
-				cmd_splt = conn_buf.split(':', 3)
+				cmd_splt = conn_buf.split(':', 4-1)
 				if (len(cmd_splt) == 4):
 					cmd_hdr_size = len(cmd_splt[0]) + 1 + len(cmd_splt[1]) + 1 + len(cmd_splt[2]) + 1  
 					total_len = cmd_hdr_size + fid_len
@@ -311,7 +319,7 @@ while 1:
 					conn.close()
 					
 			elif (conn_buf.startswith(cmd_fdata)):
-				cmd_splt = conn_buf.split(':', 3)
+				cmd_splt = conn_buf.split(':', 4-1)
 				if (len(cmd_splt) == 4):
 					file_size = int(cmd_splt[2])
 					if (not did_print_file_size):	

@@ -50,6 +50,7 @@
                 android:text="Not Connected"
                 android:textAppearance="?android:attr/textAppearanceLarge"
                 android:textSize="14sp" />
+
         </FrameLayout>
     </RelativeLayout>
 

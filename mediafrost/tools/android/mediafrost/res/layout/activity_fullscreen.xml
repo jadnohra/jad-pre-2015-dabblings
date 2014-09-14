@@ -111,7 +111,7 @@
                     android:id="@+id/consoleView2"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:maxLines="10"
+                    android:maxLines="99"
                     android:text="Not Connected"
                     android:textAppearance="?android:attr/textAppearanceLarge"
                     android:textSize="14sp" />

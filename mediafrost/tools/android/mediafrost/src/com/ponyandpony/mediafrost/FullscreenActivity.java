@@ -7,10 +7,12 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.InterruptedIOException;
 import java.io.UnsupportedEncodingException;
+import java.net.ConnectException;
 import java.net.DatagramPacket;
 import java.net.DatagramSocket;
 import java.net.InetSocketAddress;
 import java.net.Socket;
+import java.net.SocketTimeoutException;
 import java.security.DigestInputStream;
 import java.security.MessageDigest;
 import java.text.SimpleDateFormat;
@@ -107,6 +109,8 @@ public class FullscreenActivity extends Activity {
 	
 	static public String getSetting(Context context, String key) { return getSetting(context, key, null); }
 	
+	static public String nonEmptySetting(String str, String dft) { if (str == null || str.length() == 0) return dft; return str; }
+	
 	@Override
 	protected void onCreate(Bundle savedInstanceState) {
 		super.onCreate(savedInstanceState);
@@ -118,6 +122,7 @@ public class FullscreenActivity extends Activity {
 			getSetting(this, "Server", "192.168.1.4:24107");
 			getSetting(this, "MinFiles", "30");
 			getSetting(this, "MaxFiles", "300");
+			getSetting(this, "DiscoveryPort", "1600");
 		}
 		
 		setContentView(R.layout.activity_fullscreen);
@@ -285,7 +290,7 @@ public class FullscreenActivity extends Activity {
 
 					if (images.size() > 0) {
 						
-						boolean dbg_stamp = false;
+						boolean dbg_stamp = getSetting(context, "Extras", "").contains("dbg_stamp");
 						if (dbg_stamp)
 						{
 							int ti = 0;
@@ -313,6 +318,8 @@ public class FullscreenActivity extends Activity {
 						settings.port = Integer.parseInt(address[1]);
 						settings.minFiles = Integer.parseInt(getSetting(context, "MinFiles"));
 						settings.maxFiles = Integer.parseInt(getSetting(context, "MaxFiles"));
+						settings.dport = Integer.parseInt(nonEmptySetting(getSetting(context, "DiscoveryPort"), "1600"));
+						settings.targets = getSetting(context, "Targets", "");
 						NetworkThread thread = new NetworkThread(mThreadMessageHandler, settings, images, mStatusTextViews);
 						mWorkThread = thread;
 						thread.start();
@@ -326,7 +333,7 @@ public class FullscreenActivity extends Activity {
 				{
 					try
 					{
-						mWorkThread.mCancel = 1;
+						mWorkThread.mUserCancelled = true;
 						mWorkThread.mSocket.close();
 					} catch (Exception e)
 					{}
@@ -357,6 +364,8 @@ public class FullscreenActivity extends Activity {
 		int port;
 		int minFiles;
 		int maxFiles;
+		int dport;
+		String targets;
 	};
 	
 	public class NetworkThread extends Thread {
@@ -370,7 +379,9 @@ public class FullscreenActivity extends Activity {
 		Runnable mTimerRunnable;
 		String mStatusText;
 		Socket mSocket;
-		int mCancel;
+		boolean mUserCancelled;
+		boolean mSucceeded;
+		String mFailString;
 
 		NetworkThread(Handler messageHandler, NetworkThreadSettings settings, List<String> images, StatusTextViews statusTextViews) {
 			mMessageHandler = messageHandler;
@@ -378,7 +389,9 @@ public class FullscreenActivity extends Activity {
 			mImages = images;
 			mStatusTextViews = statusTextViews;
 			mStatusText = "";
-			mCancel = 0;
+			mUserCancelled = false;
+			mSucceeded = false;
+			mFailString = "";
 
 			mTimerHandler = new Handler();
 			final NetworkThread mThis = this;
@@ -543,12 +556,13 @@ public class FullscreenActivity extends Activity {
 			}
 		}
 
-		void logStatus(final String str) {
+		void logStatus(final String str, final boolean eol) {
 			//Log.v("Testing", str);
-			mStatusText = String.format("%s\n%s", mStatusText, str);
+			mStatusText = String.format("%s%s%s", mStatusText, str, eol?"\n":"");
 			setText(mStatusTextViews.activity, str);
 			setText(mStatusTextViews.console, mStatusText);
 		}
+		void logStatus(final String str) { logStatus(str, true); }
 
 		void logNotify(final String str)
 		{
@@ -572,21 +586,19 @@ public class FullscreenActivity extends Activity {
 			Socket sock = null;
 			try {
 				
-				String server = mSettings.server; int port = mSettings.port;
-				
+				String server = mSettings.server; int port = mSettings.port; int dport = mSettings.dport;
 				{
 					logStatus("Discovering ...");
 					DatagramSocket dsock = new DatagramSocket(2600);
-					
 					{
 						byte[] buffer = "/mediafrost:discover".getBytes();
-						DatagramPacket packet = new DatagramPacket(buffer, buffer.length, new InetSocketAddress("255.255.255.255", 1600));
+						DatagramPacket packet = new DatagramPacket(buffer, buffer.length, new InetSocketAddress("255.255.255.255", dport));
 						dsock.send(packet);
 					}
 					{
 						byte[] buffer = "255.255.255.255:88888888".getBytes();
-						DatagramPacket packet = new DatagramPacket(buffer, buffer.length, new InetSocketAddress("255.255.255.255", 1600));
-						dsock.setSoTimeout(1500);
+						DatagramPacket packet = new DatagramPacket(buffer, buffer.length);
+						dsock.setSoTimeout(3000);
 						try
 						{
 							dsock.receive(packet);
@@ -594,14 +606,14 @@ public class FullscreenActivity extends Activity {
 							String[] words = msg.split(":");
 							server = words[0];
 							port = Integer.parseInt(words[1]);
-							logStatus(String.format("Discovered %s:%d", server, port));
+							logStatus(String.format("Discovered %s:%d.", server, port));
 						}
-						catch(IOException e1) {
-							logStatus("Discovery failed");
+						catch(SocketTimeoutException e1) {
+							logStatus("Discovery failed.");
 						}
 						catch (Exception e2) {
 							logStatus(Log.getStackTraceString(e2));
-							logStatus("Discovery failed");
+							logStatus("Discovery failed.");
 						}
 					}
 					
@@ -611,63 +623,36 @@ public class FullscreenActivity extends Activity {
 				
 				sock = new Socket();
 				mSocket = sock;
-				sock.connect(new InetSocketAddress(server, port), 1600);
+				sock.connect(new InetSocketAddress(server, port), 0);
 				if (sock.isConnected()) {
-					logStatus(String.format("Connected to %s", sock.getRemoteSocketAddress().toString()));
+					logStatus(String.format("Connected to %s.", sock.getRemoteSocketAddress().toString()));
 					
 					int imageCount = mImages.size();
 					if (imageCount > mSettings.maxFiles)
 					{
-						logStatus(String.format("Limiting %d to max. %d files", mImages.size(), mSettings.maxFiles));
+						logStatus(String.format("Limiting %d to max. %d files.", mImages.size(), mSettings.maxFiles));
 						imageCount = mSettings.maxFiles;
 					}
 					if (imageCount < mSettings.minFiles)
 					{
-						logStatus(String.format("%d files is below %d", mImages.size(), mSettings.minFiles));
+						logStatus(String.format("%d files is below %d.", mImages.size(), mSettings.minFiles));
 						imageCount = 0;
 					}
 					
-					logStatus("Calculating total bytes ...");
-
+					logStatus("Calculating total bytes ...", false);
 					mTotalByteCount = 0;
 					for (int i = 0; i < imageCount; i++) {
 						String filePath = mImages.get(i);
 						long bytes = new File(filePath).length();
 						mTotalByteCount += bytes;
 					}
+					logStatus(String.format(" %d.", mTotalByteCount));
 					
-					sock.getOutputStream().write("/start".getBytes("US-ASCII"));
+					//TODO: escape ':'
+					sock.getOutputStream().write(String.format("/start:%s:eoc", mSettings.targets).getBytes("US-ASCII"));
 					
 					HashMap<String, Integer> fidMap = new HashMap<String, Integer>();
-					logStatus(String.format("Senging %d fids ...", imageCount));
-					{
-						openProgress(mStatusTextViews.progress1);
-						float prog1 = 0.0f;
-						for (int i = 0; i < imageCount; i++) {
-							String filePath = mImages.get(i);
-							File file = new File(filePath);
-							String fileName = file.getName();
-	
-							setText(mStatusTextViews.activity,
-									String.format("Hashing %s (%d/%d)", fileName, i+1, imageCount));
-							String fid = genMD5Hash(filePath);
-							fidMap.put(fid, Integer.valueOf(i));
-							sock.getOutputStream().write(
-									String.format("/fid:%s:%d:%s", fileName, file.length(), fid)
-											.getBytes("US-ASCII"));
-							float lprog1 = prog1;
-							prog1 += ((100.0f * (float)(file.length()))/((float) mTotalByteCount));
-							if ((int) lprog1 != (int) prog1)
-								setProgress(mStatusTextViews.progress1, (int) prog1);
-						}
-						closeProgress(mStatusTextViews.progress1);
-					}
-					
-					sock.getOutputStream().write("/fidend".getBytes("US-ASCII"));
-					sock.getOutputStream().flush();
-
 					ArrayList<String> requestedFids = new ArrayList<String>();
-					logStatus("Gathering file requests ...");
 					{
 						sock.setSoTimeout(100);
 						InputStream istream = sock.getInputStream();
@@ -678,6 +663,7 @@ public class FullscreenActivity extends Activity {
 						String cmdFrequest = "/frequest:";
 						int fidLen = 64;
 						String cmdEnd = "/frequestend";
+						String cmdGo = "/go";
 						while (requesting) {
 							try {
 
@@ -690,15 +676,44 @@ public class FullscreenActivity extends Activity {
 								do {
 									consumed = false;
 
-									if ((bufCmd.available() >= (cmdFrequest.length() + fidLen))
+									if (bufCmd.startsWith(cmdGo)) {
+										bufCmd.skip(cmdGo.length());
+										consumed = false;
+										{
+											logStatus(String.format("Senging %d fids ...", imageCount));
+											{
+												openProgress(mStatusTextViews.progress1);
+												float prog1 = 0.0f;
+												for (int i = 0; i < imageCount; i++) {
+													String filePath = mImages.get(i);
+													File file = new File(filePath);
+													String fileName = file.getName();
+							
+													setText(mStatusTextViews.activity,
+															String.format("Hashing %s (%d/%d)", fileName, i+1, imageCount));
+													String fid = genMD5Hash(filePath);
+													fidMap.put(fid, Integer.valueOf(i));
+													sock.getOutputStream().write(
+															String.format("/fid:%s:%d:%s", fileName, file.length(), fid)
+																	.getBytes("US-ASCII"));
+													float lprog1 = prog1;
+													prog1 += ((100.0f * (float)(file.length()))/((float) mTotalByteCount));
+													if ((int) lprog1 != (int) prog1)
+														setProgress(mStatusTextViews.progress1, (int) prog1);
+												}
+												closeProgress(mStatusTextViews.progress1);
+											}
+											
+											sock.getOutputStream().write("/fidend".getBytes("US-ASCII"));
+											sock.getOutputStream().flush();
+											logStatus("Gathering file requests ...");
+										}
+									} else if ((bufCmd.available() >= (cmdFrequest.length() + fidLen))
 											&& bufCmd.startsWith(cmdFrequest)) {
 										bufCmd.skip(cmdFrequest.length());
 										byte[] fidBytes = bufCmd.read(fidLen);
 										String fid = new String(fidBytes,"US-ASCII");
 										requestedFids.add(fid);
-										// Log.v("Testing",
-										// String.format("Requested %s [%d].",
-										// fid, fidIndex.intValue()));
 										consumed = true;
 									} else if (bufCmd.startsWith(cmdEnd)) {
 										requesting = false;
@@ -712,10 +727,10 @@ public class FullscreenActivity extends Activity {
 						}
 					}
 					
-					openProgress(mStatusTextViews.progress2);
+					
 					if (requestedFids.size() > 0) {
-						logStatus(String.format("Sending %d files ...",
-								requestedFids.size()));
+						openProgress(mStatusTextViews.progress2);
+						logStatus(String.format("Sending %d files ...", requestedFids.size()));
 						float prog2 = 0.0f;
 						for (int i = 0; i < requestedFids.size(); i++) {
 							String fid = requestedFids.get(i);
@@ -742,82 +757,86 @@ public class FullscreenActivity extends Activity {
 									setProgress(mStatusTextViews.progress2, (int) prog2);
 							}
 							fileInputStream.close();
-							
 						}
 						closeProgress(mStatusTextViews.progress2);
 						sock.getOutputStream().write("/fdataend".getBytes("US-ASCII"));
 						sock.getOutputStream().flush();
-
 						logStatus("Waiting for backup ...");
-						{
-							sock.setSoTimeout(1000);
-							InputStream istream = sock.getInputStream();
-							byte[] bufRead = new byte[sock
-									.getReceiveBufferSize()];
-							ByteSocketBuffer bufCmd = new ByteSocketBuffer();
+					}
+					{
+						sock.setSoTimeout(1000);
+						InputStream istream = sock.getInputStream();
+						byte[] bufRead = new byte[sock
+								.getReceiveBufferSize()];
+						ByteSocketBuffer bufCmd = new ByteSocketBuffer();
 
-							boolean requesting = true;
-							String cmdSuccess = "/success:";
-							int codeLen = 1;
-							String cmdEnd = "/end";
-							while (requesting) {
-								try {
+						boolean requesting = true;
+						String cmdSuccess = "/success:";
+						int codeLen = 1;
+						String cmdEnd = "/end";
+						while (requesting) {
+							try {
 
-									int bufSize = istream.read(bufRead);
-									if (bufSize == -1)
-										break;
-									bufCmd.add(bufRead, bufSize);
+								int bufSize = istream.read(bufRead);
+								if (bufSize == -1)
+									break;
+								bufCmd.add(bufRead, bufSize);
 
-									boolean consumed;
-									do {
-										consumed = false;
+								boolean consumed;
+								do {
+									consumed = false;
 
-										if ((bufCmd.available() >= (cmdSuccess.length() + codeLen))
-												&& bufCmd.startsWith(cmdSuccess)) {
-											bufCmd.skip(cmdSuccess.length());
-											byte[] codeBytes = bufCmd.read(codeLen);
-											String code = new String(codeBytes,"US-ASCII");
-
-											logStatus(String.format("Success: %s", code));
+									if ((bufCmd.available() >= (cmdSuccess.length() + codeLen))
+											&& bufCmd.startsWith(cmdSuccess)) {
+										bufCmd.skip(cmdSuccess.length());
+										byte[] codeBytes = bufCmd.read(codeLen);
+										String code = new String(codeBytes,"US-ASCII");
+										mFailString = code;
+										logStatus(String.format("Success: %s", code));
+										
+										if (code.equals("1"))
+										{
+											mSucceeded = true;
+											String str = String.format("Backup succeeded (%d files).", requestedFids.size());
+											logStatus(str);
+											logNotify(str);
 											
-											if (code.equals("1"))
+											if (requestedFids.size() > 0)
 											{
-												logNotify(String.format("Backup succeeded, %d files.", requestedFids.size()));
-												
-												if (requestedFids.size() > 0)
-												{
-													String fid = requestedFids.get(requestedFids.size()-1);
-													int index = fidMap.get(fid).intValue();
-													String filePath = mImages.get(index);
-													stampSuccess(FullscreenActivity.this, filePath);
-												}
+												String fid = requestedFids.get(requestedFids.size()-1);
+												int index = fidMap.get(fid).intValue();
+												String filePath = mImages.get(index);
+												stampSuccess(FullscreenActivity.this, filePath);
 											}
-											else
-											{
-												logNotify("Backup failed.");	
-											}
-															
-											consumed = true;
-										} else if (bufCmd.startsWith(cmdEnd)) {
-											requesting = false;
-											consumed = false;
 										}
-									} while (consumed);
+												
+										consumed = true;
+									} else if (bufCmd.startsWith(cmdEnd)) {
+										requesting = false;
+										consumed = false;
+									}
+								} while (consumed);
 
-								} catch (InterruptedIOException e) {
-								}
+							} catch (InterruptedIOException e) {
 							}
 						}
-					} else {
-						logStatus("Nothing to do...");
 					}
 					sock.close();
 					logStatus("Done.");
 				}
 
-			} catch(IOException e1) {
+			}
+			catch (SocketTimeoutException e3) {
 				
+				logStatus(e3.toString());
+				logNotify("Connect failed.");
+			}
+			catch (ConnectException e4) {
 				
+				logStatus(e4.toString());
+				logNotify("Connect failed.");
+			}
+			catch(IOException e1) {
 				
 				logStatus(e1.toString());
 				
@@ -831,11 +850,7 @@ public class FullscreenActivity extends Activity {
 					logStatus(Log.getStackTraceString(e2));
 				}
 				
-				if (mCancel == 0)
-					logNotify("Backup failed.");
-				
 			} catch (Exception e) {
-				
 				
 				logStatus(Log.getStackTraceString(e));
 				
@@ -848,8 +863,18 @@ public class FullscreenActivity extends Activity {
 				{
 					logStatus(Log.getStackTraceString(e2));
 				}
-				if (mCancel == 0)
-					logNotify("Backup failed.");
+			}
+			
+			if (mUserCancelled)
+			{
+				logStatus("Cancelled by user.");
+			} 
+			else if (!mSucceeded)
+			{
+				String code = (mFailString.length() > 0 ? String.format(" (%s)", mFailString) : "");
+				String str = String.format("Backup failed%s.", code);
+				logStatus(str);
+				logNotify(str);
 			}
 			
 			mTimerHandler.removeCallbacks(mTimerRunnable);
