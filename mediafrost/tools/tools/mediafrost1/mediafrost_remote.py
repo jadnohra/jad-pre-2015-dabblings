@@ -69,7 +69,7 @@ dry = ('-dry' in sys.argv)
 scan = ('-scan' in sys.argv)
 arg_db = None
 if ('-db' in sys.argv):
-	arg_db = int(sys.argv[sys.argv.index('-db')+1])
+	arg_db = sys.argv[sys.argv.index('-db')+1]
 db_add = ('-db_add' in sys.argv)	
 no_am = ('-no_am' in sys.argv)
 no_ap = ('-no_ap' in sys.argv)
@@ -80,13 +80,13 @@ dbg3 = ('-dbg3' in sys.argv)
 local_cache = ('-local_cache' in sys.argv)
 lim_cache = 0
 if ('-lim_cache' in sys.argv):
-	lim_cache = int(sys.argv[int(sys.argv.index('-lim_cache')+1)])
+	lim_cache = int(sys.argv[sys.argv.index('-lim_cache')+1])
 no_rpi = ('-no_rpi' in sys.argv)
 pup_delay = 5; pdown_delay = 1;
 if ('-pup_delay' in sys.argv):
-    pup_delay = int(sys.argv[int(sys.argv.index('-pup_delay')+1)])
+    pup_delay = int(sys.argv[sys.argv.index('-pup_delay')+1])
 if ('-pdown_delay' in sys.argv):
-    pdown_delay = int(sys.argv[int(sys.argv.index('-pdown_delay')+1)])
+    pdown_delay = int(sys.argv[sys.argv.index('-pdown_delay')+1])
 if (not no_rpi):
 	rpiBegin([12])
 	if (not has_rpi):
