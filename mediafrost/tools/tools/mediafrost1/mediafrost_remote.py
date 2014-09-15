@@ -234,8 +234,11 @@ def fsAmMount(am, dev, checkdir):
 		print 'Warning:', out	
 	if (scan):
 		print 'Scanning (-scan) {}:'.format(mpath), os.listdir(mpath)
+	print 'checking...'
 	if os.path.isdir(checkdir):
+		print 'checked'
 		return True
+	print 'checked'
 	print 'Mounting {} failed due to {}'.format(am.filter.descr, checkdir) 
 	fsAmUnmount(dev)
 	return False
