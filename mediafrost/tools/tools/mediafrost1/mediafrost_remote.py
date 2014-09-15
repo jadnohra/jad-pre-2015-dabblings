@@ -318,7 +318,7 @@ def fsBeginSession():
 				splt = sess_db.replace('\\', '/').split('/')
 				db_file = splt[-1]
 				db_sub = os.path.splitext(db_file)[0]
-				url_base = splt[:-1].join('/')
+				url_base = '/'.join(splt[:-1])
 				db_url = '{}/{}/{}'.format(url_base, db_dub, db_file)
 				test_dir = os.path.join(cache_path, db_sub)
 				test_path = os.path.join(test_dir, db_file)
