@@ -128,7 +128,7 @@ public class FullscreenActivity extends Activity {
 		{
 			getSetting(this, "Server", "192.168.1.4:24107");
 			getSetting(this, "MinFiles", "30");
-			getSetting(this, "MaxFiles", "300");
+			getSetting(this, "MaxFiles", "9999");
 			getSetting(this, "DiscoveryPort", "1600");
 			getSetting(this, "Targets", "vault_lena,vault_jad");
 			getSetting(this, "UseTime", "Yes");

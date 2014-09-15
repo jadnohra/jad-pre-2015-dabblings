@@ -68,6 +68,9 @@ self_db = os.path.join(self_dir, 'mediafrost.db')
 warn = ('-warn' in sys.argv)
 dry = ('-dry' in sys.argv)
 scan = ('-scan' in sys.argv)
+arg_db = None
+if ('-db' in sys.argv):
+	arg_db = int(sys.argv[sys.argv.index('-db')+1])
 no_am = ('-no_am' in sys.argv)
 no_ap = ('-no_ap' in sys.argv)
 perfile = ('-perfile' in sys.argv)
@@ -255,7 +258,23 @@ def fsAmEnd(automounts, status):
 		fsAmUnmount(dev)
 	fsAmPowerDown()
 
-FsSessionInfo = namedtuple('FsSessionInfo', 'fs_targets fs_cache_sources max_cache cache_path')
+def svnParseOk(err):
+	for e in err.splitlines():
+		if (not e.lower().startswith('svn: warning:'))
+			return False
+	return True
+
+def svnGet(url, fpath):
+	proc = subprocess.Popen(['svn', 'checkout', url, fpath], stdout=subprocess.PIPE, stderr=subprocess.PIPE, shell=False)
+	(out, err) = proc.communicate()
+	return svnParseOk(err)
+
+def svnPut(url, fpath):
+	proc = subprocess.Popen(['svn', 'commit', fpath, '-m', "''"], stdout=subprocess.PIPE, stderr=subprocess.PIPE, shell=False)
+	(out, err) = proc.communicate()
+	return svnParseOk(err)
+
+FsSessionInfo = namedtuple('FsSessionInfo', 'fs_targets fs_cache_sources max_cache cache_path db_path db_url')
 def fsBeginSession():
 	global fs_am_status
 	global fs_am_targets
@@ -278,8 +297,33 @@ def fsBeginSession():
 			max_cache = mcache_size; fs_cache_sources = fs_mcache_sources; cache_path = source.dir;
 		else:
 			print 'Could not mount cache.'	
+	
+	#TODO: include db size in cache
+	db_path = None; db_url = None;
+	if (arg_db is not None):
+		if (os.path.isabs(arg_db) and ('http' not in arg_db)):
+			db_path = arg_db
+		else:	
+			db_dir = os.path.join(cache_path, 'db')
+			if (not os.path.isdir(db_dir)):	
+				os.makedirs(db_dir)
+			if ('http' in arg_db):
+				db_url = arg_db
+				db_file = arg_db.replace('\\', '/').split('/')[-1]
+				if (svnGet(arg_db, db_path))
+					db_path = os.path.join(cache_path, arg_db)
+			else:
+				db_path = os.path.join(cache_path, arg_db)
+	else:
+		db_path = self_db
 
-	return FsSessionInfo(fs_targets, fs_cache_sources, max_cache, cache_path)
+	return FsSessionInfo(fs_targets, fs_cache_sources, max_cache, cache_path, db_path, db_url)
+
+def fsSessionCloseDb(sess_info):
+	if (sess_info.db_path is not None) and (sess_info.db_url is not None):
+		return svnPut(sess_info.db_url, sess_info.db_path) 
+	else:
+		return True
 
 def fsEndSession():
 	global fs_am_status
@@ -481,12 +525,14 @@ while 1:
 
 	fs_session_info = fsBeginSession()
 
-	if (fs_session_info.max_cache == 0):
-		serving = False
-		conn.close()	
-
 	print 'Session targets:', [t.dir for t in fs_session_info.fs_targets]
-	print 'Session cache', fs_session_info.cache_path	
+	print 'Session cache: {} ({})'.format(fs_session_info.cache_path, niceBytes(fs_session_info.max_cache))	
+	print 'Session db:', fs_session_info.db_path
+
+	if (fs_session_info.max_cache == 0) or (fs_session_info.db_path == None):
+		print 'Invalid session'
+		serving = False
+		conn.close()
 
 	#conn.sendall('/info:{}'.format(self_cache_size))
 	while serving:
@@ -675,6 +721,7 @@ while 1:
 	
 				try:
 					success = frost.bkpBackupFs(session, fs_session_info.fs_cache_sources, targets, nfi_dict)
+					success = success and fsSessionCloseDb(fs_session_info)
 				except:
 					print traceback.format_exc()
 					success = False
