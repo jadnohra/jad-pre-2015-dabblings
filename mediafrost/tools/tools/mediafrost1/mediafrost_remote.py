@@ -176,9 +176,7 @@ def fsAmScan(silent=False):
 	if (not os.path.isdir(self_mount)):
 		os.makedirs(self_mount)
 	cands = {}
-	print 'ls uuid...'
 	out = subprocess.Popen(['ls', '-laF', '/dev/disk/by-uuid/'], stdout=subprocess.PIPE).stdout.read()
-	print 'done'
 	for line in iter(out.splitlines()):
 		data = line.split()
 		if ((len(data)>3) and (data[-2] == '->') and ('/sd' in data[-1])):
@@ -215,9 +213,7 @@ def fsAmPowerDown():
 	rpiSetGpio(12, False)
 
 def fsAmUnmount(dev, ignore=False):
-	print 'unmounting...'
 	out = subprocess.Popen(['sudo', 'umount', dev], stderr=subprocess.PIPE).stderr.read()
-	print 'unmounted'
 	if ((not ignore) and (len(out))):
 		print 'Warning:', out
 
@@ -227,18 +223,13 @@ def fsAmMount(am, dev, checkdir):
 	mpath = os.path.join(self_mount, am.local_path)
 	if (not os.path.isdir(mpath)):
 		os.makedirs(mpath)
-	print 'mounting ...'	
-	out = subprocess.Popen(['sudo', 'mount', '-o', 'uid=pi,gid=pi', dev, mpath], stderr=subprocess.PIPE).stderr.read()
-	print 'mounted'
+	out = subprocess.Popen(['sudo', 'mount', '-o', 'uid=pi,gid=pi', dev, mpath], stderr=subprocess.PIPE).stderr.read()	
 	if (len(out)):
 		print 'Warning:', out	
 	if (scan):
 		print 'Scanning (-scan) {}:'.format(mpath), os.listdir(mpath)
-	print 'checking...'
 	if os.path.isdir(checkdir):
-		print 'checked'
 		return True
-	print 'checked'
 	print 'Mounting {} failed due to {}'.format(am.filter.descr, checkdir) 
 	fsAmUnmount(dev)
 	return False
@@ -273,31 +264,27 @@ def svnParseOk(err):
 			return False
 	return True
 
-def svnGet(url, fpath):
-	print 'svnget'
+def svnGet(url, fpath, silent=False):
+	if (not silent):
+		print 'svn getting {} {} ...'.format(url, fpath)
 	(out, err) = subprocess.Popen(['svn', 'checkout', url, fpath], stdout=subprocess.PIPE, stderr=subprocess.PIPE, shell=False).communicate()
 	print out, err
 	return svnParseOk(err)
 
 def svnPut(url, fpath):
-	print 'svnput'
+	print 'svn putting {} {} ...'.format(url, fpath)
 	(out, err) = subprocess.Popen(['svn', 'commit', fpath, '-m', "''"], stdout=subprocess.PIPE, stderr=subprocess.PIPE, shell=False).communicate()
-	print out,err
 	return svnParseOk(err)
 
 def svnCreate(url, fpath):
-	print 'scnvreate'
+	print 'svn creating {} {} ...'.format(url, fpath)
 	if (not os.path.isfile(fpath)):
 		with open(fpath, 'a'):
 			os.utime(fpath, None)
-	print 'c2'		
-	#subprocess.Popen(['svn', 'import', fpath, url])
-
 	(out, err) = subprocess.Popen(['svn', 'import', fpath, url, '-m', "''"], stdout=subprocess.PIPE, stderr=subprocess.PIPE, shell=False).communicate()
-	print out,err
 	if svnParseOk(err):
 		os.remove(fpath)
-		return svnGet(url, fpath)
+		return svnGet(url, fpath, True)
 	else:
 		return False
 
@@ -310,10 +297,8 @@ def fsBeginSession():
 	global fs_lcache_sources
 	global lcache_size
 	fs_am_status = fsAmBegin(fs_ams)
-	print 'x1'
 	fs_am_targets = frost.fsFilterMounts(fs_mounts, fs_am_filters, warn, True)
 	fs_targets = fs_manual_targets + fs_am_targets
-	print 'x2'
 	max_cache = 0; fs_cache_sources = None; cache_path = None;
 	if (local_cache):
 		 max_cache = lcache_size; fs_cache_sources = fs_lcache_sources; cache_path = self_lcache; 
@@ -325,7 +310,6 @@ def fsBeginSession():
 			max_cache = mcache_size; fs_cache_sources = fs_mcache_sources; cache_path = source.dir;
 		else:
 			print 'Could not mount cache.'	
-	print 'x3'
 	#TODO: include db size in cache
 	db_path = None; db_url = None;
 	sess_db = arg_db
