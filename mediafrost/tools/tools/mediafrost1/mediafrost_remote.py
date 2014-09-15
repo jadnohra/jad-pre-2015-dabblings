@@ -322,7 +322,7 @@ def fsBeginSession():
 				db_url = '{}/{}/{}'.format(url_base, db_dub, db_file)
 				test_dir = os.path.join(cache_path, db_sub)
 				test_path = os.path.join(test_dir, db_file)
-				if (os.path.isdir(test_dir)) and svnGet(db_url, test_dir)):
+				if (os.path.isdir(test_dir) and svnGet(db_url, test_dir)):
 					db_path = test_path
 				elif (db_add):
 					if (not os.path.isdir(test_dir)):	
