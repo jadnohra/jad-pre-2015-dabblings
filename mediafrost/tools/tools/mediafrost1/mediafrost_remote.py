@@ -274,18 +274,24 @@ def svnParseOk(err):
 	return True
 
 def svnGet(url, fpath):
+	print 'svnget'
 	(out, err) = subprocess.Popen(['svn', 'checkout', url, fpath], stdout=subprocess.PIPE, stderr=subprocess.PIPE, shell=False).communicate()
+	print out, err
 	return svnParseOk(err)
 
 def svnPut(url, fpath):
+	print 'svnput'
 	(out, err) = subprocess.Popen(['svn', 'commit', fpath, '-m', "''"], stdout=subprocess.PIPE, stderr=subprocess.PIPE, shell=False).communicate()
+	print out,err
 	return svnParseOk(err)
 
 def svnCreate(url, fpath):
+	print 'scnvreate'
 	if (not os.path.isfile(fpath)):
 		with open(fpath, 'a'):
 			os.utime(fpath, None)
 	(out, err) = subprocess.Popen(['svn', 'import', fpath, url], stdout=subprocess.PIPE, stderr=subprocess.PIPE, shell=False).communicate()
+	print out,err
 	if svnParseOk(err):
 		os.remove(fpath)
 		return svnGet(url, fpath)
@@ -301,9 +307,10 @@ def fsBeginSession():
 	global fs_lcache_sources
 	global lcache_size
 	fs_am_status = fsAmBegin(fs_ams)
+	print 'x1'
 	fs_am_targets = frost.fsFilterMounts(fs_mounts, fs_am_filters, warn, True)
 	fs_targets = fs_manual_targets + fs_am_targets
-
+	print 'x2'
 	max_cache = 0; fs_cache_sources = None; cache_path = None;
 	if (local_cache):
 		 max_cache = lcache_size; fs_cache_sources = fs_lcache_sources; cache_path = self_lcache; 
@@ -315,7 +322,7 @@ def fsBeginSession():
 			max_cache = mcache_size; fs_cache_sources = fs_mcache_sources; cache_path = source.dir;
 		else:
 			print 'Could not mount cache.'	
-	
+	print 'x3'
 	#TODO: include db size in cache
 	db_path = None; db_url = None;
 	sess_db = arg_db
@@ -337,7 +344,7 @@ def fsBeginSession():
 						db_path = test_path
 			else:
 				db_path = os.path.join(cache_path, sess_db)
-
+	print 'x4'
 	return FsSessionInfo(fs_targets, fs_cache_sources, max_cache, cache_path, db_path, db_url)
 
 def fsSessionCloseDb(sess_info):
