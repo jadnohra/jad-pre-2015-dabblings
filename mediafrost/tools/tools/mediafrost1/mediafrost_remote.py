@@ -25,7 +25,7 @@ def rpiBegin(pins):
 		import RPi.GPIO as gpio
 		gpio.setmode(gpio.BOARD)
 		gpio.setwarnings(False)
-		print 'Detected Raspberri GPIO.',
+		print 'Detected Raspberri GPIO. pins: ',
 		for p in pins:
 			gpio.setup(p, gpio.OUT)
 			print '{}={},'.format(p, gpio.input(p)),
@@ -60,8 +60,7 @@ def rpiGetGpio(pin):
 
 self_path = os.path.realpath(__file__)
 self_dir = os.path.dirname(self_path)
-self_cache = os.path.join(self_dir, 'cache')
-self_cache_size = 0
+self_lcache = os.path.join(self_dir, 'lcache')
 self_mount = os.path.join(self_dir, 'mount')
 self_test_out = os.path.join(self_dir, 'test_out')
 self_db = os.path.join(self_dir, 'mediafrost.db')
@@ -75,6 +74,7 @@ perfile = ('-perfile' in sys.argv)
 dbg = ('-dbg' in sys.argv)
 dbg2 =('-dbg2' in sys.argv)
 dbg3 = ('-dbg3' in sys.argv)
+local_cache = ('-local_cache' in sys.argv)
 lim_cache = 0
 if ('-lim_cache' in sys.argv):
 	lim_cache = int(sys.argv[int(sys.argv.index('-lim_cache')+1)])
@@ -90,37 +90,29 @@ if (not no_rpi):
 		print 'Failed to connected to RaspberryPi.'
 		exit(0)	
 
-def reset_cache():
-	global self_cache
-	global self_cache_size
-	global lim_cache
-	if (os.path.isdir(self_cache)):
-		shutil.rmtree(self_cache)
-	os.makedirs(self_cache)
-	statvfs = os.statvfs(self_cache)
-	self_cache_size = statvfs.f_frsize*statvfs.f_bavail
-	self_cache_size = self_cache_size-1024*1024*128
-	if (lim_cache):
-		if self_cache_size > lim_cache:
-			self_cache_size = lim_cache
+def resetCache(path, limit, minimum=1024*1024*256, unused=1024*1024*32):
+	if (os.path.isdir(path)):
+		shutil.rmtree(path)
+	os.makedirs(path)
+	statvfs = os.statvfs(path)
+	cache_size = statvfs.f_frsize*statvfs.f_bavail
+	cache_size = cache_size-unused
+	if (limit):
+		if cache_size > limit:
+			cache_size = limit
 		else:
-			self_cache_size = 0
+			cache_size = 0
 	else:
-		if self_cache_size <= 1024*1024*256:
-			self_cache_size = 0
-	return (self_cache_size > 0)
+		if (cache_size <= minimum):
+			cache_size = 0
+	return cache_size
 
-def nice_bytes(bytes):
-	a = ['bytes', 'KB.', 'MB.', 'GB.']
+def niceBytes(bytes):
+	a = ['bytes', 'KB', 'MB', 'GB']
 	r = float(bytes); i = 0; 
 	while (i<len(a) and  (r/1024.0 > 1.0)):	
 		r = r / 1024.0; i=i+1;
 	return '{:.2f} {}'.format(r, a[i])
-
-reset_cache()
-print '{} of disk cache available.'.format(nice_bytes(self_cache_size))
-if self_cache_size <= 0:
-	exit(0)
 
 if ('-test_out' in sys.argv) or ('-ctest_out' in sys.argv):
 	if (os.path.isdir(self_test_out) and ('-ctest_out' in sys.argv)):
@@ -131,19 +123,47 @@ if ('-test_out' in sys.argv) or ('-ctest_out' in sys.argv):
 else:
 	fs_target_filters = []
 
+fs_mounts = frost.fsFindMounts()
+if dbg3:
+    print 'fs_mounts:', fs_mounts
+
+fs_lcache_filters = [ frost.FsMountPointFilter(True, 'fs_lcache', 'fs_lcache','fs_lcache', '/dev/root', '0', self_lcache) ]
+fs_mcache_filters = [ frost.FsMountPointFilter(True, 'fs_mcache', 'fs_mcache','fs_mcache', '/dev/root', '0', os.path.join(self_mount,'mcache/mediafrost/mcache')) ]
+fs_cache_sources = None
+fs_lcache_sources = None
+
+if (local_cache):
+	fs_lcache_sources = frost.fsFilterMounts(fs_mounts, fs_lcache_filters, True, True)
+	lcache_size = resetCache(self_lcache, lim_cache)
+	print '{} of local cache available.'.format(niceBytes(lcache_size))
+	if (lcache_size <= 0):
+		exit(0)
+else:
+	print 'Will use mounted cache.'
+
+fs_am_filters = [
+				frost.FsMountPointFilter(True, 'fs_back1', 'Vault_Jad','Vault_Jad', '/dev/root', '1000', os.path.join(self_mount,'vault_jad/Vault/mediafrost')),
+				frost.FsMountPointFilter(True, 'fs_back2', 'Vault_Lena','Vault_Lena', '/dev/root', '1000', os.path.join(self_mount,'vault_lena/Vault/mediafrost')),
+             ]
 FsAutoMount = namedtuple('FsAutoMount', 'filter uuid local_path')
-fs_am_filters = 	[
-                    	frost.FsMountPointFilter(True, 'fs_back1', 'Vault_Jad','Vault_Jad', '/dev/root', '1000', os.path.join(self_mount,'vault_jad/Vault/mediafrost')),
-                    	frost.FsMountPointFilter(True, 'fs_back2', 'Vault_Lena','Vault_Lena', '/dev/root', '1000', os.path.join(self_mount,'vault_lena/Vault/mediafrost')),
-                	]
 fs_ams = [
-			FsAutoMount(fs_am_filters[0], '150B-2565', 'vault_jad'),
-			FsAutoMount(fs_am_filters[1], '1101-1163', 'vault_lena'),
-		] 
+            FsAutoMount(fs_am_filters[0], '150B-2565', 'vault_jad'),
+            FsAutoMount(fs_am_filters[1], '1101-1163', 'vault_lena'),
+            FsAutoMount(fs_mcache_filters[0], '60CD-BC6D', 'mcache'),
+        ]
 if (no_am):
-	fs_am_filters = []; fs_ams = [];
+    fs_am_filters = []; fs_ams = [];
 fs_am_status = {}
 fs_am_targets = []
+
+
+fs_manual_targets = frost.fsFilterMounts(fs_mounts, fs_target_filters, warn, True)
+if dbg3:
+    print 'fs_manual_targets:', fs_manual_targets
+use_ui = ('-ui' in sys.argv)
+if use_ui:
+    frost.bkpUiChooseStoragePoints([], fs_manual_targets)
+
 
 def fsAmScan(silent=False):
 	#lsusb
@@ -194,6 +214,7 @@ def fsAmUnmount(dev, ignore=False):
 		print 'Warning:', out
 
 def fsAmMount(am, dev, checkdir):
+	global scan
 	fsAmUnmount(dev, True)
 	mpath = os.path.join(self_mount, am.local_path)
 	if (not os.path.isdir(mpath)):
@@ -201,6 +222,8 @@ def fsAmMount(am, dev, checkdir):
 	out = subprocess.Popen(['sudo', 'mount', '-o', 'uid=pi,gid=pi', dev, mpath], stderr=subprocess.PIPE).stderr.read()
 	if (len(out)):
 		print 'Warning:', out	
+	if (scan):
+		print 'Scanning (-scan) {}:'.format(mpath), os.listdir(mpath)
 	if os.path.isdir(checkdir):
 		return True
 	print 'Mounting {} failed due to {}'.format(am.filter.descr, checkdir) 
@@ -231,33 +254,36 @@ def fsAmEnd(automounts, status):
 		fsAmUnmount(dev)
 	fsAmPowerDown()
 
+FsSessionInfo = namedtuple('FsSessionInfo', 'fs_targets fs_cache_sources max_cache cache_path')
 def fsBeginSession():
 	global fs_am_status
 	global fs_am_targets
 	global fs_manual_targets
+	global local_cache
+	global fs_lcache_sources
+	global lcache_size
 	fs_am_status = fsAmBegin(fs_ams)
-	fs_am_targets = frost.fsFilterMounts(fs_mounts, fs_am_filters, warn)
+	fs_am_targets = frost.fsFilterMounts(fs_mounts, fs_am_filters, warn, True)
 	fs_targets = fs_manual_targets + fs_am_targets
-	return fs_targets
+
+	max_cache = 0; fs_cache_sources = None; cache_path = None;
+	if (local_cache):
+		 max_cache = lcache_size; fs_cache_sources = fs_lcache_sources; cache_path = self_lcache; 
+	else:
+		fs_mcache_sources = frost.fsFilterMounts(fs_mounts, fs_mcache_filters, True, True)
+		if (len(fs_mcache_sources) > 0):
+			source = fs_mcache_sources[0]
+			mcache_size = resetCache(source.dir, lim_cache)
+			max_cache = mcache_size; fs_cache_sources = fs_mcache_sources; cache_path = source.dir;
+		else:
+			print 'Could not mount cache.'	
+
+	return FsSessionInfo(fs_targets, fs_cache_sources, max_cache, cache_path)
 
 def fsEndSession():
 	global fs_am_status
 	fsAmEnd(fs_ams, fs_am_status)
 	fs_am_status = {}
-
-fs_mounts = frost.fsFindMounts()
-if dbg3:
-	print 'fs_mounts:', fs_mounts
-fs_manual_targets = frost.fsFilterMounts(fs_mounts, fs_target_filters, warn)
-if dbg3:
-	print 'fs_manual_targets:', fs_manual_targets	
-use_ui = ('-ui' in sys.argv)
-if use_ui:
-	frost.bkpUiChooseStoragePoints([], fs_manual_targets)
-
-fs_cache_filters = [ frost.FsMountPointFilter(True, 'fs_cache', 'fs_cache','fs_cache', '/dev/root', '0', self_cache) ]
-fs_cache_sources = frost.fsFilterMounts(fs_mounts, fs_cache_filters, True)
-
 
 def Linux_ipAddresses():
 	ret = []
@@ -314,12 +340,12 @@ if (dry):
 	if (scan):
 		am_scan = fsAmScan()
 		print 'Scanned (-scan): ', am_scan
-	fs_targets = fsBeginSession()
-	print 'Automounted (-dry):', [t.dir for t in fs_targets]
+	fs_session_info = fsBeginSession()
+	print 'Automounted (-dry):', [t.dir for t in fs_session_info.fs_targets], ', cache: {} ({})'.format(fs_session_info.cache_path, niceBytes(fs_session_info.max_cache))
 	fsEndSession()
 	exit(0)
 else:
-	print 'Test', fsAmScan()
+	print 'Test Scanning Automounts...', fsAmScan(True)
 
 def sockBind(sock, address, port, tries):
 	for i in range(tries):
@@ -418,10 +444,15 @@ def recvProcessWriteFile(fileOut):
 
 session_count = 0
 while 1:
+	
+	lcache_size = 0
 	fsEndSession()
-	if (not reset_cache()):
-		print 'Not enough disk cache space to continue.'
-		exit(0)		
+	if (local_cache):
+		lcache_size = resetCache(self_lcache, lim_cache)
+		if (lcache_size <= 0):
+			print 'Not enough local cache space to continue.'
+			exit(0)		
+
 	sys.stdout.write('Listening on {}:{} ...\n'.format(address, port))
 	sock.setblocking(1)
 	conn, addr = sock.accept()
@@ -446,10 +477,15 @@ while 1:
 	session_fi_lists = []
 	session_request_fid = {}
 	session_count = session_count + 1
-	session_max_cache = self_cache_size
 
-	session_fs_targets = fsBeginSession()
-	print 'Session targets:', [t.dir for t in session_fs_targets]
+	fs_session_info = fsBeginSession()
+
+	if (fs_session_info.max_cache == 0):
+		serving = False
+		conn.close()	
+
+	print 'Session targets:', [t.dir for t in fs_session_info.fs_targets]
+	print 'Session cache', fs_session_info.cache_path	
 
 	#conn.sendall('/info:{}'.format(self_cache_size))
 	while serving:
@@ -488,7 +524,7 @@ while 1:
 						for t in req_targets:
 							tl = t.lower()
 							found = None
-							for ct in session_fs_targets:
+							for ct in fs_session_info.fs_targets:
 								if (ct.filter.id.lower() == tl) or (ct.filter.descr.lower() == tl):
 									found = ct; break;
 							if (found is None):
@@ -537,7 +573,7 @@ while 1:
 	
 
 				session_name = 'mediafrost_remote_{}'.format(session_count)
-				targets = session_fs_targets
+				targets = fs_session_info.fs_targets
 				no_db = ('-no_db' in sys.argv)
 				if (not no_db):
 					bootstrap = ('-bootstrap' in sys.argv)
@@ -566,11 +602,11 @@ while 1:
 						file_exists = frost.bkpExistsFileId(session, fid, tbl)
 						if (not file_exists):
 							session_needed_cache = session_needed_cache + fsize	
-							reject = (session_max_cache > 0 and session_needed_cache > session_max_cache)
+							reject = (session_needed_cache > fs_session_info.max_cache)
 							if (reject):
 								rel = '-(rejected)->'
 							else:	
-								fpath = os.path.join(self_cache, funame)
+								fpath = os.path.join(fs_session_info.cache_path, funame)
 								session_request_fid[fid] = fpath
 								fi_list.append(frost.NewFileInfo(fpath, fid, 0))
 								rel = '--->'
@@ -630,14 +666,14 @@ while 1:
 				print 'Backing up...'	
 				conn_buf = conn_buf[len(cmd_fdataend):]
 	
-				targets = session_fs_targets
-				source = fs_cache_sources[0]
+				targets = session_fs_info.fs_targets
+				source = session_fs_info.cache_sources[0]
 				nfi_dict = {}
 				for target,list in zip(targets, session_fi_lists):
 					nfi_dict[(source, target)] = list
 	
 				try:
-					success = frost.bkpBackupFs(session, fs_cache_sources, targets, nfi_dict)
+					success = frost.bkpBackupFs(session, session_fs_info.cache_sources, targets, nfi_dict)
 				except:
 					print traceback.format_exc()
 					success = False

@@ -88,7 +88,7 @@ def fsFindMounts():
 		return Linux_fsFindMounts()
 	return None	
 
-def fsFilterMounts(mounts, filters, warn):
+def fsFilterMounts(mounts, filters, warn, silent=False):
 	print 'Filtering file system mounts...'
 
 	ret = []
