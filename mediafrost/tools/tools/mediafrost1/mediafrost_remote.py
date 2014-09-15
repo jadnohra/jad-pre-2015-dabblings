@@ -406,9 +406,7 @@ if (dry):
 		am_scan = fsAmScan()
 		print 'Scanned (-scan): ', am_scan
 	fs_session_info = fsBeginSession()
-	print 'Automounted (-dry):', [t.dir for t in fs_session_info.fs_targets], 
-		', cache: {} ({})'.format(fs_session_info.cache_path, niceBytes(fs_session_info.max_cache)), 
-		', db: {} {})'.format(fs_session_info.db_path, fs_session_info.db_url) 
+	print 'Automounted (-dry):', [t.dir for t in fs_session_info.fs_targets], ', cache: {} ({})'.format(fs_session_info.cache_path, niceBytes(fs_session_info.max_cache)), ', db: {} {})'.format(fs_session_info.db_path, fs_session_info.db_url) 
 	fsEndSession()
 	exit(0)
 else:
