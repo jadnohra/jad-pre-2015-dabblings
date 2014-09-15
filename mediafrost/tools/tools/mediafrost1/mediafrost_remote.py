@@ -12,8 +12,10 @@ from sets import Set
 from collections import namedtuple
 import mediafrost as frost
 
+gpio = None
 has_rpi = False
 def rpiBegin(pins):
+	global gpio
 	global has_rpi
 	global rpi_status
 	if (has_rpi):
@@ -23,10 +25,12 @@ def rpiBegin(pins):
 		import RPi.GPIO as gpio
 		gpio.setmode(gpio.BOARD)
 		gpio.setwarnings(False)
+		print 'Detected Raspberri GPIO.',
 		for p in pins:
 			gpio.setup(p, gpio.OUT)
+			print '{}={},'.format(p, gpio.input(p)),
+		print ''
 		has_rpi = True
-		print 'Detected Raspberri GPIO.'
 	except RuntimeError:
 		has_gpio = False
 		str = traceback.format_exc()
@@ -48,6 +52,12 @@ def rpiSetGpio(pin, high):
 		return
 	gpio.output(pin, high)	
 
+def rpiGetGpio(pin):
+    global has_rpi
+    if (not has_rpi):
+        return
+    return (gpio.input(pin) == gpio.HIGH)
+
 self_path = os.path.realpath(__file__)
 self_dir = os.path.dirname(self_path)
 self_cache = os.path.join(self_dir, 'cache')
@@ -60,6 +70,7 @@ warn = ('-warn' in sys.argv)
 dry = ('-dry' in sys.argv)
 scan = ('-scan' in sys.argv)
 no_am = ('-no_am' in sys.argv)
+no_ap = ('-no_ap' in sys.argv)
 perfile = ('-perfile' in sys.argv)
 dbg = ('-dbg' in sys.argv)
 dbg2 =('-dbg2' in sys.argv)
@@ -68,7 +79,11 @@ lim_cache = 0
 if ('-lim_cache' in sys.argv):
 	lim_cache = int(sys.argv[int(sys.argv.index('-lim_cache')+1)])
 no_rpi = ('no_rpi' in sys.argv)
-
+pup_delay = 5; pdown_delay = 1;
+if ('-pup_delay' in sys.argv):
+    pup_delay = int(sys.argv[int(sys.argv.index('-pup_delay')+1)])
+if ('-pdown_delay' in sys.argv):
+    pdown_delay = int(sys.argv[int(sys.argv.index('-pdown_delay')+1)])
 if (not no_rpi):
 	rpiBegin([12])
 	if (not has_rpi):
@@ -130,9 +145,10 @@ if (no_am):
 fs_am_status = {}
 fs_am_targets = []
 
-def fsAmScan():
+def fsAmScan(silent=False):
 	#lsusb
-	print 'Scanning auto-mounts...'	 
+	if (not silent):
+		print 'Scanning auto-mounts...'	 
 	if (not os.path.isdir(self_mount)):
 		os.makedirs(self_mount)
 	cands = {}
@@ -143,11 +159,34 @@ def fsAmScan():
 			cands[data[-3]] = '/dev/' + data[-1].split('/')[-1]
 	return cands	
 
-def fsAmPowerUp():
-	return 0
+def fsAmPowerUp(earlyOutCallback=None, callbackArgs=None):
+	if (no_ap):
+		return
+	if ((not has_rpi) or rpiGetGpio(12)):
+		return
+	print 'Powering up...',
+	rpiSetGpio(12, True)
+	for i in range(pup_delay):
+		if (earlyOutCallback and earlyOutCallback(callbackArgs)):
+			print '(callback hit)',
+			break
+		print pup_delay-i,'',
+		sys.stdout.flush()
+		time.sleep(1)
+	print ''	
 
 def fsAmPowerDown():
-	return 0
+	if (no_ap):
+		return
+	if ((not has_rpi) or (not rpiGetGpio(12))):
+		return
+	print 'Powering down...',
+	for i in range(pdown_delay):
+		print pdown_delay-i,'',
+		sys.stdout.flush()
+		time.sleep(1)
+	print ''
+	rpiSetGpio(12, False)
 
 def fsAmUnmount(dev, ignore=False):
 	out = subprocess.Popen(['sudo', 'umount', dev], stderr=subprocess.PIPE).stderr.read()
@@ -168,12 +207,20 @@ def fsAmMount(am, dev, checkdir):
 	fsAmUnmount(dev)
 	return False
 
+def fsAmPowerupCallback(args):
+	automounts = args
+	cands = fsAmScan(True)
+	for am in automounts:
+		if (am.filter.enabled and (not am.uuid in cands)):
+			return False
+	return True
+
 def fsAmBegin(automounts):
-	fsAmPowerUp()
+	fsAmPowerUp(fsAmPowerupCallback, automounts)
 	cands = fsAmScan()
 	status = {}
 	for am in automounts:
-		if (am.uuid in cands):
+		if (am.filter.enabled and (am.uuid in cands)):
 			dev = cands[am.uuid]
 			if (fsAmMount(am, dev, am.filter.dir)):
 				status[am.uuid] = dev
