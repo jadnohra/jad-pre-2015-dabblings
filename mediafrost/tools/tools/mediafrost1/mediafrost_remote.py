@@ -320,12 +320,13 @@ def fsBeginSession():
 				db_file = splt[-1]
 				db_sub = os.path.splitext(db_file)[0]
 				url_base = '/'.join(splt[:-1])
-				db_url = '{}/{}/{}'.format(url_base, db_sub, db_file)
+				url_dir =  '{}/{}'.format(url_base, db_sub)
+				db_url = '{}/{}'.format(url_dir, db_file)
 				test_dir = os.path.join(cache_path, db_sub)
 				test_path = os.path.join(test_dir, db_file)
 				if (not os.path.isdir(test_dir)):	
 					os.makedirs(test_dir)
-				if (os.path.isdir(test_dir) and svnGet(db_url, test_dir)):
+				if (os.path.isdir(test_dir) and svnGet(url_dir, test_dir)):
 					db_path = test_path
 				elif (db_add):
 					if (not os.path.isfile(test_path)):
