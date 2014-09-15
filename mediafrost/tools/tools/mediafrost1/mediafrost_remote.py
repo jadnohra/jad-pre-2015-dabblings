@@ -81,7 +81,7 @@ local_cache = ('-local_cache' in sys.argv)
 lim_cache = 0
 if ('-lim_cache' in sys.argv):
 	lim_cache = int(sys.argv[int(sys.argv.index('-lim_cache')+1)])
-no_rpi = ('no_rpi' in sys.argv)
+no_rpi = ('-no_rpi' in sys.argv)
 pup_delay = 5; pdown_delay = 1;
 if ('-pup_delay' in sys.argv):
     pup_delay = int(sys.argv[int(sys.argv.index('-pup_delay')+1)])
