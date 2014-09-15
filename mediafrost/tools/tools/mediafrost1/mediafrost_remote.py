@@ -268,7 +268,6 @@ def svnGet(url, fpath, silent=False):
 	if (not silent):
 		print 'svn getting {} {} ...'.format(url, fpath)
 	(out, err) = subprocess.Popen(['svn', 'checkout', url, fpath], stdout=subprocess.PIPE, stderr=subprocess.PIPE, shell=False).communicate()
-	print out, err
 	return svnParseOk(err)
 
 def svnPut(url, fpath):
