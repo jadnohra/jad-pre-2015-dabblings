@@ -63,7 +63,6 @@ self_dir = os.path.dirname(self_path)
 self_lcache = os.path.join(self_dir, 'lcache')
 self_mount = os.path.join(self_dir, 'mount')
 self_test_out = os.path.join(self_dir, 'test_out')
-self_db = os.path.join(self_dir, 'mediafrost.db')
 
 warn = ('-warn' in sys.argv)
 dry = ('-dry' in sys.argv)
@@ -71,6 +70,7 @@ scan = ('-scan' in sys.argv)
 arg_db = None
 if ('-db' in sys.argv):
 	arg_db = int(sys.argv[sys.argv.index('-db')+1])
+add_db = ('-add_db' in sys.argv)	
 no_am = ('-no_am' in sys.argv)
 no_ap = ('-no_ap' in sys.argv)
 perfile = ('-perfile' in sys.argv)
@@ -265,14 +265,23 @@ def svnParseOk(err):
 	return True
 
 def svnGet(url, fpath):
-	proc = subprocess.Popen(['svn', 'checkout', url, fpath], stdout=subprocess.PIPE, stderr=subprocess.PIPE, shell=False)
-	(out, err) = proc.communicate()
+	(out, err) = subprocess.Popen(['svn', 'checkout', url, fpath], stdout=subprocess.PIPE, stderr=subprocess.PIPE, shell=False).communicate()
 	return svnParseOk(err)
 
 def svnPut(url, fpath):
-	proc = subprocess.Popen(['svn', 'commit', fpath, '-m', "''"], stdout=subprocess.PIPE, stderr=subprocess.PIPE, shell=False)
-	(out, err) = proc.communicate()
+	(out, err) = subprocess.Popen(['svn', 'commit', fpath, '-m', "''"], stdout=subprocess.PIPE, stderr=subprocess.PIPE, shell=False).communicate()
 	return svnParseOk(err)
+
+def svnCreate(url, fpath):
+	if (not os.path.isfile(fpath)):
+		with open(fpath, 'a'):
+			os.utime(fname, None)
+	(out, err) = subprocess.Popen(['svn', 'import', fpath, url], stdout=subprocess.PIPE, stderr=subprocess.PIPE, shell=False).communicate()
+	if svnParseOk(err):
+		os.remove(fpath)
+		return svnGet(url, fpath)
+	else:
+		return False
 
 FsSessionInfo = namedtuple('FsSessionInfo', 'fs_targets fs_cache_sources max_cache cache_path db_path db_url')
 def fsBeginSession():
@@ -300,22 +309,24 @@ def fsBeginSession():
 	
 	#TODO: include db size in cache
 	db_path = None; db_url = None;
-	if (arg_db is not None):
-		if (os.path.isabs(arg_db) and ('http' not in arg_db)):
-			db_path = arg_db
+	sess_db = arg_db
+	if (sess_db is not None):
+		if (os.path.isabs(sess_db) and ('http' not in arg_db)):
+			db_path = sess_db
 		else:	
 			db_dir = os.path.join(cache_path, 'db')
 			if (not os.path.isdir(db_dir)):	
 				os.makedirs(db_dir)
-			if ('http' in arg_db):
-				db_url = arg_db
-				db_file = arg_db.replace('\\', '/').split('/')[-1]
-				if (svnGet(arg_db, db_path))
-					db_path = os.path.join(cache_path, arg_db)
+			if ('http' in sess_db):
+				db_url = sess_db
+				db_file = sess_db.replace('\\', '/').split('/')[-1]
+				if (svnGet(sess_db, db_path)):
+					db_path = os.path.join(cache_path, db_file)
+				elif (db_add):
+					if (svnCreate(sess_db, db_path)):
+						db_path = os.path.join(cache_path, db_file)
 			else:
-				db_path = os.path.join(cache_path, arg_db)
-	else:
-		db_path = self_db
+				db_path = os.path.join(cache_path, sess_db)
 
 	return FsSessionInfo(fs_targets, fs_cache_sources, max_cache, cache_path, db_path, db_url)
 
