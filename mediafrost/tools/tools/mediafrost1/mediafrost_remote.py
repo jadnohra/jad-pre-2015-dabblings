@@ -645,10 +645,8 @@ while 1:
 				no_db = ('-no_db' in sys.argv)
 				if (not no_db):
 					bootstrap = ('-bootstrap' in sys.argv)
-					dbPath = self_db
-					if ('-db' in sys.argv):
-						dbPath = sys.argv[sys.argv.index('-db')+1]
-					if (not os.path.isfile(dbPath)):
+					dbPath = fs_session_info.db_path
+					if (os.path.getsize(dbPath) <= 8)
 						bootstrap = True
 					session = frost.bkpStartSession(dbPath, bootstrap, session_name)
 				else:
