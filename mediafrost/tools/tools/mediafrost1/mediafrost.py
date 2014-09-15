@@ -89,7 +89,8 @@ def fsFindMounts():
 	return None	
 
 def fsFilterMounts(mounts, filters, warn, silent=False):
-	print 'Filtering file system mounts...'
+	if (not silent):
+		print 'Filtering file system mounts...'
 
 	ret = []
 	for i in range(len(filters)):

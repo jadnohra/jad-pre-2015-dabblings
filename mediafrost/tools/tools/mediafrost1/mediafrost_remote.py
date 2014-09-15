@@ -88,7 +88,8 @@ if (not no_rpi):
 	rpiBegin([12])
 	if (not has_rpi):
 		print 'Failed to connected to RaspberryPi.'
-		exit(0)	
+		exit(0)
+	
 
 def resetCache(path, limit, minimum=1024*1024*256, unused=1024*1024*32):
 	if (os.path.isdir(path)):
@@ -666,14 +667,14 @@ while 1:
 				print 'Backing up...'	
 				conn_buf = conn_buf[len(cmd_fdataend):]
 	
-				targets = session_fs_info.fs_targets
-				source = session_fs_info.cache_sources[0]
+				targets = fs_session_info.fs_targets
+				source = fs_session_info.fs_cache_sources[0]
 				nfi_dict = {}
 				for target,list in zip(targets, session_fi_lists):
 					nfi_dict[(source, target)] = list
 	
 				try:
-					success = frost.bkpBackupFs(session, session_fs_info.cache_sources, targets, nfi_dict)
+					success = frost.bkpBackupFs(session, fs_session_info.fs_cache_sources, targets, nfi_dict)
 				except:
 					print traceback.format_exc()
 					success = False
