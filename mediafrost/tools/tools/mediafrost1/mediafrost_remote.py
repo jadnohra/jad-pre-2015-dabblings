@@ -275,7 +275,7 @@ def svnPut(url, fpath):
 def svnCreate(url, fpath):
 	if (not os.path.isfile(fpath)):
 		with open(fpath, 'a'):
-			os.utime(fname, None)
+			os.utime(fpath, None)
 	(out, err) = subprocess.Popen(['svn', 'import', fpath, url], stdout=subprocess.PIPE, stderr=subprocess.PIPE, shell=False).communicate()
 	if svnParseOk(err):
 		os.remove(fpath)
