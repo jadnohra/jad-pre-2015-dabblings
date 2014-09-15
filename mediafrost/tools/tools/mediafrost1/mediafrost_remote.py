@@ -268,6 +268,8 @@ def svnGet(url, fpath, silent=False):
 	if (not silent):
 		print 'svn getting {} {} ...'.format(url, fpath)
 	(out, err) = subprocess.Popen(['svn', 'checkout', url, fpath], stdout=subprocess.PIPE, stderr=subprocess.PIPE, shell=False).communicate()
+	print err
+	print svnParseOk(err)
 	return svnParseOk(err)
 
 def svnPut(url, fpath):
@@ -309,6 +311,7 @@ def fsBeginSession():
 			max_cache = mcache_size; fs_cache_sources = fs_mcache_sources; cache_path = source.dir;
 		else:
 			print 'Could not mount cache.'	
+	
 	#TODO: include db size in cache
 	db_path = None; db_url = None;
 	sess_db = arg_db
@@ -330,7 +333,7 @@ def fsBeginSession():
 						db_path = test_path
 			else:
 				db_path = os.path.join(cache_path, sess_db)
-	print 'x4'
+
 	return FsSessionInfo(fs_targets, fs_cache_sources, max_cache, cache_path, db_path, db_url)
 
 def fsSessionCloseDb(sess_info):
