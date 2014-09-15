@@ -70,7 +70,7 @@ scan = ('-scan' in sys.argv)
 arg_db = None
 if ('-db' in sys.argv):
 	arg_db = int(sys.argv[sys.argv.index('-db')+1])
-add_db = ('-add_db' in sys.argv)	
+db_add = ('-db_add' in sys.argv)	
 no_am = ('-no_am' in sys.argv)
 no_ap = ('-no_ap' in sys.argv)
 perfile = ('-perfile' in sys.argv)
