@@ -268,8 +268,6 @@ def svnGet(url, fpath, silent=False):
 	if (not silent):
 		print 'svn getting {} {} ...'.format(url, fpath)
 	(out, err) = subprocess.Popen(['svn', 'checkout', url, fpath], stdout=subprocess.PIPE, stderr=subprocess.PIPE, shell=False).communicate()
-	print err
-	print svnParseOk(err)
 	return svnParseOk(err)
 
 def svnPut(url, fpath):
@@ -277,17 +275,11 @@ def svnPut(url, fpath):
 	(out, err) = subprocess.Popen(['svn', 'commit', fpath, '-m', "''"], stdout=subprocess.PIPE, stderr=subprocess.PIPE, shell=False).communicate()
 	return svnParseOk(err)
 
-def svnCreate(url, fpath):
-	print 'svn creating {} {} ...'.format(url, fpath)
-	if (not os.path.isfile(fpath)):
-		with open(fpath, 'a'):
-			os.utime(fpath, None)
+def svnImport(url, fpath):
+	print 'svn import {} {} ...'.format(url, fpath)
 	(out, err) = subprocess.Popen(['svn', 'import', fpath, url, '-m', "''"], stdout=subprocess.PIPE, stderr=subprocess.PIPE, shell=False).communicate()
-	if svnParseOk(err):
-		os.remove(fpath)
-		return svnGet(url, fpath, True)
-	else:
-		return False
+	return svnParseOk(err)
+
 
 FsSessionInfo = namedtuple('FsSessionInfo', 'fs_targets fs_cache_sources max_cache cache_path db_path db_url')
 def fsBeginSession():
@@ -323,14 +315,25 @@ def fsBeginSession():
 			if (not os.path.isdir(db_dir)):	
 				os.makedirs(db_dir)
 			if ('http' in sess_db):
-				db_url = sess_db
-				db_file = sess_db.replace('\\', '/').split('/')[-1]
-				test_path = os.path.join(cache_path, db_file)
-				if (svnGet(sess_db, test_path)):
-					db_path = os.path.join(cache_path, db_file)
+				splt = sess_db.replace('\\', '/').split('/')
+				db_file = splt[-1]
+				db_sub = os.path.splitext(db_file)[0]
+				url_base = splt[:-1].join('/')
+				db_url = '{}/{}/{}'.format(url_base, db_dub, db_file)
+				test_dir = os.path.join(cache_path, db_sub)
+				test_path = os.path.join(test_dir, db_file)
+				if (os.path.isdir(test_dir)) and svnGet(db_url, test_dir)):
+					db_path = test_path
 				elif (db_add):
-					if (svnCreate(sess_db, test_path)):
-						db_path = test_path
+					if (not os.path.isdir(test_dir)):	
+						os.makedirs(test_dir)
+					if (not os.path.isfile(test_path)):
+						with open(test_path, 'a'):
+							os.utime(test_path, None)
+					if (svnImport(sess_db, test_path)):
+						os.remove(test_path)
+						if svnGet(db_url, test_dir)):
+							db_path = test_path
 			else:
 				db_path = os.path.join(cache_path, sess_db)
 
