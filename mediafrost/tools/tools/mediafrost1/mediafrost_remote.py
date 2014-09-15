@@ -332,7 +332,7 @@ def fsBeginSession():
 							os.utime(test_path, None)
 					if (svnImport(sess_db, test_path)):
 						os.remove(test_path)
-						if svnGet(db_url, test_dir)):
+						if svnGet(db_url, test_dir):
 							db_path = test_path
 			else:
 				db_path = os.path.join(cache_path, sess_db)
