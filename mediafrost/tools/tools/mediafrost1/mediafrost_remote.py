@@ -260,7 +260,7 @@ def fsAmEnd(automounts, status):
 
 def svnParseOk(err):
 	for e in err.splitlines():
-		if (not e.lower().startswith('svn: warning:'))
+		if (not e.lower().startswith('svn: warning:')):
 			return False
 	return True
 
