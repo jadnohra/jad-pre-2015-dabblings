@@ -19,7 +19,11 @@ import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Calendar;
+import java.util.Collections;
+import java.util.Comparator;
+import java.util.Date;
 import java.util.HashMap;
+import java.util.Iterator;
 import java.util.List;
 import java.util.Random;
 
@@ -96,14 +100,18 @@ public class FullscreenActivity extends Activity {
 	int mWorkCount;
 	NetworkThread mWorkThread;
 
+	static public void setSetting(Context context, String key, String val) 
+	{ 
+		SharedPreferences prefs = PreferenceManager.getDefaultSharedPreferences(context);
+		SharedPreferences.Editor editor = prefs.edit();
+		editor.putString(key, val); editor.commit();
+	}
+	
 	static public String getSetting(Context context, String key, String dft) 
 	{ 
 		SharedPreferences prefs = PreferenceManager.getDefaultSharedPreferences(context);
 		if (prefs.contains(key) == false)
-		{
-			SharedPreferences.Editor editor = prefs.edit();
-			editor.putString(key, dft); editor.commit();
-		}
+			setSetting(context, key, dft);
 		return prefs.getString(key, dft); 
 	}
 	
@@ -123,7 +131,7 @@ public class FullscreenActivity extends Activity {
 			getSetting(this, "MaxFiles", "300");
 			getSetting(this, "DiscoveryPort", "1600");
 			getSetting(this, "Targets", "vault_lena,vault_jad");
-			getSetting(this, "UseDate", "Yes");
+			getSetting(this, "UseTime", "Yes");
 		}
 		
 		setContentView(R.layout.activity_fullscreen);
@@ -268,6 +276,7 @@ public class FullscreenActivity extends Activity {
 
 	
 	View.OnTouchListener mTouchListener = new View.OnTouchListener() {
+		@SuppressLint("SimpleDateFormat")
 		@Override
 		public boolean onTouch(View view, MotionEvent motionEvent) {
 
@@ -281,7 +290,7 @@ public class FullscreenActivity extends Activity {
 					
 					List<String> images = getCameraImages(context);
 					// Log.v("Testing", images.toString());
-
+					
 					boolean dbg = false;
 					if (dbg && images.size() > 0) {
 						String hash = genMD5Hash(images.get(0));
@@ -299,9 +308,11 @@ public class FullscreenActivity extends Activity {
 								if (!images.get(i).contains("jpg"))
 									{	ti = i; break; }
 							stampSuccess(FullscreenActivity.this, images.get(ti));
+							long time = new File(images.get(ti)).lastModified();
+							setSetting(FullscreenActivity.this, "LastTime", new SimpleDateFormat("dd-MM-yyyy HH:mm:ss").format(time));
 						}
 						
-						mStatusTextViews.console.setText("Connecting ...");
+						mStatusTextViews.console.setText("");
 						mStatusTextViews.time.setText("00:00:00");
 						mStatusTextViews.activity.setText("Connecting...");
 						//mStatusTextViews.progress.setVisibility(View.VISIBLE);
@@ -321,6 +332,17 @@ public class FullscreenActivity extends Activity {
 						settings.maxFiles = Integer.parseInt(getSetting(context, "MaxFiles"));
 						settings.dport = Integer.parseInt(nonEmptySetting(getSetting(context, "DiscoveryPort"), "1600"));
 						settings.targets = getSetting(context, "Targets", "");
+						
+						long minTime = 0;
+						if (getSetting(context, "UseTime", "").equalsIgnoreCase("yes"))
+						{
+							try
+							{
+								minTime = new SimpleDateFormat("dd-MM-yyyy HH:mm:ss").parse(getSetting(context, "LastTime", null)).getTime();
+							} catch (Exception e) {}
+						}
+						settings.minTime = minTime;
+						
 						NetworkThread thread = new NetworkThread(mThreadMessageHandler, settings, images, mStatusTextViews);
 						mWorkThread = thread;
 						thread.start();
@@ -352,9 +374,13 @@ public class FullscreenActivity extends Activity {
 			
 			if (msg.what == 1)
 			{
-				FullscreenActivity.this.mStatus = Status.Idle;
-				FullscreenActivity.this.mStatusTextViews.backup.setEnabled(true);
-				FullscreenActivity.this.mWorkThread = null;
+				FullscreenActivity act = FullscreenActivity.this;
+				act.mStatus = Status.Idle;
+				act.mStatusTextViews.backup.setEnabled(true);
+				act.mWorkThread = null;
+				boolean succeeded = msg.getData().containsKey("Succeeded") && msg.getData().getBoolean("Succeeded");
+				if (succeeded && msg.getData().containsKey("LastTime") && msg.getData().getString("LastTime") != null)
+					act.setSetting(act, "LastTime", msg.getData().getString("LastTime"));
 			}
 		}
 	};
@@ -367,6 +393,7 @@ public class FullscreenActivity extends Activity {
 		int maxFiles;
 		int dport;
 		String targets;
+		long minTime;
 	};
 	
 	public class NetworkThread extends Thread {
@@ -383,6 +410,7 @@ public class FullscreenActivity extends Activity {
 		boolean mUserCancelled;
 		boolean mSucceeded;
 		String mFailString;
+		String mLastTime;
 
 		NetworkThread(Handler messageHandler, NetworkThreadSettings settings, List<String> images, StatusTextViews statusTextViews) {
 			mMessageHandler = messageHandler;
@@ -393,6 +421,7 @@ public class FullscreenActivity extends Activity {
 			mUserCancelled = false;
 			mSucceeded = false;
 			mFailString = "";
+			mLastTime = null;
 
 			mTimerHandler = new Handler();
 			final NetworkThread mThis = this;
@@ -540,7 +569,7 @@ public class FullscreenActivity extends Activity {
 					}
 				});
 		}
-
+		
 		void stopProgress() {
 			if (mStatusTextViews.progress1 != null)
 				mStatusTextViews.progress1.post(new Runnable() {
@@ -553,7 +582,12 @@ public class FullscreenActivity extends Activity {
 				});
 			if (mMessageHandler != null)
 			{
-				mMessageHandler.sendEmptyMessage(1);
+				Message msg = Message.obtain(mMessageHandler, 1, 0, 0);
+				Bundle data = new Bundle(); 
+				data.putBoolean("Succeeded", mSucceeded);
+				data.putString("LastTime", mLastTime);
+				msg.setData(data);
+				msg.sendToTarget();
 			}
 		}
 
@@ -584,12 +618,44 @@ public class FullscreenActivity extends Activity {
 		}
 		
 		public void run() {
+			
+			{
+				{					
+					if (mSettings.minTime > 0)
+					{
+						int removed = 0;
+						long minTime = mSettings.minTime - 1000;
+						Iterator<String> it = mImages.iterator();
+						while (it.hasNext()) {
+							String f = it.next();
+							if(new File(f).lastModified() < minTime)
+								{ it.remove(); removed++; }
+						}
+						logStatus(String.format("Filtered out %d of %d files by date.", removed, mImages.size()+removed));
+					}
+					else
+					{
+						logStatus(String.format("Detected %d files.", mImages.size()));	
+					}
+					
+					class ImageComp implements Comparator<String>
+					{
+						public int compare(String f1, String f2) {
+							long t1 = new File(f1).lastModified();
+							long t2 = new File(f2).lastModified();
+				  			return t1>t2?1:(t1<t2?-1:0);
+				  		}
+					};
+					Collections.sort(mImages, new ImageComp());
+				}
+			}
+			
 			Socket sock = null;
 			try {
 				
 				String server = mSettings.server; int port = mSettings.port; int dport = mSettings.dport;
 				{
-					logStatus("Discovering ...");
+					logStatus("Discovering ... ", false);
 					DatagramSocket dsock = new DatagramSocket(2600);
 					{
 						byte[] buffer = "/mediafrost:discover".getBytes();
@@ -607,14 +673,14 @@ public class FullscreenActivity extends Activity {
 							String[] words = msg.split(":");
 							server = words[0];
 							port = Integer.parseInt(words[1]);
-							logStatus(String.format("Discovered %s:%d.", server, port));
+							logStatus(String.format("%s:%d.", server, port));
 						}
 						catch(SocketTimeoutException e1) {
-							logStatus("Discovery failed.");
+							logStatus("failed.");
 						}
 						catch (Exception e2) {
 							logStatus(Log.getStackTraceString(e2));
-							logStatus("Discovery failed.");
+							logStatus("failed.");
 						}
 					}
 					
@@ -807,6 +873,11 @@ public class FullscreenActivity extends Activity {
 												String fid = requestedFids.get(requestedFids.size()-1);
 												int index = fidMap.get(fid).intValue();
 												String filePath = mImages.get(index);
+												try
+												{
+													long time = new File(filePath).lastModified();
+													mLastTime = new SimpleDateFormat("dd-MM-yyyy HH:mm:ss").format(time);
+												} catch (Exception e) {}
 												stampSuccess(FullscreenActivity.this, filePath);
 											}
 										}

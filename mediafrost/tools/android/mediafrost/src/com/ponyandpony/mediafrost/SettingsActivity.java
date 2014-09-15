@@ -16,8 +16,8 @@ public class SettingsActivity extends PreferenceActivity implements Preference.O
 	public EditTextPreference mMaxFiles;
 	public EditTextPreference mTargets;
 	public EditTextPreference mExtras;
-	public EditTextPreference mUseDate;
-	public EditTextPreference mLastDate;
+	public EditTextPreference mUseTime;
+	public EditTextPreference mLastTime;
 	
 	EditTextPreference createPreference(String key, String title, boolean useSummaryUpdater)
 	{
@@ -68,10 +68,10 @@ public class SettingsActivity extends PreferenceActivity implements Preference.O
 			screen.addPreference(mTargets);
 			mExtras = createPreference("Extras", "Extras", true);
 			screen.addPreference(mExtras);
-			mUseDate = createPreference("UseDate", "Use Date", true);
-			screen.addPreference(mUseDate);
-			mLastDate = createPreference("Last Date", "Last Date", true);
-			screen.addPreference(mLastDate);
+			mUseTime = createPreference("UseTime", "Use Date", true);
+			screen.addPreference(mUseTime);
+			mLastTime = createPreference("LastTime", "Last Date", true);
+			screen.addPreference(mLastTime);
 		}
 	}
 };
