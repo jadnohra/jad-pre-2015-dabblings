@@ -12,6 +12,42 @@ from sets import Set
 from collections import namedtuple
 import mediafrost as frost
 
+has_rpi = False
+def rpiBegin(pins):
+	global has_rpi
+	global rpi_status
+	if (has_rpi):
+		return
+	has_rpi = False
+	try:
+		import RPi.GPIO as gpio
+		gpio.setmode(gpio.BOARD)
+		gpio.setwarnings(False)
+		for p in pins:
+			gpio.setup(p, gpio.OUT)
+		has_rpi = True
+		print 'Detected Raspberri GPIO.'
+	except RuntimeError:
+		has_gpio = False
+		str = traceback.format_exc()
+		if ('root' in str):
+			print str
+		has_gpio = False
+	return has_rpi
+
+def rpiEnd():
+	global has_rpi
+	if (not has_rpi):
+		return
+	gpio.cleanup()
+	has_rpi = False
+
+def rpiSetGpio(pin, high):
+	global has_rpi
+	if (not has_rpi):
+		return
+	gpio.output(pin, high)	
+
 self_path = os.path.realpath(__file__)
 self_dir = os.path.dirname(self_path)
 self_cache = os.path.join(self_dir, 'cache')
@@ -31,7 +67,13 @@ dbg3 = ('-dbg3' in sys.argv)
 lim_cache = 0
 if ('-lim_cache' in sys.argv):
 	lim_cache = int(sys.argv[int(sys.argv.index('-lim_cache')+1)])
+no_rpi = ('no_rpi' in sys.argv)
 
+if (not no_rpi):
+	rpiBegin([12])
+	if (not has_rpi):
+		print 'Failed to connected to RaspberryPi.'
+		exit(0)	
 
 def reset_cache():
 	global self_cache
