@@ -176,7 +176,9 @@ def fsAmScan(silent=False):
 	if (not os.path.isdir(self_mount)):
 		os.makedirs(self_mount)
 	cands = {}
+	print 'ls uuid...'
 	out = subprocess.Popen(['ls', '-laF', '/dev/disk/by-uuid/'], stdout=subprocess.PIPE).stdout.read()
+	print 'done'
 	for line in iter(out.splitlines()):
 		data = line.split()
 		if ((len(data)>3) and (data[-2] == '->') and ('/sd' in data[-1])):
@@ -213,7 +215,9 @@ def fsAmPowerDown():
 	rpiSetGpio(12, False)
 
 def fsAmUnmount(dev, ignore=False):
+	print 'unmounting...'
 	out = subprocess.Popen(['sudo', 'umount', dev], stderr=subprocess.PIPE).stderr.read()
+	print 'unmounted'
 	if ((not ignore) and (len(out))):
 		print 'Warning:', out
 
@@ -223,7 +227,9 @@ def fsAmMount(am, dev, checkdir):
 	mpath = os.path.join(self_mount, am.local_path)
 	if (not os.path.isdir(mpath)):
 		os.makedirs(mpath)
+	print 'mounting ...'	
 	out = subprocess.Popen(['sudo', 'mount', '-o', 'uid=pi,gid=pi', dev, mpath], stderr=subprocess.PIPE).stderr.read()
+	print 'mounted'
 	if (len(out)):
 		print 'Warning:', out	
 	if (scan):
