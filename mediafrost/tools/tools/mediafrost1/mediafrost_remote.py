@@ -291,9 +291,9 @@ def svnCreate(url, fpath):
 		with open(fpath, 'a'):
 			os.utime(fpath, None)
 	print 'c2'		
-	subprocess.Popen(['svn', 'import', fpath, url])
+	#subprocess.Popen(['svn', 'import', fpath, url])
 
-	(out, err) = subprocess.Popen(['svn', 'import', fpath, url], stdout=subprocess.PIPE, stderr=subprocess.PIPE, shell=False).communicate()
+	(out, err) = subprocess.Popen(['svn', 'import', fpath, url, '-m', "''"], stdout=subprocess.PIPE, stderr=subprocess.PIPE, shell=False).communicate()
 	print out,err
 	if svnParseOk(err):
 		os.remove(fpath)
