@@ -320,11 +320,12 @@ def fsBeginSession():
 			if ('http' in sess_db):
 				db_url = sess_db
 				db_file = sess_db.replace('\\', '/').split('/')[-1]
-				if (svnGet(sess_db, db_path)):
+				test_path = os.path.join(cache_path, db_file)
+				if (svnGet(sess_db, test_path)):
 					db_path = os.path.join(cache_path, db_file)
 				elif (db_add):
-					if (svnCreate(sess_db, db_path)):
-						db_path = os.path.join(cache_path, db_file)
+					if (svnCreate(sess_db, test_path)):
+						db_path = test_path
 			else:
 				db_path = os.path.join(cache_path, sess_db)
 
