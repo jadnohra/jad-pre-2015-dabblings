@@ -262,17 +262,23 @@ def fsAmBegin(automounts):
 	fsAmPowerUp(fsAmPowerupCallback, automounts)
 	cands = fsAmScan()
 	status = {}
-	for am in automounts:
-		if (am.filter.enabled and (am.uuid in cands)):
-			dev = cands[am.uuid]
-			if (fsAmMount(am, dev, am.filter.dir)):
-				status[am.uuid] = FsAmStatus(am, dev)
+	if (len(automounts)):
+		print 'Mounting ...',
+		for am in automounts:
+			if (am.filter.enabled and (am.uuid in cands)):
+				dev = cands[am.uuid]
+				if (fsAmMount(am, dev, am.filter.dir)):
+					status[am.uuid] = FsAmStatus(am, dev)
+		print 'Done'
 	return status	
 
 def fsAmEnd(automounts, status):
-	for st in status.values():
-		if (not fsAmUnmount(st.am, st.dev)):
-			return False
+	if (len(status)):
+		print 'Unmounting ...',
+		for st in status.values():
+			if (not fsAmUnmount(st.am, st.dev)):
+				return False
+		print 'Done'	
 	fsAmPowerDown()
 	return True
 
@@ -573,11 +579,13 @@ while 1:
 
 	fs_session_info = fsBeginSession()
 
+	session_bootstrap = ('-bootstrap' in sys.argv) or ((fs_session_info.db_path is not None) and (os.path.getsize(fs_session_info.db_path) <= 8))
+
 	print 'Session targets:', [t.dir for t in fs_session_info.fs_targets]
 	print 'Session cache: {} ({})'.format(fs_session_info.cache_path, niceBytes(fs_session_info.max_cache))	
-	print 'Session db:', fs_session_info.db_path
+	print 'Session db: {} {}'.format(fs_session_info.db_path, '(bootstrap)' if session_bootstrap else '')
 
-	if (fs_session_info.max_cache == 0) or (fs_session_info.db_path == None):
+	if (fs_session_info.max_cache == 0) or (fs_session_info.db_path is None):
 		print 'Invalid session'
 		serving = False
 		conn.close()
@@ -672,11 +680,7 @@ while 1:
 				targets = fs_session_info.fs_targets
 				no_db = ('-no_db' in sys.argv)
 				if (not no_db):
-					bootstrap = ('-bootstrap' in sys.argv)
-					dbPath = fs_session_info.db_path
-					if (os.path.getsize(dbPath) <= 8):
-						bootstrap = True
-					session = frost.bkpStartSession(dbPath, bootstrap, session_name)
+					session = frost.bkpStartSession(fs_session_info.db_path, session_bootstrap, session_name)
 				else:
 					session = frost.bkpStartSession(None, True, session_name)
 				frost.bkpPrepareTargetTables(session, targets)
