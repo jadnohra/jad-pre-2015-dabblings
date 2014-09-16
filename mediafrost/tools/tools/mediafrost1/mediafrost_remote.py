@@ -77,6 +77,7 @@ perfile = ('-perfile' in sys.argv)
 dbg = ('-dbg' in sys.argv)
 dbg2 =('-dbg2' in sys.argv)
 dbg3 = ('-dbg3' in sys.argv)
+dbgsvn = ('-dbgsvn' in sys.argv)
 local_cache = ('-local_cache' in sys.argv)
 lim_cache = 0
 if ('-lim_cache' in sys.argv):
@@ -96,8 +97,9 @@ if (not no_rpi):
 
 def resetCache(path, limit, minimum=1024*1024*256, unused=1024*1024*32):
 	if (os.path.isdir(path)):
-		shutil.rmtree(path)
-	os.makedirs(path)
+		map( os.unlink, [os.path.join( mydir,f) for f in os.listdir(mydir)] )
+	else:
+		os.makedirs(path)
 	statvfs = os.statvfs(path)
 	cache_size = statvfs.f_frsize*statvfs.f_bavail
 	cache_size = cache_size-unused
@@ -268,16 +270,22 @@ def svnGet(url, fpath, silent=False):
 	if (not silent):
 		print 'svn getting {} {} ...'.format(url, fpath)
 	(out, err) = subprocess.Popen(['svn', 'checkout', url, fpath], stdout=subprocess.PIPE, stderr=subprocess.PIPE, shell=False).communicate()
+	if (dbgsvn):
+		print out if len(out) else '',; err if len(err) else '',;
 	return svnParseOk(err)
 
 def svnPut(url, fpath):
 	print 'svn putting {} {} ...'.format(url, fpath)
 	(out, err) = subprocess.Popen(['svn', 'commit', fpath, '-m', "''"], stdout=subprocess.PIPE, stderr=subprocess.PIPE, shell=False).communicate()
+	if (dbgsvn):
+		print out if len(out) else '',; err if len(err) else '',;
 	return svnParseOk(err)
 
 def svnImport(url, fpath):
 	print 'svn import {} {} ...'.format(url, fpath)
 	(out, err) = subprocess.Popen(['svn', 'import', fpath, url, '-m', "''"], stdout=subprocess.PIPE, stderr=subprocess.PIPE, shell=False).communicate()
+	if (dbgsvn):
+		print out if len(out) else '',; err if len(err) else '',;
 	return svnParseOk(err)
 
 
