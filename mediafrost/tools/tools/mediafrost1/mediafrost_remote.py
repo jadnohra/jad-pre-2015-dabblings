@@ -97,7 +97,7 @@ if (not no_rpi):
 
 def resetCache(path, limit, minimum=1024*1024*256, unused=1024*1024*32):
 	if (os.path.isdir(path)):
-		map( os.unlink, [os.path.join( mydir,f) for f in os.listdir(mydir)] )
+		map( os.unlink, [os.path.join(path,f) for f in os.listdir(path)] )
 	else:
 		os.makedirs(path)
 	statvfs = os.statvfs(path)
