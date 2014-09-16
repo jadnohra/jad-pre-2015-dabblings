@@ -648,7 +648,7 @@ while 1:
 				conn.close()
 				serving = False
 
-				if (not session is None):
+				if (session is not None):
 					frost.bkpEndSession(session)
 					session = None
 
@@ -798,6 +798,10 @@ while 1:
 				if (dbg and len(conn_buf) > 0):
 					print ' >dbg?', (conn_buf[:75] + '..') if len(conn_buf) > 75 else conn_buf
 		
+	if (session is not None):
+		frost.bkpEndSession(session)
+		session = None
+
 	conn.close()
 	
 conn.close()
