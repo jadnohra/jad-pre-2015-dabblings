@@ -214,14 +214,21 @@ def fsAmPowerDown():
 	print ''
 	rpiSetGpio(12, False)
 
-def fsAmUnmount(dev, ignore=False):
-	out = subprocess.Popen(['sudo', 'umount', dev], stderr=subprocess.PIPE).stderr.read()
-	if ((not ignore) and (len(out))):
-		print 'Warning:', out
+def fsAmUnmount(am, dev):
+	mpath = os.path.join(self_mount, am.local_path)
+	out = subprocess.Popen(['mountpoint', mpath], stdout=subprocess.PIPE).stdout.read()
+	is_mounted = out.endswith('is a mountpoint')
+	if (is_mounted):
+		err = subprocess.Popen(['sudo', 'umount', dev], stderr=subprocess.PIPE).stderr.read()
+		if len(err)):
+			print 'Error:', err
+	out = subprocess.Popen(['mountpoint', mpath], stdout=subprocess.PIPE).stdout.read()
+	is_mounted = out.endswith('is a mountpoint')
+	return (not is_mounted)			
 
 def fsAmMount(am, dev, checkdir):
 	global scan
-	fsAmUnmount(dev, True)
+	fsAmUnmount(am, dev, True)
 	mpath = os.path.join(self_mount, am.local_path)
 	if (not os.path.isdir(mpath)):
 		os.makedirs(mpath)
@@ -233,7 +240,7 @@ def fsAmMount(am, dev, checkdir):
 	if os.path.isdir(checkdir):
 		return True
 	print 'Mounting {} failed due to {}'.format(am.filter.descr, checkdir) 
-	fsAmUnmount(dev)
+	fsAmUnmount(am, dev)
 	return False
 
 def fsAmPowerupCallback(args):
@@ -244,6 +251,7 @@ def fsAmPowerupCallback(args):
 			return False
 	return True
 
+FsAmStatus = namedtuple('FsAmStatus', 'am dev')
 def fsAmBegin(automounts):
 	fsAmPowerUp(fsAmPowerupCallback, automounts)
 	cands = fsAmScan()
@@ -252,13 +260,15 @@ def fsAmBegin(automounts):
 		if (am.filter.enabled and (am.uuid in cands)):
 			dev = cands[am.uuid]
 			if (fsAmMount(am, dev, am.filter.dir)):
-				status[am.uuid] = dev
+				status[am.uuid] = FsAmStatus(am, dev)
 	return status	
 
 def fsAmEnd(automounts, status):
-	for dev in status.values():
-		fsAmUnmount(dev)
+	for st in status.values():
+		if (not fsAmUnmount(st.am, st.dev))
+			return False
 	fsAmPowerDown()
+	return True
 
 def svnParseOk(err):
 	for e in err.splitlines():
@@ -356,8 +366,9 @@ def fsSessionCloseDb(sess_info):
 
 def fsEndSession():
 	global fs_am_status
-	fsAmEnd(fs_ams, fs_am_status)
+	ret = fsAmEnd(fs_ams, fs_am_status)
 	fs_am_status = {}
+	return ret
 
 def Linux_ipAddresses():
 	ret = []
@@ -520,7 +531,9 @@ session_count = 0
 while 1:
 	
 	lcache_size = 0
-	fsEndSession()
+	if (not fsEndSession())
+		print 'Count not end session.'
+		exit(0)
 	if (local_cache):
 		lcache_size = resetCache(self_lcache, lim_cache)
 		if (lcache_size <= 0):
