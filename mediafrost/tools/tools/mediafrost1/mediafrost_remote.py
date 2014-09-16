@@ -772,7 +772,7 @@ while 1:
 	
 				try:
 					if ('-dry_target_write' in sys.argv):
-						print 'Skipping target writes (-dry_target_write).'
+						print 'Skipping target writes (-dry_target_write)'
 						nfi_dict = {}
 					success = frost.bkpBackupFs(session, fs_session_info.fs_cache_sources, targets, nfi_dict)
 					frost.bkpEndSession(session)
