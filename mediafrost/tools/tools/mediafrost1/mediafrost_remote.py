@@ -218,13 +218,19 @@ def fsAmUnmount(am, dev):
 	mpath = os.path.join(self_mount, am.local_path)
 	out = subprocess.Popen(['mountpoint', mpath], stdout=subprocess.PIPE).stdout.read()
 	is_mounted = out.endswith('is a mountpoint')
-	if (is_mounted):
-		err = subprocess.Popen(['sudo', 'umount', dev], stderr=subprocess.PIPE).stderr.read()
-		if len(err):
-			print 'Error:', err
+	if (not is_mounted):
+		return True
+	err = subprocess.Popen(['sudo', 'umount', dev], stderr=subprocess.PIPE).stderr.read()
+	if len(err):
+		print 'Error:', err
 	out = subprocess.Popen(['mountpoint', mpath], stdout=subprocess.PIPE).stdout.read()
 	is_mounted = out.endswith('is a mountpoint')
-	return (not is_mounted)			
+	if (is_mounted):
+		out = subprocess.Popen(['lsof'], stdout=subprocess.PIPE).stdout.read()
+		print '>>> Diagnosing unmount failure...'
+		print subprocess.Popen(['lsof'], stdout=subprocess.PIPE).stdout.read()
+		print '>>> End diagnosis'
+	return (not is_mounted)
 
 def fsAmMount(am, dev, checkdir):
 	global scan
