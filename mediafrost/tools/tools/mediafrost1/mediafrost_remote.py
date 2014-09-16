@@ -265,7 +265,7 @@ def fsAmBegin(automounts):
 
 def fsAmEnd(automounts, status):
 	for st in status.values():
-		if (not fsAmUnmount(st.am, st.dev))
+		if (not fsAmUnmount(st.am, st.dev)):
 			return False
 	fsAmPowerDown()
 	return True
