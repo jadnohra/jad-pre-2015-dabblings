@@ -220,7 +220,7 @@ def fsAmUnmount(am, dev):
 	is_mounted = out.endswith('is a mountpoint')
 	if (is_mounted):
 		err = subprocess.Popen(['sudo', 'umount', dev], stderr=subprocess.PIPE).stderr.read()
-		if len(err)):
+		if len(err):
 			print 'Error:', err
 	out = subprocess.Popen(['mountpoint', mpath], stdout=subprocess.PIPE).stdout.read()
 	is_mounted = out.endswith('is a mountpoint')
