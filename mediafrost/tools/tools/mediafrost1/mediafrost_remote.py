@@ -218,7 +218,7 @@ def fsAmUnmount(am, dev):
 	mpath = os.path.join(self_mount, am.local_path)
 	out = subprocess.Popen(['mountpoint', mpath], stdout=subprocess.PIPE).stdout.read()
 	print out
-	is_mounted = out.endswith('is a mountpoint')
+	is_mounted = ('is a mountpoint' in out)
 	print is_mounted
 	if (not is_mounted):
 		return True
@@ -228,7 +228,7 @@ def fsAmUnmount(am, dev):
 		print 'Error:', err
 	out = subprocess.Popen(['mountpoint', mpath], stdout=subprocess.PIPE).stdout.read()
 	print out
-	is_mounted = out.endswith('is a mountpoint')
+	is_mounted = ('is a mountpoint' in out)
 	print is_mounted
 	if (is_mounted):
 		out = subprocess.Popen(['lsof'], stdout=subprocess.PIPE).stdout.read()
