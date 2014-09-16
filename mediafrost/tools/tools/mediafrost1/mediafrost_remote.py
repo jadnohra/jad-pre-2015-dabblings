@@ -583,7 +583,7 @@ while 1:
 
 	print 'Session targets:', [t.dir for t in fs_session_info.fs_targets]
 	print 'Session cache: {} ({})'.format(fs_session_info.cache_path, niceBytes(fs_session_info.max_cache))	
-	print 'Session db: {} {}'.format(fs_session_info.db_path, '(bootstrap)' if session_bootstrap else '')
+	print 'Session db: {} ({}) {}'.format(fs_session_info.db_path, niceBytes((os.path.getsize(fs_session_info.db_path)), '(bootstrap)' if session_bootstrap else '')
 
 	if (fs_session_info.max_cache == 0) or (fs_session_info.db_path is None):
 		print 'Invalid session'
