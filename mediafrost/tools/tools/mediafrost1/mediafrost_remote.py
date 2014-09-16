@@ -531,8 +531,8 @@ session_count = 0
 while 1:
 	
 	lcache_size = 0
-	if (not fsEndSession())
-		print 'Count not end session.'
+	if (not fsEndSession()):
+		print 'Error ending session.'
 		exit(0)
 	if (local_cache):
 		lcache_size = resetCache(self_lcache, lim_cache)
