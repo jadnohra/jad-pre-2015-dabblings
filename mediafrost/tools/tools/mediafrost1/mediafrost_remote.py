@@ -228,7 +228,7 @@ def fsAmUnmount(am, dev):
 
 def fsAmMount(am, dev, checkdir):
 	global scan
-	fsAmUnmount(am, dev, True)
+	fsAmUnmount(am, dev)
 	mpath = os.path.join(self_mount, am.local_path)
 	if (not os.path.isdir(mpath)):
 		os.makedirs(mpath)
