@@ -761,7 +761,7 @@ while 1:
 	
 	
 			elif (conn_buf.startswith(cmd_fdataend)):
-				print 'Backing up...'	
+				print 'Backing up ...'	
 				conn_buf = conn_buf[len(cmd_fdataend):]
 	
 				targets = fs_session_info.fs_targets
@@ -771,6 +771,9 @@ while 1:
 					nfi_dict[(source, target)] = list
 	
 				try:
+					if ('-dry_target_write' in sys.argv):
+						print 'Skipping target writes (-dry_target_write).'
+						nfi_dict = {}
 					success = frost.bkpBackupFs(session, fs_session_info.fs_cache_sources, targets, nfi_dict)
 					frost.bkpEndSession(session)
 					session = None
