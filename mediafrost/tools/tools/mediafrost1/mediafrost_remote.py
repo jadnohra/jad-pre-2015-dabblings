@@ -217,19 +217,14 @@ def fsAmPowerDown():
 def fsAmUnmount(am, dev):
 	mpath = os.path.join(self_mount, am.local_path)
 	out = subprocess.Popen(['mountpoint', mpath], stdout=subprocess.PIPE).stdout.read()
-	print out
 	is_mounted = ('is a mountpoint' in out)
-	print is_mounted
 	if (not is_mounted):
 		return True
-	print 'unmounting...'
 	err = subprocess.Popen(['sudo', 'umount', dev], stderr=subprocess.PIPE).stderr.read()
 	if len(err):
 		print 'Error:', err
 	out = subprocess.Popen(['mountpoint', mpath], stdout=subprocess.PIPE).stdout.read()
-	print out
 	is_mounted = ('is a mountpoint' in out)
-	print is_mounted
 	if (is_mounted):
 		out = subprocess.Popen(['lsof'], stdout=subprocess.PIPE).stdout.read()
 		print '>>> Diagnosing unmount failure...'
@@ -647,6 +642,7 @@ while 1:
 
 				if (not session is None):
 					frost.bkpEndSession(session)
+					session = None
 
 			elif (conn_buf.startswith(cmd_fid)):
 				cmd_splt = conn_buf.split(':', 3)
@@ -772,6 +768,8 @@ while 1:
 	
 				try:
 					success = frost.bkpBackupFs(session, fs_session_info.fs_cache_sources, targets, nfi_dict)
+					frost.bkpEndSession(session)
+					session = None
 					success = success and fsSessionCloseDb(fs_session_info)
 				except:
 					print traceback.format_exc()

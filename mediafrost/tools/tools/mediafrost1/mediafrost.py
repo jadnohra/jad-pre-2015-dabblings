@@ -262,6 +262,7 @@ def bkpEndSession(session):
 		return
 	if (session.dbConn is not None):
 		session.dbConn.close()
+		print 'closed dbConn'
 
 def bkpDumpDb(session, fp):
 	with open(fp, 'w') as f:
