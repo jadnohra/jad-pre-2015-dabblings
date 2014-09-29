@@ -173,7 +173,7 @@ ODE issues and robotics
 Complementarity Problems in Many-Body Contact Dynamics Simulation)
 * <toolkit> Projected Gradient LCP: R. Andreani, J. J. Júdice, J. M. Martínez and J. Patrício, A projected-gradient interior-point algorithm for complementarity problems
 	- Matrix market! http://math.nist.gov/MatrixMarket/, http://www.netlib.org/
-* <toolkit> LCP+matrix splitting (On Iterative Solution for Linear Complementarity Problem with an $H_{+}$-Matrix, A. Hadjidimos)	
+* <toolkit> LCP+matrix splitting (On Iterative Solution for Linear Complementarity Problem with an $H_{+}$-Matrix, A. Hadjidimos)
 * silly/old? the class/canonical form of rbs mlcp matrices.
 * <toolkit> (Demmel, A supernodal approach to sparse partial pivoting) (SuperLu)
 * Better to 'choose at random' instead of broken perturb
@@ -184,6 +184,7 @@ Complementarity Problems in Many-Body Contact Dynamics Simulation)
 * S. M. Robinson, Some continuity properties of polyhedral multifunctions, Mathematical Programming Study 14 (1981) 206–214.
 * Huynh The Phung, A Geometrical Approach to the Linear Complementarity Problem
 * Observations on a class of nasty linear complementarity problems
+* http://researchindex.net/author/Ferris,_M.C./536ff9cf26184448c512789a
 
 ----- LCP in several open source dynamics packages
  - http://www.gams.com/dd/docs/solvers/path.pdf
@@ -204,6 +205,7 @@ Complementarity Problems in Many-Body Contact Dynamics Simulation)
 * WOF keyboard mapper!!! (KMW ...)
 * pyHavok!
 * Phys revealer: inert, damp,max,...
+* Hvk: usable vehicle ai, at last!
 
 ------- Delegate
 * Multi-threading accums
@@ -220,6 +222,8 @@ Complementarity Problems in Many-Body Contact Dynamics Simulation)
 	- hkdsSolver.h, this not a 'solver'
 	- don't split files when it is not needed
 	- don't use serial, use embedded json, config per group, global config, etc.
+		- also very important: mlcp as plug, so that having a toolkit, including optimized versions makes no difference.
+		- non-opt versions should not be bothered by opt ones
 	- keep hkp, hknp, support transparent and more
 	- keep self-containment, eg: blocks, etc.
 	- keep math style, the main ver is not for experiments, a copy can be.
@@ -228,8 +232,9 @@ Complementarity Problems in Many-Body Contact Dynamics Simulation)
 	- hkReal currStep, hkReal microStepBatch are integers! remove sctx.substep'Scale'.
 	- Revert isMlcpNumeric instead of meaningless'isOK':
 	- mprog::Number
-	- hkds live multiplaform,multithread (sockets, etc.)
+	- hkds live multiplaform,multithread (sockets, etc.) 
 		- cleanup PUBLIC/INTERNAL for use in demos
+		- using tls, and also using tcp socket for trace
 	- build system variants of hkdsCompileConfig
 	- optimize ghost for almost free performance: dirty flag update once per frame.
 		- hkds frame callback
@@ -238,19 +243,33 @@ Complementarity Problems in Many-Body Contact Dynamics Simulation)
 	- remove the added 'int numMlcp;'
 	- mlcp database in hkds python script
 	- dis and contacts, dis and solver mixing
+	- Hkdis!!! Positional perturbation!
 	- undo the filter_caching in solver.cpp, or at least fix it such that we can also run without, to change the order of solvers for testing.
+	- Tls for internal memory caching, no external setting!
+	- Remove MlcpMatrix, MotionInfo, PairLinAng, etc. from 'types' header
+	- hkSolverConstraintBlock back to hkds
+	- hkpLimitAccelVelMotorControl back to hkds
+	- move trace, etc. to tools. not project specific? or keep copies and keep tool?
+	- go over all cls of 'RbNew' and pick the rests.
+	- free non-copy conv by template speci.
+	- Fix Peter's tau implementation, implement just as in SolverFunction.hxx
+	- Local filters for trace, otherwise we will swamp, test with multiple iters, support them better. (hash filter)
 
 * Hkds force readout + robot muscle demo
 * group demo + group merge demo + live perf, etc.
+* Hkds float/double arg. : cfg.dbl in double builds gives: cfg.real:native,float,double
 
 
 ------- Hkds
+* explain the open, non-baking approach in a specific 'software philosophy' document: no bake motor in, no bake settings in, 
+	no bake algo in.
 * sor friction, also, better penetration recovery: contacts in complicated heightfield
 * Hkds implement the rationals: it is very different if we round numbers at end of op. Vs. At end of frame / algo!!!
 	 - Isnt it mostly about mem mgt?!?!
 * P4,hkds lab
 * Prel. test: python rationals on non-baby-sitted model!
 * Robotic arm soft contact screw or pull manipulator
+	- also relate to recovery of wrong initial configuration (Peter's motor tau).
 * algo steps: e.g: solve group1 (system+normal contact), then feed into group2-iter: (system+normal contact+friction)
 * better control over 'rhs' neccessitates split impulse and/or projection. enabling it by default causes undesirable oscillations (e.g: drop a lh944 with this enabled for ang motor!)
 	- for now this is remedied with a hold-pos motor controller.
@@ -259,10 +278,29 @@ Complementarity Problems in Many-Body Contact Dynamics Simulation)
 	- more precise control over stabilization bias (now disabled for ang motors, but enabled for other things...), until we use proj/split.
 		- for now this is remedied with a hold-pos motor controller.
 * Fwd: Hkds does 2d natively: motorbike vehicle testbed	
+* Control systems (e.g motor control), on a system level, that is, like industrial ones that 'know more' about a system.
+* Mlcp recipe to generalize
+* dis:
+	- Hkdis into tool: sotftness, wobliness, explosiveness, performance (mlcp), scaling, weak points
+* hkds: Add recipe, add config strings, and internal algo based config structs, shlex parse. multi-level recipes can enable/disable constraint types for direct warmup of system with contacts.
+* Turn generic control into a control tool, or at least config.
+* hkds team: vehicle builder
+* Hkds: pseudo plastic method, Hkds: force field perturbation method.
+* Hkds: path to automatic: reverse direct and iter! Move to systems ctraints that are not converging and connected. Also: solution quality as a basic metric, generalize the level concept.
+* Hkds: 'Write things down' week(s).
+* Hkds: And/or precondit into toolkit, more flexi-recipe.
+* If numer instabil -> limit break -> bias -> jitter then: calc-err and iter smooth while smoothing is error reducing. Again: flexible recipe.
+* Add hkds note or imp: error bias suck and/or reset. This does not work since some bias is needed: e.g: for unilaterals (limits), etc. The better way needs more intrusiveness, during setup and/or hkds-constraints.
 
 ------- Analytical dynamics
 * Best coord sys for the job?
 * Pos ctraints are garbage, (Damp grave corrections? nah)
+
+
+------- Differential Equations Research
+* Yes they do exist, the exponentially convergent algorithms (trio: Ivan Gavrilyuk, Volodymyr Makarov, Vitalii Vasylyk):
+	- (An Exponentially Convergent Algorithm For Nonlinear Differential Equations In Banach Spaces) http://citeseerx.ist.psu.edu/viewdoc/summary?doi=10.1.1.154.2552
+	- (Exponentially Convergent Algorithms for Abstract Differential Equations)
 
 
 ------- Roadmap / KMW
@@ -286,6 +324,8 @@ Complementarity Problems in Many-Body Contact Dynamics Simulation)
 * Redo the math of all bias in all constraints
 * Free direct solver from tau/damp coupling.
 * Fallback: pgs toolkit
+* Hkds: specific: hydraulic adapter + force recalc
+* Find out why on demo level, we need to divide by number of microsteps to get the applied impulse (on demo level)!
 * list1
 	- Hkds: imp pgs parallel + fallback! + conv. Setting.
 	- Mechanical neighbor matrix? Modif inertias, recover forcres using bias?
@@ -321,3 +361,18 @@ Complementarity Problems in Many-Body Contact Dynamics Simulation)
 	- excacator counterweight
 		- http://www.bllc.net/HardHatSamples/Excavator_Instructors_Notes.pdf
 		- http://www.iinte.edu.pl/pdf/200907s58.pdf	
+
+------ Piece of Mathematics weeks.
+	- Hkds: add to report: fallacy (misconception, partial truth) of 'mass ratio' see off axis, rotation, eyc.		
+
+
+------ Present
+	- One culprit is the pernicious laptop, it should be outlawed! It encourages the speaker to pass the cognitive speed-limit by orders of magnitude. Sure enough, the best invited talk was Michael Kiessling's talk that used the ancient technology of overhead projector, and it would have been even better if he only used the blackboard, and it would have been better still if he didn't use anything, just told us a story.	
+
+	- Finally, there is an issue for which architecture is entirely the wrong metaphor, and Colum- bus’ departure from the Mediterranean is much more appropriate. Los Reyes Catolicos certainly did not promote free intellectual exploration in their domestic and colonial policy, but they did at least fund a “blue sea” project.
+
+	Nowadays, one is asked to give advance notice of all of the theorems that one intends to prove. Such planning may be possible when building a house, but it can be done if and only if there are no original ideas. A mathematician with a plan for a theorem wants to carry it out straight away, and the only pieces of equipment that are needed are a clear head and a clear blackboard. We don’t put our lives at stake as Columbus did when we embark on scientific experiments or try to prove mathematical theorems, but if there is no intellectual risk of failure in a proposed piece of research, then it is redundant, and probably not worthy of funding.
+
+	We like to think that the finished product of mathematics is the most precise of any branch of science or engineering. The corollary of this is that the vision of a mathematical project in advance of its detailed plan is necessarily much mo
+
+	- http://gelookahead.economist.com/disrupt-disrupted/ 	(Key Takeaways)
