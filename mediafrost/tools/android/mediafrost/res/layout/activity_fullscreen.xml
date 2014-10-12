@@ -1,11 +1,12 @@
 <?xml version="1.0" encoding="utf-8"?>
+
 <FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
     android:layout_height="wrap_content"
     android:background="#0099cc"
     tools:context="com.ponyandpony.mediafrost.FullscreenActivity" >
-
+    
     <ViewFlipper
         android:id="@+id/viewFlipper1"
         android:layout_width="match_parent"
@@ -33,6 +34,20 @@
                 android:text="@string/button_backup"
                 android:textSize="24sp"
                 android:textStyle="normal" />
+            
+              <!-->Button
+                android:id="@+id/manual_button"
+                style="?metaButtonBarButtonStyle"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:background="@color/black_overlay"
+                android:minHeight="0dp"
+                android:minWidth="0dp"
+                android:padding="10dp"
+                android:text="@string/button_manual"
+                android:textSize="24sp"
+                android:textStyle="normal" /-->
 
             <ProgressBar
                 android:id="@+id/progressBar2"

@@ -39,6 +39,7 @@ import android.os.Message;
 import android.preference.PreferenceActivity;
 import android.preference.PreferenceFragment;
 import android.preference.PreferenceManager;
+import android.provider.DocumentsContract;
 import android.provider.MediaStore;
 import android.provider.MediaStore.Images;
 import android.view.Gravity;
@@ -49,6 +50,8 @@ import android.widget.ProgressBar;
 import android.widget.RelativeLayout;
 import android.widget.TextView;
 import android.widget.ViewFlipper;
+import android.content.ClipData;
+import android.content.CursorLoader;
 import android.content.Intent;
 import android.content.SharedPreferences;
 import android.media.ThumbnailUtils;
@@ -118,6 +121,7 @@ public class FullscreenActivity extends Activity {
 	static public String getSetting(Context context, String key) { return getSetting(context, key, null); }
 	static public String nonEmptySetting(String str, String dft) { if (str == null || str.length() == 0) return dft; return str; }
 	
+	@SuppressLint("InlinedApi")
 	@Override
 	protected void onCreate(Bundle savedInstanceState) {
 		super.onCreate(savedInstanceState);
@@ -131,6 +135,7 @@ public class FullscreenActivity extends Activity {
 			getSetting(this, "MaxFiles", "9999");
 			getSetting(this, "DiscoveryPort", "1600");
 			getSetting(this, "Targets", "vault_lena,vault_jad");
+			//getSetting(this, "Sources", "camera");
 			getSetting(this, "UseTime", "Yes");
 		}
 		
@@ -181,6 +186,27 @@ public class FullscreenActivity extends Activity {
 
 		{
 			mSettingsActivity = new SettingsActivity();
+		}
+	
+		if (getSetting(this, "Extras", "").contains("dbg_buckets"))
+		{
+			List<String> names = getImageBucketNames(this);
+			for (int i=0; i<names.size(); ++i)
+			{
+				Log.v("Testing", String.format(names.get(i)));	
+			}
+		}
+		
+		if (android.os.Build.VERSION.SDK_INT >= 18)
+		{
+			if (getSetting(this, "Extras", "").contains("dbg_sel"))
+			{
+				Intent intent = new Intent();
+				intent.setType("image/*");
+				intent.putExtra(Intent.EXTRA_ALLOW_MULTIPLE, true);
+				intent.setAction(Intent.ACTION_GET_CONTENT);
+				startActivityForResult(Intent.createChooser(intent,"Select Picture"), 1);
+			}
 		}
 	}
 
@@ -274,83 +300,200 @@ public class FullscreenActivity extends Activity {
 		}
 	};
 
+	@SuppressLint("NewApi")
+	public String getRealPathFromURI(Uri uri){
+	   Cursor cursor = getContentResolver().query(uri, null, null, null, null);
+	   cursor.moveToFirst();
+	   String document_id = cursor.getString(0);
+	   document_id = document_id.substring(document_id.lastIndexOf(":")+1);
+	   cursor.close();
+
+	   cursor = getContentResolver().query( 
+	   android.provider.MediaStore.Images.Media.EXTERNAL_CONTENT_URI,
+	   null, MediaStore.Images.Media._ID + " = ? ", new String[]{document_id}, null);
+	   cursor.moveToFirst();
+	   String path = cursor.getString(cursor.getColumnIndex(MediaStore.Images.Media.DATA));
+	   cursor.close();
+
+	   return path;
+	}
 	
-	View.OnTouchListener mTouchListener = new View.OnTouchListener() {
-		@SuppressLint("SimpleDateFormat")
-		@Override
-		public boolean onTouch(View view, MotionEvent motionEvent) {
+	@SuppressLint("NewApi")
+	@Override
+	public void onActivityResult(int requestCode, int resultCode, Intent data) {
+		
+		if (resultCode == Activity.RESULT_OK)	
+		
+	      if(requestCode == 12) {
+	    	  List<String> images = new ArrayList<String>();
+	    	 if (data.getData() != null) {
+	    		 /* Disallow single selection (by mistake)
+	    		  Uri imageUri = data.getData();
+	    		  images.add(getRealPathFromURI( imageUri));
+	    	  	*/
+	    	  } else if (data.getClipData() != null) {
+	    		  //Bitmap bitmap = MediaStore.Images.Media.getBitmap(this.getContentResolver(), clipdata.getItemAt(i).getUri());
+	    		  ClipData clipdata = data.getClipData();
+	    		  if (clipdata != null)
+	    		  {
+	                for (int i=0; i<clipdata.getItemCount();i++)
+	                	images.add(getRealPathFromURI( clipdata.getItemAt(i).getUri()));
+	    		  }   
+	    	  }
+	    	 if (images.size() > 0)
+	    		 launchBackup(this, images, false);
+	    	  //for (int i=0; i<images.size(); ++i) Log.v("Testing", String.format(images.get(i)));	
+	      }
+	      
+	}
+	
+	@SuppressLint("SimpleDateFormat")
+	public void launchBackup(Context context, List<String> images, boolean automatic) {
+		Iterator<String> iter = images.iterator();
+		while (iter.hasNext()) {
+		    if (iter.next().startsWith(getStampPrefix())) {
+		        iter.remove();
+		    }
+		}
+		
+		boolean dbg = false;
+		if (dbg && images.size() > 0) {
+			String hash = genMD5Hash(images.get(0));
+			Log.v("Testing", images.get(0));
+			Log.v("Testing", hash);
+		}
 
-			if (view.getId() == R.id.backup_button) {
-				Context context = view.getContext();
-				if (motionEvent.getAction() == MotionEvent.ACTION_DOWN) {
-					
-					FullscreenActivity.this.mStatus = Status.Working;
-					FullscreenActivity.this.mWorkCount++;
-					FullscreenActivity.this.mStatusTextViews.backup.setEnabled(false);
-					
-					List<String> images = getCameraImages(context);
-					// Log.v("Testing", images.toString());
-					
-					boolean dbg = false;
-					if (dbg && images.size() > 0) {
-						String hash = genMD5Hash(images.get(0));
-						Log.v("Testing", images.get(0));
-						Log.v("Testing", hash);
-					}
-
-					if (images.size() > 0) {
-						
-						boolean dbg_stamp = getSetting(context, "Extras", "").contains("dbg_stamp");
-						if (dbg_stamp)
-						{
-							int ti = 0;
-							for (int i=0; i<images.size(); ++i)
-								if (!images.get(i).contains("jpg"))
-									{	ti = i; break; }
-							stampSuccess(FullscreenActivity.this, images.get(ti));
-							long time = new File(images.get(ti)).lastModified();
-							setSetting(FullscreenActivity.this, "LastTime", new SimpleDateFormat("dd-MM-yyyy HH:mm:ss").format(time));
-						}
-						
-						mStatusTextViews.console.setText("");
-						mStatusTextViews.time.setText("00:00:00");
-						mStatusTextViews.activity.setText("Connecting...");
-						//mStatusTextViews.progress.setVisibility(View.VISIBLE);
-						mStatusTextViews.cancel.setVisibility(View.VISIBLE);
-						mStatusTextViews.progress1.setVisibility(View.VISIBLE);
-						mStatusTextViews.progress1.setProgress(0);
-						mStatusTextViews.progress2.setVisibility(View.VISIBLE);
-						mStatusTextViews.progress2.setProgress(0);
-						//mStatusTextViews.progress3.setVisibility(View.VISIBLE);
-						//mStatusTextViews.progress3.setProgress(0);
-
-						NetworkThreadSettings settings = new NetworkThreadSettings();
-						String address[] = getSetting(context, "Server", null).split(":");
-						settings.server = address[0];
-						settings.port = Integer.parseInt(address[1]);
-						settings.minFiles = Integer.parseInt(getSetting(context, "MinFiles"));
-						settings.maxFiles = Integer.parseInt(getSetting(context, "MaxFiles"));
-						settings.dport = Integer.parseInt(nonEmptySetting(getSetting(context, "DiscoveryPort"), "1600"));
-						settings.targets = getSetting(context, "Targets", "");
-						
-						long minTime = 0;
-						if (getSetting(context, "UseTime", "").equalsIgnoreCase("yes"))
-						{
-							try
-							{
-								minTime = new SimpleDateFormat("dd-MM-yyyy HH:mm:ss").parse(getSetting(context, "LastTime", null)).getTime();
-							} catch (Exception e) {}
-						}
-						settings.minTime = minTime;
-						
-						NetworkThread thread = new NetworkThread(mThreadMessageHandler, settings, images, mStatusTextViews);
-						mWorkThread = thread;
-						thread.start();
-					}
-					return true;
-				}
+		if (images.size() > 0) {
+			
+			boolean dbg_stamp = getSetting(context, "Extras", "").contains("dbg_stamp");
+			if (dbg_stamp)
+			{
+				int ti = 0;
+				for (int i=0; i<images.size(); ++i)
+					if (!images.get(i).contains("jpg"))
+						{	ti = i; break; }
+				stampSuccess(FullscreenActivity.this, images.get(ti));
+				long time = new File(images.get(ti)).lastModified();
+				setSetting(FullscreenActivity.this, "LastTime", new SimpleDateFormat("dd-MM-yyyy HH:mm:ss").format(time));
+				return;
 			}
-			else if (view.getId() == R.id.cancel_button) {
+			
+			boolean dbg_sort = getSetting(context, "Extras", "").contains("dbg_sort");
+			if (dbg_sort)
+			{
+				class ImageComp implements Comparator<String>
+				{
+					public int compare(String f1, String f2) {
+						long t1 = new File(f1).lastModified();
+						long t2 = new File(f2).lastModified();
+			  			return t1>t2?1:(t1<t2?-1:0);
+			  		}
+				};
+				Collections.sort(images, new ImageComp());
+				
+				for (int i=0; i<images.size(); ++i)
+				{
+					Log.v("Testing", String.format(images.get(i)));	
+				}
+				return;
+			}
+			
+			FullscreenActivity.this.mStatus = Status.Working;
+			FullscreenActivity.this.mWorkCount++;
+			
+			mStatusTextViews.console.setText("");
+			mStatusTextViews.time.setText("00:00:00");
+			mStatusTextViews.activity.setText("Connecting...");
+			//mStatusTextViews.progress.setVisibility(View.VISIBLE);
+			mStatusTextViews.cancel.setVisibility(View.VISIBLE);
+			mStatusTextViews.progress1.setVisibility(View.VISIBLE);
+			mStatusTextViews.progress1.setProgress(0);
+			mStatusTextViews.progress2.setVisibility(View.VISIBLE);
+			mStatusTextViews.progress2.setProgress(0);
+			//mStatusTextViews.progress3.setVisibility(View.VISIBLE);
+			//mStatusTextViews.progress3.setProgress(0);
+
+			NetworkThreadSettings settings = new NetworkThreadSettings();
+			String address[] = getSetting(context, "Server", null).split(":");
+			settings.server = address[0];
+			settings.port = Integer.parseInt(address[1]);
+			
+			settings.dport = Integer.parseInt(nonEmptySetting(getSetting(context, "DiscoveryPort"), "1600"));
+			settings.targets = getSetting(context, "Targets", "");
+			if (automatic) {
+				settings.minFiles = Integer.parseInt(getSetting(context, "MinFiles"));
+				settings.maxFiles = Integer.parseInt(getSetting(context, "MaxFiles"));
+				settings.stamp = true;
+			} else {
+				settings.minFiles = 0;
+				settings.maxFiles = images.size();
+				settings.stamp = false;
+			}
+				
+			long minTime = 0;
+			if (automatic && getSetting(context, "UseTime", "").equalsIgnoreCase("yes"))
+			{
+				try
+				{
+					minTime = new SimpleDateFormat("dd-MM-yyyy HH:mm:ss").parse(getSetting(context, "LastTime", null)).getTime();
+				} catch (Exception e) {}
+			}
+			settings.minTime = minTime;
+			
+			NetworkThread thread = new NetworkThread(mThreadMessageHandler, settings, images, mStatusTextViews);
+			mWorkThread = thread;
+			thread.start();
+		}
+	}
+
+	View.OnTouchListener mTouchListener = new View.OnTouchListener() {
+		
+		boolean isHolding = false;
+		boolean triggeredHold = false;
+		
+		@SuppressLint("InlinedApi")
+		@Override
+		public boolean onTouch(View view, MotionEvent evt) {
+
+			isHolding = false;
+			if (view.getId() == R.id.backup_button) {
+				
+				if (evt.getAction() == MotionEvent.ACTION_DOWN) {
+					
+					isHolding = true;
+					triggeredHold = false;
+					Runnable holdRunnable = new Runnable() {
+						public void run() {
+							if (isHolding) {
+								triggeredHold = true;
+								Intent intent = new Intent();
+								intent.setType("image/*");
+								if (android.os.Build.VERSION.SDK_INT >= 18)
+									intent.putExtra(Intent.EXTRA_ALLOW_MULTIPLE, true);
+								intent.setAction(Intent.ACTION_GET_CONTENT);
+								startActivityForResult(Intent.createChooser(intent,"Select Files"), 12);
+							}
+						}
+					};
+					
+					Handler holdHandler = new Handler();
+					holdHandler.postDelayed(holdRunnable, 1000);
+					
+				} else if (evt.getAction() == MotionEvent.ACTION_UP) {
+					
+					if (!triggeredHold) {
+						Context context = view.getContext();
+						{	
+							List<String> images = getCameraImages(context);
+							launchBackup(context, images, true);
+	
+							return true;
+						}
+					}
+					triggeredHold = false;
+				}	
+			}
+			else if (view.getId() == R.id.cancel_button && evt.getAction() == MotionEvent.ACTION_DOWN) {
 			
 				if (mWorkThread != null && mWorkThread.mSocket != null)
 				{
@@ -361,6 +504,8 @@ public class FullscreenActivity extends Activity {
 					} catch (Exception e)
 					{}
 				}
+				
+				return true;
 			}
 			
 			return false;
@@ -394,6 +539,7 @@ public class FullscreenActivity extends Activity {
 		int dport;
 		String targets;
 		long minTime;
+		boolean stamp;
 	};
 	
 	public class NetworkThread extends Thread {
@@ -585,7 +731,8 @@ public class FullscreenActivity extends Activity {
 				Message msg = Message.obtain(mMessageHandler, 1, 0, 0);
 				Bundle data = new Bundle(); 
 				data.putBoolean("Succeeded", mSucceeded);
-				data.putString("LastTime", mLastTime);
+				if (mSettings.stamp)
+					data.putString("LastTime", mLastTime);
 				msg.setData(data);
 				msg.sendToTarget();
 			}
@@ -868,11 +1015,23 @@ public class FullscreenActivity extends Activity {
 											logStatus(str);
 											logNotify(str);
 											
-											if (requestedFids.size() > 0)
+											if (mSettings.stamp && requestedFids.size() > 0)
 											{
-												String fid = requestedFids.get(requestedFids.size()-1);
-												int index = fidMap.get(fid).intValue();
-												String filePath = mImages.get(index);
+												int maxIndex = 0;
+												{
+													String fid = requestedFids.get(requestedFids.size()-1);
+													int index = fidMap.get(fid).intValue();
+													maxIndex = index;
+												}
+												
+												for (int i=0; i<requestedFids.size(); i++)
+												{
+													String fid = requestedFids.get(i);
+													int index = fidMap.get(fid).intValue();
+													if (index > maxIndex) maxIndex = index;
+												}
+												
+												String filePath = mImages.get(maxIndex);
 												try
 												{
 													long time = new File(filePath).lastModified();
@@ -1080,6 +1239,11 @@ public class FullscreenActivity extends Activity {
 		return thumb;
 	}
 	
+	private static String getStampPrefix()
+	{
+		return "mediafrost_stamp-";
+	}
+	
 	@SuppressLint("SimpleDateFormat")
 	public static void stampSuccess(Context context, String iconInputFilePath)
 	{
@@ -1113,7 +1277,7 @@ public class FullscreenActivity extends Activity {
 	    File file; String fpath;
 	    do
 	    {
-	    	String fname = "mediafrost_stamp-"+ generator.nextInt() +".jpg"; 
+	    	String fname = getStampPrefix() + generator.nextInt() +".jpg"; 
 	    	fpath = folder + "/" + fname;
 	    	file = new File (fpath);
 	    } while (file.exists());
@@ -1157,6 +1321,39 @@ public class FullscreenActivity extends Activity {
 		}
 	}
 
+	public static List<String> getImageBucketNames(Context context) {
+		Uri images = MediaStore.Images.Media.EXTERNAL_CONTENT_URI;
+	    String[] projection = new String[]{   
+	            MediaStore.Images.Media.BUCKET_ID,
+	            MediaStore.Images.Media.BUCKET_DISPLAY_NAME,
+	            MediaStore.Images.Media.DATE_TAKEN,
+	            MediaStore.Images.Media.DATA
+	    };
+
+	    String BUCKET_ORDER_BY = MediaStore.Images.Media.DATE_MODIFIED + " DESC";
+	    String BUCKET_GROUP_BY = "1) GROUP BY 1,(2";
+	    Cursor imagecursor = context.getContentResolver().query(images,
+	            projection, // Which columns to return
+	            BUCKET_GROUP_BY,       // Which rows to return (all rows)
+	            null,       // Selection arguments (none)
+	            BUCKET_ORDER_BY        // Ordering
+	            );
+
+	    //this.imageUrls = new ArrayList<String>();
+	    ArrayList<String> imageBuckets  = new ArrayList<String>();
+	    for (int i = 0; i < imagecursor.getCount(); i++)
+	    {
+	        imagecursor.moveToPosition(i);
+	        int bucketColumnIndex = imagecursor.getColumnIndex(MediaStore.Images.Media.BUCKET_DISPLAY_NAME);
+	        String bucketDisplayName = imagecursor.getString(bucketColumnIndex);
+	        imageBuckets.add(bucketDisplayName);
+	        //int dataColumnIndex = imagecursor.getColumnIndex(MediaStore.Images.Media.DATA);
+	        //imageUrls.add(imagecursor.getString(dataColumnIndex));
+
+	    }
+	    return imageBuckets;
+	}
+	
 	public static List<String> getCameraImages(Context context) {
 
 		ArrayList<String> result = new ArrayList<String>();

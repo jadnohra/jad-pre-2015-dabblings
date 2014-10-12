@@ -15,6 +15,7 @@ public class SettingsActivity extends PreferenceActivity implements Preference.O
 	public EditTextPreference mMinFiles;
 	public EditTextPreference mMaxFiles;
 	public EditTextPreference mTargets;
+	//public EditTextPreference mSources;
 	public EditTextPreference mExtras;
 	public EditTextPreference mUseTime;
 	public EditTextPreference mLastTime;
@@ -56,22 +57,30 @@ public class SettingsActivity extends PreferenceActivity implements Preference.O
 		PreferenceScreen screen = getPreferenceScreen();
 		
 		{
-			mServer = createPreference("Server", "Server Address", true);
-			screen.addPreference(mServer);
-			mDiscoveryPort = createPreference("DiscoveryPort", "Discovery Port", true);
-			screen.addPreference(mDiscoveryPort);
+			//mSources = createPreference("Sources", "Backup Sources", true);
+			//screen.addPreference(mSources);
+			
+			mTargets = createPreference("Targets", "Backup Targets", true);
+			screen.addPreference(mTargets);
+
 			mMinFiles = createPreference("MinFiles", "Minimum Files to Backup", true);
 			screen.addPreference(mMinFiles);
 			mMaxFiles = createPreference("MaxFiles", "Maximum Files to Backup", true);
 			screen.addPreference(mMaxFiles);
-			mTargets = createPreference("Targets", "Backup Targets", true);
-			screen.addPreference(mTargets);
-			mExtras = createPreference("Extras", "Extras", true);
-			screen.addPreference(mExtras);
+
 			mUseTime = createPreference("UseTime", "Use Date", true);
 			screen.addPreference(mUseTime);
 			mLastTime = createPreference("LastTime", "Last Date", true);
 			screen.addPreference(mLastTime);
+			
+			mServer = createPreference("Server", "Server Address", true);
+			screen.addPreference(mServer);
+			mDiscoveryPort = createPreference("DiscoveryPort", "Discovery Port", true);
+			screen.addPreference(mDiscoveryPort);
+
+			mExtras = createPreference("Extras", "Extras", true);
+			screen.addPreference(mExtras);
+
 		}
 	}
 };

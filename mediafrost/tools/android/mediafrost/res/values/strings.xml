@@ -2,8 +2,9 @@
 <resources>
 
     <string name="app_name">Mediafrost</string>
-     <string name="app_vname">Mediafrost (1.1.0)</string>
+     <string name="app_vname">Mediafrost (1.1.3)</string>
     <string name="button_backup">Backup</string>
+     <string name="button_manual">Manual Backup</string>
     <string name="button_cancel">Cancel</string>
 
 </resources>
