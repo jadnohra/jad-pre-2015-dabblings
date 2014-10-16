@@ -115,7 +115,7 @@ if 0:
 	print try_mponens(T1, T2)
 
 if 1:
-	arg_base = int(sys.argv[sys.argv.index('-base')+1]) if ('-base' in sys.argv) else 3
+	arg_base = int(sys.argv[sys.argv.index('-base')+1]) if ('-base' in sys.argv) else 1
 	base_subs = base_sentences(arg_base)
 	base_subs.append(s_disj(['p'], ['p'])) 
 	base_subs.append(s_disj(['q'], ['q'])) 
