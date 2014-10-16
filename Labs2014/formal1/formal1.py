@@ -70,7 +70,7 @@ def gen_axioms(schema_info, base_subs):
 	#print axioms; raw_input("....");	
 	return axioms				
 
-def gen_proofs(depth, thm_len, base_subs, thms, proof = [], cnt=[0]):
+def gen_proofs(depth, thm_len, base_subs, schema_inf, axioms, thms, proof = [], cnt=[0]):
 	def bleep():
 		if (cnt[0] == 1 or cnt[0] % 10000 == 0):
 			sys.stdout.flush()
@@ -79,14 +79,19 @@ def gen_proofs(depth, thm_len, base_subs, thms, proof = [], cnt=[0]):
 	n = len(proof)
 	if (n >= depth):
 		return	
-	for si in schema_infos:
+	for axm in axioms:
+			#print s_nice(axm); raw_input("..");	
+			if (axm not in proof):	
+				nproof = list(proof); nproof.append(axm); cnt[0] = cnt[0]+1; bleep();
+				gen_proofs(depth, thm_len, base_subs, schema_inf, axioms, thms, nproof, cnt)	
+	for si in schema_inf:
 		#print s_nice(si['schema']); raw_input("...");	
 		axioms = gen_axioms(si, base_subs)
 		for axm in axioms:
 			#print s_nice(axm); raw_input("..");	
 			if (axm not in proof):	
 				nproof = list(proof); nproof.append(axm); cnt[0] = cnt[0]+1; bleep();
-				gen_proofs(depth, thm_len, base_subs, thms, nproof, cnt)
+				gen_proofs(depth, thm_len, base_subs, schema_inf, axioms, thms, nproof, cnt)
 	for ti in range(len(proof)):
 		for tj in range(ti+1,len(proof)):
 			#print s_nice(proof[ti]), s_nice(proof[tj])
@@ -98,7 +103,7 @@ def gen_proofs(depth, thm_len, base_subs, thms, proof = [], cnt=[0]):
 						thms.append(thm)
 				if (thm not in proof):
 					nproof = list(proof); nproof.append(thm); cnt[0] = cnt[0]+1; bleep();
-					gen_proofs(depth, thm_len, base_subs, thms, nproof, cnt)	
+					gen_proofs(depth, thm_len, base_subs, schema_inf, axioms, thms, nproof, cnt)	
 
 #print try_mponens(['x','=>','y'], ['x'])
 
@@ -118,14 +123,24 @@ if 1:
 	arg_base = int(sys.argv[sys.argv.index('-base')+1]) if ('-base' in sys.argv) else 1
 	base_subs = base_sentences(arg_base)
 	base_subs.append(s_disj(['p'], ['p'])) 
-	base_subs.append(s_disj(['q'], ['q'])) 
+	if (arg_base == 2):
+		base_subs.append(s_disj(['q'], ['q'])) 
 	
 	arg_len = int(sys.argv[sys.argv.index('-len')+1]) if ('-len' in sys.argv) else 3
 	arg_depth = int(sys.argv[sys.argv.index('-depth')+1]) if ('-depth' in sys.argv) else 3
-	ts = time.time()
-	thms = []; gen_proofs(arg_depth, arg_len, base_subs, thms);
-	print time.time() - ts, 'sec.'
-	for thm in thms:
-		print s_nice(thm)
+	arg_derive = int(sys.argv[sys.argv.index('-derive')+1]) if ('-derive' in sys.argv) else 1
+
+	derived_axioms = []; thms = []; last_len_thms = 0;
+	for i in range(arg_derive):
+		print 'derive level', i
+		ts = time.time()
+		gen_proofs(arg_depth, arg_len, base_subs, schema_infos, derived_axioms, thms)
+		print time.time() - ts, 'sec.'
+		#for thm in thms[last_len_thms:]:
+		#	print s_nice(thm)
+		if (last_len_thms == len(thms)):
+			break
+		last_len_thms = len(thms)	
+		derived_axioms = derived_axioms + thms
 
 
