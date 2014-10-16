@@ -92,9 +92,9 @@ def gen_proofs(depth, thm_len, base_subs, thms, proof = [], cnt=[0]):
 			#print s_nice(proof[ti]), s_nice(proof[tj])
 			thm = try_mponens(proof[ti], proof[tj])
 			if (thm is not None):
-				#print s_nice(thm); raw_input(".");
 				if (s_len(thm) <= thm_len):
 					if (thm not in thms):
+						print s_nice(thm)
 						thms.append(thm)
 				if (thm not in proof):
 					nproof = list(proof); nproof.append(thm); cnt[0] = cnt[0]+1; bleep();
@@ -115,13 +115,15 @@ if 0:
 	print try_mponens(T1, T2)
 
 if 1:
-	base_subs = base_sentences(1)
+	arg_base = int(sys.argv[sys.argv.index('-base')+1]) if ('-base' in sys.argv) else 3
+	base_subs = base_sentences(arg_base)
 	base_subs.append(s_disj(['p'], ['p'])) 
-	ts = time.time()
+	base_subs.append(s_disj(['q'], ['q'])) 
+	
 	arg_len = int(sys.argv[sys.argv.index('-len')+1]) if ('-len' in sys.argv) else 3
 	arg_depth = int(sys.argv[sys.argv.index('-depth')+1]) if ('-depth' in sys.argv) else 3
-	thms = []
-	gen_proofs(arg_depth, arg_len, base_subs, thms)
+	ts = time.time()
+	thms = []; gen_proofs(arg_depth, arg_len, base_subs, thms);
 	print time.time() - ts, 'sec.'
 	for thm in thms:
 		print s_nice(thm)
