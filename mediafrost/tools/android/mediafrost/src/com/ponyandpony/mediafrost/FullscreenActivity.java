@@ -26,6 +26,7 @@ import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Random;
+import java.util.TreeSet;
 
 import android.annotation.SuppressLint;
 import android.annotation.TargetApi;
@@ -36,6 +37,7 @@ import android.os.Bundle;
 import android.os.Environment;
 import android.os.Handler;
 import android.os.Message;
+import android.preference.EditTextPreference;
 import android.preference.PreferenceActivity;
 import android.preference.PreferenceFragment;
 import android.preference.PreferenceManager;
@@ -94,6 +96,8 @@ public class FullscreenActivity extends Activity {
 	StatusTextViews mStatusTextViews;
 	SettingsActivity mSettingsActivity;
 	
+	List<String> mSources;
+	
 	enum Status
 	{
 		Idle,
@@ -121,6 +125,25 @@ public class FullscreenActivity extends Activity {
 	static public String getSetting(Context context, String key) { return getSetting(context, key, null); }
 	static public String nonEmptySetting(String str, String dft) { if (str == null || str.length() == 0) return dft; return str; }
 	
+	static public void setSettingBool(Context context, String key, Boolean val) 
+	{ 
+		SharedPreferences prefs = PreferenceManager.getDefaultSharedPreferences(context);
+		SharedPreferences.Editor editor = prefs.edit();
+		editor.putBoolean(key, val); editor.commit();
+	}
+	
+	static public Boolean getSettingBool(Context context, String key, Boolean dft) 
+	{ 
+		SharedPreferences prefs = PreferenceManager.getDefaultSharedPreferences(context);
+		if (prefs.contains(key) == false)
+			setSettingBool(context, key, dft);
+		return prefs.getBoolean(key, dft); 
+	}
+	
+	static public Boolean getSettingBool(Context context, String key) { return getSettingBool(context, key, null); }
+	static public Boolean nonEmptySettingBool(Boolean str, Boolean dft) { if (str == null) return dft; return str; }
+	
+	
 	@SuppressLint("InlinedApi")
 	@Override
 	protected void onCreate(Bundle savedInstanceState) {
@@ -137,6 +160,18 @@ public class FullscreenActivity extends Activity {
 			getSetting(this, "Targets", "vault_lena,vault_jad");
 			//getSetting(this, "Sources", "camera");
 			getSetting(this, "UseTime", "Yes");
+			
+			{
+				{
+					mSources = getBucketNames(this);
+					for (int i=0; i<mSources.size(); i++) {
+						boolean bkp = false;
+						if (mSources.get(i).equalsIgnoreCase("Camera")) bkp = true;
+						//setSettingBool(this, "Source_"+mSources.get(i), Boolean.valueOf(bkp));
+						getSettingBool(this, "Source_"+mSources.get(i), Boolean.valueOf(bkp));
+					}
+				}
+			}
 		}
 		
 		setContentView(R.layout.activity_fullscreen);
@@ -190,7 +225,7 @@ public class FullscreenActivity extends Activity {
 	
 		if (getSetting(this, "Extras", "").contains("dbg_buckets"))
 		{
-			List<String> names = getImageBucketNames(this);
+			List<String> names = getBucketNames(this);
 			for (int i=0; i<names.size(); ++i)
 			{
 				Log.v("Testing", String.format(names.get(i)));	
@@ -341,62 +376,16 @@ public class FullscreenActivity extends Activity {
 	    		  }   
 	    	  }
 	    	 if (images.size() > 0)
-	    		 launchBackup(this, images, false);
+	    		 launchBackup(this, null, images, false);
 	    	  //for (int i=0; i<images.size(); ++i) Log.v("Testing", String.format(images.get(i)));	
 	      }
 	      
 	}
 	
+	
+	
 	@SuppressLint("SimpleDateFormat")
-	public void launchBackup(Context context, List<String> images, boolean automatic) {
-		Iterator<String> iter = images.iterator();
-		while (iter.hasNext()) {
-		    if (iter.next().startsWith(getStampPrefix())) {
-		        iter.remove();
-		    }
-		}
-		
-		boolean dbg = false;
-		if (dbg && images.size() > 0) {
-			String hash = genMD5Hash(images.get(0));
-			Log.v("Testing", images.get(0));
-			Log.v("Testing", hash);
-		}
-
-		if (images.size() > 0) {
-			
-			boolean dbg_stamp = getSetting(context, "Extras", "").contains("dbg_stamp");
-			if (dbg_stamp)
-			{
-				int ti = 0;
-				for (int i=0; i<images.size(); ++i)
-					if (!images.get(i).contains("jpg"))
-						{	ti = i; break; }
-				stampSuccess(FullscreenActivity.this, images.get(ti));
-				long time = new File(images.get(ti)).lastModified();
-				setSetting(FullscreenActivity.this, "LastTime", new SimpleDateFormat("dd-MM-yyyy HH:mm:ss").format(time));
-				return;
-			}
-			
-			boolean dbg_sort = getSetting(context, "Extras", "").contains("dbg_sort");
-			if (dbg_sort)
-			{
-				class ImageComp implements Comparator<String>
-				{
-					public int compare(String f1, String f2) {
-						long t1 = new File(f1).lastModified();
-						long t2 = new File(f2).lastModified();
-			  			return t1>t2?1:(t1<t2?-1:0);
-			  		}
-				};
-				Collections.sort(images, new ImageComp());
-				
-				for (int i=0; i<images.size(); ++i)
-				{
-					Log.v("Testing", String.format(images.get(i)));	
-				}
-				return;
-			}
+	public void launchBackup(Context context, List<String> sources, List<String> images, boolean automatic) {
 			
 			FullscreenActivity.this.mStatus = Status.Working;
 			FullscreenActivity.this.mWorkCount++;
@@ -420,7 +409,7 @@ public class FullscreenActivity extends Activity {
 			
 			settings.dport = Integer.parseInt(nonEmptySetting(getSetting(context, "DiscoveryPort"), "1600"));
 			settings.targets = getSetting(context, "Targets", "");
-			if (automatic) {
+			if (automatic == false) {
 				settings.minFiles = Integer.parseInt(getSetting(context, "MinFiles"));
 				settings.maxFiles = Integer.parseInt(getSetting(context, "MaxFiles"));
 				settings.stamp = true;
@@ -440,10 +429,9 @@ public class FullscreenActivity extends Activity {
 			}
 			settings.minTime = minTime;
 			
-			NetworkThread thread = new NetworkThread(mThreadMessageHandler, settings, images, mStatusTextViews);
+			NetworkThread thread = new NetworkThread(mThreadMessageHandler, settings, sources, images, mStatusTextViews);
 			mWorkThread = thread;
 			thread.start();
-		}
 	}
 
 	View.OnTouchListener mTouchListener = new View.OnTouchListener() {
@@ -511,6 +499,56 @@ public class FullscreenActivity extends Activity {
 			return false;
 		}
 	};
+	
+	static void prepareImages(Context context, List<String> images)
+	{
+		boolean dbg = false;
+		if (dbg && images.size() > 0) {
+			String hash = genMD5Hash(images.get(0));
+			Log.v("Testing", images.get(0));
+			Log.v("Testing", hash);
+		}
+		
+		boolean dbg_stamp = getSetting(context, "Extras", "").contains("dbg_stamp");
+		if (dbg_stamp)
+		{
+			int ti = 0;
+			for (int i=0; i<images.size(); ++i)
+				if (!images.get(i).contains("jpg"))
+					{	ti = i; break; }
+			stampSuccess(context, images.get(ti));
+			long time = new File(images.get(ti)).lastModified();
+			setSetting(context, "LastTime", new SimpleDateFormat("dd-MM-yyyy HH:mm:ss").format(time));
+			return;
+		}
+		
+		boolean dbg_sort = getSetting(context, "Extras", "").contains("dbg_sort");
+		if (dbg_sort)
+		{
+			class ImageComp implements Comparator<String>
+			{
+				public int compare(String f1, String f2) {
+					long t1 = new File(f1).lastModified();
+					long t2 = new File(f2).lastModified();
+		  			return t1>t2?1:(t1<t2?-1:0);
+		  		}
+			};
+			Collections.sort(images, new ImageComp());
+			
+			for (int i=0; i<images.size(); ++i)
+			{
+				Log.v("Testing", String.format(images.get(i)));	
+			}
+			return;
+		}
+		
+		Iterator<String> iter = images.iterator();
+		while (iter.hasNext()) {
+		    if (iter.next().startsWith(getStampPrefix())) {
+		        iter.remove();
+		    }
+		}
+	}
 
 	public Handler mThreadMessageHandler = new Handler() {
 		@Override
@@ -546,6 +584,8 @@ public class FullscreenActivity extends Activity {
 		
 		NetworkThreadSettings mSettings;
 		Handler mMessageHandler;
+		BucketInfos mBucketInfos;
+		List<String> mSources;
 		List<String> mImages;
 		long mTotalByteCount;
 		StatusTextViews mStatusTextViews;
@@ -558,9 +598,11 @@ public class FullscreenActivity extends Activity {
 		String mFailString;
 		String mLastTime;
 
-		NetworkThread(Handler messageHandler, NetworkThreadSettings settings, List<String> images, StatusTextViews statusTextViews) {
+		NetworkThread(Handler messageHandler, NetworkThreadSettings settings, BucketInfos bucketInfos, List<String> sources, List<String> images, StatusTextViews statusTextViews) {
 			mMessageHandler = messageHandler;
 			mSettings = settings;
+			mBucketInfos = bucketInfos;
+			mSources = sources;
 			mImages = images;
 			mStatusTextViews = statusTextViews;
 			mStatusText = "";
@@ -765,24 +807,50 @@ public class FullscreenActivity extends Activity {
 		}
 		
 		public void run() {
-			
+			if (mImages != null)
 			{
+				if (mImages.size() > 0)
+					runBatch(mImages);
+			}
+			if (mSources != null)
+			{
+				for (int i=0; i<mSources.size(); i++)
+				{
+					logStatus(String.format("Backing up '%s'.", mSources.get(i)));
+					List<String> images = getMediaFiles(FullscreenActivity.this, mBucketInfos, mSources.get(i));
+					if (images.size() > 0)
+						runBatch(images);
+				}
+			}
+			
+		}
+			
+		public void runBatch(List<String> images) {	
+			{
+				{
+					Iterator<String> iter = images.iterator();
+					while (iter.hasNext()) {
+					    if (iter.next().startsWith(getStampPrefix())) {
+					        iter.remove();
+					    }
+					}
+				}
 				{					
 					if (mSettings.minTime > 0)
 					{
 						int removed = 0;
 						long minTime = mSettings.minTime - 1000;
-						Iterator<String> it = mImages.iterator();
+						Iterator<String> it = images.iterator();
 						while (it.hasNext()) {
 							String f = it.next();
 							if(new File(f).lastModified() < minTime)
 								{ it.remove(); removed++; }
 						}
-						logStatus(String.format("Filtered out %d of %d files by date.", removed, mImages.size()+removed));
+						logStatus(String.format("Filtered out %d of %d files by date.", removed, images.size()+removed));
 					}
 					else
 					{
-						logStatus(String.format("Detected %d files.", mImages.size()));	
+						logStatus(String.format("Detected %d files.", images.size()));	
 					}
 					
 					class ImageComp implements Comparator<String>
@@ -793,7 +861,7 @@ public class FullscreenActivity extends Activity {
 				  			return t1>t2?1:(t1<t2?-1:0);
 				  		}
 					};
-					Collections.sort(mImages, new ImageComp());
+					Collections.sort(images, new ImageComp());
 				}
 			}
 			
@@ -841,22 +909,22 @@ public class FullscreenActivity extends Activity {
 				if (sock.isConnected()) {
 					logStatus(String.format("Connected to %s.", sock.getRemoteSocketAddress().toString()));
 					
-					int imageCount = mImages.size();
+					int imageCount = images.size();
 					if (imageCount > mSettings.maxFiles)
 					{
-						logStatus(String.format("Limiting %d to max. %d files.", mImages.size(), mSettings.maxFiles));
+						logStatus(String.format("Limiting %d to max. %d files.", images.size(), mSettings.maxFiles));
 						imageCount = mSettings.maxFiles;
 					}
 					if (imageCount < mSettings.minFiles)
 					{
-						logStatus(String.format("%d files is below %d.", mImages.size(), mSettings.minFiles));
+						logStatus(String.format("%d files is below %d.", images.size(), mSettings.minFiles));
 						imageCount = 0;
 					}
 					
 					logStatus("Calculating total bytes ...", false);
 					mTotalByteCount = 0;
 					for (int i = 0; i < imageCount; i++) {
-						String filePath = mImages.get(i);
+						String filePath = images.get(i);
 						long bytes = new File(filePath).length();
 						mTotalByteCount += bytes;
 					}
@@ -899,7 +967,7 @@ public class FullscreenActivity extends Activity {
 												openProgress(mStatusTextViews.progress1);
 												float prog1 = 0.0f;
 												for (int i = 0; i < imageCount; i++) {
-													String filePath = mImages.get(i);
+													String filePath = images.get(i);
 													File file = new File(filePath);
 													String fileName = file.getName();
 							
@@ -949,7 +1017,7 @@ public class FullscreenActivity extends Activity {
 						for (int i = 0; i < requestedFids.size(); i++) {
 							String fid = requestedFids.get(i);
 							int index = fidMap.get(fid).intValue();
-							String filePath = mImages.get(index);
+							String filePath = images.get(index);
 
 							File file = new File(filePath);
 							setText(mStatusTextViews.activity,
@@ -1031,7 +1099,7 @@ public class FullscreenActivity extends Activity {
 													if (index > maxIndex) maxIndex = index;
 												}
 												
-												String filePath = mImages.get(maxIndex);
+												String filePath = images.get(maxIndex);
 												try
 												{
 													long time = new File(filePath).lastModified();
@@ -1294,16 +1362,19 @@ public class FullscreenActivity extends Activity {
 	    }
 	}
 	
-	public static void getMediaFiles(Context context, String proj, String buck, Uri uri, List<String> out) {
+	public static void getMediaFiles(Context context, String bukid, String proj, String buck, Uri uri, List<String> out) {
 
 		try {
 
 			final String[] projection = { proj  };
 			final String selection = buck + " = ?";
+			/*
 			final String CAMERA_IMAGE_BUCKET_NAME = Environment
 					.getExternalStorageDirectory().toString() + CamFolder;
 			final String CAMERA_IMAGE_BUCKET_ID = getBucketId(CAMERA_IMAGE_BUCKET_NAME);
 			final String[] selectionArgs = { CAMERA_IMAGE_BUCKET_ID };
+			*/
+			final String[] selectionArgs = { bukid };
 			final Cursor cursor = context.getContentResolver().query(
 					uri, projection, selection,
 					selectionArgs, null);
@@ -1320,17 +1391,40 @@ public class FullscreenActivity extends Activity {
 			Log.v("Testing", e.toString());
 		}
 	}
+	
+	
+	static class BucketInfo
+	{
+		String id;
+		String name;
+		Uri uri;
+	};
+	
+	static class BucketInfos
+	{
+		List<BucketInfo> imageBuckets;
+		List<BucketInfo> videoBuckets;
+		List<String> bucketNames;
+	};
 
-	public static List<String> getImageBucketNames(Context context) {
-		Uri images = MediaStore.Images.Media.EXTERNAL_CONTENT_URI;
+	static class BucketInfoIdComp implements Comparator<BucketInfo>{
+		 
+	    @Override
+	    public int compare(BucketInfo e1, BucketInfo e2) {
+	        return e1.id.compareTo(e2.id);
+	    }
+	}   
+	
+	public static List<BucketInfo> getBucketNames(Context context, Uri EXTERNAL_CONTENT_URI, String BUCKET_ID, String BUCKET_DISPLAY_NAME, String DATE_TAKEN, String DATA, String DATE_MODIFIED) {
+		Uri images = EXTERNAL_CONTENT_URI;
 	    String[] projection = new String[]{   
-	            MediaStore.Images.Media.BUCKET_ID,
-	            MediaStore.Images.Media.BUCKET_DISPLAY_NAME,
-	            MediaStore.Images.Media.DATE_TAKEN,
-	            MediaStore.Images.Media.DATA
+	            BUCKET_ID,
+	            BUCKET_DISPLAY_NAME,
+	            DATE_TAKEN,
+	            DATA
 	    };
 
-	    String BUCKET_ORDER_BY = MediaStore.Images.Media.DATE_MODIFIED + " DESC";
+	    String BUCKET_ORDER_BY = DATE_MODIFIED + " DESC";
 	    String BUCKET_GROUP_BY = "1) GROUP BY 1,(2";
 	    Cursor imagecursor = context.getContentResolver().query(images,
 	            projection, // Which columns to return
@@ -1340,13 +1434,22 @@ public class FullscreenActivity extends Activity {
 	            );
 
 	    //this.imageUrls = new ArrayList<String>();
-	    ArrayList<String> imageBuckets  = new ArrayList<String>();
+	    ArrayList<BucketInfo> imageBuckets  = new ArrayList<BucketInfo>();
 	    for (int i = 0; i < imagecursor.getCount(); i++)
 	    {
 	        imagecursor.moveToPosition(i);
-	        int bucketColumnIndex = imagecursor.getColumnIndex(MediaStore.Images.Media.BUCKET_DISPLAY_NAME);
-	        String bucketDisplayName = imagecursor.getString(bucketColumnIndex);
-	        imageBuckets.add(bucketDisplayName);
+	        BucketInfo info = new BucketInfo();
+	        {
+	        	int bucketColumnIndex = imagecursor.getColumnIndex(BUCKET_DISPLAY_NAME);
+	        	String bucketDisplayName = imagecursor.getString(bucketColumnIndex);
+	        	info.name = bucketDisplayName;
+	        }
+	        {
+	        	int bucketColumnIndex = imagecursor.getColumnIndex(BUCKET_ID);
+	        	String bucketDisplayId = imagecursor.getString(bucketColumnIndex);
+	        	info.id = bucketDisplayId;
+	        }
+	        imageBuckets.add(info);
 	        //int dataColumnIndex = imagecursor.getColumnIndex(MediaStore.Images.Media.DATA);
 	        //imageUrls.add(imagecursor.getString(dataColumnIndex));
 
@@ -1354,12 +1457,72 @@ public class FullscreenActivity extends Activity {
 	    return imageBuckets;
 	}
 	
-	public static List<String> getCameraImages(Context context) {
+	
+	
+	public static BucketInfos getBuckets(Context context) {
+		
+		BucketInfos infos = new BucketInfos();
+		
+		infos.imageBuckets = getBucketNames(context, MediaStore.Images.Media.EXTERNAL_CONTENT_URI,  MediaStore.Images.Media.BUCKET_ID,
+	            MediaStore.Images.Media.BUCKET_DISPLAY_NAME,
+	            MediaStore.Images.Media.DATE_TAKEN,
+	            MediaStore.Images.Media.DATA,
+	            MediaStore.Images.Media.DATE_MODIFIED);
+		infos.videoBuckets = getBucketNames(context, MediaStore.Video.Media.EXTERNAL_CONTENT_URI,  MediaStore.Video.Media.BUCKET_ID,
+	            MediaStore.Video.Media.BUCKET_DISPLAY_NAME,
+	            MediaStore.Video.Media.DATE_TAKEN,
+	            MediaStore.Video.Media.DATA,
+	            MediaStore.Video.Media.DATE_MODIFIED);	
+		
+		TreeSet<BucketInfo> col1 = new TreeSet<BucketInfo>(new BucketInfoIdComp());
+		col1.addAll(infos.imageBuckets); col1.addAll(infos.videoBuckets);
+		
+		Iterator<BucketInfo> it = col1.iterator();
+		 while(it.hasNext()) {
+			 infos.bucketNames.add(it.next().name);
+	      }
+
+		return infos;
+	}
+	
+	public static List<String> getMediaFiles(Context context, BucketInfos infos, String bucketName) {
+
+		String imgId = null; String vidId = null;
+		
+		for (int i=0; i<infos.imageBuckets.size(); i++)
+		{
+			if (bucketName.compareTo(infos.imageBuckets.get(i).name) == 0)
+			{
+				imgId = infos.imageBuckets.get(i).id;
+				break;
+			}
+		}
+		
+		for (int i=0; i<infos.videoBuckets.size(); i++)
+		{
+			if (bucketName.compareTo(infos.videoBuckets.get(i).name) == 0)
+			{
+				vidId = infos.videoBuckets.get(i).id;
+				break;
+			}
+		}
+		
+		ArrayList<String> result = new ArrayList<String>();
+		if (imgId != null)
+			getMediaFiles(context, imgId, MediaStore.Images.Media.DATA, MediaStore.Images.Media.BUCKET_ID, MediaStore.Images.Media.EXTERNAL_CONTENT_URI, result);
+		if (vidId != null)
+			getMediaFiles(context, vidId, MediaStore.Video.Media.DATA, MediaStore.Video.Media.BUCKET_ID, MediaStore.Video.Media.EXTERNAL_CONTENT_URI, result);
+		return result;
+	}
+	
+	/*
+	public static List<String> getMediaFiles(Context context, String bucketId) {
 
 		ArrayList<String> result = new ArrayList<String>();
 		getMediaFiles(context, MediaStore.Images.Media.DATA, MediaStore.Images.Media.BUCKET_ID, MediaStore.Images.Media.EXTERNAL_CONTENT_URI, result);
 		getMediaFiles(context, MediaStore.Video.Media.DATA, MediaStore.Video.Media.BUCKET_ID, MediaStore.Video.Media.EXTERNAL_CONTENT_URI, result);
 		return result;
 	}
+	*/
 
 }

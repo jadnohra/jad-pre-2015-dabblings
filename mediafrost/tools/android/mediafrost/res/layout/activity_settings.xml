@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <PreferenceScreen xmlns:android="http://schemas.android.com/apk/res/android" >
-    <!--  
-    <EditTextPreference  android:key="Server" 
+    
+    <!-->EditTextPreference  android:key="Server" 
         	android:title="Mediafrost Server Address" android:dialogTitle="Mediafrost Server Address"
             android:summary="192.168.1.4:24107" android:defaultValue="192.168.1.4:24107" />
     <CheckBoxPreference android:key="EnableLimits" 
@@ -13,6 +13,6 @@
             android:summary="30" android:defaultValue="30" />
       <EditTextPreference  android:key="MaxFiles" android:dependency="EnableLimits"
         	android:title="Maximum Files to Backup" android:dialogTitle="Maximum Files to Backup"
-            android:summary="900" android:defaultValue="900" />
-      -->      
+            android:summary="900" android:defaultValue="900" /-->
+         
 </PreferenceScreen>
