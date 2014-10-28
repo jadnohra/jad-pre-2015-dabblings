@@ -120,12 +120,20 @@ def niceBytes(bytes):
 		r = r / 1024.0; i=i+1;
 	return '{:.2f} {}'.format(r, a[i])
 
+default_mount_match_name = '???'
+sys_plat = platform.system().lower()
+if ('darwin' in sys_plat):
+	default_mount_match_name = 'Apple'
+if ('linux' in sys_plat):
+	default_mount_match_name = '/dev/root'
+
 if ('-test_out' in sys.argv) or ('-ctest_out' in sys.argv):
 	if (os.path.isdir(self_test_out) and ('-ctest_out' in sys.argv)):
 		shutil.rmtree(self_test_out)
 	if (not os.path.isdir(self_test_out)):
 		os.makedirs(self_test_out)
-	fs_target_filters = [ frost.FsMountPointFilter(True, 'test_fs_out', 'test_fs_out','test_fs_out', '/dev/root', '0', self_test_out) ]
+	
+	fs_target_filters = [ frost.FsMountPointFilter(True, 'test_fs_out', 'test_fs_out','test_fs_out', default_mount_match_name, '0', self_test_out) ]
 else:
 	fs_target_filters = []
 
@@ -133,8 +141,8 @@ fs_mounts = frost.fsFindMounts()
 if dbg3:
     print 'fs_mounts:', fs_mounts
 
-fs_lcache_filters = [ frost.FsMountPointFilter(True, 'fs_lcache', 'fs_lcache','fs_lcache', '/dev/root', '0', self_lcache) ]
-fs_mcache_filters = [ frost.FsMountPointFilter(True, 'fs_mcache', 'fs_mcache','fs_mcache', '/dev/root', '0', os.path.join(self_mount,'mcache/mediafrost/mcache')) ]
+fs_lcache_filters = [ frost.FsMountPointFilter(True, 'fs_lcache', 'fs_lcache','fs_lcache', default_mount_match_name, '0', self_lcache) ]
+fs_mcache_filters = [ frost.FsMountPointFilter(True, 'fs_mcache', 'fs_mcache','fs_mcache', default_mount_match_name, '0', os.path.join(self_mount,'mcache/mediafrost/mcache')) ]
 fs_cache_sources = None
 fs_lcache_sources = None
 
@@ -148,8 +156,8 @@ else:
 	print 'Will use mounted cache.'
 
 fs_am_filters = [
-				frost.FsMountPointFilter(True, 'fs_back1', 'Vault_Jad','Vault_Jad', '/dev/root', '1000', os.path.join(self_mount,'vault_jad/Vault/mediafrost')),
-				frost.FsMountPointFilter(True, 'fs_back2', 'Vault_Lena','Vault_Lena', '/dev/root', '1000', os.path.join(self_mount,'vault_lena/Vault/mediafrost')),
+				frost.FsMountPointFilter(True, 'fs_back1', 'Vault_Jad','Vault_Jad', default_mount_match_name, '1000', os.path.join(self_mount,'vault_jad/Vault/mediafrost')),
+				frost.FsMountPointFilter(True, 'fs_back2', 'Vault_Lena','Vault_Lena', default_mount_match_name, '1000', os.path.join(self_mount,'vault_lena/Vault/mediafrost')),
              ]
 FsAutoMount = namedtuple('FsAutoMount', 'filter uuid local_path')
 fs_ams = [
@@ -165,7 +173,8 @@ fs_am_targets = []
 
 fs_manual_targets = frost.fsFilterMounts(fs_mounts, fs_target_filters, warn, True)
 if dbg3:
-    print 'fs_manual_targets:', fs_manual_targets
+	print 'fs_target_filters:', fs_target_filters
+	print 'fs_manual_targets:', fs_manual_targets
 use_ui = ('-ui' in sys.argv)
 if use_ui:
     frost.bkpUiChooseStoragePoints([], fs_manual_targets)
@@ -442,7 +451,8 @@ if (dry):
 	fsEndSession()
 	exit(0)
 else:
-	print 'Test Scanning Automounts...', fsAmScan(True)
+	if (not no_am):
+		print 'Test Scanning Automounts...', fsAmScan(True)
 
 def sockBind(sock, address, port, tries):
 	for i in range(tries):

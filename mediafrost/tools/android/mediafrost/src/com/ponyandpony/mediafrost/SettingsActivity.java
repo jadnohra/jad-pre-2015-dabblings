@@ -28,7 +28,7 @@ public class SettingsActivity extends PreferenceActivity implements Preference.O
 	public EditTextPreference mTargets;
 	//public EditTextPreference mSources;
 	public EditTextPreference mExtras;
-	public EditTextPreference mUseTime;
+	public SwitchPreference mUseTime;
 	public EditTextPreference mLastTime;
 	public List<SwitchPreference> mSources;
 	
@@ -73,9 +73,9 @@ public class SettingsActivity extends PreferenceActivity implements Preference.O
 
 	            {
 					act.mSources = new ArrayList<SwitchPreference>();
-					List<String> sources = FullscreenActivity.getBucketNames(act);
-					for (int i=0; i<sources.size(); i++) {
-						SwitchPreference pref = act.createPreferenceToggle(act, "Source_"+sources.get(i), sources.get(i), act);
+					FullscreenActivity.BucketInfos sources = FullscreenActivity.getBuckets(act);
+					for (int i=0; i<sources.bucketNames.size(); i++) {
+						SwitchPreference pref = act.createPreferenceToggle(act, "Source_"+sources.bucketNames.get(i), sources.bucketNames.get(i), act);
 						screen.addPreference(pref);
 						act.mSources.add(pref);
 					}
@@ -102,7 +102,7 @@ public class SettingsActivity extends PreferenceActivity implements Preference.O
 				act.mMaxFiles = act.createPreference(act, "MaxFiles", "Maximum Files to Backup", act);
 				screen.addPreference(act.mMaxFiles);
 
-				act.mUseTime = act.createPreference(act, "UseTime", "Use Date", act);
+				act.mUseTime = act.createPreferenceToggle(act, "UseTime", "Use Date", act);
 				screen.addPreference(act.mUseTime);
 				act.mLastTime = act.createPreference(act, "LastTime", "Last Date", act);
 				screen.addPreference(act.mLastTime);

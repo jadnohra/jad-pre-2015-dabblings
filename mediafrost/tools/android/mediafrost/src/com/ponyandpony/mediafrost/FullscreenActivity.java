@@ -96,7 +96,7 @@ public class FullscreenActivity extends Activity {
 	StatusTextViews mStatusTextViews;
 	SettingsActivity mSettingsActivity;
 	
-	List<String> mSources;
+	BucketInfos mBucketInfos;
 	
 	enum Status
 	{
@@ -159,16 +159,16 @@ public class FullscreenActivity extends Activity {
 			getSetting(this, "DiscoveryPort", "1600");
 			getSetting(this, "Targets", "vault_lena,vault_jad");
 			//getSetting(this, "Sources", "camera");
-			getSetting(this, "UseTime", "Yes");
+			getSettingBool(this, "UseTime", Boolean.TRUE);
 			
 			{
 				{
-					mSources = getBucketNames(this);
-					for (int i=0; i<mSources.size(); i++) {
+					mBucketInfos = getBuckets(this);
+					for (int i=0; i<mBucketInfos.bucketNames.size(); i++) {
 						boolean bkp = false;
-						if (mSources.get(i).equalsIgnoreCase("Camera")) bkp = true;
+						if (mBucketInfos.bucketNames.get(i).equalsIgnoreCase("Camera")) bkp = true;
 						//setSettingBool(this, "Source_"+mSources.get(i), Boolean.valueOf(bkp));
-						getSettingBool(this, "Source_"+mSources.get(i), Boolean.valueOf(bkp));
+						getSettingBool(this, "Source_"+mBucketInfos.bucketNames.get(i), Boolean.valueOf(bkp));
 					}
 				}
 			}
@@ -225,10 +225,10 @@ public class FullscreenActivity extends Activity {
 	
 		if (getSetting(this, "Extras", "").contains("dbg_buckets"))
 		{
-			List<String> names = getBucketNames(this);
-			for (int i=0; i<names.size(); ++i)
+			BucketInfos infos = getBuckets(this);
+			for (int i=0; i<infos.bucketNames.size(); ++i)
 			{
-				Log.v("Testing", String.format(names.get(i)));	
+				Log.v("Testing", String.format(infos.bucketNames.get(i)));	
 			}
 		}
 		
@@ -420,7 +420,7 @@ public class FullscreenActivity extends Activity {
 			}
 				
 			long minTime = 0;
-			if (automatic && getSetting(context, "UseTime", "").equalsIgnoreCase("yes"))
+			if (automatic && getSettingBool(context, "UseTime", Boolean.FALSE).booleanValue())
 			{
 				try
 				{
@@ -429,7 +429,7 @@ public class FullscreenActivity extends Activity {
 			}
 			settings.minTime = minTime;
 			
-			NetworkThread thread = new NetworkThread(mThreadMessageHandler, settings, sources, images, mStatusTextViews);
+			NetworkThread thread = new NetworkThread(mThreadMessageHandler, settings, mBucketInfos, sources, images, mStatusTextViews);
 			mWorkThread = thread;
 			thread.start();
 	}
@@ -446,6 +446,7 @@ public class FullscreenActivity extends Activity {
 			isHolding = false;
 			if (view.getId() == R.id.backup_button) {
 				
+				/*
 				if (evt.getAction() == MotionEvent.ACTION_DOWN) {
 					
 					isHolding = true;
@@ -467,18 +468,26 @@ public class FullscreenActivity extends Activity {
 					Handler holdHandler = new Handler();
 					holdHandler.postDelayed(holdRunnable, 1000);
 					
-				} else if (evt.getAction() == MotionEvent.ACTION_UP) {
+				} else */ if (evt.getAction() == MotionEvent.ACTION_UP) {
 					
-					if (!triggeredHold) {
+					//if (!triggeredHold) 
+					{
 						Context context = view.getContext();
 						{	
-							List<String> images = getCameraImages(context);
-							launchBackup(context, images, true);
-	
+							List<String> sources = new ArrayList();
+							
+							for (int i=0; i<mBucketInfos.bucketNames.size(); i++) {
+								Boolean bkp = getSettingBool(context, "Source_"+mBucketInfos.bucketNames.get(i), Boolean.valueOf(false));
+								if (bkp.booleanValue()) {
+									sources.add(mBucketInfos.bucketNames.get(i));
+								}
+							}
+							
+							launchBackup(context, sources, null, false);
 							return true;
 						}
 					}
-					triggeredHold = false;
+					//triggeredHold = false;
 				}	
 			}
 			else if (view.getId() == R.id.cancel_button && evt.getAction() == MotionEvent.ACTION_DOWN) {
@@ -1478,9 +1487,11 @@ public class FullscreenActivity extends Activity {
 		col1.addAll(infos.imageBuckets); col1.addAll(infos.videoBuckets);
 		
 		Iterator<BucketInfo> it = col1.iterator();
-		 while(it.hasNext()) {
+		infos.bucketNames = new ArrayList<String>();
+		while(it.hasNext()) {
 			 infos.bucketNames.add(it.next().name);
 	      }
+		Collections.sort(infos.bucketNames);
 
 		return infos;
 	}
