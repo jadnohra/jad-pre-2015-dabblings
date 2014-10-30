@@ -735,9 +735,8 @@ while 1:
 					print 'Caching files...'
 				else:
 					print 'Nothing to do'
-					serving = False
-					conn.send('/frequestend'); conn.sendall('/success:1');
-					conn.close()
+					conn.send('/frequestend'); conn.send('/success:1');
+					conn.sendall(cmd_end); serving = False; conn.close();	
 					
 			elif (conn_buf.startswith(cmd_fdata)):
 				cmd_splt = conn_buf.split(':', 3)

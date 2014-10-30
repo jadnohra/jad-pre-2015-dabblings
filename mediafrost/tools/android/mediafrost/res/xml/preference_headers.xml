@@ -3,12 +3,16 @@
         xmlns:android="http://schemas.android.com/apk/res/android">
 
 
-     <header android:fragment="com.ponyandpony.mediafrost.SettingsActivity$Prefs1Fragment"
-            android:title="Backup Sources"
+     <header android:fragment="com.ponyandpony.mediafrost.SettingsActivity$Prefs1aFragment"
+            android:title="Sources"
             android:summary="Choose what to backup." />
      
+     <header android:fragment="com.ponyandpony.mediafrost.SettingsActivity$Prefs1bFragment"
+            android:title="Source Date Options"
+            android:summary="Set date options per source." />
+     
      <header android:fragment="com.ponyandpony.mediafrost.SettingsActivity$Prefs2Fragment"
-            android:title="Advanced"
-            android:summary="Set advanced options." />
+            android:title="Global Options"
+            android:summary="Set global options." />
      
 </preference-headers>

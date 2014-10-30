@@ -28,9 +28,14 @@ public class SettingsActivity extends PreferenceActivity implements Preference.O
 	public EditTextPreference mTargets;
 	//public EditTextPreference mSources;
 	public EditTextPreference mExtras;
-	public SwitchPreference mUseTime;
-	public EditTextPreference mLastTime;
+	//public SwitchPreference mUseTime;
+	//public EditTextPreference mLastTime;
+	public SwitchPreference mNotify;
+	public SwitchPreference mClearConsole;
+	
 	public List<SwitchPreference> mSources;
+	public List<SwitchPreference> mUseTime;
+	public List<EditTextPreference> mLastTime;
 	
 	EditTextPreference createPreference(Context ctx, String key, String title, Preference.OnPreferenceChangeListener cl)
 	{
@@ -60,7 +65,7 @@ public class SettingsActivity extends PreferenceActivity implements Preference.O
 		return true;
 	}
 
-	  public static class Prefs1Fragment extends PreferenceFragment {
+	  public static class Prefs1aFragment extends PreferenceFragment {
 	        @Override
 	        public void onCreate(Bundle savedInstanceState) {
 	            super.onCreate(savedInstanceState);
@@ -73,11 +78,48 @@ public class SettingsActivity extends PreferenceActivity implements Preference.O
 
 	            {
 					act.mSources = new ArrayList<SwitchPreference>();
-					FullscreenActivity.BucketInfos sources = FullscreenActivity.getBuckets(act);
-					for (int i=0; i<sources.bucketNames.size(); i++) {
-						SwitchPreference pref = act.createPreferenceToggle(act, "Source_"+sources.bucketNames.get(i), sources.bucketNames.get(i), act);
-						screen.addPreference(pref);
-						act.mSources.add(pref);
+
+					for (int i=0; i<act.mBucketInfos.bucketNames.size(); i++) {
+						String buckName = act.mBucketInfos.bucketNames.get(i);
+						{
+							SwitchPreference pref = act.createPreferenceToggle(act, "Source_"+buckName, act.mBucketInfos.bucketNames.get(i), act);
+							screen.addPreference(pref);
+							act.mSources.add(pref);
+						}
+					}
+				}
+	        }
+	    }
+	  
+	  public static class Prefs1bFragment extends PreferenceFragment {
+	        @Override
+	        public void onCreate(Bundle savedInstanceState) {
+	            super.onCreate(savedInstanceState);
+
+	            addPreferencesFromResource(R.xml.fragemented_preferences);
+	            
+	            
+	            SettingsActivity act = (SettingsActivity) getActivity();
+	            PreferenceScreen screen = getPreferenceScreen();
+
+	            {
+					act.mUseTime = new ArrayList<SwitchPreference>();
+					act.mLastTime = new ArrayList<EditTextPreference>();
+					
+					for (int i=0; i<act.mBucketInfos.bucketNames.size(); i++) {
+						String buckName = act.mBucketInfos.bucketNames.get(i);
+						
+						{
+							SwitchPreference pref = act.createPreferenceToggle(act, "UseTime_"+buckName, buckName, act);
+							screen.addPreference(pref);
+							act.mUseTime.add(pref);
+						}
+						
+						{
+							EditTextPreference pref = act.createPreference(act, "LastTime_"+buckName, "Last Date", act);
+							screen.addPreference(pref);
+							act.mLastTime.add(pref);
+						}
 					}
 				}
 	        }
@@ -102,16 +144,18 @@ public class SettingsActivity extends PreferenceActivity implements Preference.O
 				act.mMaxFiles = act.createPreference(act, "MaxFiles", "Maximum Files to Backup", act);
 				screen.addPreference(act.mMaxFiles);
 
-				act.mUseTime = act.createPreferenceToggle(act, "UseTime", "Use Date", act);
-				screen.addPreference(act.mUseTime);
-				act.mLastTime = act.createPreference(act, "LastTime", "Last Date", act);
-				screen.addPreference(act.mLastTime);
 				
 				act.mServer = act.createPreference(act, "Server", "Server Address", act);
 				screen.addPreference(act.mServer);
 				act.mDiscoveryPort = act.createPreference(act, "DiscoveryPort", "Discovery Port", act);
 				screen.addPreference(act.mDiscoveryPort);
 
+				act.mNotify = act.createPreferenceToggle(act, "Notify", "Notify", act);
+				screen.addPreference(act.mNotify);
+				
+				act.mClearConsole = act.createPreferenceToggle(act, "ClearConsole", "Clear Console", act);
+				screen.addPreference(act.mClearConsole);
+				
 				act.mExtras = act.createPreference(act, "Extras", "Extras", act);
 				screen.addPreference(act.mExtras);
 	        }
@@ -125,8 +169,12 @@ public class SettingsActivity extends PreferenceActivity implements Preference.O
 	  @Override
 	public boolean  isValidFragment(String fragmentName) { return true; }
 
+	  FullscreenActivity.BucketInfos mBucketInfos;  
+	  
 	public void onCreate(Bundle savedInstanceState) {
 		super.onCreate(savedInstanceState);
+		
+		mBucketInfos = FullscreenActivity.getBuckets(this);
 		
 		 // Add a button to the header list.
 		/*

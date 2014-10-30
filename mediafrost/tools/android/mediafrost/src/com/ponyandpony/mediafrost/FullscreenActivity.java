@@ -143,6 +143,43 @@ public class FullscreenActivity extends Activity {
 	static public Boolean getSettingBool(Context context, String key) { return getSettingBool(context, key, null); }
 	static public Boolean nonEmptySettingBool(Boolean str, Boolean dft) { if (str == null) return dft; return str; }
 	
+	void refreshBuckets() {
+		{
+			mBucketInfos = getBuckets(this);
+			
+			mBucketInfos.bucketMinTimes = new ArrayList<Long>();
+			for (int i=0; i<mBucketInfos.bucketNames.size(); i++) {
+				String buckName = mBucketInfos.bucketNames.get(i);
+				
+				{
+					boolean bkp = false;
+					if (mBucketInfos.bucketNames.get(i).equalsIgnoreCase("Camera")) bkp = true;
+					//setSettingBool(this, "Source_"+mSources.get(i), Boolean.valueOf(bkp));
+					getSettingBool(this, "Source_"+buckName, Boolean.valueOf(bkp));
+				}
+				
+				{
+					getSettingBool(this, "UseTime_"+buckName, Boolean.TRUE);
+				}
+				
+				//{
+				//	getSetting(this, "LastTime_"+buckName, "");
+				//}
+				
+				{
+					long minTime = 0;
+					if (getSettingBool(this, "UseTime_"+buckName, Boolean.FALSE).booleanValue())
+					{
+						try
+						{
+							minTime = new SimpleDateFormat("dd-MM-yyyy HH:mm:ss").parse(getSetting(this, "LastTime_"+buckName, null)).getTime();
+						} catch (Exception e) {}
+					}
+					mBucketInfos.bucketMinTimes.add(new Long(minTime));
+				}
+			}
+		}
+	}
 	
 	@SuppressLint("InlinedApi")
 	@Override
@@ -159,19 +196,11 @@ public class FullscreenActivity extends Activity {
 			getSetting(this, "DiscoveryPort", "1600");
 			getSetting(this, "Targets", "vault_lena,vault_jad");
 			//getSetting(this, "Sources", "camera");
-			getSettingBool(this, "UseTime", Boolean.TRUE);
+			//getSettingBool(this, "UseTime", Boolean.TRUE);
+			getSettingBool(this, "Notify", Boolean.TRUE);
+			getSettingBool(this, "ClearConsole", Boolean.FALSE);
 			
-			{
-				{
-					mBucketInfos = getBuckets(this);
-					for (int i=0; i<mBucketInfos.bucketNames.size(); i++) {
-						boolean bkp = false;
-						if (mBucketInfos.bucketNames.get(i).equalsIgnoreCase("Camera")) bkp = true;
-						//setSettingBool(this, "Source_"+mSources.get(i), Boolean.valueOf(bkp));
-						getSettingBool(this, "Source_"+mBucketInfos.bucketNames.get(i), Boolean.valueOf(bkp));
-					}
-				}
-			}
+			refreshBuckets();
 		}
 		
 		setContentView(R.layout.activity_fullscreen);
@@ -419,15 +448,10 @@ public class FullscreenActivity extends Activity {
 				settings.stamp = false;
 			}
 				
-			long minTime = 0;
-			if (automatic && getSettingBool(context, "UseTime", Boolean.FALSE).booleanValue())
-			{
-				try
-				{
-					minTime = new SimpleDateFormat("dd-MM-yyyy HH:mm:ss").parse(getSetting(context, "LastTime", null)).getTime();
-				} catch (Exception e) {}
-			}
-			settings.minTime = minTime;
+			settings.useMinTime = (automatic == false);
+			
+			settings.doNotify = getSettingBool(context, "Notify", Boolean.TRUE).booleanValue();
+			settings.doClearConsole = getSettingBool(context, "ClearConsole", Boolean.FALSE).booleanValue();
 			
 			NetworkThread thread = new NetworkThread(mThreadMessageHandler, settings, mBucketInfos, sources, images, mStatusTextViews);
 			mWorkThread = thread;
@@ -474,6 +498,7 @@ public class FullscreenActivity extends Activity {
 					{
 						Context context = view.getContext();
 						{	
+							refreshBuckets();
 							List<String> sources = new ArrayList();
 							
 							for (int i=0; i<mBucketInfos.bucketNames.size(); i++) {
@@ -564,15 +589,22 @@ public class FullscreenActivity extends Activity {
 		public void handleMessage(Message msg) {
 			super.handleMessage(msg);
 			
-			if (msg.what == 1)
+			if (msg.what == 13)
 			{
 				FullscreenActivity act = FullscreenActivity.this;
 				act.mStatus = Status.Idle;
 				act.mStatusTextViews.backup.setEnabled(true);
 				act.mWorkThread = null;
-				boolean succeeded = msg.getData().containsKey("Succeeded") && msg.getData().getBoolean("Succeeded");
-				if (succeeded && msg.getData().containsKey("LastTime") && msg.getData().getString("LastTime") != null)
-					act.setSetting(act, "LastTime", msg.getData().getString("LastTime"));
+				Bundle bundle = msg.getData();
+				if (bundle != null && bundle.containsKey("LastTimes")) {
+					ArrayList<String> lastTimes = bundle.getStringArrayList("LastTimes");
+					for (int i=0; i<lastTimes.size(); i++) {
+						if (lastTimes.get(i) != null) {
+							String buckName = act.mBucketInfos.bucketNames.get(i);
+							setSetting(act, "LastTime_"+buckName, lastTimes.get(i));
+						}
+					}
+				}
 			}
 		}
 	};
@@ -585,8 +617,10 @@ public class FullscreenActivity extends Activity {
 		int maxFiles;
 		int dport;
 		String targets;
-		long minTime;
+		boolean useMinTime;
 		boolean stamp;
+		boolean doNotify;
+		boolean doClearConsole;
 	};
 	
 	public class NetworkThread extends Thread {
@@ -605,7 +639,7 @@ public class FullscreenActivity extends Activity {
 		boolean mUserCancelled;
 		boolean mSucceeded;
 		String mFailString;
-		String mLastTime;
+		ArrayList<String> mLastTimes;
 
 		NetworkThread(Handler messageHandler, NetworkThreadSettings settings, BucketInfos bucketInfos, List<String> sources, List<String> images, StatusTextViews statusTextViews) {
 			mMessageHandler = messageHandler;
@@ -618,7 +652,7 @@ public class FullscreenActivity extends Activity {
 			mUserCancelled = false;
 			mSucceeded = false;
 			mFailString = "";
-			mLastTime = null;
+			mLastTimes = null;
 
 			mTimerHandler = new Handler();
 			final NetworkThread mThis = this;
@@ -777,18 +811,13 @@ public class FullscreenActivity extends Activity {
 						mStatusTextViews.cancel.setVisibility(View.INVISIBLE);
 					}
 				});
-			if (mMessageHandler != null)
-			{
-				Message msg = Message.obtain(mMessageHandler, 1, 0, 0);
-				Bundle data = new Bundle(); 
-				data.putBoolean("Succeeded", mSucceeded);
-				if (mSettings.stamp)
-					data.putString("LastTime", mLastTime);
-				msg.setData(data);
-				msg.sendToTarget();
-			}
 		}
 
+		void clearConsole() {
+			mStatusText = "";
+			setText(mStatusTextViews.console, mStatusText);
+		}
+		
 		void logStatus(final String str, final boolean eol) {
 			//Log.v("Testing", str);
 			mStatusText = String.format("%s%s%s", mStatusText, str, eol?"\n":"");
@@ -799,7 +828,7 @@ public class FullscreenActivity extends Activity {
 
 		void logNotify(final String str)
 		{
-			if (true)
+			if (mSettings.doNotify)
 			{
 				NotificationCompat.Builder builder =
 					    new NotificationCompat.Builder(FullscreenActivity.this)
@@ -816,25 +845,67 @@ public class FullscreenActivity extends Activity {
 		}
 		
 		public void run() {
+			
+			boolean allSucceeded = true;
+			int totalImages = 0;
+			
 			if (mImages != null)
 			{
+				preprocessBatch(mImages, -1);
 				if (mImages.size() > 0)
-					runBatch(mImages);
+				{
+					int imgCount = runBatch(mImages, -1);
+					if (imgCount < 0) allSucceeded = false; else totalImages += imgCount;
+				}
 			}
 			if (mSources != null)
 			{
+				mLastTimes = new ArrayList<String>();
+				for (int i=0; i<mBucketInfos.bucketNames.size(); i++)
+				{
+					mLastTimes.add(null);
+				}
+				
 				for (int i=0; i<mSources.size(); i++)
 				{
-					logStatus(String.format("Backing up '%s'.", mSources.get(i)));
-					List<String> images = getMediaFiles(FullscreenActivity.this, mBucketInfos, mSources.get(i));
+					String source = mSources.get(i);
+					int buckIndex = mBucketInfos.bucketNames.indexOf(source);
+					logStatus(String.format("Backing up '%s'.", source));
+					List<String> images = getMediaFiles(FullscreenActivity.this, mBucketInfos, source);
+					preprocessBatch(images, buckIndex);
 					if (images.size() > 0)
-						runBatch(images);
+					{
+						int imgCount = runBatch(images, buckIndex);
+						if (imgCount < 0) allSucceeded = false; else totalImages += imgCount;
+					}
+				}
+				
+				{
+					String str = null;
+					if (allSucceeded)
+					{
+						str = String.format(":) Success (%d files).", totalImages);
+					}
+					else
+					{
+						str = String.format(":( Failure (%d files).", totalImages);
+					}
+					logNotify(str);
 				}
 			}
 			
+			if (mMessageHandler != null)
+			{
+				Message msg = Message.obtain(mMessageHandler, 13, 0, 0);
+				Bundle data = new Bundle(); 
+				data.putBoolean("Succeeded", allSucceeded);
+				data.putStringArrayList("LastTimes", mLastTimes);
+				msg.setData(data);
+				msg.sendToTarget();
+			}
 		}
-			
-		public void runBatch(List<String> images) {	
+		
+		public void preprocessBatch(List<String> images, int buckIndex) {
 			{
 				{
 					Iterator<String> iter = images.iterator();
@@ -844,15 +915,23 @@ public class FullscreenActivity extends Activity {
 					    }
 					}
 				}
+				
+				if (buckIndex >= 0)
 				{					
-					if (mSettings.minTime > 0)
+					long minTime = 0;
+					if (mSettings.useMinTime)
+					{
+						minTime = mBucketInfos.bucketMinTimes.get(buckIndex).longValue();
+					}
+					
+					if (minTime  > 0)
 					{
 						int removed = 0;
-						long minTime = mSettings.minTime - 1000;
+						long safeMinTime = minTime - 1000;
 						Iterator<String> it = images.iterator();
 						while (it.hasNext()) {
 							String f = it.next();
-							if(new File(f).lastModified() < minTime)
+							if(new File(f).lastModified() < safeMinTime)
 								{ it.remove(); removed++; }
 						}
 						logStatus(String.format("Filtered out %d of %d files by date.", removed, images.size()+removed));
@@ -873,7 +952,13 @@ public class FullscreenActivity extends Activity {
 					Collections.sort(images, new ImageComp());
 				}
 			}
+		}
 			
+		public int runBatch(List<String> images, int buckIndex) {	
+			
+			if (mSettings.doClearConsole) clearConsole();
+			
+			int returnCode = -1;
 			Socket sock = null;
 			try {
 				
@@ -1088,11 +1173,12 @@ public class FullscreenActivity extends Activity {
 										if (code.equals("1"))
 										{
 											mSucceeded = true;
+											returnCode = requestedFids.size();
 											String str = String.format("Backup succeeded (%d files).", requestedFids.size());
 											logStatus(str);
-											logNotify(str);
+							
 											
-											if (mSettings.stamp && requestedFids.size() > 0)
+											if (requestedFids.size() > 0)
 											{
 												int maxIndex = 0;
 												{
@@ -1109,12 +1195,19 @@ public class FullscreenActivity extends Activity {
 												}
 												
 												String filePath = images.get(maxIndex);
-												try
+												
+												if (buckIndex >= 0)
 												{
-													long time = new File(filePath).lastModified();
-													mLastTime = new SimpleDateFormat("dd-MM-yyyy HH:mm:ss").format(time);
-												} catch (Exception e) {}
-												stampSuccess(FullscreenActivity.this, filePath);
+													try
+													{
+														long time = new File(filePath).lastModified();
+														String lastTime = new SimpleDateFormat("dd-MM-yyyy HH:mm:ss").format(time);
+														mLastTimes.set(buckIndex, lastTime);
+													} catch (Exception e) {}
+												}
+												
+												if (mSettings.stamp)
+													stampSuccess(FullscreenActivity.this, filePath);
 											}
 										}
 												
@@ -1137,12 +1230,10 @@ public class FullscreenActivity extends Activity {
 			catch (SocketTimeoutException e3) {
 				
 				logStatus(e3.toString());
-				logNotify("Connect failed.");
 			}
 			catch (ConnectException e4) {
 				
 				logStatus(e4.toString());
-				logNotify("Connect failed.");
 			}
 			catch(IOException e1) {
 				
@@ -1182,11 +1273,11 @@ public class FullscreenActivity extends Activity {
 				String code = (mFailString.length() > 0 ? String.format(" (%s)", mFailString) : "");
 				String str = String.format("Backup failed%s.", code);
 				logStatus(str);
-				logNotify(str);
 			}
 			
 			mTimerHandler.removeCallbacks(mTimerRunnable);
 			stopProgress();
+			return returnCode;
 		}
 	};
 
@@ -1324,8 +1415,7 @@ public class FullscreenActivity extends Activity {
 	@SuppressLint("SimpleDateFormat")
 	public static void stampSuccess(Context context, String iconInputFilePath)
 	{
-		final String folder = Environment.getExternalStorageDirectory().toString() + CamFolder;
-       
+		String folder = new File(iconInputFilePath).getAbsoluteFile().getParent();
 		
         Bitmap iconBmp;
         if (isImageFile(iconInputFilePath))
@@ -1414,6 +1504,7 @@ public class FullscreenActivity extends Activity {
 		List<BucketInfo> imageBuckets;
 		List<BucketInfo> videoBuckets;
 		List<String> bucketNames;
+		List<Long> bucketMinTimes;
 	};
 
 	static class BucketInfoIdComp implements Comparator<BucketInfo>{
@@ -1493,6 +1584,14 @@ public class FullscreenActivity extends Activity {
 	      }
 		Collections.sort(infos.bucketNames);
 
+		
+		Iterator<String> iter = infos.bucketNames.iterator();
+		while (iter.hasNext()) {
+		    if (iter.next().toLowerCase().startsWith("whatsapp prof")) {
+		        iter.remove();
+		    }
+		}
+		
 		return infos;
 	}
 	
