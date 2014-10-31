@@ -423,6 +423,7 @@ public class FullscreenActivity extends Activity {
 			mStatusTextViews.time.setText("00:00:00");
 			mStatusTextViews.activity.setText("Connecting...");
 			//mStatusTextViews.progress.setVisibility(View.VISIBLE);
+			mStatusTextViews.backup.setEnabled(false);
 			mStatusTextViews.cancel.setVisibility(View.VISIBLE);
 			mStatusTextViews.progress1.setVisibility(View.VISIBLE);
 			mStatusTextViews.progress1.setProgress(0);
@@ -452,6 +453,7 @@ public class FullscreenActivity extends Activity {
 			
 			settings.doNotify = getSettingBool(context, "Notify", Boolean.TRUE).booleanValue();
 			settings.doClearConsole = getSettingBool(context, "ClearConsole", Boolean.FALSE).booleanValue();
+			
 			
 			NetworkThread thread = new NetworkThread(mThreadMessageHandler, settings, mBucketInfos, sources, images, mStatusTextViews);
 			mWorkThread = thread;
@@ -858,7 +860,7 @@ public class FullscreenActivity extends Activity {
 					if (imgCount < 0) allSucceeded = false; else totalImages += imgCount;
 				}
 			}
-			if (mSources != null)
+			if (mSources != null && !mUserCancelled)
 			{
 				mLastTimes = new ArrayList<String>();
 				for (int i=0; i<mBucketInfos.bucketNames.size(); i++)
@@ -866,7 +868,7 @@ public class FullscreenActivity extends Activity {
 					mLastTimes.add(null);
 				}
 				
-				for (int i=0; i<mSources.size(); i++)
+				for (int i=0; i<mSources.size() && !mUserCancelled; i++)
 				{
 					String source = mSources.get(i);
 					int buckIndex = mBucketInfos.bucketNames.indexOf(source);
@@ -880,6 +882,7 @@ public class FullscreenActivity extends Activity {
 					}
 				}
 				
+				if (!mUserCancelled)
 				{
 					String str = null;
 					if (allSucceeded)
