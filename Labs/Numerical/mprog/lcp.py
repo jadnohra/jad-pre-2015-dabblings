@@ -844,7 +844,6 @@ def solve_mlcp_psor(Mq, bounds, out, opts = {}):
 				status = 2
 		if (thresh_err != 0.0):
 			err = mlcp_sol_err(Mq, z[:-1], bounds)
-			print 'e1', err[1]
 			if (err[1] <= thresh_err):
 				status = 2
 		if (thresh_maxit != 0):
@@ -1435,6 +1434,7 @@ def solve_mlcp_dir(din, opts = {}):
 					i = i + 1; iln = iln + 1;
 					sol = None
 					try:
+						#print fp
 						sol = solve_mlcp_file(fp, opts)
 					except Exception:
 						print ''
