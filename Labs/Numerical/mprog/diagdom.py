@@ -52,16 +52,17 @@ def print_tab(list, pref='', sep=' ', post=''):
 def mat_print(M):
 	print_tab([[str(x) for x in M[r]] for r in range(len(M))])
 
-LogBlip = 1; LogDbg = 2;
-def log_print(str, log = True):
-	if (log):
-		print str
-def opt_print(str, opt = {}):
-	log_print(str, opt.get('log', 0))
 def vec_str(v):
 		return '({})'.format(', '.join(str(x) for x in v))
-def vec_print(v, log = True):
-	print vec_str(v) if log else 0
+def vec_print(v):
+	print vec_str(v)
+
+LogNone = 0; LogBlip = 1; LogDbg = 2; LogIt = 3;
+def log_mat(M, name, opts, opt):
+	if (opts.get('log', LogNone) >= opt):
+		if (name):
+			print name
+		print_tab([[str(x) for x in M[r]] for r in range(len(M))])
 
 def m_min(a, b):
 	return a if a <= b else b
@@ -227,6 +228,13 @@ def mat_neg(M):
 		for j in range(c1):
 			rn[j] = -rm[j]
 	return N
+def mat_muls(M, s):
+	r1 = len(M);c1 = len(M[0]);
+	N = mat_create(r1, c1, None)
+	for i in range(r1):
+		for j in range(c1):
+			N[i][j] = M[i][j]*s
+	return N	
 def mat_divs(M, s):
 	r1 = len(M);c1 = len(M[0]);
 	N = mat_create(r1, c1, None)
@@ -302,6 +310,20 @@ def mat_diagInv(M):
 	for i in range(r):
 		I[i] = [g_num(0)]*c; I[i][i] = g_num(1)/M[i][i];
 	return I
+def mat_argmax(M):
+	r,c = mat_dims(M)
+	mi = 0; mj = 0;
+	for i in range(r):
+		for j in range(c):
+			if (M[i][j] > M[mi][mj]):
+				mi = i; mj = j;
+	return (mi, mj)			
+
+def mat_norm_0(M):
+	return max( [ sum( [m_abs(x) for x in mat_col(M, i)] ) for i in range(mat_cols(M)) ] )	
+def mat_norm_inf(M):
+	return max( [ sum( m_abs(M[i]) ) for i in range(mat_rows(M)) ] )
+
 def mat_det(M, r = 0):
 	n = len(M); det = 0;
 	if (n == 1):
@@ -363,36 +385,102 @@ def mat_float(M):
 	return N
 
 def data_conv_hex_int(x):
-	return int(x, 16)
+	return int(x.strip(), 16)
 
-def data_conv_hex_cflt(x):
+def data_conv_hex_cflt_flt(x):
+	x = x.strip()
 	x = x[2:] if x.startswith('0x') else x
-	struct.unpack('!f', x.zfill(8).decode('hex'))[0]
+	return struct.unpack('!f', x.zfill(8).decode('hex'))[0]
 
 def data_conv_csv_mat(x, r, c, dconv):
-	
+	m = mat_create(r, c, g_num(0))
+	els = x.split(',')
+	for i in range(r):
+		for j in range(c):
+			m[i][j] = dconv['hcf-f'](els[i*c+j])
+	return m
 
 def def_data_conv():
-	 return { 'h-i':data_conv_hex_int, 'hex-int':data_conv_hex_int, 'h-cf':data_conv_hex_cflt, 'hex-cflt':data_conv_hex_cflt }
+	 return { 'h-i':data_conv_hex_int, 'hex-int':data_conv_hex_int, 'hcf-f':data_conv_hex_cflt_flt, 'hex_cflt-flt':data_conv_hex_cflt_flt }
 
 def load_json_matrix(dict, dconv):
 	r = dconv['h-i'](dict['m']); c = dconv['h-i'](dict['n']); M = dict['M'];
 
+def data_conv_json_mat(dict, dconv):
+	m = dconv['h-i'](dict['m'])
+	n = dconv['h-i'](dict['n'])
+	x = dict['M']
+	return data_conv_csv_mat(x, m, n, dconv)
 
-def load_json_matrices(path, dconv):
 
+def load_json_matrices(path, dconv, opts):
+	problem = {}
 	with open(path, 'r') as fi: 
 		str = fi.read()
 		str = str.replace('\n', '').replace('\r', '').replace('\t', ' ')
 		dict = json.loads(str)
 		for k in dict.keys():
 			if (k == 'Mlcp_A'):
-				load_matrix()
+				x = data_conv_json_mat(dict[k], dconv)
+				problem[k] = x; log_mat(x, k, opts, LogDbg);
+			elif (k == 'Jac'):
+				x = data_conv_json_mat(dict[k], dconv)
+				problem[k] = x; log_mat(x, k, opts, LogDbg);
+			elif (k == 'iI'):
+				x = data_conv_json_mat(dict[k], dconv)
+				problem[k] = x; log_mat(x, k, opts, LogDbg)
+	return problem
+
+def calc_pseudo_inv_iter(A, stopping, opts):
+	def calc_init(A):
+		At = mat_transp(A)
+		alpha = mat_norm_inf(mat_mul(A, At))
+		return mat_muls(At, (g_num(2)/alpha)*g_num(0.5) )
+	Ai = calc_init(A)
+	it = None; conv = None;
+	for it in range(stopping.get('maxit', 10)):
+		log_mat(Ai, 'Ai', opts, LogBlip)
+		Aip = mat_sub(mat_muls(Ai, g_num(2)), mat_mul(Ai, mat_mul(A, Ai)))
+		D = mat_sub(Ai, Aip); conv = mat_norm_inf(D);
+		if (conv <= stopping.get('conv', conv-g_num(1))):
+			break
+		Ai = Aip
+	return (Ai, it, conv)
+
+def calc_iI_perturbation(problem, Jp, add = g_num(0)):
+	iI = problem['iI']; J = problem['Jac'];
+	S = mat_mul(mat_mul(J, iI), mat_transp(J))
+	(di,dj) = mat_argmax(S)
+	d = iI[di][dj] + add
+	Pert = mat_mul(Jp, mat_transp(Jp))
+	Pert = mat_muls(Pert, d)
+	return Pert
+	
+def test_iI_perturbation(problem, Jp, add):
+	iI = problem['iI']; J = problem['Jac'];
+	Pert = calc_iI_perturbation(problem, Jp, add)
+	iIp = mat_add(iI, Pert)
+	Sp = mat_mul(mat_mul(J, iIp), mat_transp(J))
+	S = mat_mul(mat_mul(J, iI), mat_transp(J))
+
+	#print 'Pert'; mat_print(Pert)
+	#print 'Mlcp_A'; mat_print(problem['Mlcp_A'])
+	print 'S'; mat_print(S)
+	print 'Sp'; mat_print(Sp)
+	#print 'iI'; mat_print(iI)
+	#print 'iIp'; mat_print(iIp)
 
 
 def main():
+	opts = {'log':LogDbg}
+	log_dbg = sys_argv_has('-log_dbg'); log_blip = sys_argv_has('-log_blip');
+	log = LogNone; log = LogBlip if log_blip else log; log = LogDbg if log_dbg else log; 
+	opts['log'] = log
+
 	if sys_argv_has('-in'):
-		load_json(sys_argv_get('-in', ''), def_data_conv())
+		problem = load_json_matrices(sys_argv_get('-in', ''), def_data_conv(), opts)
+		(Jp, it, conv) = calc_pseudo_inv_iter(problem['Jac'], {'maxit':100, 'conv':1.e-4}, opts)
+		test_iI_perturbation(problem, Jp, float(sys_argv_get('-add', '0.0')))
 
 if hasattr(sys, 'argv'):
 	main()
