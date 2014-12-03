@@ -51,6 +51,14 @@ def print_tab(list, pref='', sep=' ', post=''):
 		print pref + sep.join("{:>{}}".format(x, col_width[i]) for i,x in enumerate(line)) + post
 def mat_print(M):
 	print_tab([[str(x) for x in M[r]] for r in range(len(M))])
+def mat_print_fmt(M, prec = 2):
+	if (prec >= 0):
+		fmt = '{{:.{}}}'.format(prec)
+		print_tab([[x if (isinstance(x, str)) else fmt.format(x) for x in M[r]] for r in range(len(M))])	
+	else:
+		mat_print(M)
+	
+
 
 def vec_str(v):
 		return '({})'.format(', '.join(str(x) for x in v))
@@ -62,7 +70,7 @@ def log_mat(M, name, opts, opt):
 	if (opts.get('log', LogNone) >= opt):
 		if (name):
 			print name
-		print_tab([[str(x) for x in M[r]] for r in range(len(M))])
+		mat_print_fmt(M)	
 
 def m_min(a, b):
 	return a if a <= b else b
@@ -105,6 +113,8 @@ def vec_dot(a,b):
 	for i in range(len(a)):
 		d += a[i]*b[i]
 	return d
+def vec_abs(a):
+	return [m_abs(x) for x in a]
 def vec_argmin2(v):
 	return min(enumerate(v), key=operator.itemgetter(1));
 def vec_argmax2(v):
@@ -320,10 +330,10 @@ def mat_argmax(M):
 	return (mi, mj)			
 
 def mat_norm_0(M):
-	return max( [ sum( [m_abs(x) for x in mat_col(M, i)] ) for i in range(mat_cols(M)) ] )	
+	return max( [ sum( vec_abs(mat_col(M, i)) ) for i in range(mat_cols(M)) ] )	
 def mat_norm_inf(M):
-	return max( [ sum( m_abs(M[i]) ) for i in range(mat_rows(M)) ] )
-
+	return max( [ sum( vec_abs(M[i]) ) for i in range(mat_rows(M)) ] )
+	
 def mat_det(M, r = 0):
 	n = len(M); det = 0;
 	if (n == 1):
@@ -435,7 +445,7 @@ def calc_pseudo_inv_iter(A, stopping, opts):
 	def calc_init(A):
 		At = mat_transp(A)
 		alpha = mat_norm_inf(mat_mul(A, At))
-		return mat_muls(At, (g_num(2)/alpha)*g_num(0.5) )
+		return mat_muls(At, (g_num(2)/alpha)*g_num(0.25) )
 	Ai = calc_init(A)
 	it = None; conv = None;
 	for it in range(stopping.get('maxit', 10)):
@@ -450,25 +460,87 @@ def calc_pseudo_inv_iter(A, stopping, opts):
 def calc_iI_perturbation(problem, Jp, add = g_num(0)):
 	iI = problem['iI']; J = problem['Jac'];
 	S = mat_mul(mat_mul(J, iI), mat_transp(J))
-	(di,dj) = mat_argmax(S)
-	d = iI[di][dj] + add
+	r,c = mat_dims(S)
+	d = 0.0
+	for i in range(r):
+		s = sum( [m_abs(S[i][j]) for j in range(r) if j != i] )
+		d = m_max(d, s)
+	
 	Pert = mat_mul(Jp, mat_transp(Jp))
-	Pert = mat_muls(Pert, d)
-	return Pert
+	Pert = mat_muls(Pert, d+add)
+
+	r,c = mat_dims(Pert); n = r/6
+	Pert2 = mat_create(r, c, g_num(0))
+	for ni in range(n):
+		di = ni*6;
+		for i in range(di, di+3):
+			Pert2[i][i] = Pert[i][i]
+		for i in range(di+3, di+6):
+			for j in range(di+3, di+6):
+				Pert2[i][j] = Pert[i][j]
+	return (Pert, Pert2)
+
+def calc_diag_dom_vec(M):
+	r,c = mat_dims(M)
+	dom = [None]*r;
+	for i in range(r):
+		s = sum( [m_abs(M[i][j]) for j in range(r) if j != i] )
+		d = m_abs(M[i][i])
+		dom[i] = (d, s, '*' if d<s else '')
+	return dom	
+		
+
+def check_S_diagDom(S):
+	dom = calc_diag_dom_vec(S)
+	for i in range(len(dom)):
+		if (dom[i][0] < dom[i][1]):
+			return False
+	return True		
+
+def check_S_diagDom2(problem):
+	iI = problem['iI']; J = problem['Jac'];
+	S = mat_mul(mat_mul(J, iI), mat_transp(J))
+	dom = calc_diag_dom_vec(S)
+	for i in range(len(dom)):
+		if (dom[i][0] < dom[i][1]):
+			return False
+	return True		
+
+def mat_append_dom_col(M):
+	dom = calc_diag_dom_vec(M)
+	for i in range(len(dom)):
+		M[i].append('({:.3}, {:.3}){}'.format(dom[i][0], dom[i][1], dom[i][2]))
 	
 def test_iI_perturbation(problem, Jp, add):
 	iI = problem['iI']; J = problem['Jac'];
-	Pert = calc_iI_perturbation(problem, Jp, add)
-	iIp = mat_add(iI, Pert)
-	Sp = mat_mul(mat_mul(J, iIp), mat_transp(J))
+	(Pert, Pert2) = calc_iI_perturbation(problem, Jp, add)
+	
 	S = mat_mul(mat_mul(J, iI), mat_transp(J))
 
-	#print 'Pert'; mat_print(Pert)
+	iIp = mat_add(iI, Pert)
+	Sp = mat_mul(mat_mul(J, iIp), mat_transp(J))
+	iIp2 = mat_add(iI, Pert2)
+	Sp2 = mat_mul(mat_mul(J, iIp2), mat_transp(J))
+	
 	#print 'Mlcp_A'; mat_print(problem['Mlcp_A'])
-	print 'S'; mat_print(S)
-	print 'Sp'; mat_print(Sp)
-	#print 'iI'; mat_print(iI)
-	#print 'iIp'; mat_print(iIp)
+	r,c = mat_dims(S)
+	if (r < 16):
+		print 'diag'; mat_print_fmt(mat_mul(J, mat_mul(Pert, mat_transp(J))), 2)
+		mat_append_dom_col(S)
+		print 'S', check_S_diagDom(S); mat_print_fmt(S, 2); 
+		mat_append_dom_col(Sp)
+		print 'Sp', check_S_diagDom(Sp); mat_print_fmt(Sp, 2)
+		mat_append_dom_col(Sp2)
+		print 'Sp2', check_S_diagDom(Sp2); mat_print_fmt(Sp2, 2)
+		#print 'Pert'; mat_print_fmt(Pert, 2)
+		#print 'Pert2'; mat_print_fmt(Pert2, 2)
+		#print 'iI'; mat_print_fmt(iI, 2)
+		#print 'iIp'; mat_print(iIp)
+	else:
+		print 'S', check_S_diagDom(S); mat_print(mat_transp([calc_diag_dom_vec(S)]))
+		print 'Sp', check_S_diagDom(Sp); mat_print(mat_transp([calc_diag_dom_vec(Sp)]))
+		print 'Sp2', check_S_diagDom(Sp2); mat_print(mat_transp([calc_diag_dom_vec(Sp2)]))
+			
 
 
 def main():
@@ -479,8 +551,13 @@ def main():
 
 	if sys_argv_has('-in'):
 		problem = load_json_matrices(sys_argv_get('-in', ''), def_data_conv(), opts)
-		(Jp, it, conv) = calc_pseudo_inv_iter(problem['Jac'], {'maxit':100, 'conv':1.e-4}, opts)
-		test_iI_perturbation(problem, Jp, float(sys_argv_get('-add', '0.0')))
+		if (check_S_diagDom2(problem) and (not sys_argv_has('-force'))):
+			print 'Already diag dom'
+		else:	
+			(Jp, it, conv) = calc_pseudo_inv_iter(problem['Jac'], {'maxit':100, 'conv':1.e-4}, opts)
+			#(Jp2, it, conv) = calc_pseudo_inv_iter( mat_transp(problem['Jac']), {'maxit':100, 'conv':1.e-4}, opts); print 'Jp2'; mat_print(mat_transp(Jp2));
+			#print it, conv
+			test_iI_perturbation(problem, Jp, float(sys_argv_get('-add', '0.0')))
 
 if hasattr(sys, 'argv'):
 	main()
