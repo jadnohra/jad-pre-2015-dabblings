@@ -430,15 +430,29 @@ def load_json_matrices(path, dconv, opts):
 		str = str.replace('\n', '').replace('\r', '').replace('\t', ' ')
 		dict = json.loads(str)
 		for k in dict.keys():
-			if (k == 'Mlcp_A'):
+			if (k == 'source'):
+				print '{}: {}'.format('source', dict[k])
+			elif (k == 'Mlcp_A'):
 				x = data_conv_json_mat(dict[k], dconv)
 				problem[k] = x; log_mat(x, k, opts, LogDbg);
 			elif (k == 'Jac'):
 				x = data_conv_json_mat(dict[k], dconv)
 				problem[k] = x; log_mat(x, k, opts, LogDbg);
+				if (sys_argv_has('-exclude') and 'types' in dict[k]):
+					types = dict[k]['types'].split(',')
+					excludes = [y.strip() for y in sys_argv_get('-exclude', '').split(',')]
+					rem = []
+					for i in range(len(types)):
+						if (types[i].strip().lower() in excludes):
+							rem.append(i)
+					for ri in reversed(rem):
+						x.pop(ri)
+					print 'Excluded {} rows of {}'.format(len(rem), mat_rows(x)+len(rem))
 			elif (k == 'iI'):
 				x = data_conv_json_mat(dict[k], dconv)
 				problem[k] = x; log_mat(x, k, opts, LogDbg)
+			elif (k == 'source'):
+				problem[k] = dict[k]
 	return problem
 
 def calc_pseudo_inv_iter(A, stopping, opts):
