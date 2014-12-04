@@ -329,11 +329,15 @@ def mat_argmax(M):
 				mi = i; mj = j;
 	return (mi, mj)			
 
+def mat_trace(M):
+	return sum( M[i][i] for i in range( m_min(mat_cols(M), mat_rows(M)) ) )	
 def mat_norm_0(M):
 	return max( [ sum( vec_abs(mat_col(M, i)) ) for i in range(mat_cols(M)) ] )	
 def mat_norm_inf(M):
 	return max( [ sum( vec_abs(M[i]) ) for i in range(mat_rows(M)) ] )
-	
+def mat_norm_frob(M):
+	return math.sqrt(mat_trace( mat_mul(M, mat_transp(M)) ))
+
 def mat_det(M, r = 0):
 	n = len(M); det = 0;
 	if (n == 1):
@@ -431,7 +435,8 @@ def load_json_matrices(path, dconv, opts):
 		dict = json.loads(str)
 		for k in dict.keys():
 			if (k == 'source'):
-				print '{}: {}'.format('source', dict[k])
+				problem[k] = dict[k]
+				print '{}: {}'.format('Source', dict[k])
 			elif (k == 'Mlcp_A'):
 				x = data_conv_json_mat(dict[k], dconv)
 				problem[k] = x; log_mat(x, k, opts, LogDbg);
@@ -461,15 +466,18 @@ def calc_pseudo_inv_iter(A, stopping, opts):
 		alpha = mat_norm_inf(mat_mul(A, At))
 		return mat_muls(At, (g_num(2)/alpha)*g_num(0.25) )
 	Ai = calc_init(A)
-	it = None; conv = None;
+	it = None; conv = None; last_conv = None;
 	for it in range(stopping.get('maxit', 10)):
-		log_mat(Ai, 'Ai', opts, LogBlip)
+		log_mat(Ai, 'Ai', opts, LogDbg)
 		Aip = mat_sub(mat_muls(Ai, g_num(2)), mat_mul(Ai, mat_mul(A, Ai)))
 		D = mat_sub(Ai, Aip); conv = mat_norm_inf(D);
 		if (conv <= stopping.get('conv', conv-g_num(1))):
 			break
+		#if (last_conv is not None and conv >= last_conv):
+		#	break
+		last_conv = conv	
 		Ai = Aip
-	return (Ai, it, conv)
+	return (Ai, it+1, conv)
 
 def calc_iI_perturbation(problem, Jp, add = g_num(0)):
 	iI = problem['iI']; J = problem['Jac'];
@@ -502,7 +510,12 @@ def calc_diag_dom_vec(M):
 		d = m_abs(M[i][i])
 		dom[i] = (d, s, '*' if d<s else '')
 	return dom	
-		
+
+def count_err_diag_dom_vec(dom):
+	cnt = 0
+	for d in dom:
+		cnt = cnt + (1 if d[0] < d[1] else 0)
+	return cnt	
 
 def check_S_diagDom(S):
 	dom = calc_diag_dom_vec(S)
@@ -525,7 +538,7 @@ def mat_append_dom_col(M):
 	for i in range(len(dom)):
 		M[i].append('({:.3}, {:.3}){}'.format(dom[i][0], dom[i][1], dom[i][2]))
 	
-def test_iI_perturbation(problem, Jp, add):
+def test_iI_perturbation(problem, Jp, add, opts):
 	iI = problem['iI']; J = problem['Jac'];
 	(Pert, Pert2) = calc_iI_perturbation(problem, Jp, add)
 	
@@ -538,40 +551,63 @@ def test_iI_perturbation(problem, Jp, add):
 	
 	#print 'Mlcp_A'; mat_print(problem['Mlcp_A'])
 	r,c = mat_dims(S)
+	dom_errs = [None, None, None]
 	if (r < 16):
-		print 'diag'; mat_print_fmt(mat_mul(J, mat_mul(Pert, mat_transp(J))), 2)
-		mat_append_dom_col(S)
-		print 'S', check_S_diagDom(S); mat_print_fmt(S, 2); 
-		mat_append_dom_col(Sp)
-		print 'Sp', check_S_diagDom(Sp); mat_print_fmt(Sp, 2)
-		mat_append_dom_col(Sp2)
-		print 'Sp2', check_S_diagDom(Sp2); mat_print_fmt(Sp2, 2)
+		if (opts['log'] >= LogBlip):
+			print 'diag'; mat_print_fmt(mat_mul(J, mat_mul(Pert, mat_transp(J))), 2)
+		mat_append_dom_col(S); dom_err = count_err_diag_dom_vec(calc_diag_dom_vec(S)); dom_errs[0] = dom_err;
+		if (opts['log'] >= LogBlip):
+			print 'S', check_S_diagDom(S); mat_print_fmt(S, 2); 
+		
+		mat_append_dom_col(Sp); dom_err = count_err_diag_dom_vec(calc_diag_dom_vec(Sp)); dom_errs[1] = dom_err;
+		if (opts['log'] >= LogBlip):
+			print 'Sp', check_S_diagDom(Sp); mat_print_fmt(Sp, 2)
+		mat_append_dom_col(Sp2); dom_err = count_err_diag_dom_vec(calc_diag_dom_vec(Sp2)); dom_errs[2] = dom_err;
+		if (opts['log'] >= LogBlip):
+			print 'Sp2', check_S_diagDom(Sp2); mat_print_fmt(Sp2, 2)
 		#print 'Pert'; mat_print_fmt(Pert, 2)
 		#print 'Pert2'; mat_print_fmt(Pert2, 2)
 		#print 'iI'; mat_print_fmt(iI, 2)
 		#print 'iIp'; mat_print(iIp)
 	else:
-		print 'S', check_S_diagDom(S); mat_print(mat_transp([calc_diag_dom_vec(S)]))
-		print 'Sp', check_S_diagDom(Sp); mat_print(mat_transp([calc_diag_dom_vec(Sp)]))
-		print 'Sp2', check_S_diagDom(Sp2); mat_print(mat_transp([calc_diag_dom_vec(Sp2)]))
+		dom_vec = calc_diag_dom_vec(S); dom_err = count_err_diag_dom_vec(dom_vec); dom_errs[0] = dom_err;
+		if (opts['log'] >= LogBlip):
+			print 'S', check_S_diagDom(S); mat_print(mat_transp([dom_vec]))
+		dom_vec = calc_diag_dom_vec(Sp); dom_err = count_err_diag_dom_vec(dom_vec); dom_errs[1] = dom_err;
+		if (opts['log'] >= LogBlip):	
+			print 'Sp', check_S_diagDom(Sp); mat_print(mat_transp([calc_diag_dom_vec(Sp)]))
+		dom_vec = calc_diag_dom_vec(Sp2); dom_err = count_err_diag_dom_vec(dom_vec); dom_errs[2] = dom_err;
+		if (opts['log'] >= LogBlip):
+			print 'Sp2', check_S_diagDom(Sp2); mat_print(mat_transp([calc_diag_dom_vec(Sp2)]))
 			
+	return 'dim:{}, S:{}, Sp:{}, Sp2:{}, mass:{}, p-mass:{}, p2-mass:{}, ghost-mass:{}'.format(mat_rows(S), dom_errs[0], dom_errs[1], dom_errs[2], mat_norm_frob(iI), mat_norm_frob(iIp), mat_norm_frob(iIp2), mat_norm_frob(mat_sub(iIp2, iIp)))	
 
 
 def main():
 	opts = {'log':LogDbg}
-	log_dbg = sys_argv_has('-log_dbg'); log_blip = sys_argv_has('-log_blip');
+	log_dbg = sys_argv_has('-log_dbg'); log_blip = sys_argv_has('-log_blip') or sys_argv_has('-log');
 	log = LogNone; log = LogBlip if log_blip else log; log = LogDbg if log_dbg else log; 
 	opts['log'] = log
+	print log
 
 	if sys_argv_has('-in'):
+		print 'Loading...'
 		problem = load_json_matrices(sys_argv_get('-in', ''), def_data_conv(), opts)
 		if (check_S_diagDom2(problem) and (not sys_argv_has('-force'))):
 			print 'Already diag dom'
 		else:	
-			(Jp, it, conv) = calc_pseudo_inv_iter(problem['Jac'], {'maxit':100, 'conv':1.e-4}, opts)
+			print 'Calculating perturbation...'
+			(Jp, it, conv) = calc_pseudo_inv_iter(problem['Jac'], {'maxit':int(sys_argv_get('-maxit', 24)), 'conv':1.e-4}, opts)
 			#(Jp2, it, conv) = calc_pseudo_inv_iter( mat_transp(problem['Jac']), {'maxit':100, 'conv':1.e-4}, opts); print 'Jp2'; mat_print(mat_transp(Jp2));
-			#print it, conv
-			test_iI_perturbation(problem, Jp, float(sys_argv_get('-add', '0.0')))
+			
+			print 'Analyzing...'
+			result = test_iI_perturbation(problem, Jp, float(sys_argv_get('-add', '0.0')), opts)
+			print ''	
+			if ('source' in problem):
+				print 'Source: {}'.format(problem['source'])
+			print 'Pert Conv: {:.2} in {}'.format(conv, it)
+			print result	
+	
 
 if hasattr(sys, 'argv'):
 	main()
