@@ -175,8 +175,8 @@ Complementarity Problems in Many-Body Contact Dynamics Simulation)
 	- Matrix market! http://math.nist.gov/MatrixMarket/, http://www.netlib.org/
 * <toolkit> LCP+matrix splitting (On Iterative Solution for Linear Complementarity Problem with an $H_{+}$-Matrix, A. Hadjidimos)
 * silly/old? the class/canonical form of rbs mlcp matrices.
-* <toolkit> (Demmel, A supernodal approach to sparse partial pivoting) (SuperLu)
-* Better to 'choose at random' instead of broken perturb
+* <toolkit> (Demmel, A supernodal approach to sparse partial pivoting) (SuperLu). This can accelerate LU factorization when used inside LCP.
+* Better to 'choose at random' instead of broken perturb, since we have a fallback.
 
 
 -------- LCP research*
@@ -254,6 +254,8 @@ Complementarity Problems in Many-Body Contact Dynamics Simulation)
 	- free non-copy conv by template speci.
 	- Fix Peter's tau implementation, implement just as in SolverFunction.hxx
 	- Local filters for trace, otherwise we will swamp, test with multiple iters, support them better. (hash filter)
+	- Implement shift results pointer! it is used in NpDynSys1Demo: prismatic!
+	- m_inverseInertiaLocal.setZero() breaks, creates full zero rows in Mlcp matrix, handle this! (see NpDynSys1Demo: prismatic and m_inverseInertiaLocal.setZero())
 
 * Hkds force readout + robot muscle demo
 * group demo + group merge demo + live perf, etc.
@@ -282,6 +284,12 @@ Complementarity Problems in Many-Body Contact Dynamics Simulation)
 * Mlcp recipe to generalize
 * dis:
 	- Hkdis into tool: sotftness, wobliness, explosiveness, performance (mlcp), scaling, weak points
+* dis:
+	hkds: dis: tune: psor err, iters, mlcp, etc for a vehicle
+	With such a tool, it can become possible to choose psor settings properly and bypass the need for mlcp except when needed.
+	The tool should have two obvious knobs: performance, fidelity.
+* dis:
+	google: https://www.google.de/search?client=safari&rls=en&q=automated+floating+point+analysis&ie=UTF-8&oe=UTF-8&gfe_rd=cr&ei=8BhpVJuGE8qI8Qeo-IGADw#q=automated+floating+point+analysis&rls=en&start=10	
 * hkds: Add recipe, add config strings, and internal algo based config structs, shlex parse. multi-level recipes can enable/disable constraint types for direct warmup of system with contacts.
 * Turn generic control into a control tool, or at least config.
 * hkds team: vehicle builder
@@ -291,6 +299,44 @@ Complementarity Problems in Many-Body Contact Dynamics Simulation)
 * Hkds: And/or precondit into toolkit, more flexi-recipe.
 * If numer instabil -> limit break -> bias -> jitter then: calc-err and iter smooth while smoothing is error reducing. Again: flexible recipe.
 * Add hkds note or imp: error bias suck and/or reset. This does not work since some bias is needed: e.g: for unilaterals (limits), etc. The better way needs more intrusiveness, during setup and/or hkds-constraints.
+* hkds: the specificity philosophy. e.g we know tat least some lin dep sources, use that while if xourse also handle general case. simil: out of mlcp we know it is mot limit: can we do sthg with this info? maybe also in gen about limits. does this relate directly to compliance and bias research?
+* hkds: iterative incremental auto-block?
+* hkds: should it not be possible to calculate the needed number of iterations needed for psor given the nice symmetric structure and the other properties.
+* hkds: sound bar rendering (https://soundcloud.com/rodemics/voice-over-2-ntg2-wav?in=rodemics/sets/ntg2)
+* dis: extra trace monitor
+* write fdb server??
+* spider arena: ui, random weights, compare, fight? with sound!
+* http://www.cs.rpi.edu/~trink/sim_packages.html
+* also integ rbsysjson
+* hkds: one-pager
+	http://sfb649.wiwi.hu-berlin.de/fedc_homepage/xplore/ebooks/html/csa/node38.html
+* Coop oktal.fr, http://www.maxsoft-india.com/SimWise.aspx, http://www.experts.renault.com/kemeny/projects/ivima/index.html, http://www.katron.com.tr/index.html
+* We must pre-process the limits and motors eventually, for performance and solvability. Do it properly, by analyzing the resulting mlcp rows related to the mot/lim constraint.
+
+------- Commercial
+* sell nds, also put it into the hkds agenda
+* hkds: beat eric+ggl's project, make them buy our stuff
+* hkds: the forward looking robotics toolkit, what about hydrocopters etc?
+* hkds: simulate athg
+* hkds: compliance: http://www.magicalrobot.org/BeingHuman/vytas-sunspirals-publications
+* hkds: kiss perturbationless mlcp by config hashing.
+* hkds: http://www.simscale.com/_en/index.php?page=library
+
+------- nds
+ * use julia prog lang? (http://julialang.org/)
+ * Add this to the issue example list: (COM-2811, fp precision)
+	 Hey Oliver, the repro is in the issue:
+			hkVector4f vec;
+			vec.set( 0.0f, 0.0f, 0.000000000000000000111021597f, 0.982303559f );
+			hkSimdFloat32 vecLength = vec.length <3, hkMathAccuracyMode::HK_ACC_MID, hkMathNegSqrtMode::HK_SQRT_SET_ZERO>(); // vec.length3()
+			HK_ASSERT2( 0x6173b782, vecLength < 1000000.0f, "translation is unexpectedly large" );
+		Built on vs2012, noSimd, Debug. vecLength will be NaN.
+
+		Not sure who this should be directed to but just looking for some input on COM-2811 , “hkVector4f::length3() returns NaN for fpu math types and not full accuracy”. This is in noSIMD, VS2012 or higher.
+
+		Details in the issue but basically a vector with small but not denormal length, calling vec.length3() calls vec.length<3, hkMathAccuracyMode::HK_ACC_MID, hkMathNegSqrtMode::HK_SQRT_SET_ZERO>. This checks for zero length (which it isn’t), then performs an approximate sqrt, which produces a NaN. This NaN gets returned back to the caller which is obviously wrong since they asked for HK_SQRT_SET_ZERO.
+ * Rename nds to nam? nac? numerical analysis machine/calculator.		
+     
 
 ------- Analytical dynamics
 * Best coord sys for the job?
@@ -302,6 +348,39 @@ Complementarity Problems in Many-Body Contact Dynamics Simulation)
 	- (An Exponentially Convergent Algorithm For Nonlinear Differential Equations In Banach Spaces) http://citeseerx.ist.psu.edu/viewdoc/summary?doi=10.1.1.154.2552
 	- (Exponentially Convergent Algorithms for Abstract Differential Equations)
 
+------- Integration.
+* "An Angular Momentum and Energy Conserving Lie-Group Integration Scheme for Rigid Body Rotational Dynamics Originating from Störmer-Verlet Algorithm"
+* 
+
+------- Sig
+* Take max func yi=max(yk, 0<k<i). Which is monotone. Then find best poly growth func: x^g.
+	Find g by bin search. If x < 1 then converging!!!
+	Do same with min func.
+* Links:
+	- http://office.microsoft.com/en-gb/help/choosing-the-best-trendline-for-your-data-HP005262321.aspx
+	- http://www.alglib.net/interpolation/leastsquares.php#header4
+	- https://tamino.wordpress.com/2014/01/01/
+	- http://en.wikipedia.org/wiki/Gompertz_function
+	- http://oklo.org/category/systemic-faq/page/3/
+	- http://oklo.org/systemic-console-tutorial-3-gl-876/
+	- not much found on 'variable frequency curve fitting'
+	- damped sine curve fitting
+		- http://www.nlreg.com/
+		- http://stackoverflow.com/questions/16110185/how-to-fit-a-curve-to-a-damped-sine-wave-in-matlab
+		- http://fortrancalculus.info/apps/curvfit.html
+	- http://ab-initio.mit.edu/wiki/index.php/Harminv
+
+
+------ Dsl
+* The proper language! Do not fix structure, piping is semantic, functional piping.
+
+------ Dynamical Systems Research
+* http://www.inrialpes.fr/bipop/people/brogliato/brogli.html
+
+------ Game Physics
+* hkds for game phys: blackbox system control 'theory'
+* why not hvk destr?https://bisimulations.com/vbs3/technology
+* integ to np: kinetic version of all constraints.
 
 ------- Roadmap / KMW
 * Solve lin-sys separatly! and faster!
@@ -361,10 +440,17 @@ Complementarity Problems in Many-Body Contact Dynamics Simulation)
 	- excacator counterweight
 		- http://www.bllc.net/HardHatSamples/Excavator_Instructors_Notes.pdf
 		- http://www.iinte.edu.pl/pdf/200907s58.pdf	
+* 400 vehicles:
+	- milsim: integr. kinematic mode
+
+------ Commertical solvers
+* solvers: http://ampl.com/products/solvers/
 
 ------ Piece of Mathematics weeks.
 	- Hkds: add to report: fallacy (misconception, partial truth) of 'mass ratio' see off axis, rotation, eyc.		
 
+------- Employment
+	- List of intership projs, like dlr.
 
 ------ Present
 	- One culprit is the pernicious laptop, it should be outlawed! It encourages the speaker to pass the cognitive speed-limit by orders of magnitude. Sure enough, the best invited talk was Michael Kiessling's talk that used the ancient technology of overhead projector, and it would have been even better if he only used the blackboard, and it would have been better still if he didn't use anything, just told us a story.	
