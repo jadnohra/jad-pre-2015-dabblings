@@ -161,6 +161,7 @@ ODE issues and robotics
 * Can perturbation also be used to handle singulariy in syst-of-eq solving? Think of parallel lines that are perturbed.
 * Solve limits with cpa, then motors with ppcd2 or some sign (for limits) preserving algo
 * 'Warm start' : knowing the basis try to reach that first with min pivots?
+	- note my hybrid 'accel direct, warm start it' is actually (a bit remtly) related to pgs+subspace min, active set warm start in a sense, but using gs instead of prev iter. Note that! we could accel using last iter by trying to just use same active set!
 * Cant we presolve and solve in parallel??
 * http://link.springer.com/chapter/10.1007/BFb0120781  (Robust implementation of Lemke's method for the linear complementarity problem)
  ( found publically at http://www.thetomlins.org/John/robust_lemke.pdf)
@@ -312,6 +313,18 @@ Complementarity Problems in Many-Body Contact Dynamics Simulation)
 	http://sfb649.wiwi.hu-berlin.de/fedc_homepage/xplore/ebooks/html/csa/node38.html
 * Coop oktal.fr, http://www.maxsoft-india.com/SimWise.aspx, http://www.experts.renault.com/kemeny/projects/ivima/index.html, http://www.katron.com.tr/index.html
 * We must pre-process the limits and motors eventually, for performance and solvability. Do it properly, by analyzing the resulting mlcp rows related to the mot/lim constraint.
+* Particle based geometrical impossibility detector
+
+
+------- Hardware Pad control
+* Devices:
+	- http://www.thomann.de/at/cat.html?gf=daw_controller&oa=pra
+	- http://www.akaipro.com/category/pad-controllers
+	- http://www.behringer.com/EN/Category/Computer-Audio.aspx?s=N2003
+	- http://www.bhphotovideo.com/c/product/638094-REG/Akai_LPD8_LPD8_USB_MIDI.html/prm/alsVwDtl
+
+------ Information management
+* at Nasa: http://www.sciencedirect.com/science/article/pii/0740624X9090051O
 
 ------- Commercial
 * sell nds, also put it into the hkds agenda
@@ -324,6 +337,7 @@ Complementarity Problems in Many-Body Contact Dynamics Simulation)
 
 ------- nds
  * use julia prog lang? (http://julialang.org/)
+ 	- Dis: write dis1 in julia lang! http://julia.readthedocs.org/en/latest/manual/complex-and-rational-numbers/
  * Add this to the issue example list: (COM-2811, fp precision)
 	 Hey Oliver, the repro is in the issue:
 			hkVector4f vec;
