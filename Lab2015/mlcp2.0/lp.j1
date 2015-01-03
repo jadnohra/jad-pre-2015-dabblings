@@ -1,1 +1,64 @@
-println( lu([1 3 5 ; 2 4 7 ; 1 1 0]) )
+# http://learnxinyminutes.com/docs/julia/
+
+#= 
+	Solve, Revised, Simplex. lp_solve_rsimplex
+	1. revised simplex, basis inversion, no reuse
+	2. revised simplex, basis factorization, no reuse
+	3. revised simplex, basis factorization, reuse, no re-factorization
+	4. revised simplex, basis factorization, reuse, re-factorization
+	5. revised simplex, basis factorization, reuse, re-factorization, degen, sing
+	
+	Solve, Revised, Sparse. solve_srsimplex
+	1. revised sparse simplex
+
+	Presolve
+	1. ??
+=#
+
+module lp
+
+	type canonical_problem
+		numtype::String
+		n::Int
+		c::Array{Any, 1}
+		A::Array{Any, 2}
+		b::Array{Any, 1}
+
+		canonical_problem(numtype) = ( x = new(); x.n = 0; x.numtype = numtype; return x;  )
+		canonical_problem() = canonical_problem("Float32")
+	end
+
+	
+
+end
+
+module lp_rsimplex_algo1
+	using lp
+
+	type working_data
+		n::Int = 66
+		Ib::Array{Int, 1}
+		Ir::Array{Int, 1}
+		B::Array{Any, 2}
+		Binv::Array{Any, 2}
+		R::Array{Any, 2}
+
+		working_data() = new()
+	end
+
+	function create_data(problem)
+		#data = :working_data{TYPE}
+	end	
+
+	function get_starting_basis_logical()
+	end
+
+	function solve(problem)
+		ret = working_data()
+		println(problem)
+		ret.B = eval(parse(@sprintf("zeros(%s, (2,2))", problem.numtype)))
+		return ret
+	end
+
+end
+
