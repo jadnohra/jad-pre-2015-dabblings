@@ -21,6 +21,7 @@ module lp
 	type canonical_problem
 		numtype::String
 		n::Int
+		m::Int
 		c::Array{Any, 1}
 		A::Array{Any, 2}
 		b::Array{Any, 1}
@@ -29,37 +30,88 @@ module lp
 		canonical_problem() = canonical_problem("Float32")
 	end
 
-	
-
 end
+
 
 module lp_rsimplex_algo1
 	using lp
 
 	type working_data
-		n::Int = 66
-		Ib::Array{Int, 1}
-		Ir::Array{Int, 1}
-		B::Array{Any, 2}
-		Binv::Array{Any, 2}
-		R::Array{Any, 2}
+		problem::lp.canonical_problem
+		n::Int
+		m::Int
+		iB::Array{Int, 1}
+		iR::Array{Int, 1}
+		B#::Array{numtype, 2}
+		Binv#::Array{numtype, 2}
+		R#::Array{numtype, 2}
+		xB#::Array{numtype, 1}
+
 
 		working_data() = new()
 	end
 
 	function create_data(problem)
-		#data = :working_data{TYPE}
+		ret = working_data()
+		ret.problem = problem
+		ret.n = problem.n 
+		ret.m = problem.m
+		ret.iB = zeros(Int, problem.m)
+		ret.iR = zeros(Int, problem.n)
+		ret.B = eval(parse(@sprintf("zeros(%s, (%d,%d))", problem.numtype, problem.m, problem.m)))
+		ret.Binv = eval(parse(@sprintf("zeros(%s, (%d,%d))", problem.numtype, problem.m, problem.m)))
+		ret.R = eval(parse(@sprintf("zeros(%s, (%d,%d))", problem.numtype, problem.m, problem.n)))	
+		ret.xB =  eval(parse(@sprintf("zeros(%s, (%d))", problem.numtype, problem.m)))
+
+		return ret
 	end	
 
-	function get_starting_basis_logical()
+	function sel_cols(S, T, iC)
+		for c = 1:length(iC)
+			cc = iC[c]
+			for r = 1:size(S)[1]
+				T[r, c] = S[r, cc]
+			end	
+		end
+		return T
+		# T = S[1:size(S)[1], iT] (nice, but will allocate memory)
+	end
+
+	function split_cols(S, T1, T2, iT1)
+		i1 = 1; Tc1 = 1; Tc2 = 1;
+		for c = 1:size(S)[2]
+			if length(iT1) >= i1 && c == iT1[i1]
+				T = T1; Tc = Tc1; Tc1 = Tc1+1; i1 = i1 + 1;
+			else
+				T = T2; Tc = Tc2; Tc2 = Tc2+1; 
+			end
+			for r = 1:size(S)[1]
+				T[r, Tc] = S[r, c]
+			end	
+		end
+	end
+
+	function set_basis_logical(data)
+		data.iB = [i for i in n+1:n+m]
+		data.iR = [i for i in 1:n]
+	end
+
+	function split_basic(data)
+		data.B = sel_cols(data.problem.A, data.B, data.iB)
+		data.R = sel_cols(data.problem.A, data.R, data.iR)
 	end
 
 	function solve(problem)
-		ret = working_data()
-		println(problem)
-		ret.B = eval(parse(@sprintf("zeros(%s, (2,2))", problem.numtype)))
-		return ret
+		data = create_data(problem)
+		start_basis_logical(data)
+		return data
 	end
 
 end
 
+function test()
+	problem = lp.canonical_problem("Float32")
+	problem.n = 2; problem.m = 2;
+	sol = lp_rsimplex_algo1.solve(problem)
+	println(sol)
+end
