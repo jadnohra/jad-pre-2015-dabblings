@@ -16,6 +16,7 @@
 	1. ??
 =#
 
+
 module lp
 
 	type canonical_problem
@@ -47,16 +48,25 @@ module lp
 		return ret
 	end
 
-	function create_problem(numtype, c, A, b)
+	function create_max_problem(numtype, c, A, b)
 		ret = canonical_problem()
 		ret.numtype = numtype
 		ret.n = length(c)
 		ret.m = length(b)
 		ret.c = conv_vec(numtype, c)
-		ret.A = conv_mat(numtype, A)
+		ret.A = hcat( conv_mat(numtype, A), eye(ret.m) )
 		ret.b = conv_vec(numtype, b)
 		return ret
 	end
+
+	function create_min_problem(numtype, c, A, b) return create_max_problem(numtype, -1*(c), A, b) end
+
+	problem_db = Function[]
+
+	function problem_LPFE_p88(numtype)	
+		create_min_problem(numtype, [4,3], [1 -1; 2 -1; 0 1], [1, 3, 5])
+	end
+	push!(problem_db, problem_LPFE_p88)
 
 end
 
@@ -75,7 +85,6 @@ module lp_rsimplex_algo1
 		R#::Array{numtype, 2}
 		xB#::Array{numtype, 1}
 
-
 		working_data() = new()
 	end
 
@@ -88,12 +97,13 @@ module lp_rsimplex_algo1
 		ret.iR = Array(Int, prob.n)
 		numtype = prob.numtype; n = prob.n; m = prob.m;
 		ret.B = eval(parse( "Array($numtype, ($m,$m))" ))
-		ret.Binv = eval(parse( "Array($numtype, ($m,$m))" ))
+		#ret.Binv = eval(parse( "Array($numtype, ($m,$m))" ))
 		ret.R = eval(parse( "Array($numtype, ($m,$n))" ))
 		ret.xB = eval(parse( "Array($numtype, $m)" ))
 		return ret
 	end	
 
+#=
 	function sel_cols(S, T, iC)
 		for c = 1:length(iC)
 			cc = iC[c]
@@ -104,6 +114,7 @@ module lp_rsimplex_algo1
 		return T
 		# T = S[1:size(S)[1], iT] (nice, but will allocate memory)
 	end
+=#
 
 	function split_cols(S, T1, T2, iT1)
 		i1 = 1; Tc1 = 1; Tc2 = 1;
@@ -120,26 +131,28 @@ module lp_rsimplex_algo1
 	end
 
 	function set_basis_logical(data)
-		data.iB = [i for i in n+1:n+m]
-		data.iR = [i for i in 1:n]
+		data.iB = [i for i in data.n+1:data.n+data.m]
+		data.iR = [i for i in 1:data.n]
 	end
 
-	function solve(problem)
-		data = create_data(problem)
-		set_basis_logical(data)
-		split_cols(data.prob.A, data.B, data.R, data.iB)
+	function update_B_R(data) split_cols(data.prob.A, data.B, data.R, data.iB) end
+	function update_Binv(data) data.Binv = inv(data.B) end
+	function update_xB(data) data.xB = data.Binv * (data.prob.b) end
+
+	function solve_data(data)
+		set_basis_logical(data) 
+		update_B_R(data) 
+		update_Binv(data)
+		update_xB(data)
 		return data
 	end
+
+	function solve_problem(problem) solve_data(create_data(problem)) end
 
 end
 
 function test()
-	problem = lp.canonical_problem("Float32")
-	problem.n = 2; problem.m = 1;
-	problem.c = [1, 1]
-	problem.A = [[2, 3]]
-	problem.b = 10
-
-	sol = lp_rsimplex_algo1.solve(problem)
-	println(sol)
+	prob = lp.create_problem("Float32", [1, 1], [2 3;], 10)
+	sol = lp_rsimplex_algo1.solve_problem(prob)
+	return sol
 end
