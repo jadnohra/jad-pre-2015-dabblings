@@ -22,12 +22,40 @@ module lp
 		numtype::String
 		n::Int
 		m::Int
-		c::Array{Any, 1}
-		A::Array{Any, 2}
-		b::Array{Any, 1}
+		c#::Array{Any, 1}
+		A#::Array{Any, 2}
+		b#::Array{Any, 1}
 
-		canonical_problem(numtype) = ( x = new(); x.n = 0; x.numtype = numtype; return x;  )
-		canonical_problem() = canonical_problem("Float32")
+		canonical_problem() = new()
+	end
+
+	function conv_vec(numtype, V)
+		n = length(V)
+		ret = eval(parse( "Array($numtype, $n)" ))
+		for i = 1:n 
+			ret[i] = eval(parse("convert($(numtype), $V[$i])"))
+		end
+		return ret
+	end
+
+	function conv_mat(numtype, M)
+		r = size(M)[1]; c = size(M)[2];
+		ret = eval(parse( "Array($numtype, ($r, $c))" ))
+		for i = 1:length(M)
+			ret[i] = eval(parse("convert($(numtype), $M[$i])"))
+		end
+		return ret
+	end
+
+	function create_problem(numtype, c, A, b)
+		ret = canonical_problem()
+		ret.numtype = numtype
+		ret.n = length(c)
+		ret.m = length(b)
+		ret.c = conv_vec(numtype, c)
+		ret.A = conv_mat(numtype, A)
+		ret.b = conv_vec(numtype, b)
+		return ret
 	end
 
 end
@@ -37,7 +65,7 @@ module lp_rsimplex_algo1
 	using lp
 
 	type working_data
-		problem::lp.canonical_problem
+		prob::lp.canonical_problem
 		n::Int
 		m::Int
 		iB::Array{Int, 1}
@@ -51,18 +79,18 @@ module lp_rsimplex_algo1
 		working_data() = new()
 	end
 
-	function create_data(problem)
+	function create_data(prob)
 		ret = working_data()
-		ret.problem = problem
-		ret.n = problem.n 
-		ret.m = problem.m
-		ret.iB = zeros(Int, problem.m)
-		ret.iR = zeros(Int, problem.n)
-		ret.B = eval(parse(@sprintf("zeros(%s, (%d,%d))", problem.numtype, problem.m, problem.m)))
-		ret.Binv = eval(parse(@sprintf("zeros(%s, (%d,%d))", problem.numtype, problem.m, problem.m)))
-		ret.R = eval(parse(@sprintf("zeros(%s, (%d,%d))", problem.numtype, problem.m, problem.n)))	
-		ret.xB =  eval(parse(@sprintf("zeros(%s, (%d))", problem.numtype, problem.m)))
-
+		ret.prob = prob
+		ret.n = prob.n 
+		ret.m = prob.m
+		ret.iB = Array(Int, prob.m)
+		ret.iR = Array(Int, prob.n)
+		numtype = prob.numtype; n = prob.n; m = prob.m;
+		ret.B = eval(parse( "Array($numtype, ($m,$m))" ))
+		ret.Binv = eval(parse( "Array($numtype, ($m,$m))" ))
+		ret.R = eval(parse( "Array($numtype, ($m,$n))" ))
+		ret.xB = eval(parse( "Array($numtype, $m)" ))
 		return ret
 	end	
 
@@ -96,14 +124,10 @@ module lp_rsimplex_algo1
 		data.iR = [i for i in 1:n]
 	end
 
-	function split_basic(data)
-		data.B = sel_cols(data.problem.A, data.B, data.iB)
-		data.R = sel_cols(data.problem.A, data.R, data.iR)
-	end
-
 	function solve(problem)
 		data = create_data(problem)
-		start_basis_logical(data)
+		set_basis_logical(data)
+		split_cols(data.prob.A, data.B, data.R, data.iB)
 		return data
 	end
 
@@ -111,7 +135,11 @@ end
 
 function test()
 	problem = lp.canonical_problem("Float32")
-	problem.n = 2; problem.m = 2;
+	problem.n = 2; problem.m = 1;
+	problem.c = [1, 1]
+	problem.A = [[2, 3]]
+	problem.b = 10
+
 	sol = lp_rsimplex_algo1.solve(problem)
 	println(sol)
 end
