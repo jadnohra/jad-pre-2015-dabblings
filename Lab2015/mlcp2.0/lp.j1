@@ -30,6 +30,12 @@ module lp
 		canonical_problem() = new()
 	end
 
+	type solution
+		solved::Bool
+
+		solution() = ( x = new(); x.solved = false; return x; )
+	end	
+
 	function conv_vec(numtype, V)
 		n = length(V)
 		ret = eval(parse( "Array($numtype, $n)" ))
@@ -87,6 +93,7 @@ module lp_rsimplex_algo1
 		piT#::Array{numtype, 1}
 		cBT#::Array{numtype, 1}
 		dJ#::Array{numtype, 1}
+		zero
 
 		working_data() = new()
 	end
@@ -106,6 +113,7 @@ module lp_rsimplex_algo1
 		#ret.piT = eval(parse( "Array($numtype, $m+$n)" ))
 		#ret.cBT = eval(parse( "Array($numtype, $m)" ))
 		ret.dJ = eval(parse( "Array($numtype, $n)" ))
+		ret.zero = eval(parse( "zero($numtype)" ))
 		return ret
 	end	
 
@@ -135,9 +143,11 @@ module lp_rsimplex_algo1
 	function update_piT(data) data.piT = reshape(data.cBT * data.Binv, length(data.cBT)); end
 	function calc_dj(data, j) i = data.iR[j]; dj = data.prob.c[i] - dot(data.piT, data.prob.A[:,i]); return dj; end	
 	function update_dJ(data) for j = 1:data.n data.dJ[j] = calc_dj(data, j) end; end	
-
+	function check_optimal_dJ(data) return all( dj->( dj >= data.zero), data.dJ); end
+		
 	function solve_data(data)
-		set_basis_logical(data);
+		sol = lp.solution()
+		set_basis_logical(data)
 		update_B_R(data) 
 		update_Binv(data)
 		update_xB(data)
@@ -145,6 +155,7 @@ module lp_rsimplex_algo1
 		update_cBT(data)
 		update_piT(data)
 		update_dJ(data)
+		println(check_optimal_dJ(data))
 
 		return data
 	end
