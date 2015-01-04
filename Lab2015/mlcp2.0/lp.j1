@@ -53,8 +53,8 @@ module lp
 		ret.numtype = numtype
 		ret.n = length(c)
 		ret.m = length(b)
-		ret.c = conv_vec(numtype, c)
-		ret.A = hcat( conv_mat(numtype, A), eye(ret.m) )
+		ret.c = vcat( conv_vec(numtype, c), eval(parse( "zeros($numtype, $(ret.m))" )) ) 
+		ret.A = hcat( conv_mat(numtype, A), conv_mat(numtype, eye(ret.m)) )
 		ret.b = conv_vec(numtype, b)
 		return ret
 	end
@@ -84,6 +84,9 @@ module lp_rsimplex_algo1
 		Binv#::Array{numtype, 2}
 		R#::Array{numtype, 2}
 		xB#::Array{numtype, 1}
+		piT#::Array{numtype, 1}
+		cBT#::Array{numtype, 1}
+		dJ#::Array{numtype, 1}
 
 		working_data() = new()
 	end
@@ -100,21 +103,11 @@ module lp_rsimplex_algo1
 		#ret.Binv = eval(parse( "Array($numtype, ($m,$m))" ))
 		ret.R = eval(parse( "Array($numtype, ($m,$n))" ))
 		ret.xB = eval(parse( "Array($numtype, $m)" ))
+		#ret.piT = eval(parse( "Array($numtype, $m+$n)" ))
+		#ret.cBT = eval(parse( "Array($numtype, $m)" ))
+		ret.dJ = eval(parse( "Array($numtype, $n)" ))
 		return ret
 	end	
-
-#=
-	function sel_cols(S, T, iC)
-		for c = 1:length(iC)
-			cc = iC[c]
-			for r = 1:size(S)[1]
-				T[r, c] = S[r, cc]
-			end	
-		end
-		return T
-		# T = S[1:size(S)[1], iT] (nice, but will allocate memory)
-	end
-=#
 
 	function split_cols(S, T1, T2, iT1)
 		i1 = 1; Tc1 = 1; Tc2 = 1;
@@ -138,12 +131,21 @@ module lp_rsimplex_algo1
 	function update_B_R(data) split_cols(data.prob.A, data.B, data.R, data.iB) end
 	function update_Binv(data) data.Binv = inv(data.B) end
 	function update_xB(data) data.xB = data.Binv * (data.prob.b) end
+	function update_cBT(data) data.cBT = transpose(data.prob.c[data.iB]) end
+	function update_piT(data) data.piT = reshape(data.cBT * data.Binv, length(data.cBT)); end
+	function calc_dj(data, j) i = data.iR[j]; dj = data.prob.c[i] - dot(data.piT, data.prob.A[:,i]); return dj; end	
+	function update_dJ(data) for j = 1:data.n data.dJ[j] = calc_dj(data, j) end; end	
 
 	function solve_data(data)
-		set_basis_logical(data) 
+		set_basis_logical(data);
 		update_B_R(data) 
 		update_Binv(data)
 		update_xB(data)
+		#todo phaseI
+		update_cBT(data)
+		update_piT(data)
+		update_dJ(data)
+
 		return data
 	end
 
