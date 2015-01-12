@@ -163,7 +163,7 @@ module lp_rsimplex_algo1
 			dj = data.dJ[i]
 			if (dj < data.zero && dj <= min_dj)
 				if (dj == min_dj)
-					println("Warning: degenracy.")
+					println("Warning: degeneracy.")
 				end	
 				min_i = i; min_dj = dj;
 			end	
@@ -178,7 +178,7 @@ module lp_rsimplex_algo1
 				ratio = data.xB[i] / data.αq[i]
 				if (min_i == 0 || ratio <= min_ratio)
 					if (ratio == min_ratio)
-						println("Warning: degenracy.")
+						println("Warning: degeneracy.")
 					end	
 					min_i = i; min_ratio = ratio;
 				end
