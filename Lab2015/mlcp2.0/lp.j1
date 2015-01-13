@@ -131,18 +131,27 @@ module lp
 		iR = dcd_iR(sol.prob.n, sol.prob.m, iB)
 		if (typ == 2) dcd_basis(n, iB); end
 		if (typ == 3) dcd_basis(n, iR); end
+		if (typ == 4) println(sort(iB)); end
+		if (typ == 5) println(sort(iR)); end
 		for i = 1:length(sol.sess.iters)
-			c,r = sol.sess.iters[i]["pivot"]
-			if (typ == 1) @printf "%d. %s,%s \n" i dcd_var(n, iR[c]) dcd_var(n, iB[r]); end
-			tmp = iR[c]; iR[c] = iB[r]; iB[r] = tmp;
-			if (typ == 2) dcd_basis(n, iB); end
-			if (typ == 3) dcd_basis(n, iR); end
+			iter = sol.sess.iters[i]
+			if (haskey(iter, "pivot"))
+				c,r = sol.sess.iters[i]["pivot"]
+				if (typ == 1) @printf "%d. %s,%s \n" i dcd_var(n, iR[c]) dcd_var(n, iB[r]); end
+				tmp = iR[c]; iR[c] = iB[r]; iB[r] = tmp;
+				if (typ == 2) dcd_basis(n, iB); end
+				if (typ == 3) dcd_basis(n, iR); end
+				if (typ == 4) println(sort(iB)); end
+				if (typ == 5) println(sort(iR)); end
+			end		
 		end		
 	end
 
 	function dcd_pivots(sol) dcd_pivots_impl(sol, 1) end
 	function dcd_bases(sol) dcd_pivots_impl(sol, 2) end
 	function dcd_nbases(sol) dcd_pivots_impl(sol, 3) end
+	function dcd_ibases(sol) dcd_pivots_impl(sol, 4) end
+	function dcd_inbases(sol) dcd_pivots_impl(sol, 5) end
 	function dcd_iters(sol) println(length(sol.sess.iters)) end
 
 	problem_db = Any[]
@@ -286,6 +295,7 @@ module lp_rsimplex_algo1
 		update_cBT(data)
 
 		while(maxit == 0 || it < maxit)
+			if (it != 0) dcd.iter(sol.sess, ""); end
 			#Step 1
 			update_πT(data)
 			#Step 2
