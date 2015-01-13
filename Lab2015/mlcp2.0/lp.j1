@@ -154,24 +154,6 @@ module lp
 	function dcd_inbases(sol) dcd_pivots_impl(sol, 5) end
 	function dcd_iters(sol) println(length(sol.sess.iters)) end
 
-	problem_db = Any[]
-
-	function problem_simple(numtype) 
-		return create_min_problem(numtype, [1, 1], [2 3;], [10], {"maxit" => 5})
-	end; push!(problem_db, (problem_simple, ""))
-
-	function problem_LPFE_p88(numtype)	
-		return create_max_problem(numtype, [4,3], [1 -1; 2 -1; 0 1], [1, 3, 5], {"maxit" => 5})
-	end; push!(problem_db, (problem_LPFE_p88, "LPFE_p88"))
-
-	function problem_LPFE_p11(numtype)	
-		return create_max_problem(numtype, [5,4,3], [2 3 1; 4 1 2; 3 4 2], [5, 11, 8], {"maxit" => 5})
-	end; push!(problem_db, (problem_LPFE_p11, "LPFE_p11"))
-
-	function problem_LPFE_p27(numtype)	
-		return create_max_problem(numtype, [10,-57,-9,-24], [0.5 -5.5 -2.5 9; 0.5 -1.5 -0.5 1; 1 0 0 0], [0, 0, 1], {"maxit" => 5})
-	end; push!(problem_db, (problem_LPFE_p27, "LPFE_p27 degen"))
-
 end
 
 
@@ -330,25 +312,50 @@ module lp_rsimplex_algo1
 
 end
 
-function test(key, numtype = "Float32")
-	prob = 0
-	if (typeof(key) == Int)
-		pinfo = lp.problem_db[key]
-		prob = pinfo[1](numtype)
-	else
-		for i = 1:length(lp.problem_db)
-			pinfo = lp.problem_db[i]
-			if (contains(pinfo[2], key))
-				prob = pinfo[1](numtype)
-				break	
+module lp_db
+	using lp
+	using lp_rsimplex_algo1
+	
+	prob_db = Any[]
+
+	function problem_simple(numtype) 
+		return lp.create_min_problem(numtype, [1, 1], [2 3;], [10], {"maxit" => 5})
+	end; push!(prob_db, (problem_simple, ""))
+
+	function problem_LPFE_p88(numtype)	
+		return lp.create_max_problem(numtype, [4,3], [1 -1; 2 -1; 0 1], [1, 3, 5], {"maxit" => 5})
+	end; push!(prob_db, (problem_LPFE_p88, "LPFE_p88"))
+
+	function problem_LPFE_p11(numtype)	
+		return lp.create_max_problem(numtype, [5,4,3], [2 3 1; 4 1 2; 3 4 2], [5, 11, 8], {"maxit" => 5})
+	end; push!(prob_db, (problem_LPFE_p11, "LPFE_p11"))
+
+	function problem_LPFE_p27(numtype)	
+		return lp.create_max_problem(numtype, [10,-57,-9,-24], [0.5 -5.5 -2.5 9; 0.5 -1.5 -0.5 1; 1 0 0 0], [0, 0, 1], {"maxit" => 5})
+	end; push!(prob_db, (problem_LPFE_p27, "LPFE_p27 degen"))
+
+
+	function solve(key, numtype = "Float32")
+		prob = 0
+		if (typeof(key) == Int)
+			pinfo = prob_db[key]
+			prob = pinfo[1](numtype)
+		else
+			for i = 1:length(prob_db)
+				pinfo = prob_db[i]
+				if (contains(pinfo[2], key))
+					prob = pinfo[1](numtype)
+					break	
+				end
 			end
 		end
-	end
 
-	if (typeof(prob) != Int)
-		@printf "Problem: '%s' \n" pinfo[2]
-		sol = lp_rsimplex_algo1.solve_problem(prob)
-		return sol
+		if (typeof(prob) != Int)
+			@printf "Problem: '%s' \n" pinfo[2]
+			sol = lp_rsimplex_algo1.solve_problem(prob)
+			return sol
+		end
+
+		return lp.Solution();
 	end
-	return lp.Solution();
 end
