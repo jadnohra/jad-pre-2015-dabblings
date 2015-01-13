@@ -49,6 +49,7 @@ module lp
 	const Invalid = "Invalid"
 	const Optimal = "Optimal"
 	const Unbounded = "Unbounded"
+	const Maxit = "Maxit"
 
 	type Canonical_problem
 		numtype::String
@@ -57,6 +58,7 @@ module lp
 		c#::Array{Any, 1}
 		A#::Array{Any, 2}
 		b#::Array{Any, 1}
+		params::Dict{String,Any}
 
 		Canonical_problem() = new()
 	end
@@ -69,7 +71,6 @@ module lp
 		sess::dcd.Session
 		data
 		
-
 		Solution() = ( x = new(); x.solved = false; x.status = Invalid; x.sess = dcd.Session(); return x; )
 	end	
 
@@ -91,7 +92,7 @@ module lp
 		return ret
 	end
 
-	function create_min_problem(numtype, c, A, b)
+	function create_min_problem(numtype, c, A, b, params = {})
 		ret = Canonical_problem()
 		ret.numtype = numtype
 		ret.n = length(c)
@@ -99,10 +100,11 @@ module lp
 		ret.c = vcat( conv_vec(numtype, c), eval(parse( "zeros($numtype, $(ret.m))" )) ) 
 		ret.A = hcat( conv_mat(numtype, A), conv_mat(numtype, eye(ret.m)) )
 		ret.b = conv_vec(numtype, b)
+		ret.params = params
 		return ret
 	end
 
-	function create_max_problem(numtype, c, A, b) return create_min_problem(numtype, -1*(c), A, b) end
+	function create_max_problem(numtype, c, A, b, params = {}) return create_min_problem(numtype, -1*(c), A, b, params) end
 	
 	function dcd_var_info(n, i) return i <= n ? ("x", i) : ("w", i-n); end
 	function dcd_var(n, i) s,i = dcd_var_info(n, i); return @sprintf "%s%d" s i; end
@@ -146,19 +148,19 @@ module lp
 	problem_db = Any[]
 
 	function problem_simple(numtype) 
-		return create_min_problem(numtype, [1, 1], [2 3;], [10])
+		return create_min_problem(numtype, [1, 1], [2 3;], [10], {"maxit" => 5})
 	end; push!(problem_db, (problem_simple, ""))
 
 	function problem_LPFE_p88(numtype)	
-		return create_max_problem(numtype, [4,3], [1 -1; 2 -1; 0 1], [1, 3, 5])
+		return create_max_problem(numtype, [4,3], [1 -1; 2 -1; 0 1], [1, 3, 5], {"maxit" => 5})
 	end; push!(problem_db, (problem_LPFE_p88, "LPFE_p88"))
 
 	function problem_LPFE_p11(numtype)	
-		return create_max_problem(numtype, [5,4,3], [2 3 1; 4 1 2; 3 4 2], [5, 11, 8])
+		return create_max_problem(numtype, [5,4,3], [2 3 1; 4 1 2; 3 4 2], [5, 11, 8], {"maxit" => 5})
 	end; push!(problem_db, (problem_LPFE_p11, "LPFE_p11"))
 
 	function problem_LPFE_p27(numtype)	
-		return create_max_problem(numtype, [10,-57,-9,-24], [0.5 -5.5 -2.5 9; 0.5 -1.5 -0.5 1; 1 0 0 0], [0, 0, 1])
+		return create_max_problem(numtype, [10,-57,-9,-24], [0.5 -5.5 -2.5 9; 0.5 -1.5 -0.5 1; 1 0 0 0], [0, 0, 1], {"maxit" => 5})
 	end; push!(problem_db, (problem_LPFE_p27, "LPFE_p27 degen"))
 
 end
@@ -271,6 +273,7 @@ module lp_rsimplex_algo1
 
 	function solve_data(data)
 		# [CTSM].p33,p30, but with naive basis reinversion instead of update.
+		it = 0; maxit = get(data.prob.params, "maxit", 0);
 		sol = lp.Solution(); sol.data = data; sol.prob = data.prob;
 		dcd.iter(sol.sess, "init")
 		#Step 0
@@ -282,7 +285,7 @@ module lp_rsimplex_algo1
 		#todo phaseI
 		update_cBT(data)
 
-		while(true)
+		while(maxit == 0 || it < maxit)
 			#Step 1
 			update_πT(data)
 			#Step 2
@@ -306,8 +309,10 @@ module lp_rsimplex_algo1
 			pivot_iB_iR(data, q, p)
 			update_B_R(data)
 			update_Binv(data)
+			it = it + 1
 		end	
 
+		sol.solved = false; sol.status = lp.Maxit;
 		return sol
 	end
 
