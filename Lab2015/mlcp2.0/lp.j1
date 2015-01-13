@@ -46,6 +46,10 @@ end
 module lp
 	using dcd
 
+	const Invalid = "Invalid"
+	const Optimal = "Optimal"
+	const Unbounded = "Unbounded"
+
 	type Canonical_problem
 		numtype::String
 		n::Int
@@ -59,10 +63,14 @@ module lp
 
 	type Solution
 		solved::Bool
+		status::String
+
+		prob::Canonical_problem
 		sess::dcd.Session
 		data
+		
 
-		Solution() = ( x = new(); x.solved = false; x.sess = dcd.Session(); return x; )
+		Solution() = ( x = new(); x.solved = false; x.status = Invalid; x.sess = dcd.Session(); return x; )
 	end	
 
 	function conv_vec(numtype, V)
@@ -96,27 +104,62 @@ module lp
 
 	function create_max_problem(numtype, c, A, b) return create_min_problem(numtype, -1*(c), A, b) end
 	
-	function dcd_pivots(sol)
-		for i = 1:length(sol.sess.iters)
-			pvt = sol.sess.iters[i]["pivot"]
-			@printf "%d. %s,%s \n" i pvt[1] pvt[2]
+	function dcd_var_info(n, i) return i <= n ? ("x", i) : ("w", i-n); end
+	function dcd_var(n, i) s,i = dcd_var_info(n, i); return @sprintf "%s%d" s i; end
+	function dcd_iR(n, m, iB) 
+		iR = Int[] 
+		for i = 1:m+n 
+			if findfirst(iB, i) == 0 push!(iR, i) end
 		end
-	end
-	
+		return iR
+	end			
+		
+	function dcd_basis(n, iB)
+		for i = 1:length(iB)
+			vs,vi = dcd_var_info(n, iB[i])
+			@printf "%s%d " vs vi
+		end
+		@printf "\n"
+	end	
 
-	problem_db = Function[]
+	function dcd_pivots_impl(sol, typ)
+		if isempty(sol.sess.iters) return; end
+		n = sol.prob.n
+		iB = deepcopy(sol.sess.iters[1]["iB"])
+		iR = dcd_iR(sol.prob.n, sol.prob.m, iB)
+		if (typ == 2) dcd_basis(n, iB); end
+		if (typ == 3) dcd_basis(n, iR); end
+		for i = 1:length(sol.sess.iters)
+			c,r = sol.sess.iters[i]["pivot"]
+			if (typ == 1) @printf "%d. %s,%s \n" i dcd_var(n, iR[c]) dcd_var(n, iB[r]); end
+			tmp = iR[c]; iR[c] = iB[r]; iB[r] = tmp;
+			if (typ == 2) dcd_basis(n, iB); end
+			if (typ == 3) dcd_basis(n, iR); end
+		end		
+	end
+
+	function dcd_pivots(sol) dcd_pivots_impl(sol, 1) end
+	function dcd_bases(sol) dcd_pivots_impl(sol, 2) end
+	function dcd_nbases(sol) dcd_pivots_impl(sol, 3) end
+	function dcd_iters(sol) println(length(sol.sess.iters)) end
+
+	problem_db = Any[]
 
 	function problem_simple(numtype) 
-		create_min_problem(numtype, [1, 1], [2 3;], [10]) 
-	end; push!(problem_db, problem_simple)
+		return create_min_problem(numtype, [1, 1], [2 3;], [10])
+	end; push!(problem_db, (problem_simple, ""))
 
 	function problem_LPFE_p88(numtype)	
-		create_max_problem(numtype, [4,3], [1 -1; 2 -1; 0 1], [1, 3, 5])
-	end; push!(problem_db, problem_LPFE_p88)
+		return create_max_problem(numtype, [4,3], [1 -1; 2 -1; 0 1], [1, 3, 5])
+	end; push!(problem_db, (problem_LPFE_p88, "LPFE_p88"))
 
 	function problem_LPFE_p11(numtype)	
-		create_max_problem(numtype, [5,4,3], [2 3 1; 4 1 2; 3 4 2], [5, 11, 8])
-	end; push!(problem_db, problem_LPFE_p11)
+		return create_max_problem(numtype, [5,4,3], [2 3 1; 4 1 2; 3 4 2], [5, 11, 8])
+	end; push!(problem_db, (problem_LPFE_p11, "LPFE_p11"))
+
+	function problem_LPFE_p27(numtype)	
+		return create_max_problem(numtype, [10,-57,-9,-24], [0.5 -5.5 -2.5 9; 0.5 -1.5 -0.5 1; 1 0 0 0], [0, 0, 1])
+	end; push!(problem_db, (problem_LPFE_p27, "LPFE_p27 degen"))
 
 end
 
@@ -134,7 +177,7 @@ module lp_rsimplex_algo1
 		B#::Array{numtype, 2}
 		Binv#::Array{numtype, 2}
 		R#::Array{numtype, 2}
-		xB#::Array{numtype, 1}
+		β#::Array{numtype, 1}
 		πT#::Array{numtype, 1}
 		cBT#::Array{numtype, 1}
 		dJ#::Array{numtype, 1}
@@ -155,7 +198,7 @@ module lp_rsimplex_algo1
 		ret.B = eval(parse( "Array($numtype, ($m,$m))" ))
 		#ret.Binv = eval(parse( "Array($numtype, ($m,$m))" ))
 		ret.R = eval(parse( "Array($numtype, ($m,$n))" ))
-		ret.xB = eval(parse( "Array($numtype, $m)" ))
+		ret.β = eval(parse( "Array($numtype, $m)" ))
 		#ret.πT = eval(parse( "Array($numtype, $m+$n)" ))
 		#ret.cBT = eval(parse( "Array($numtype, $m)" ))
 		ret.dJ = eval(parse( "Array($numtype, $n)" ))
@@ -163,11 +206,6 @@ module lp_rsimplex_algo1
 		ret.zero = eval(parse( "zero($numtype)" ))
 		return ret
 	end	
-
-	function dcd_var_info(n, i) return i <= n ? ("x", i) : ("w", i-n); end
-	function dcd_var(n, i) s,i = dcd_var_info(n, i); return @sprintf "%s%d" s i; end
-	function dcd_var_col(data, c) return dcd_var(data.n, data.iR[c]) end
-	function dcd_var_row(data, r) return dcd_var(data.n, data.iB[r]) end
 
 	function split_cols(S, T1, T2, iT1)
 		i1 = 1; Tc1 = 1; Tc2 = 1;
@@ -190,15 +228,15 @@ module lp_rsimplex_algo1
 
 	function update_B_R(data) split_cols(data.prob.A, data.B, data.R, data.iB) end
 	function update_Binv(data) data.Binv = inv(data.B) end
-	function update_xB(data) data.xB = data.Binv * (data.prob.b) end
+	function init_β(data) data.β = data.Binv * (data.prob.b) end
 	function update_cBT(data) data.cBT = transpose(data.prob.c[data.iB]) end
 	function update_πT(data) data.πT = reshape(data.cBT * data.Binv, length(data.cBT)); end
 	function calc_dj(data, j) i = data.iR[j]; dj = data.prob.c[i] - dot(data.πT, data.prob.A[:,i]); return dj; end	
 	function update_dJ(data) for j = 1:data.n data.dJ[j] = calc_dj(data, j) end; end	
 	function update_αq(data, q) data.αq = data.Binv * (data.prob.A[:,q]) end
-	function check_optimal_dJ(data) return all( dj->(dj >= data.zero), data.dJ); end
-	
-
+	function check_optimal_dJ(data) return all( dj->(dj >= data.zero), data.dJ ); end
+	function update_β(data, p, θ) data.β = data.β - (θ*data.αq); data.β[p] = θ; end
+	function pivot_iB_iR(data, q, p) tmp = data.iR[q]; data.iR[q] = data.iB[p]; data.iB[p] = tmp; end 	
 
 	function price_full_dantzig(data)
 		# [CTSM].p187
@@ -219,7 +257,7 @@ module lp_rsimplex_algo1
 		min_i = 0; min_ratio = data.zero;
 		for i = 1:length(data.αq)
 			if (data.αq[i] > data.zero)
-				ratio = data.xB[i] / data.αq[i]
+				ratio = data.β[i] / data.αq[i]
 				if (min_i == 0 || ratio <= min_ratio)
 					if (ratio == min_ratio)
 						println("Warning: degeneracy.")
@@ -228,38 +266,47 @@ module lp_rsimplex_algo1
 				end
 			end
 		end
-		return min_i
+		return (min_i, min_ratio)
 	end
 
 	function solve_data(data)
-		# [CTSM].p33
-		sol = lp.Solution(); sol.data = data; 
+		# [CTSM].p33,p30, but with naive basis reinversion instead of update.
+		sol = lp.Solution(); sol.data = data; sol.prob = data.prob;
 		dcd.iter(sol.sess, "init")
+		#Step 0
 		set_basis_logical(data)
+		dcd.set(sol.sess, "iB", deepcopy(data.iB))
 		update_B_R(data) 
 		update_Binv(data)
-		update_xB(data)
+		init_β(data)
 		#todo phaseI
 		update_cBT(data)
-		update_πT(data)
-		update_dJ(data)
-		if check_optimal_dJ(data)
-			sol.solved = true
-			return sol
-		end
-		q = price_full_dantzig(data)
-		update_αq(data, q)
-		p = chuzro(data)
-		
-		dcd.set(sol.sess, "pivot", (dcd_var_col(data, p), dcd_var_row(data, q)) )
-		if (p == 0)
-			println("Unbounded")
-			sol.solved = false
-			return sol
-		end
 
-		#@printf "p:%d q:%d \n" p q
-		#println(data.αq)
+		while(true)
+			#Step 1
+			update_πT(data)
+			#Step 2
+			update_dJ(data)
+			if check_optimal_dJ(data)
+				sol.solved = true; sol.status = lp.Optimal;
+				return sol
+			end
+			q = price_full_dantzig(data)
+			#Step 3
+			update_αq(data, q)
+			#Step 4
+			p,θ = chuzro(data)
+			if (p == 0)
+				sol.solved = false; sol.status = lp.Unbounded;
+				return sol
+			end
+			dcd.set(sol.sess, "pivot", (q, p))
+			#Step 5
+			update_β(data, p, θ)
+			pivot_iB_iR(data, q, p)
+			update_B_R(data)
+			update_Binv(data)
+		end	
 
 		return sol
 	end
@@ -268,8 +315,25 @@ module lp_rsimplex_algo1
 
 end
 
-function test(i = 1, numtype = "Float32")
-	prob = lp.problem_db[i](numtype)
-	sol = lp_rsimplex_algo1.solve_problem(prob)
-	return sol
+function test(key, numtype = "Float32")
+	prob = 0
+	if (typeof(key) == Int)
+		pinfo = lp.problem_db[key]
+		prob = pinfo[1](numtype)
+	else
+		for i = 1:length(lp.problem_db)
+			pinfo = lp.problem_db[i]
+			if (contains(pinfo[2], key))
+				prob = pinfo[1](numtype)
+				break	
+			end
+		end
+	end
+
+	if (typeof(prob) != Int)
+		@printf "Problem: '%s' \n" pinfo[2]
+		sol = lp_rsimplex_algo1.solve_problem(prob)
+		return sol
+	end
+	return lp.Solution();
 end
