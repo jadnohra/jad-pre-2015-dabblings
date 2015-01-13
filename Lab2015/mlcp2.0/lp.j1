@@ -103,7 +103,6 @@ module lp
 		end
 	end
 
-	
 	problem_db = Function[]
 
 	function problem_simple(numtype) 
