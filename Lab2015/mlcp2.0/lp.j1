@@ -17,6 +17,14 @@
 	1. ??
 =#
 
+module pretty
+
+	function print(obj)
+			
+	end
+
+end
+
 module dcd # Data Crunching Debugger
 	
 	type Session
@@ -31,7 +39,7 @@ module dcd # Data Crunching Debugger
 	end
 
 	function set(sess, key, val)
-		sess.iters[end][key] = val
+		sess.iters[end][key] = deepcopy(val)
 	end
 
 	function get(sess, it, key)
@@ -155,7 +163,15 @@ module lp
 	function dcd_ibasis(sol) dcd_pivots_impl(sol, 4) end
 	function dcd_inbasis(sol) dcd_pivots_impl(sol, 5) end
 	function dcd_iters(sol) println(length(sol.sess.iters)) end
-
+	function dcd_key(sol, key)	
+		for i = 1:length(sol.sess.iters)
+			iter = sol.sess.iters[i]
+			if (haskey(iter, key))
+				val = iter[key]
+				println("$i. $val")
+			end
+		end	
+	end
 end
 
 
@@ -238,14 +254,9 @@ module lp_rsimplex_algo1
 	function init_z(data) data.z = dot(reshape(data.cBT, length(data.cBT)), data.β); end
 	function update_z(data, q, θ) data.z = data.z + θ * data.dJ[q]; end
 	function comp_π(data) data.π = reshape(data.cBT * data.Binv, length(data.cBT)); end
-	function comp_dj(data, j) i = data.iR[j]; dj = data.prob.c[i] - dot(data.π, data.prob.A[:,i]); return dj; end	
-	function comp_dJ(data) for j = 1:data.n data.dJ[j] = comp_dj(data, j) end; end	
-	function comp_αq(data, q) 
-		aq = data.iR[q]; 
-		print("B "); println(data.B);
-		print("aq "); println(data.prob.A[:,aq]);
-		data.αq = data.Binv * (data.prob.A[:,aq]) 
-	end
+	function calc_dj(data, j) i = data.iR[j]; dj = data.prob.c[i] - dot(data.π, data.prob.A[:,i]); return dj; end	
+	function comp_dJ(data) for j = 1:data.n data.dJ[j] = calc_dj(data, j) end; end	
+	function comp_αq(data, q) aq = data.iR[q]; data.αq = data.Binv * (data.prob.A[:,aq]); end
 	function check_optimal_dJ(data) return all( dj->(dj >= data.zero), data.dJ ); end
 	
 	function pivot_iB_iR(data, q, p) tmp = data.iR[q]; data.iR[q] = data.iB[p]; data.iB[p] = tmp; end 	
@@ -301,41 +312,33 @@ module lp_rsimplex_algo1
 		dcd.iter(sol.sess, "init")
 		#Step 0
 		set_basis_logical(data)
-		dcd.set(sol.sess, "iB", deepcopy(data.iB))
+		dcd.set(sol.sess, "iB", data.iB)
 		#Initializations
 		comp_cBT(data); comp_B_R(data); comp_Binv(data); 
 		init_β(data); init_z(data);
-		print("iB: "); println(data.iB);
-		print("β: "); println(data.β);
+		dcd.set(sol.sess, "β", data.β)
 		#todo phaseI
 		
 		while(maxit == 0 || it < maxit)
-			print(it+1); println();
 			if (it != 0) dcd.iter(sol.sess, ""); end
 			#Step 1
 			comp_π(data)
 			#Step 2
 			comp_dJ(data)
 			if check_optimal_dJ(data) succeed_solution(data, sol); return sol; end
-			q = price_full_dantzig(data)
-			print("q: "); println(q);
+			q = price_full_dantzig(data); dcd.set(sol.sess, "q", q);
 			#Step 3
-			comp_αq(data, q); print("αq: "); println(data.αq);
+			comp_αq(data, q); dcd.set(sol.sess, "αq", data.αq);
 			#Step 4
-			p,θ = chuzro(data)
-			print("θ: "); println(θ);
-			#println((p, data.iB[p],θ));
+			p,θ = chuzro(data); dcd.set(sol.sess, "p", p); dcd.set(sol.sess, "θ", θ);
 			if (p == 0) fail_solution(lp.Unbounded); return sol; end
 			dcd.set(sol.sess, "pivot", (q, p))
 			#Step 5
 			pivot_iB_iR(data, q, p)
 			#Updates
-			update_β(data, p, θ); update_z(data, q, θ);
-			print("iB: "); println(data.iB);
-			print("β: "); println(data.β);
+			update_β(data, p, θ); dcd.set(sol.sess, "β", data.β); 
+			update_z(data, q, θ); dcd.set(sol.sess, "z", data.z);
 			comp_cBT(data); comp_B_R(data); comp_Binv(data); 
-			println();
-			
 			it = it + 1
 		end	
 
