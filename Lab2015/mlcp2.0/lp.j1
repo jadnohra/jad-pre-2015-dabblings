@@ -176,10 +176,17 @@ module lp_rsimplex_algo1
 		π#::Array{numtype, 1}
 		cBT#::Array{numtype, 1}
 		dJ#::Array{numtype, 1}
-		αq#::Array{numtype, 1}
+		αq#::Array{numtype, 1} 	
 		z#numtype
 		zero
 		
+		# LPFE notation:
+		# αq - ΔxB
+		# β - xB*
+		# q - j
+		# i - p
+		# t - θ
+
 		Working_data() = new()
 	end
 
@@ -233,7 +240,12 @@ module lp_rsimplex_algo1
 	function comp_π(data) data.π = reshape(data.cBT * data.Binv, length(data.cBT)); end
 	function comp_dj(data, j) i = data.iR[j]; dj = data.prob.c[i] - dot(data.π, data.prob.A[:,i]); return dj; end	
 	function comp_dJ(data) for j = 1:data.n data.dJ[j] = comp_dj(data, j) end; end	
-	function comp_αq(data, q) data.αq = data.Binv * (data.prob.A[:,q]) end
+	function comp_αq(data, q) 
+		aq = data.iR[q]; 
+		print("B "); println(data.B);
+		print("aq "); println(data.prob.A[:,aq]);
+		data.αq = data.Binv * (data.prob.A[:,aq]) 
+	end
 	function check_optimal_dJ(data) return all( dj->(dj >= data.zero), data.dJ ); end
 	
 	function pivot_iB_iR(data, q, p) tmp = data.iR[q]; data.iR[q] = data.iB[p]; data.iB[p] = tmp; end 	
@@ -272,8 +284,8 @@ module lp_rsimplex_algo1
 	function succeed_solution(data, sol)
 		sol.solved = true 
 		sol.status = lp.Optimal
-		sol.z = data.z;
-		sol.x = eval(parse( "zero($numtype, $n)" ))
+		sol.z = data.z
+		sol.x = eval(parse( "zeros($(data.prob.numtype), $(data.n))" ))
 		for i = 1:length(data.iB)
 			xi = data.iB[i]
 			if (xi <= data.n) sol.x[xi] = data.β[i]; end
@@ -291,11 +303,14 @@ module lp_rsimplex_algo1
 		set_basis_logical(data)
 		dcd.set(sol.sess, "iB", deepcopy(data.iB))
 		#Initializations
-		comp_B_R(data); comp_Binv(data); comp_cBT(data); 
+		comp_cBT(data); comp_B_R(data); comp_Binv(data); 
 		init_β(data); init_z(data);
+		print("iB: "); println(data.iB);
+		print("β: "); println(data.β);
 		#todo phaseI
 		
 		while(maxit == 0 || it < maxit)
+			print(it+1); println();
 			if (it != 0) dcd.iter(sol.sess, ""); end
 			#Step 1
 			comp_π(data)
@@ -303,20 +318,24 @@ module lp_rsimplex_algo1
 			comp_dJ(data)
 			if check_optimal_dJ(data) succeed_solution(data, sol); return sol; end
 			q = price_full_dantzig(data)
+			print("q: "); println(q);
 			#Step 3
-			comp_αq(data, q); println(data.αq);
+			comp_αq(data, q); print("αq: "); println(data.αq);
 			#Step 4
 			p,θ = chuzro(data)
+			print("θ: "); println(θ);
+			#println((p, data.iB[p],θ));
 			if (p == 0) fail_solution(lp.Unbounded); return sol; end
 			dcd.set(sol.sess, "pivot", (q, p))
 			#Step 5
 			pivot_iB_iR(data, q, p)
 			#Updates
 			update_β(data, p, θ); update_z(data, q, θ);
+			print("iB: "); println(data.iB);
+			print("β: "); println(data.β);
+			comp_cBT(data); comp_B_R(data); comp_Binv(data); 
+			println();
 			
-			comp_B_R(data); 
-			println(data.iB); println(data.B);
-			comp_Binv(data); comp_cBT(data); 
 			it = it + 1
 		end	
 
