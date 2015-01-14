@@ -66,6 +66,8 @@ module lp
 	type Solution
 		solved::Bool
 		status::String
+		z#::numtype
+		x#::Array{numtype, 1}
 
 		prob::Canonical_problem
 		sess::dcd.Session
@@ -171,10 +173,11 @@ module lp_rsimplex_algo1
 		Binv#::Array{numtype, 2}
 		R#::Array{numtype, 2}
 		β#::Array{numtype, 1}
-		πT#::Array{numtype, 1}
+		π#::Array{numtype, 1}
 		cBT#::Array{numtype, 1}
 		dJ#::Array{numtype, 1}
 		αq#::Array{numtype, 1}
+		z#numtype
 		zero
 		
 		Working_data() = new()
@@ -192,7 +195,7 @@ module lp_rsimplex_algo1
 		#ret.Binv = eval(parse( "Array($numtype, ($m,$m))" ))
 		ret.R = eval(parse( "Array($numtype, ($m,$n))" ))
 		ret.β = eval(parse( "Array($numtype, $m)" ))
-		#ret.πT = eval(parse( "Array($numtype, $m+$n)" ))
+		#ret.π = eval(parse( "Array($numtype, $m+$n)" ))
 		#ret.cBT = eval(parse( "Array($numtype, $m)" ))
 		ret.dJ = eval(parse( "Array($numtype, $n)" ))
 		#ret.αq = eval(parse( "Array($numtype, $n)" ))
@@ -220,16 +223,19 @@ module lp_rsimplex_algo1
 		data.iR = [i for i in 1:data.n]
 	end
 
-	function update_B_R(data) split_cols(data.prob.A, data.B, data.R, data.iB, false) end
-	function update_Binv(data) data.Binv = inv(data.B) end
+	function comp_B_R(data) split_cols(data.prob.A, data.B, data.R, data.iB, false) end
+	function comp_Binv(data) data.Binv = inv(data.B) end
+	function comp_cBT(data) data.cBT = transpose(data.prob.c[data.iB]) end
 	function init_β(data) data.β = data.Binv * (data.prob.b) end
-	function update_cBT(data) data.cBT = transpose(data.prob.c[data.iB]) end
-	function update_πT(data) data.πT = reshape(data.cBT * data.Binv, length(data.cBT)); end
-	function calc_dj(data, j) i = data.iR[j]; dj = data.prob.c[i] - dot(data.πT, data.prob.A[:,i]); return dj; end	
-	function update_dJ(data) for j = 1:data.n data.dJ[j] = calc_dj(data, j) end; end	
-	function update_αq(data, q) data.αq = data.Binv * (data.prob.A[:,q]) end
-	function check_optimal_dJ(data) return all( dj->(dj >= data.zero), data.dJ ); end
 	function update_β(data, p, θ) data.β = data.β - (θ*data.αq); data.β[p] = θ; end
+	function init_z(data) data.z = dot(reshape(data.cBT, length(data.cBT)), data.β); end
+	function update_z(data, q, θ) data.z = data.z + θ * data.dJ[q]; end
+	function comp_π(data) data.π = reshape(data.cBT * data.Binv, length(data.cBT)); end
+	function comp_dj(data, j) i = data.iR[j]; dj = data.prob.c[i] - dot(data.π, data.prob.A[:,i]); return dj; end	
+	function comp_dJ(data) for j = 1:data.n data.dJ[j] = comp_dj(data, j) end; end	
+	function comp_αq(data, q) data.αq = data.Binv * (data.prob.A[:,q]) end
+	function check_optimal_dJ(data) return all( dj->(dj >= data.zero), data.dJ ); end
+	
 	function pivot_iB_iR(data, q, p) tmp = data.iR[q]; data.iR[q] = data.iB[p]; data.iB[p] = tmp; end 	
 
 	function price_full_dantzig(data)
@@ -263,6 +269,19 @@ module lp_rsimplex_algo1
 		return (min_i, min_ratio)
 	end
 
+	function succeed_solution(data, sol)
+		sol.solved = true 
+		sol.status = lp.Optimal
+		sol.z = data.z;
+		sol.x = eval(parse( "zero($numtype, $n)" ))
+		for i = 1:length(data.iB)
+			xi = data.iB[i]
+			if (xi <= data.n) sol.x[xi] = data.β[i]; end
+		end
+	end
+
+	function fail_solution(sol, status) sol.solved = false; sol.status = status; end
+
 	function solve_data(data)
 		# [CTSM].p33,p30, but with naive basis reinversion instead of update.
 		it = 0; maxit = get(data.prob.params, "maxit", 0);
@@ -271,41 +290,37 @@ module lp_rsimplex_algo1
 		#Step 0
 		set_basis_logical(data)
 		dcd.set(sol.sess, "iB", deepcopy(data.iB))
-		update_B_R(data) 
-		update_Binv(data)
-		init_β(data)
+		#Initializations
+		comp_B_R(data); comp_Binv(data); comp_cBT(data); 
+		init_β(data); init_z(data);
 		#todo phaseI
-		update_cBT(data)
-
+		
 		while(maxit == 0 || it < maxit)
 			if (it != 0) dcd.iter(sol.sess, ""); end
 			#Step 1
-			update_πT(data)
+			comp_π(data)
 			#Step 2
-			update_dJ(data)
-			if check_optimal_dJ(data)
-				sol.solved = true; sol.status = lp.Optimal;
-				return sol
-			end
+			comp_dJ(data)
+			if check_optimal_dJ(data) succeed_solution(data, sol); return sol; end
 			q = price_full_dantzig(data)
 			#Step 3
-			update_αq(data, q)
+			comp_αq(data, q); println(data.αq);
 			#Step 4
 			p,θ = chuzro(data)
-			if (p == 0)
-				sol.solved = false; sol.status = lp.Unbounded;
-				return sol
-			end
+			if (p == 0) fail_solution(lp.Unbounded); return sol; end
 			dcd.set(sol.sess, "pivot", (q, p))
 			#Step 5
-			update_β(data, p, θ)
 			pivot_iB_iR(data, q, p)
-			update_B_R(data)
-			update_Binv(data)
+			#Updates
+			update_β(data, p, θ); update_z(data, q, θ);
+			
+			comp_B_R(data); 
+			println(data.iB); println(data.B);
+			comp_Binv(data); comp_cBT(data); 
 			it = it + 1
 		end	
 
-		sol.solved = false; sol.status = lp.Maxit;
+		fail_solution(lp.Maxit);
 		return sol
 	end
 
