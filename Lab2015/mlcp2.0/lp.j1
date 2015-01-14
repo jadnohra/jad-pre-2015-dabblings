@@ -20,7 +20,7 @@
 module pretty
 
 	function print(obj)
-			
+		#if (typeof(obj) == Int)
 	end
 
 end
@@ -55,6 +55,7 @@ module lp
 	using dcd
 
 	const Invalid = "Invalid"
+	const Infeasible = "Infeasible"
 	const Optimal = "Optimal"
 	const Unbounded = "Unbounded"
 	const Maxit = "Maxit"
@@ -126,34 +127,41 @@ module lp
 		return iR
 	end			
 		
-	function dcd_print_basis(n, iB)
-		for i = 1:length(iB)
-			vs,vi = dcd_var_info(n, iB[i])
-			@printf "%s%d " vs vi
-		end
-		@printf "\n"
-	end	
-
 	function dcd_pivots_impl(sol, typ)
+
+		function dcd_print_basis(n, iB)
+			for i = 1:length(iB)
+				vs,vi = dcd_var_info(n, iB[i])
+				@printf "%s%d " vs vi
+			end
+			@printf "\n"
+		end	
+
+		function dcd_print_pivot_type(n, iB, iR, typ)
+			if (typ == 2) dcd_print_basis(n, iB)
+			elseif (typ == 3) dcd_print_basis(n, iR)
+			elseif (typ == 4) println(sort(iB))
+			elseif (typ == 5) println(sort(iR))
+			end
+		end
+
+		function dcd_print_pivot(i, iter, n, iB, iR, typ)
+			if (haskey(iter, "pivot"))
+				c,r = iter["pivot"]
+				if (typ == 1) @printf "%d. %s,%s \n" i dcd_var(n, iR[c]) dcd_var(n, iB[r]); end
+				tmp = iR[c]; iR[c] = iB[r]; iB[r] = tmp;
+				if (typ != 1) dcd_print_pivot_type(n, iB, iR, typ) end
+			end		
+		end	
+
 		if isempty(sol.sess.iters) return; end
 		n = sol.prob.n
 		iB = deepcopy(sol.sess.iters[1]["iB"])
 		iR = dcd_iR(sol.prob.n, sol.prob.m, iB)
-		if (typ == 2) dcd_print_basis(n, iB); end
-		if (typ == 3) dcd_print_basis(n, iR); end
-		if (typ == 4) println(sort(iB)); end
-		if (typ == 5) println(sort(iR)); end
+		if (typ != 1) dcd_print_pivot_type(n, iB, iR, typ) end
 		for i = 1:length(sol.sess.iters)
 			iter = sol.sess.iters[i]
-			if (haskey(iter, "pivot"))
-				c,r = sol.sess.iters[i]["pivot"]
-				if (typ == 1) @printf "%d. %s,%s \n" i dcd_var(n, iR[c]) dcd_var(n, iB[r]); end
-				tmp = iR[c]; iR[c] = iB[r]; iB[r] = tmp;
-				if (typ == 2) dcd_print_basis(n, iB); end
-				if (typ == 3) dcd_print_basis(n, iR); end
-				if (typ == 4) println(sort(iB)); end
-				if (typ == 5) println(sort(iR)); end
-			end		
+			dcd_print_pivot(i, iter, n, iB, iR, typ)
 		end		
 	end
 
@@ -258,6 +266,7 @@ module lp_rsimplex_algo1
 	function comp_dJ(data) for j = 1:data.n data.dJ[j] = calc_dj(data, j) end; end	
 	function comp_αq(data, q) aq = data.iR[q]; data.αq = data.Binv * (data.prob.A[:,aq]); end
 	function check_optimal_dJ(data) return all( dj->(dj >= data.zero), data.dJ ); end
+	function check_feasible_β(data) return all( β->(β >= data.zero), data.β ); end
 	
 	function pivot_iB_iR(data, q, p) tmp = data.iR[q]; data.iR[q] = data.iB[p]; data.iB[p] = tmp; end 	
 
@@ -318,7 +327,8 @@ module lp_rsimplex_algo1
 		init_β(data); init_z(data);
 		dcd.set(sol.sess, "β", data.β)
 		#todo phaseI
-		
+		if (check_feasible_β(data) == false) fail_solution(sol, lp.Infeasible); return sol; end
+
 		while(maxit == 0 || it < maxit)
 			if (it != 0) dcd.iter(sol.sess, ""); end
 			#Step 1
@@ -331,7 +341,7 @@ module lp_rsimplex_algo1
 			comp_αq(data, q); dcd.set(sol.sess, "αq", data.αq);
 			#Step 4
 			p,θ = chuzro(data); dcd.set(sol.sess, "p", p); dcd.set(sol.sess, "θ", θ);
-			if (p == 0) fail_solution(lp.Unbounded); return sol; end
+			if (p == 0) fail_solution(sol, lp.Unbounded); return sol; end
 			dcd.set(sol.sess, "pivot", (q, p))
 			#Step 5
 			pivot_iB_iR(data, q, p)
@@ -342,7 +352,7 @@ module lp_rsimplex_algo1
 			it = it + 1
 		end	
 
-		fail_solution(lp.Maxit);
+		fail_solution(sol, lp.Maxit)
 		return sol
 	end
 
@@ -393,7 +403,13 @@ module lp_db
 			sol = lp_rsimplex_algo1.solve_problem(prob)
 			
 			println(sol.status); 
-			lp.dcd_nbasis(sol);
+			if (sol.solved)
+				print("x: "); println(sol.x);
+				print("z: "); println(sol.z);
+			else
+				println("nbasis:")
+				lp.dcd_nbasis(sol)	
+			end
 			println();
 			
 			return sol
