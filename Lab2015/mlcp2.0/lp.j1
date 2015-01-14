@@ -406,23 +406,24 @@ module lp_db
 
 		if (typeof(dbprob) != Int)
 			println()
-
-			check_status_str = (length(dbprob.check_status) > 0) ? dbprob.check_status : ""
-			check_x_str =  (length(dbprob.check_x) > 0) ? string(dbprob.check_x) : ""
-			@printf "Problem: '%s' %s %s \n" dbprob.descr check_status_str check_x_str
+			@printf "Problem: '%s'\n" dbprob.descr 
 			println(); println("Solution:");
 			lp_prob = dbprob.creator(numtype)
 			sol = lp_rsimplex_algo1.solve_problem(lp_prob)
 			
 			if (length(dbprob.check_status) > 0)
 				if (dbprob.check_status != sol.status)
-					println("XXX: status '$(sol.status)' should be '$(dbprob.check_status)'")
+					print_with_color(:red, "status: '$(sol.status)' should be '$(dbprob.check_status)' \n")
+				else (dbprob.check_status != sol.status)
+					print_with_color(:green, "status: '$(sol.status)' \n")	
 				end
 			end
 
 			if (length(dbprob.check_x) > 0)
 				if (dbprob.check_x != sol.x)
-					println("XXX: status '$(sol.x)' should be '$(dbprob.check_x)'")
+					print_with_color(:red, "x: '$(sol.x)' should be '$(dbprob.check_x)' \n")
+				else
+					print_with_color(:green, "x: '$(sol.x)' \n")	
 				end
 			end
 
