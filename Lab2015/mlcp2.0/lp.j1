@@ -195,7 +195,6 @@ module lp_rsimplex_algo1
 		iR::Array{Int, 1}
 		B#::Array{numtype, 2}
 		Binv#::Array{numtype, 2}
-		R#::Array{numtype, 2}
 		β#::Array{numtype, 1}
 		π#::Array{numtype, 1}
 		cBT#::Array{numtype, 1}
@@ -224,7 +223,6 @@ module lp_rsimplex_algo1
 		numtype = prob.numtype; n = prob.n; m = prob.m;
 		ret.B = eval(parse( "Array($numtype, ($m,$m))" ))
 		#ret.Binv = eval(parse( "Array($numtype, ($m,$m))" ))
-		ret.R = eval(parse( "Array($numtype, ($m,$n))" ))
 		ret.β = eval(parse( "Array($numtype, $m)" ))
 		#ret.π = eval(parse( "Array($numtype, $m+$n)" ))
 		#ret.cBT = eval(parse( "Array($numtype, $m)" ))
@@ -234,18 +232,12 @@ module lp_rsimplex_algo1
 		return ret
 	end	
 
-	function split_cols(S, T1, T2, iT1, is_sorted)
-		iT1 = is_sorted ? iT1 : sort(iT1)
-		i1 = 1; Tc1 = 1; Tc2 = 1;
-		for c = 1:size(S)[2]
-			if length(iT1) >= i1 && c == iT1[i1]
-				T = T1; Tc = Tc1; Tc1 = Tc1+1; i1 = i1 + 1;
-			else
-				T = T2; Tc = Tc2; Tc2 = Tc2+1; 
+	function sel_cols(S, T, cols)
+		for i = 1:length(cols)
+			c = cols[i]
+			for r = 1:size(T)[1]
+				T[r,i] = S[r,c]
 			end
-			for r = 1:size(S)[1]
-				T[r, Tc] = S[r, c]
-			end	
 		end
 	end
 
@@ -254,7 +246,7 @@ module lp_rsimplex_algo1
 		data.iR = [i for i in 1:data.n]
 	end
 
-	function comp_B_R(data) split_cols(data.prob.A, data.B, data.R, data.iB, false) end
+	function comp_B_R(data) sel_cols(data.prob.A, data.B, data.iB) end
 	function comp_Binv(data) data.Binv = inv(data.B) end
 	function comp_cBT(data) data.cBT = transpose(data.prob.c[data.iB]) end
 	function init_β(data) data.β = data.Binv * (data.prob.b) end
@@ -325,16 +317,18 @@ module lp_rsimplex_algo1
 		#Initializations
 		comp_cBT(data); comp_B_R(data); comp_Binv(data); 
 		init_β(data); init_z(data);
-		dcd.set(sol.sess, "β", data.β)
+		dcd.set(sol.sess, "β0", data.β)
 		#todo phaseI
 		if (check_feasible_β(data) == false) fail_solution(sol, lp.Infeasible); return sol; end
 
 		while(maxit == 0 || it < maxit)
 			if (it != 0) dcd.iter(sol.sess, ""); end
 			#Step 1
-			comp_π(data)
+			dcd.set(sol.sess, "B", data.B); dcd.set(sol.sess, "Binv", data.Binv);
+			dcd.set(sol.sess, "cBT", data.cBT);
+			comp_π(data); dcd.set(sol.sess, "π", data.π);
 			#Step 2
-			comp_dJ(data)
+			comp_dJ(data); dcd.set(sol.sess, "dJ", data.dJ);
 			if check_optimal_dJ(data) succeed_solution(data, sol); return sol; end
 			q = price_full_dantzig(data); dcd.set(sol.sess, "q", q);
 			#Step 3
@@ -383,7 +377,7 @@ module lp_db
 
 	function problem_LPFE_p11(numtype)	
 		return lp.create_max_problem(numtype, [5,4,3], [2 3 1; 4 1 2; 3 4 2], [5, 11, 8], {"maxit" => 5})
-	end; push!(prob_db, DbProblem(problem_LPFE_p11, "LPFE_p11", "", []))
+	end; push!(prob_db, DbProblem(problem_LPFE_p11, "LPFE_p11", lp.Optimal, [2, 0, 1]))
 
 	function problem_LPFE_p27(numtype)	
 		return lp.create_max_problem(numtype, [10,-57,-9,-24], [0.5 -5.5 -2.5 9; 0.5 -1.5 -0.5 1; 1 0 0 0], [0, 0, 1], {"maxit" => 5})
