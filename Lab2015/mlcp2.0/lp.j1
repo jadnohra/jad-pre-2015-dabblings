@@ -364,45 +364,69 @@ module lp_db
 	using lp
 	using lp_rsimplex_algo1
 	
+	type DbProblem
+		creator::Function
+		descr::String
+		check_status::String
+		check_x#::Array{numtype, 1}
+	end
+
 	prob_db = Any[]
 
 	function problem_simple(numtype) 
 		return lp.create_min_problem(numtype, [1, 1], [2 3;], [10], {"maxit" => 5})
-	end; push!(prob_db, (problem_simple, ""))
+	end; push!(prob_db, DbProblem(problem_simple, "", "", []))
 
 	function problem_LPFE_p88(numtype)	
 		return lp.create_max_problem(numtype, [4,3], [1 -1; 2 -1; 0 1], [1, 3, 5], {"maxit" => 5})
-	end; push!(prob_db, (problem_LPFE_p88, "LPFE_p88"))
+	end; push!(prob_db, DbProblem(problem_LPFE_p88, "LPFE_p88", lp.Optimal, [4, 5]))
 
 	function problem_LPFE_p11(numtype)	
 		return lp.create_max_problem(numtype, [5,4,3], [2 3 1; 4 1 2; 3 4 2], [5, 11, 8], {"maxit" => 5})
-	end; push!(prob_db, (problem_LPFE_p11, "LPFE_p11"))
+	end; push!(prob_db, DbProblem(problem_LPFE_p11, "LPFE_p11", "", []))
 
 	function problem_LPFE_p27(numtype)	
 		return lp.create_max_problem(numtype, [10,-57,-9,-24], [0.5 -5.5 -2.5 9; 0.5 -1.5 -0.5 1; 1 0 0 0], [0, 0, 1], {"maxit" => 5})
-	end; push!(prob_db, (problem_LPFE_p27, "LPFE_p27 degen"))
+	end; push!(prob_db, DbProblem(problem_LPFE_p27, "LPFE_p27 degen", "", []))
 
 
 	function solve(key, numtype = "Float32")
-		prob = 0
+		dbprob = 0
 		if (typeof(key) == Int)
-			pinfo = prob_db[key]
-			prob = pinfo[1](numtype)
+			dbprob = prob_db[key]
 		else
 			for i = 1:length(prob_db)
-				pinfo = prob_db[i]
-				if (contains(pinfo[2], key))
-					prob = pinfo[1](numtype)
+				iprob = prob_db[i]
+				if (contains(iprob.descr, key))
+					dbprob = iprob
 					break	
 				end
 			end
 		end
 
-		if (typeof(prob) != Int)
-			@printf "Problem: '%s' \n" pinfo[2]
-			sol = lp_rsimplex_algo1.solve_problem(prob)
+		if (typeof(dbprob) != Int)
+			println()
+
+			check_status_str = (length(dbprob.check_status) > 0) ? dbprob.check_status : ""
+			check_x_str =  (length(dbprob.check_x) > 0) ? string(dbprob.check_x) : ""
+			@printf "Problem: '%s' %s %s \n" dbprob.descr check_status_str check_x_str
+			println(); println("Solution:");
+			lp_prob = dbprob.creator(numtype)
+			sol = lp_rsimplex_algo1.solve_problem(lp_prob)
 			
-			println(sol.status); 
+			if (length(dbprob.check_status) > 0)
+				if (dbprob.check_status != sol.status)
+					println("XXX: status '$(sol.status)' should be '$(dbprob.check_status)'")
+				end
+			end
+
+			if (length(dbprob.check_x) > 0)
+				if (dbprob.check_x != sol.x)
+					println("XXX: status '$(sol.x)' should be '$(dbprob.check_x)'")
+				end
+			end
+
+			println(sol.status)
 			if (sol.solved)
 				print("x: "); println(sol.x);
 				print("z: "); println(sol.z);
