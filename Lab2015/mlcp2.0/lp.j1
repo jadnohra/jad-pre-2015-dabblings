@@ -26,20 +26,24 @@ module pretty
 end
 
 module dcd # Data Crunching Debugger
-	
 	type Session
+		enable::Bool
 		iters::Array{Dict{String,Any}, 1}
 
-		Session() = ( x = new(); x.iters = Array(Dict{String,Any}, 0); return x; )
-	end
-
-	function iter(sess, descr)
-		push!(sess.iters, Dict{String,Any}()) 
-		set(sess, "descr", descr)
+		Session(enable = false) = ( x = new(); x.enable = enable; x.iters = Array(Dict{String,Any}, 0); return x; )
 	end
 
 	function set(sess, key, val)
-		sess.iters[end][key] = deepcopy(val)
+		if (sess.enable)
+			sess.iters[end][key] = deepcopy(val)
+		end	
+	end
+
+	function iter(sess, descr)
+		if (sess.enable)
+			push!(sess.iters, Dict{String,Any}()) 
+			set(sess, "descr", descr)
+		end	
 	end
 
 	function get(sess, it, key)
@@ -82,7 +86,7 @@ module lp
 		sess::dcd.Session
 		data
 		
-		Solution() = ( x = new(); x.solved = false; x.status = Invalid; x.sess = dcd.Session(); return x; )
+		Solution(enable_dcd = false) = ( x = new(); x.solved = false; x.status = Invalid; x.sess = dcd.Session(enable_dcd); return x; )
 	end	
 
 	function conv_vec(numtype, V)
@@ -309,7 +313,7 @@ module lp_rsimplex_algo1
 	function solve_data(data)
 		# [CTSM].p33,p30, but with naive basis reinversion instead of update.
 		it = 0; maxit = get(data.prob.params, "maxit", 0);
-		sol = lp.Solution(); sol.data = data; sol.prob = data.prob;
+		sol = lp.Solution(get(data.prob.params, "dcd", false)); sol.data = data; sol.prob = data.prob;
 		dcd.iter(sol.sess, "init")
 		#Step 0
 		set_basis_logical(data)
@@ -384,7 +388,7 @@ module lp_db
 	end; push!(prob_db, DbProblem(problem_LPFE_p27, "LPFE_p27 degen", "", []))
 
 
-	function solve(key, numtype = "Float32")
+	function solve(key, numtype = "Float32", enable_dcd = false)
 		dbprob = 0
 		if (typeof(key) == Int)
 			dbprob = prob_db[key]
@@ -403,9 +407,12 @@ module lp_db
 			@printf "Problem: '%s'\n" dbprob.descr 
 			println(); println("Solution:");
 			lp_prob = dbprob.creator(numtype)
+			lp_prob.params["dcd"] = enable_dcd
 			sol = lp_rsimplex_algo1.solve_problem(lp_prob)
 			
+			used_checks = false
 			if (length(dbprob.check_status) > 0)
+				used_checks = true
 				if (dbprob.check_status != sol.status)
 					print_with_color(:red, "status: '$(sol.status)' should be '$(dbprob.check_status)' \n")
 				else (dbprob.check_status != sol.status)
@@ -414,6 +421,7 @@ module lp_db
 			end
 
 			if (length(dbprob.check_x) > 0)
+				used_checks = true
 				if (dbprob.check_x != sol.x)
 					print_with_color(:red, "x: '$(sol.x)' should be '$(dbprob.check_x)' \n")
 				else
@@ -421,14 +429,16 @@ module lp_db
 				end
 			end
 
-			println(sol.status)
-			if (sol.solved)
-				print("x: "); println(sol.x);
-				print("z: "); println(sol.z);
-			else
-				println("nbasis:")
-				lp.dcd_nbasis(sol)	
-			end
+			if (used_checks == false)
+				println(sol.status)
+				if (sol.solved)
+					print("x: "); println(sol.x);
+					print("z: "); println(sol.z);
+				else
+					println("nbasis:")
+					lp.dcd_nbasis(sol)	
+				end
+			end	
 			println();
 			
 			return sol
