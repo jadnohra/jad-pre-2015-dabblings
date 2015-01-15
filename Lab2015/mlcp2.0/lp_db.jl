@@ -25,9 +25,9 @@ module lp_db
 
 	prob_db = Any[]
 
-	function problem_simple(numtype) 
+	function problem_t1(numtype) 
 		return lp.create_min_problem(numtype, [1, 1], [2 3;], [10], {"maxit" => 5})
-	end; push!(prob_db, DbProblem(problem_simple, "", "", []))
+	end; push!(prob_db, DbProblem(problem_t1, "t1", lp.Optimal, [0, 0]))
 
 	function problem_LPFE_p88(numtype)	
 		return lp.create_max_problem(numtype, [4,3], [1 -1; 2 -1; 0 1], [1, 3, 5], {"maxit" => 5})
@@ -107,9 +107,7 @@ module lp_db
 		dbprob = 0
 		if (typeof(prob_key) == Int)
 			if (prob_key == 0)
-				for i = 1:length(prob_db)
-					solve(i, arg_str)	
-				end	
+				@time for i = 1:length(prob_db) solve(i, arg_str); end;
 				return
 			else	
 				dbprob = prob_db[prob_key]
