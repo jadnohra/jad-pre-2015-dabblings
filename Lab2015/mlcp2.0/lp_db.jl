@@ -61,7 +61,6 @@ module lp_db
 		return lp.create_max_problem(numtype, [-1 -3 -1], [2 -5 1; 2 -1 2], [-5, 4], {"maxit" => 100})
 	end; push!(prob_db, DbProblem(problem_LPFE_p22_4, "problem_LPFE_p22_4", lp.Optimal, [0, 1, 0]))
 
-
 	#p184
 
 	function check_sol(dbprob, sol, params)
