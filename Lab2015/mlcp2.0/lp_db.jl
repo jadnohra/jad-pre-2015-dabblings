@@ -33,11 +33,11 @@ module lp_db
 
 	function problem_LPFE_p27(numtype)	
 		return lp.create_max_problem(numtype, [10,-57,-9,-24], [0.5 -5.5 -2.5 9; 0.5 -1.5 -0.5 1; 1 0 0 0], [0, 0, 1], {"maxit" => 5})
-	end; push!(prob_db, DbProblem(problem_LPFE_p27, "LPFE_p27 degen", "", []))
+	end; push!(prob_db, DbProblem(problem_LPFE_p27, "LPFE_p27 degen", lp.Optimal, [1, 0, 1, 0]))
 
 	function problem_LPFE_m27(numtype)	
 		return lp.create_max_problem(numtype, [10,-57,-9,-24], [0.5 -5.5 -2.5 9; 0.5 -1.5 -0.5 1; 1 0 0 0], [1.e-5, 0, 1], {"maxit" => 5})
-	end; push!(prob_db, DbProblem(problem_LPFE_m27, "LPFE_m27 pert", "", []))
+	end; push!(prob_db, DbProblem(problem_LPFE_m27, "LPFE_m27 pert", lp.Optimal, [1, 0, 1, 0]))
 
 	function problem_LPFE_p18(numtype)	
 		return lp.create_max_problem(numtype, [-2 -1], [-1 1; -1 -2; 0 1], [-1, -2, 1], {"maxit" => 5})
@@ -46,6 +46,19 @@ module lp_db
 	function problem_LPFE_p20(numtype)	
 		return lp.create_max_problem(numtype, [-2 -1], [-1 1; -1 -2; 0 1], [-1, -2, 1], {"maxit" => 5})
 	end; push!(prob_db, DbProblem(problem_LPFE_p18, "LPFE_p18 phaseI", lp.Unbounded, []))
+
+	function problem_LPFE_p23_9(numtype)	
+		return lp.create_min_problem(numtype, [2 3 4], [0 2 3; 1 1 2; 1 2 3], [5, 4, 7], {"maxit" => 10})
+	end; push!(prob_db, DbProblem(problem_LPFE_p23_9, "problem_LPFE_p23_9", lp.Optimal, [0, 0, 0]))
+
+	function problem_LPFE_p23_8(numtype)	
+		return lp.create_max_problem(numtype, [3 2], [1 -2; 1 -1; 2 -1; 1 0; 2 1; 1 1; 1 2; 0 1], [1, 2, 6, 5, 16, 12, 21, 10], {"maxit" => 10})
+	end; push!(prob_db, DbProblem(problem_LPFE_p23_8, "problem_LPFE_p23_8", lp.Optimal, [0, 0]))
+
+	function problem_LPFE_p22_4(numtype)	
+		return lp.create_max_problem(numtype, [-1 -3 -1], [2 -5 1; 2 -1 2], [-5, 4], {"maxit" => 100})
+	end; push!(prob_db, DbProblem(problem_LPFE_p22_4, "problem_LPFE_p22_4", lp.Optimal, [0, 1, 0]))
+
 
 	#p184
 
@@ -90,8 +103,9 @@ module lp_db
 
 				if (length(dbprob.check_x) > 0)
 					used_checks = true
-					if (dbprob.check_x != sol.x)
-						print_with_color(:red, "x: '$(sol.x)' should be '$(dbprob.check_x)' \n")
+					if (sol.solved == false || dbprob.check_x != sol.x)
+						sol_x = sol.solved ? sol.x : ()
+						print_with_color(:red, "x: '$(sol_x)' should be '$(dbprob.check_x)' \n")
 					else
 						print_with_color(:green, "x: '$(sol.x)' \n")	
 					end

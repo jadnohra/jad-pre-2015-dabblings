@@ -324,7 +324,7 @@ module lp_rsimplex_algo1
 		init_β(data); init_z(data);
 		dcd.set(sol.sess, "β0", data.β)
 		#todo phaseI
-		if (check_feasible_β(data) == false) fail_solution(sol, lp.Infeasible); return sol; end
+		if (check_feasible_β(data) == false) println("Warning: phaseI."); fail_solution(sol, lp.Infeasible); return sol; end
 
 		while(maxit == 0 || it < maxit)
 			if (it != 0) dcd.iter(sol.sess, ""); end
