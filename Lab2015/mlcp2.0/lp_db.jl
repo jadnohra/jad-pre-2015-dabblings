@@ -41,11 +41,7 @@ module lp_db
 
 	function problem_LPFE_p18(numtype)	
 		return lp.create_max_problem(numtype, [-2 -1], [-1 1; -1 -2; 0 1], [-1, -2, 1], {"maxit" => 5})
-	end; push!(prob_db, DbProblem(problem_LPFE_p18, "LPFE_p18 phaseI", "", []))
-
-	function problem_LPFE_p20(numtype)	
-		return lp.create_max_problem(numtype, [-2 -1], [-1 1; -1 -2; 0 1], [-1, -2, 1], {"maxit" => 5})
-	end; push!(prob_db, DbProblem(problem_LPFE_p18, "LPFE_p18 phaseI", lp.Unbounded, []))
+	end; push!(prob_db, DbProblem(problem_LPFE_p18, "LPFE_p18 phaseI", lp.Optimal, [4/3, 1/3]))
 
 	function problem_LPFE_p23_9(numtype)	
 		return lp.create_min_problem(numtype, [2 3 4], [0 2 3; 1 1 2; 1 2 3], [5, 4, 7], {"maxit" => 10})
@@ -53,7 +49,7 @@ module lp_db
 
 	function problem_LPFE_p23_8(numtype)	
 		return lp.create_max_problem(numtype, [3 2], [1 -2; 1 -1; 2 -1; 1 0; 2 1; 1 1; 1 2; 0 1], [1, 2, 6, 5, 16, 12, 21, 10], {"maxit" => 10})
-	end; push!(prob_db, DbProblem(problem_LPFE_p23_8, "problem_LPFE_p23_8", lp.Optimal, [0, 0]))
+	end; push!(prob_db, DbProblem(problem_LPFE_p23_8, "problem_LPFE_p23_8", lp.Optimal, [4, 8]))
 
 	function problem_LPFE_p22_4(numtype)	
 		return lp.create_max_problem(numtype, [-1 -3 -1], [2 -5 1; 2 -1 2], [-5, 4], {"maxit" => 100})
@@ -62,6 +58,41 @@ module lp_db
 
 	#p184
 
+	function check_sol(dbprob, sol, params)
+		prefix = " "
+
+		if (length(dbprob.check_status) > 0)
+			if (dbprob.check_status != sol.status)
+				print_with_color(:red, "$(prefix)status: '$(sol.status)' should be '$(dbprob.check_status)' \n")
+			else (dbprob.check_status != sol.status)
+				print_with_color(:green, "$(prefix)status: '$(sol.status)' \n")	
+			end
+		else	
+			println("$(prefix)$(sol.status)")
+		end
+
+		if (length(dbprob.check_x) > 0)
+			check_x = lp.conv_vec(params["type"], dbprob.check_x)
+			if (sol.solved == false || check_x != sol.x)
+				sol_x = sol.solved ? sol.x : ()
+				print_with_color(:red, "$(prefix)x: '$(sol_x)' should be '$(check_x)' \n")
+			else
+				print_with_color(:green, "$(prefix)x: '$(sol.x)' \n")	
+			end
+		else
+			if (sol.solved)
+				println("$(prefix)x: $(sol.x)")
+				println("$(prefix)z: $(sol.z)") 
+			else
+				if (params["dcd"] == true)
+					println("$(prefix)nbasis:")
+					lp.dcd_nbasis(sol)	
+				end	
+			end
+		end
+
+		println();
+	end
 
 	function solve(prob_key, arg_str::String = "")
 		params = { "type" => "Float32", "dcd" => false, "algo" => "" }
@@ -80,6 +111,8 @@ module lp_db
 			end
 		end
 
+		sol = lp.Solution()
+
 		if (typeof(dbprob) != Int)
 			println()
 			@printf "Problem: '%s'\n" dbprob.descr 
@@ -88,42 +121,11 @@ module lp_db
 			
 			if (length(params["algo"]) == 0)
 
-				println(); println("Solution:");
+				println("\n------")
 				sol = lp_rsimplex_algo1.solve_problem(lp_prob)
-				
-				used_checks = false
-				if (length(dbprob.check_status) > 0)
-					used_checks = true
-					if (dbprob.check_status != sol.status)
-						print_with_color(:red, "status: '$(sol.status)' should be '$(dbprob.check_status)' \n")
-					else (dbprob.check_status != sol.status)
-						print_with_color(:green, "status: '$(sol.status)' \n")	
-					end
-				end
+				println("------\n")
 
-				if (length(dbprob.check_x) > 0)
-					used_checks = true
-					if (sol.solved == false || dbprob.check_x != sol.x)
-						sol_x = sol.solved ? sol.x : ()
-						print_with_color(:red, "x: '$(sol_x)' should be '$(dbprob.check_x)' \n")
-					else
-						print_with_color(:green, "x: '$(sol.x)' \n")	
-					end
-				end
-
-				if (used_checks == false)
-					println(sol.status)
-					if (sol.solved)
-						print("x: "); println(sol.x);
-						print("z: "); println(sol.z);
-					else
-						println("nbasis:")
-						lp.dcd_nbasis(sol)	
-					end
-				end	
-				println();
-				
-				return sol
+				check_sol(dbprob, sol, params)
 			else
 
 				m = Model(solver = GLPKSolverLP(method=:Exact))
@@ -145,18 +147,16 @@ module lp_db
 				sol.status = status_dict[status]
 				sol.solved = (sol.status == lp.Optimal)
 				sol.z = getObjectiveValue(m)
-				if (sol.solved) sol.x = [ JuMP.getValue(lp_x[i]) for i=1:lp_prob.n ]; end;
-				
-				println(sol.status)
-				if (sol.solved)
-					print("x: "); println(sol.x);
-					print("z: "); println(sol.z);
+				if (sol.solved) 
+					sol.x = eval(parse( "Array($(params["type"]), $(lp_prob.n))" ))
+					for i=1:lp_prob.n
+						sol.x[i] = JuMP.getValue(lp_x[i])
+					end	
 				end
-
-				return sol
+				check_sol(dbprob, sol, params)
 			end	
 		end 
-		return lp.Solution()
+		return sol
 	end
 
 end
