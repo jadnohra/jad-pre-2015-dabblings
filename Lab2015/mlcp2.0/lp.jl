@@ -358,6 +358,8 @@ module lp_rsimplex_algo1
 
 end
 
+include("args.jl")
+
 module lp_db
 	using lp
 	using lp_rsimplex_algo1
