@@ -1,3 +1,9 @@
+# https://groups.google.com/forum/#!topic/julia-users/6p5vRSYcApY
+#https://github.com/dpo/ampl.jl
+#http://orfe.princeton.edu/~rvdb/ampl/nlmodels/index.html
+#https://github.com/mpf/Optimization-Test-Problems (many of the same problems, without the solve command)
+#http://netlib.org/ampl/models/
+
 include("lp.jl")
 include("arg.jl")
 
@@ -100,7 +106,14 @@ module lp_db
 		
 		dbprob = 0
 		if (typeof(prob_key) == Int)
-			dbprob = prob_db[prob_key]
+			if (prob_key == 0)
+				for i = 1:length(prob_db)
+					solve(i, arg_str)	
+				end	
+				return
+			else	
+				dbprob = prob_db[prob_key]
+			end	
 		else
 			for i = 1:length(prob_db)
 				iprob = prob_db[i]
@@ -122,7 +135,7 @@ module lp_db
 			if (length(params["algo"]) == 0)
 
 				println("\n------")
-				sol = lp_rsimplex_algo1.solve_problem(lp_prob)
+				@time sol = lp_rsimplex_algo1.solve_problem(lp_prob)
 				println("------\n")
 
 				check_sol(dbprob, sol, params)
@@ -139,7 +152,7 @@ module lp_db
 				setObjective(m, :Min, obj)
 				
 				println("\n------")
-				status = JuMP.solve(m)
+				@time status = JuMP.solve(m)
 				println("------\n")
 
 				status_dict = { :Optimal => lp.Optimal, :Unbounded => lp.Unbounded, :Infeasible => lp.Infeasible, :UserLimit => lp.Maxit, :Error => lp.Error, :NotSolved => lp.Created }
