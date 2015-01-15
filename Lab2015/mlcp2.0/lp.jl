@@ -58,13 +58,14 @@ end
 module lp
 	using dcd
 
-	const Invalid = "Invalid"
+	const Created = "Created"
 	const Infeasible = "Infeasible"
 	const Optimal = "Optimal"
 	const Unbounded = "Unbounded"
 	const Maxit = "Maxit"
+	const Error = "Error"
 
-	type Canonical_problem
+	type Canonical_problem #Minimize
 		numtype::String
 		n::Int
 		m::Int
@@ -86,7 +87,7 @@ module lp
 		sess::dcd.Session
 		data
 		
-		Solution(enable_dcd = false) = ( x = new(); x.solved = false; x.status = Invalid; x.sess = dcd.Session(enable_dcd); return x; )
+		Solution(enable_dcd = false) = ( x = new(); x.solved = false; x.status = Created; x.sess = dcd.Session(enable_dcd); return x; )
 	end	
 
 	function conv_vec(numtype, V)

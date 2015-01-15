@@ -5,7 +5,11 @@ module lp_db
 	using lp
 	using lp_rsimplex_algo1
 	importall arg
-	
+
+	# Waiting for https://github.com/JuliaLang/julia/pull/6884
+	importall JuMP
+	importall GLPKMathProgInterface
+
 	type DbProblem
 		creator::Function
 		descr::String
@@ -43,7 +47,7 @@ module lp_db
 
 
 	function solve(prob_key, arg_str::String = "")
-		params = { "type" => "Float32", "dcd" => false }
+		params = { "type" => "Float32", "dcd" => false, "algo" => "" }
 		arg_get(arg_create(arg_str), params)
 		
 		dbprob = 0
@@ -62,45 +66,79 @@ module lp_db
 		if (typeof(dbprob) != Int)
 			println()
 			@printf "Problem: '%s'\n" dbprob.descr 
-			println(); println("Solution:");
 			lp_prob = dbprob.creator(params["type"])
 			lp_prob.params["dcd"] = params["dcd"]
-			sol = lp_rsimplex_algo1.solve_problem(lp_prob)
 			
-			used_checks = false
-			if (length(dbprob.check_status) > 0)
-				used_checks = true
-				if (dbprob.check_status != sol.status)
-					print_with_color(:red, "status: '$(sol.status)' should be '$(dbprob.check_status)' \n")
-				else (dbprob.check_status != sol.status)
-					print_with_color(:green, "status: '$(sol.status)' \n")	
-				end
-			end
+			if (length(params["algo"]) == 0)
 
-			if (length(dbprob.check_x) > 0)
-				used_checks = true
-				if (dbprob.check_x != sol.x)
-					print_with_color(:red, "x: '$(sol.x)' should be '$(dbprob.check_x)' \n")
-				else
-					print_with_color(:green, "x: '$(sol.x)' \n")	
+				println(); println("Solution:");
+				sol = lp_rsimplex_algo1.solve_problem(lp_prob)
+				
+				used_checks = false
+				if (length(dbprob.check_status) > 0)
+					used_checks = true
+					if (dbprob.check_status != sol.status)
+						print_with_color(:red, "status: '$(sol.status)' should be '$(dbprob.check_status)' \n")
+					else (dbprob.check_status != sol.status)
+						print_with_color(:green, "status: '$(sol.status)' \n")	
+					end
 				end
-			end
 
-			if (used_checks == false)
+				if (length(dbprob.check_x) > 0)
+					used_checks = true
+					if (dbprob.check_x != sol.x)
+						print_with_color(:red, "x: '$(sol.x)' should be '$(dbprob.check_x)' \n")
+					else
+						print_with_color(:green, "x: '$(sol.x)' \n")	
+					end
+				end
+
+				if (used_checks == false)
+					println(sol.status)
+					if (sol.solved)
+						print("x: "); println(sol.x);
+						print("z: "); println(sol.z);
+					else
+						println("nbasis:")
+						lp.dcd_nbasis(sol)	
+					end
+				end	
+				println();
+				
+				return sol
+			else
+
+				m = Model(solver = GLPKSolverLP(method=:Exact))
+				
+				@defVar(m, lp_x[1:lp_prob.n] >= 0 )
+				for ri = 1:lp_prob.m
+					aff = AffExpr(lp_x[1:lp_prob.n], reshape(lp_prob.A[ri,1:lp_prob.n], lp_prob.n), 0.0)
+					@addConstraint(m, aff <= lp_prob.b[ri])
+				end	
+				obj = AffExpr(lp_x[1:lp_prob.n], lp_prob.c, 0.0)
+				setObjective(m, :Min, obj)
+				
+				println("------")
+				status = JuMP.solve(m)
+				println("------")
+
+				status_dict = { :Optimal => lp.Optimal, :Unbounded => lp.Unbounded, :Infeasible => lp.Infeasible, :UserLimit => lp.Maxit, :Error => lp.Error, :NotSolved => lp.Created }
+				sol = lp.Solution()
+				sol.status = status_dict[status]
+				sol.solved = (sol.status == lp.Optimal)
+				sol.z = getObjectiveValue(m)
+				if (sol.solved) sol.x = [ JuMP.getValue(lp_x[i]) for i=1:lp_prob.n ]; end;
+				
 				println(sol.status)
 				if (sol.solved)
 					print("x: "); println(sol.x);
 					print("z: "); println(sol.z);
-				else
-					println("nbasis:")
-					lp.dcd_nbasis(sol)	
 				end
-			end	
-			println();
-			
-			return sol
-		end
 
-		return lp.Solution();
+				return sol
+			end	
+		end 
+		return lp.Solution()
 	end
+
 end
