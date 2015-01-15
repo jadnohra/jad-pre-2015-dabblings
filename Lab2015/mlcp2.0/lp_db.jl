@@ -1,9 +1,10 @@
 include("lp.jl")
-include("args.jl")
+include("arg.jl")
 
 module lp_db
 	using lp
 	using lp_rsimplex_algo1
+	importall arg
 	
 	type DbProblem
 		creator::Function
@@ -41,14 +42,17 @@ module lp_db
 	#p184
 
 
-	function solve(key, numtype = "Float32", enable_dcd = false)
+	function solve(prob_key, arg_str::String = "")
+		params = { "type" => "Float32", "dcd" => false }
+		arg_get(arg_create(arg_str), params)
+		
 		dbprob = 0
-		if (typeof(key) == Int)
-			dbprob = prob_db[key]
+		if (typeof(prob_key) == Int)
+			dbprob = prob_db[prob_key]
 		else
 			for i = 1:length(prob_db)
 				iprob = prob_db[i]
-				if (contains(iprob.descr, key))
+				if (contains(iprob.descr, prob_key))
 					dbprob = iprob
 					break	
 				end
@@ -59,8 +63,8 @@ module lp_db
 			println()
 			@printf "Problem: '%s'\n" dbprob.descr 
 			println(); println("Solution:");
-			lp_prob = dbprob.creator(numtype)
-			lp_prob.params["dcd"] = enable_dcd
+			lp_prob = dbprob.creator(params["type"])
+			lp_prob.params["dcd"] = params["dcd"]
 			sol = lp_rsimplex_algo1.solve_problem(lp_prob)
 			
 			used_checks = false

@@ -1,6 +1,11 @@
 
 module arg
 
+	export arg_create
+	export arg_key
+	export arg_has
+	export arg_get
+
 	type ArgPart 
 		start::Int
 		sz::Int 
@@ -17,9 +22,9 @@ module arg
 		ArgKey() = new()
 	end
 
-	key() = ( x = ArgKey(); x.keys = Array(String, 0); x.iter = Array(Int, 0); x.match = Array(Int, 0); return x; )
-	key(k::String) = ( x = key(); add_key(x, k); return x; )
-	key(prev_ak::ArgKey, k::String) = ( x = key(); add_key(x, prev_ak, k); return x; )
+	arg_key() = ( x = ArgKey(); x.keys = Array(String, 0); x.iter = Array(Int, 0); x.match = Array(Int, 0); return x; )
+	arg_key(k::String) = ( x = arg_key(); add_key(x, k); return x; )
+	arg_key(prev_ak::ArgKey, k::String) = ( x = arg_key(); add_key(x, prev_ak, k); return x; )
 
 	function add_key(ak::ArgKey, k::String, it = 0, mtch = -1)
 		push!(ak.keys, k); push!(ak.iter, it); push!(ak.match, mtch);
@@ -101,7 +106,6 @@ module arg
 			else
 				return false
 			end
-			println("$(str) $(str_i)")
 		end
 		return true
 	end
@@ -171,7 +175,7 @@ module arg
 		return args.nodes[found_ni].val_start + index
 	end	
 	
-	function create(str::String) 
+	function arg_create(str::String) 
 		args = Args()
 		args.str_orig = str
 		args.str = Array(Char, length(str)+1); args.str[end] = char(0);
@@ -184,98 +188,61 @@ module arg
 		return _get_root_sub(args)
 	end	
 
-	function get(args::Args, key::ArgKey) 
+	function to_key(k::Any)
+		return typeof(k) == ArgKey ? k : arg_key(k)
+	end
+
+	function get_part(args::Args, key) 
+		key = to_key(key)
 		ni = _find(args, key); val = _to_part(args, ni); 
 		return ((ni != -1 && !args.nodes[ni].val_is_node), val)
 	end
 
-	function has(args::Args, key::ArgKey) 
-		return get(args, key)[1]
+	function arg_has(args::Args, key) 
+		key = to_key(key)
+		return get_part(args, key)[1]
 	end	
 
-	function has_sub(args::Args, key::ArgKey) 
+	function has_sub(args::Args, key) 
+		key = to_key(key)
 		ni = _find(args, key); 
 		return (ni != -1 && args.nodes[ni].val_is_node)
 	end	
 
-	function iter(args::Args, key::ArgKey) 
+	function iter(args::Args, key) 
+		key = to_key(key)
 		if (key.match[key_length(key)] == -1) return has_sub(key); end;
 		if (key_length(key)) key.iter[end] = key.iter[end]+1; key.match[end] = -1; end;
 		return has_sub(args, key)
 	end
 
-	function parse(args::Args, key::ArgKey, dflt::String) 
-		found, val = get(args, key)
+	function parse_s(args::Args, key, dflt::String) 
+		key = to_key(key)
+		found, val = get_part(args, key)
 		if (found == false) return dflt; end;
 		return join(args.str[val.start:val.start+val.sz-1])
 	end
 
-	#=
-	struct Args : NoCopy
-	{
-		struct Internal
-		{
+	function arg_get(args::Args, key, dflt::Any) 
+		key = to_key(key)
+		typ = string(typeof(dflt))
+		str = parse_s(args, key, "")
+		if (length(str) == 0 || typeof(dflt) == String) return dflt; end;
+		ret = dflt
+		try
+			ret = eval(Base.parse("convert($(typ), \"$str\")"))
+		catch
+			ret = eval(Base.parse("convert($(typ), $str)"))
+		end
+		return ret
+	end
 
-			template<typename T1, typename T2> static bool convStr(const char* str, const char* fmt, T2 dflt, T1& out)
-			{
-				T1 v[1]; v[0] = (T1) dflt;
-				int sc = sscanf(str, fmt, &v[0]);
-				out = v[0];
-				return (sc == 1);
-			}
+	function arg_get(args::Args, keys::Dict{Any, Any}) 
+		for k in keys
+			keys[k[1]] = arg_get(args, k[1], k[2])
+		end
+	end
 
-			static void copy(const char* str, ArgPart& val, hkStringBuf& buf) { buf.set(str+val.start, val.sz); }	
-			template<typename T1, typename T2> static bool parse(const char* str, ArgPart val, const char* fmt, T1& out, T2 dflt) { return Internal::convStr(str+val.start, fmt, dflt, out); }
-		};
-
-		const char* parse(ArgKey& key, const char* dflt) 
-		{ 
-			ArgPart val; if (!get(key, val)) return dflt;
-			return str + val.start;
-		}
-
-		template<typename T1, typename T2> bool parse(ArgKey& key, const char* fmt, T1& out, T2 dflt)
-		{
-			ArgPart val; if (!get(key, val)) { out = (T1)dflt; return false; }
-			return Internal::parse<T1, T2>(str, val, fmt, out, dflt);
-		}
-
-		int parse_i(ArgKey& key, int dflt) { int ret; parse(key, "%i", ret, dflt); return ret; }
-		unsigned int parse_ui(ArgKey& key, unsigned int dflt) { unsigned int ret; parse(key, "%u", ret, dflt); return ret; }
-		float parse_f(ArgKey& key, float dflt) { float ret; parse(key, "%f", ret, dflt); return ret; }
-		double parse_d(ArgKey& key, double dflt) { double ret; parse(key, "%fl", ret, dflt); return ret; }
-
-
-		bool get(const char* key, ArgPart& val) { ArgKey k(key); return get(k, val); }
-		bool has(const char* key) { ArgKey k(key); return has(k); }
-		const char* parse(const char* key, const char* dflt) { ArgKey k(key); return parse(k, dflt); }
-		template<typename T1, typename T2> bool parse(const char* key, const char* fmt, T1& out, T2 dflt) { ArgKey k(key); return parse<T1,T2>(k, fmt, out, dflt); }
-		int parse_i(const char* key, int dflt) { ArgKey k(key); return parse_i(k, dflt); }
-		unsigned int parse_ui(const char* key, unsigned int dflt) { ArgKey k(key); return parse_ui(k, dflt); }
-		float parse_f(const char* key, float dflt) { ArgKey k(key); return parse_f(k, dflt); }
-		double parse_d(const char* key, double dflt) { ArgKey k(key); return parse_d(k, dflt); }
-		
-		bool get(const char* key1, const char* key2, ArgPart& val) { ArgKey k(key1, key2); return get(k, val); }
-		bool has(const char* key1, const char* key2) { ArgKey k(key1, key2); return has(k); }
-		const char* parse(const char* key1, const char* key2, const char* dflt) { ArgKey k(key1, key2); return parse(k, dflt); }
-		template<typename T1, typename T2> bool parse(const char* key1, const char* key2, const char* fmt, T1& out, T2 dflt) { ArgKey k(key1, key2); return parse<T1,T2>(k, fmt, out, dflt); }
-		int parse_i(const char* key1, const char* key2, int dflt) { ArgKey k(key1, key2); return parse_i(k, dflt); }
-		unsigned int parse_ui(const char* key1, const char* key2, unsigned int dflt) { ArgKey k(key1, key2); return parse_ui(k, dflt); }
-		float parse_f(const char* key1, const char* key2, float dflt) { ArgKey k(key1, key2); return parse_f(k, dflt); }
-		double parse_d(const char* key1, const char* key2, double dflt) { ArgKey k(key1, key2); return parse_d(k, dflt); }
-
-		bool get(ArgKey& key1, const char* key2, ArgPart& val) { ArgKey k(key1, key2); return get(k, val); }
-		bool has(ArgKey& key1, const char* key2) { ArgKey k(key1, key2); return has(k); }
-		const char* parse(ArgKey& key1, const char* key2, const char* dflt) { ArgKey k(key1, key2); return parse(k, dflt); }
-		template<typename T1, typename T2> bool parse(ArgKey& key1, const char* key2, const char* fmt, T1& out, T2 dflt) { ArgKey k(key1, key2); return parse<T1,T2>(k, fmt, out, dflt); }
-		int parse_i(ArgKey& key1, const char* key2, int dflt) { ArgKey k(key1, key2); return parse_i(k, dflt); }
-		unsigned int parse_ui(ArgKey& key1, const char* key2, unsigned int dflt) { ArgKey k(key1, key2); return parse_ui(k, dflt); }
-		float parse_f(ArgKey& key1, const char* key2, float dflt) { ArgKey k(key1, key2); return parse_f(k, dflt); }
-		double parse_d(ArgKey& key1, const char* key2, double dflt) { ArgKey k(key1, key2); return parse_d(k, dflt); }
-
-		int iterNodes(int index, ArgKey& key) { return Internal::iterKey(*this, index, key); }
-		const char* getNodeKey(int node) { return str+nodes[node].key_start; }
-	};
-	=#
+	#TODO. convert the rest of the c++ code.
 
 end
