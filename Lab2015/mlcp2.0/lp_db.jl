@@ -35,6 +35,10 @@ module lp_db
 		return lp.create_max_problem(numtype, [10,-57,-9,-24], [0.5 -5.5 -2.5 9; 0.5 -1.5 -0.5 1; 1 0 0 0], [0, 0, 1], {"maxit" => 5})
 	end; push!(prob_db, DbProblem(problem_LPFE_p27, "LPFE_p27 degen", "", []))
 
+	function problem_LPFE_m27(numtype)	
+		return lp.create_max_problem(numtype, [10,-57,-9,-24], [0.5 -5.5 -2.5 9; 0.5 -1.5 -0.5 1; 1 0 0 0], [1.e-5, 0, 1], {"maxit" => 5})
+	end; push!(prob_db, DbProblem(problem_LPFE_m27, "LPFE_m27 pert", "", []))
+
 	function problem_LPFE_p18(numtype)	
 		return lp.create_max_problem(numtype, [-2 -1], [-1 1; -1 -2; 0 1], [-1, -2, 1], {"maxit" => 5})
 	end; push!(prob_db, DbProblem(problem_LPFE_p18, "LPFE_p18 phaseI", "", []))
