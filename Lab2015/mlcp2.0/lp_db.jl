@@ -118,9 +118,9 @@ module lp_db
 				obj = AffExpr(lp_x[1:lp_prob.n], lp_prob.c, 0.0)
 				setObjective(m, :Min, obj)
 				
-				println("------")
+				println("\n------")
 				status = JuMP.solve(m)
-				println("------")
+				println("------\n")
 
 				status_dict = { :Optimal => lp.Optimal, :Unbounded => lp.Unbounded, :Infeasible => lp.Infeasible, :UserLimit => lp.Maxit, :Error => lp.Error, :NotSolved => lp.Created }
 				sol = lp.Solution()
