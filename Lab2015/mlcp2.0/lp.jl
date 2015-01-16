@@ -3,12 +3,12 @@
 module lp
 	using dcd
 
-	const Created = "Created"
-	const Infeasible = "Infeasible"
-	const Optimal = "Optimal"
-	const Unbounded = "Unbounded"
-	const Maxit = "Maxit"
-	const Error = "Error"
+	:Created
+	:Infeasible
+	:Optimal
+	:Unbounded
+	:Maxit
+	:Error
 
 	typealias Params Dict{Any,Any}
 
@@ -26,7 +26,7 @@ module lp
 
 	type Solution{T}
 		solved::Bool
-		status::String
+		status::Symbol
 		z::T
 		x::Vector{T}
 
@@ -35,7 +35,7 @@ module lp
 		function Solution(params::Params) 
 			x = new() 
 			x.solved = false
-			x.status = Created 
+			x.status = :Created 
 			x.dcd = dcd.Session(get(params, "dcd", false))
 			return x
 		end	

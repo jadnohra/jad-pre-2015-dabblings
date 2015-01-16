@@ -13,7 +13,7 @@ module lp_bench
 	type DbProblem
 		creator::Function
 		descr::String
-		check_status::String
+		check_status::Symbol
 		check_x#::Array{numtype, 1}
 	end
 
@@ -21,45 +21,45 @@ module lp_bench
 
 	function problem_t1(numtype) 
 		return lp.create_min_problem(numtype, [1, 1], [2 3;], [10], {"maxit" => 5})
-	end; push!(prob_db, DbProblem(problem_t1, "t1", lp.Optimal, [0, 0]))
+	end; push!(prob_db, DbProblem(problem_t1, "t1", :Optimal, [0, 0]))
 
 	function problem_LPFE_p88(numtype)	
 		return lp.create_max_problem(numtype, [4,3], [1 -1; 2 -1; 0 1], [1, 3, 5], {"maxit" => 5})
-	end; push!(prob_db, DbProblem(problem_LPFE_p88, "LPFE_p88", lp.Optimal, [4, 5]))
+	end; push!(prob_db, DbProblem(problem_LPFE_p88, "LPFE_p88", :Optimal, [4, 5]))
 
 	function problem_LPFE_p11(numtype)	
 		return lp.create_max_problem(numtype, [5,4,3], [2 3 1; 4 1 2; 3 4 2], [5, 11, 8], {"maxit" => 5})
-	end; push!(prob_db, DbProblem(problem_LPFE_p11, "LPFE_p11", lp.Optimal, [2, 0, 1]))
+	end; push!(prob_db, DbProblem(problem_LPFE_p11, "LPFE_p11", :Optimal, [2, 0, 1]))
 
 	function problem_LPFE_p27(numtype)	
 		return lp.create_max_problem(numtype, [10,-57,-9,-24], [0.5 -5.5 -2.5 9; 0.5 -1.5 -0.5 1; 1 0 0 0], [0, 0, 1], {"maxit" => 5})
-	end; push!(prob_db, DbProblem(problem_LPFE_p27, "LPFE_p27 degen", lp.Optimal, [1, 0, 1, 0]))
+	end; push!(prob_db, DbProblem(problem_LPFE_p27, "LPFE_p27 degen", :Optimal, [1, 0, 1, 0]))
 
 	function problem_LPFE_m27(numtype)	
 		return lp.create_max_problem(numtype, [10,-57,-9,-24], [0.5 -5.5 -2.5 9; 0.5 -1.5 -0.5 1; 1 0 0 0], [1.e-5, 0, 1], {"maxit" => 5})
-	end; push!(prob_db, DbProblem(problem_LPFE_m27, "LPFE_m27 pert", lp.Optimal, [1, 0, 1, 0]))
+	end; push!(prob_db, DbProblem(problem_LPFE_m27, "LPFE_m27 pert", :Optimal, [1, 0, 1, 0]))
 
 	function problem_LPFE_p18(numtype)	
 		return lp.create_max_problem(numtype, [-2 -1], [-1 1; -1 -2; 0 1], [-1, -2, 1], {"maxit" => 5})
-	end; push!(prob_db, DbProblem(problem_LPFE_p18, "LPFE_p18 phaseI", lp.Optimal, [4/3, 1/3]))
+	end; push!(prob_db, DbProblem(problem_LPFE_p18, "LPFE_p18 phaseI", :Optimal, [4/3, 1/3]))
 
 	function problem_LPFE_p23_9(numtype)	
 		return lp.create_min_problem(numtype, [2 3 4], [0 2 3; 1 1 2; 1 2 3], [5, 4, 7], {"maxit" => 10})
-	end; push!(prob_db, DbProblem(problem_LPFE_p23_9, "problem_LPFE_p23_9", lp.Optimal, [0, 0, 0]))
+	end; push!(prob_db, DbProblem(problem_LPFE_p23_9, "problem_LPFE_p23_9", :Optimal, [0, 0, 0]))
 
 	function problem_LPFE_p23_8(numtype)	
 		return lp.create_max_problem(numtype, [3 2], [1 -2; 1 -1; 2 -1; 1 0; 2 1; 1 1; 1 2; 0 1], [1, 2, 6, 5, 16, 12, 21, 10], {"maxit" => 10})
-	end; push!(prob_db, DbProblem(problem_LPFE_p23_8, "problem_LPFE_p23_8", lp.Optimal, [4, 8]))
+	end; push!(prob_db, DbProblem(problem_LPFE_p23_8, "problem_LPFE_p23_8", :Optimal, [4, 8]))
 
 	function problem_LPFE_p22_4(numtype)	
 		return lp.create_max_problem(numtype, [-1 -3 -1], [2 -5 1; 2 -1 2], [-5, 4], {"maxit" => 100})
-	end; push!(prob_db, DbProblem(problem_LPFE_p22_4, "problem_LPFE_p22_4", lp.Optimal, [0, 1, 0]))
+	end; push!(prob_db, DbProblem(problem_LPFE_p22_4, "problem_LPFE_p22_4", :Optimal, [0, 1, 0]))
 
 	#p184
 
 	function check_sol(dbprob, sol, params)
 		prefix = " "
-		if (length(dbprob.check_status) > 0)
+		if (dbprob.check_status != :Unset)
 			if (dbprob.check_status != sol.status)
 				print_with_color(:red, "$(prefix)status: '$(sol.status)' should be '$(dbprob.check_status)' \n")
 			else (dbprob.check_status != sol.status)

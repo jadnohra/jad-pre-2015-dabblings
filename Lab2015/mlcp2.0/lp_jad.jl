@@ -127,7 +127,7 @@ module lp_jad_I_1
 
 	function succeed_solution{T}(dat::Dat{T}, sol::lp.Solution)
 		sol.solved = true 
-		sol.status = lp.Optimal
+		sol.status = :Optimal
 		sol.z = dat.z
 		sol.x = eval(parse( "zeros($(dat.prob.numtype), $(dat.n))" ))
 		for i = 1:length(dat.iB)
@@ -136,7 +136,7 @@ module lp_jad_I_1
 		end
 	end
 
-	function fail_solution(sol::lp.Solution, status::String) sol.solved = false; sol.status = status; end
+	function fail_solution(sol::lp.Solution, status::Symbol) sol.solved = false; sol.status = status; end
 
 	function solve_dat{T}(dat::Dat{T}, sol::lp.Solution)
 		# [CTSM].p33,p30, but with naive basis reinversion instead of update.
@@ -151,7 +151,7 @@ module lp_jad_I_1
 		init_β(dat); init_z(dat);
 		dcd.@set(dbg, "β0", dat.β) 
 		#todo phaseI
-		if (check_feasible_β(dat) == false) println("Warning: phaseI."); fail_solution(sol, lp.Infeasible); return; end
+		if (check_feasible_β(dat) == false) println("Warning: phaseI."); fail_solution(sol, :Infeasible); return; end
 
 		while(dat.maxit == 0 || it < dat.maxit)
 			dcd.@it(dbg)
@@ -167,7 +167,7 @@ module lp_jad_I_1
 			comp_αq(dat, q); dcd.@set(dbg, "αq", dat.αq); 
 			#Step 4
 			p,θ = chuzro(dat); dcd.@set(dbg, "p", p); dcd.@set(dbg, "θ", θ); 
-			if (p == 0) fail_solution(sol, lp.Unbounded); return; end
+			if (p == 0) fail_solution(sol, :Unbounded); return; end
 			dcd.@set(dbg, "pivot", (q, p)) 
 			#Step 5
 			pivot_iB_iR(dat, q, p)
@@ -177,7 +177,7 @@ module lp_jad_I_1
 			comp_cBT(dat); comp_B_R(dat); comp_Binv(dat); 
 			it = it + 1
 		end	
-		fail_solution(sol, lp.Maxit)
+		fail_solution(sol, :Maxit)
 	end
 
 	function solve_problem(lp_prob) 
