@@ -1,15 +1,13 @@
-# https://groups.google.com/forum/#!topic/julia-users/6p5vRSYcApY
+#https://groups.google.com/forum/#!topic/julia-users/6p5vRSYcApY
 #https://github.com/dpo/ampl.jl
 #http://orfe.princeton.edu/~rvdb/ampl/nlmodels/index.html
 #https://github.com/mpf/Optimization-Test-Problems (many of the same problems, without the solve command)
 #http://netlib.org/ampl/models/
 
-include("lp.jl")
-include("arg.jl")
 
-module lp_db
-	using lp
-	using lp_rsimplex_algo1
+module lp_bench
+	using lp_problem
+	using lp_rsimplex_I_1
 	importall arg
 
 	# Waiting for https://github.com/JuliaLang/julia/pull/6884
@@ -99,8 +97,8 @@ module lp_db
 		println();
 	end
 
-	function solve(prob_key, arg_str::String = "")
-		params = { "type" => "Float32", "dcd" => false, "algo" => "" }
+	function solve(prob_key = 0, arg_str::String = "")
+		params = { "type" => "Float32", "dcd" => false, "code" => "" }
 		arg_get(arg_create(arg_str), params)
 		
 		dbprob = 0
@@ -129,10 +127,10 @@ module lp_db
 			lp_prob = dbprob.creator(params["type"])
 			lp_prob.params["dcd"] = params["dcd"]
 			
-			if (length(params["algo"]) == 0)
+			if (length(params["code"]) == 0)
 
 				println("\n------")
-				@time sol = lp_rsimplex_algo1.solve_problem(lp_prob)
+				@time sol = lp_rsimplex_I_1.solve_problem(lp_prob)
 				println("------\n")
 
 				check_sol(dbprob, sol, params)
