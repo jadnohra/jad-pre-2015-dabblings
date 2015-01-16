@@ -19,8 +19,8 @@
 =#
 
 module lp_jad_I_1
-	using lp
 	using dcd
+	using lp
 
 	type Dat{T}
 		prob::lp.Canonical_problem
@@ -47,7 +47,6 @@ module lp_jad_I_1
 	end
 
 	function fill_dat{T}(prob::lp.Canonical_problem, dat::Dat{T})
-		#numtype = prob.numtype; 
 		n = prob.n; m = prob.m;
 		dat.maxit = get(prob.params, "maxit", 0)
 		dat.prob = prob
@@ -55,14 +54,14 @@ module lp_jad_I_1
 		dat.m = m
 		dat.iB = Array(Int, m)
 		dat.iR = Array(Int, n)
-		dat.B = Array(T, (m,m)) #eval(parse( "Array($numtype, ($m,$m))" ))
+		dat.B = Array(T, (m,m)) 
 		#dat.Binv = eval(parse( "Array($numtype, ($m,$m))" ))
-		dat.β = Array(T, m) #eval(parse( "Array($numtype, $m)" ))
+		dat.β = Array(T, m) 
 		#dat.π = eval(parse( "Array($numtype, $m+$n)" ))
 		#dat.cBT = eval(parse( "Array($numtype, $m)" ))
-		dat.dJ = Array(T, n) #eval(parse( "Array($numtype, $n)" ))
+		dat.dJ = Array(T, n) 
 		#dat.αq = eval(parse( "Array($numtype, $n)" ))
-		dat.zero = zero(T) #eval(parse( "zero($numtype)" ))
+		dat.zero = zero(T) 
 	end	
 
 	function sel_cols{T}(src::Matrix{T}, dst::Matrix{T}, cols::Vector{Int})
@@ -137,43 +136,44 @@ module lp_jad_I_1
 		end
 	end
 
-	function fail_solution{T}(sol::lp.Solution, status::String) sol.solved = false; sol.status = status; end
+	function fail_solution(sol::lp.Solution, status::String) sol.solved = false; sol.status = status; end
 
 	function solve_dat{T}(dat::Dat{T}, sol::lp.Solution)
 		# [CTSM].p33,p30, but with naive basis reinversion instead of update.
+		dbg = sol.dcd
+		dcd.@it(dbg)
 		it = 0
-		dcd.iter(sol.sess, "init")
 		#Step 0
 		set_basis_logical(dat)
-		dcd.set(sol.sess, "iB", dat.iB)
+		dcd.@set(dbg, "iB", dat.iB)
 		#Initializations
 		comp_cBT(dat); comp_B_R(dat); comp_Binv(dat); 
 		init_β(dat); init_z(dat);
-		dcd.set(sol.sess, "β0", dat.β)
+		dcd.@set(dbg, "β0", dat.β) 
 		#todo phaseI
 		if (check_feasible_β(dat) == false) println("Warning: phaseI."); fail_solution(sol, lp.Infeasible); return; end
 
 		while(dat.maxit == 0 || it < dat.maxit)
-			if (it != 0) dcd.iter(sol.sess, ""); end
+			dcd.@it(dbg)
 			#Step 1
-			dcd.set(sol.sess, "B", dat.B); dcd.set(sol.sess, "Binv", dat.Binv);
-			dcd.set(sol.sess, "cBT", dat.cBT);
-			comp_π(dat); dcd.set(sol.sess, "π", dat.π);
+			dcd.@set(dbg, "B", dat.B); dcd.@set(dbg, "Binv", dat.Binv); 
+			dcd.@set(dbg, "cBT", dat.cBT); 
+			comp_π(dat); dcd.@set(dbg, "π", dat.π); 
 			#Step 2
-			comp_dJ(dat); dcd.set(sol.sess, "dJ", dat.dJ);
+			comp_dJ(dat); dcd.@set(dbg, "dJ", dat.dJ); 
 			if check_optimal_dJ(dat) succeed_solution(dat, sol); return; end
-			q = price_full_dantzig(dat); dcd.set(sol.sess, "q", q);
+			q = price_full_dantzig(dat); dcd.@set(dbg, "q", q); 
 			#Step 3
-			comp_αq(dat, q); dcd.set(sol.sess, "αq", dat.αq);
+			comp_αq(dat, q); dcd.@set(dbg, "αq", dat.αq); 
 			#Step 4
-			p,θ = chuzro(dat); dcd.set(sol.sess, "p", p); dcd.set(sol.sess, "θ", θ);
+			p,θ = chuzro(dat); dcd.@set(dbg, "p", p); dcd.@set(dbg, "θ", θ); 
 			if (p == 0) fail_solution(sol, lp.Unbounded); return; end
-			dcd.set(sol.sess, "pivot", (q, p))
+			dcd.@set(dbg, "pivot", (q, p)) 
 			#Step 5
 			pivot_iB_iR(dat, q, p)
 			#Updates
-			update_β(dat, p, θ); dcd.set(sol.sess, "β", dat.β); 
-			update_z(dat, q, θ); dcd.set(sol.sess, "z", dat.z);
+			update_β(dat, p, θ); dcd.@set(dbg, "β", dat.β); 
+			update_z(dat, q, θ); dcd.@set(dbg, "z", dat.z); 
 			comp_cBT(dat); comp_B_R(dat); comp_Binv(dat); 
 			it = it + 1
 		end	
@@ -181,11 +181,10 @@ module lp_jad_I_1
 	end
 
 	function solve_problem(lp_prob) 
-		numtype = lp_prob.numtype
-		expr_Dat = parse( "Dat{$numtype}()" )
+		expr_Dat = parse( "Dat{$(lp_prob.numtype)}()" )
 		dat = eval(expr_Dat)
 		fill_dat(lp_prob, dat)
-		sol = lp.Solution(lp_prob.params)
+		sol = lp.create_solution(lp_prob.numtype, lp_prob.params)
 		solve_dat(dat, sol) 
 		return sol
 	end

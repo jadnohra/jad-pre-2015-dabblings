@@ -19,7 +19,7 @@ module lp_glpk
 		@time status = JuMP.solve(m)
 	
 		status_dict = { :Optimal => lp.Optimal, :Unbounded => lp.Unbounded, :Infeasible => lp.Infeasible, :UserLimit => lp.Maxit, :Error => lp.Error, :NotSolved => lp.Created }
-		sol = lp.Solution()
+		sol = lp.create_solution(lp_prob.numtype, lp_prob.params)
 		sol.status = status_dict[status]
 		sol.solved = (sol.status == lp.Optimal)
 		sol.z = getObjectiveValue(m)
@@ -31,4 +31,5 @@ module lp_glpk
 		end
 		return sol
 	end	
+
 end				
