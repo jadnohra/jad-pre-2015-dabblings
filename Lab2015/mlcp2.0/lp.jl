@@ -59,7 +59,7 @@ module lp
 
 		sess::dcd.Session
 		
-		function Solution(params::Dict{String, Any}) 
+		function Solution(params::Dict{String, Any} = Dict{String, Any}()) 
 			x = new() 
 			x.solved = false
 			x.status = Created 
