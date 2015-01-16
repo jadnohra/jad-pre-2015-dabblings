@@ -29,7 +29,7 @@ module dcd # Data Crunching Debugger
 	end
 end
 
-module lp_problem
+module lp
 	using dcd
 
 	const Created = "Created"

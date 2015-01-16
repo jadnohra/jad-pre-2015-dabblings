@@ -2,7 +2,7 @@
 # Robert J. Vanderbei. Linear Programming: Foundations and Extensions. Springer, second edition, 2001. [LPFE]
 
 #= 
-	I. Solve, Revised, Canonical Simplex. lp_solve_rsimplex
+	I. Solve, Revised, Canonical Simplex. 
 	1. revised simplex, basis inversion, no reuse
 	2. revised simplex, basis factorization, no reuse
 	3. revised simplex, basis factorization, reuse, no re-factorization
@@ -18,8 +18,8 @@
 	1. ??
 =#
 
-module lp_rsimplex_I_1
-	using lp_problem
+module lp_jad_I_1
+	using lp
 	using dcd
 
 	type Working_data

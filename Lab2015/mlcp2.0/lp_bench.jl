@@ -6,13 +6,9 @@
 
 
 module lp_bench
-	using lp_problem
-	using lp_rsimplex_I_1
+	using lp
+	using lp_jad_I_1
 	importall arg
-
-	# Waiting for https://github.com/JuliaLang/julia/pull/6884
-	importall JuMP
-	importall GLPKMathProgInterface
 
 	type DbProblem
 		creator::Function
@@ -97,8 +93,8 @@ module lp_bench
 		println();
 	end
 
-	function solve(prob_key = 0, arg_str::String = "")
-		params = { "type" => "Float32", "dcd" => false, "code" => "" }
+	function solve(prob_key = 0, code_module = lp_jad_I_1, arg_str::String = "")
+		params = { "type" => "Float32", "dcd" => false }
 		arg_get(arg_create(arg_str), params)
 		
 		dbprob = 0
@@ -126,43 +122,12 @@ module lp_bench
 			@printf "Problem: '%s'\n" dbprob.descr 
 			lp_prob = dbprob.creator(params["type"])
 			lp_prob.params["dcd"] = params["dcd"]
-			
-			if (length(params["code"]) == 0)
 
-				println("\n------")
-				@time sol = lp_rsimplex_I_1.solve_problem(lp_prob)
-				println("------\n")
+			println("\n------")
+			sol = code_module.solve_problem(lp_prob)
+			println("------\n")
 
-				check_sol(dbprob, sol, params)
-			else
-
-				m = Model(solver = GLPKSolverLP(method=:Exact))
-				
-				@defVar(m, lp_x[1:lp_prob.n] >= 0 )
-				for ri = 1:lp_prob.m
-					aff = AffExpr(lp_x[1:lp_prob.n], reshape(lp_prob.A[ri,1:lp_prob.n], lp_prob.n), 0.0)
-					@addConstraint(m, aff <= lp_prob.b[ri])
-				end	
-				obj = AffExpr(lp_x[1:lp_prob.n], lp_prob.c, 0.0)
-				setObjective(m, :Min, obj)
-				
-				println("\n------")
-				@time status = JuMP.solve(m)
-				println("------\n")
-
-				status_dict = { :Optimal => lp.Optimal, :Unbounded => lp.Unbounded, :Infeasible => lp.Infeasible, :UserLimit => lp.Maxit, :Error => lp.Error, :NotSolved => lp.Created }
-				sol = lp.Solution()
-				sol.status = status_dict[status]
-				sol.solved = (sol.status == lp.Optimal)
-				sol.z = getObjectiveValue(m)
-				if (sol.solved) 
-					sol.x = eval(parse( "Array($(params["type"]), $(lp_prob.n))" ))
-					for i=1:lp_prob.n
-						sol.x[i] = JuMP.getValue(lp_x[i])
-					end	
-				end
-				check_sol(dbprob, sol, params)
-			end	
+			check_sol(dbprob, sol, params)
 		end 
 		return sol
 	end
