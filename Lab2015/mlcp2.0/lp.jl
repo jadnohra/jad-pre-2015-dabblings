@@ -57,11 +57,15 @@ module lp
 		z#::numtype
 		x#::Array{numtype, 1}
 
-		prob::Canonical_problem
 		sess::dcd.Session
-		data
 		
-		Solution(enable_dcd = false) = ( x = new(); x.solved = false; x.status = Created; x.sess = dcd.Session(enable_dcd); return x; )
+		function Solution(params::Dict{String, Any}) 
+			x = new() 
+			x.solved = false
+			x.status = Created 
+			x.sess = dcd.Session(get(params, "dcd", false))
+			return x
+		end	
 	end	
 
 	function conv_vec(numtype, V)

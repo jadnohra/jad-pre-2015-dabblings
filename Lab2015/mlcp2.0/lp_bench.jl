@@ -59,7 +59,6 @@ module lp_bench
 
 	function check_sol(dbprob, sol, params)
 		prefix = " "
-
 		if (length(dbprob.check_status) > 0)
 			if (dbprob.check_status != sol.status)
 				print_with_color(:red, "$(prefix)status: '$(sol.status)' should be '$(dbprob.check_status)' \n")
@@ -93,7 +92,7 @@ module lp_bench
 		println();
 	end
 
-	function solve(prob_key = 0, code_module = lp_jad_I_1, arg_str::String = "")
+	function solve(prob_key = 0, arg_str::String = "", code_module = lp_jad_I_1)
 		params = { "type" => "Float32", "dcd" => false }
 		arg_get(arg_create(arg_str), params)
 		
@@ -114,8 +113,6 @@ module lp_bench
 				end
 			end
 		end
-
-		sol = lp.Solution()
 
 		if (typeof(dbprob) != Int)
 			println()
