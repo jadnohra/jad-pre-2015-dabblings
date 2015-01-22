@@ -1,24 +1,32 @@
 # István Maros. Computational Techniques of the Simplex Method. Kluwer Academic Publishers, Boston, 2003. [CTSM]
 # Robert J. Vanderbei. Linear Programming: Foundations and Extensions. Springer, second edition, 2001. [LPFE]
 
-#= 
-	I. Solve, Revised, Canonical Simplex. 
-	1. revised simplex, basis inversion, no reuse
-	2. revised simplex, basis factorization, no reuse
-	3. revised simplex, basis factorization, reuse, no re-factorization
-	4. revised simplex, basis factorization, reuse, re-factorization
-	5. revised simplex, basis factorization, reuse, re-factorization, degen (CTSM p230), sing
-	6. 5. with 'textbook' Phase-I
-	7. 5. with Maros' Phase-I (p203)
-	
-	II. Solve, Revised, Sparse, Canonical Simplex. solve_srsimplex
-	1. revised sparse simplex
+#=
+	List of algorithms
 
-	III. Generalized Simplex variants of I, then II (Presolve, Postolve)
-	1. ??
+	Linear Programming
+		I. Solve, Revised, Canonical Simplex.
+		1. revised simplex, basis inversion, no reuse
+		2. revised simplex, basis factorization, no reuse
+		3. revised simplex, basis factorization, reuse, no re-factorization
+		4. revised simplex, basis factorization, reuse, re-factorization
+		5. revised simplex, basis factorization, reuse, re-factorization, degen (CTSM p230), sing
+		6. 5. with 'textbook' Phase-I
+		7. 5. with Maros' Phase-I (p203)
+
+		II. Solve, Revised, Sparse, Canonical Simplex.
+		1. revised sparse simplex
+
+		III. Generalized Simplex variants of I, then II (Presolve, Postsolve)
+		1. ??
+
+	LU Factorization
+		I. Suhl-suhl (CTSM p136)
 =#
 
-module lp_jad_I_1
+module jad
+
+module lp_I_1
 	using dcd
 	using lp
 
@@ -36,10 +44,10 @@ module lp_jad_I_1
 		π::Array{T, 1}
 		cBT::Array{T, 2}
 		dJ::Array{T, 1}
-		αq::Array{T, 1} 	
+		αq::Array{T, 1}
 		z::T
 		zero::T
-		
+
 		# LPFE notation translation.
 		# αq - ΔxB, β - xB*, q - j, i - p, t - θ
 
@@ -50,19 +58,19 @@ module lp_jad_I_1
 		n = prob.n; m = prob.m;
 		dat.maxit = get(prob.params, "maxit", 0)
 		dat.prob = prob
-		dat.n = n 
+		dat.n = n
 		dat.m = m
 		dat.iB = Array(Int, m)
 		dat.iR = Array(Int, n)
-		dat.B = Array(T, (m,m)) 
-		#dat.Binv = Array(T, (m,m)) 
-		dat.β = Array(T, m) 
-		#dat.π = Array(T, m+n) 
-		#dat.cBT = Array(T, m) 
-		dat.dJ = Array(T, n) 
-		#dat.αq = Array(T, n) 
-		dat.zero = zero(T) 
-	end	
+		dat.B = Array(T, (m,m))
+		#dat.Binv = Array(T, (m,m))
+		dat.β = Array(T, m)
+		#dat.π = Array(T, m+n)
+		#dat.cBT = Array(T, m)
+		dat.dJ = Array(T, n)
+		#dat.αq = Array(T, n)
+		dat.zero = zero(T)
+	end
 
 	function sel_cols{T}(src::Matrix{T}, dst::Matrix{T}, cols::Vector{Int})
 		for i = 1:length(cols)
@@ -86,13 +94,13 @@ module lp_jad_I_1
 	function init_z{T}(dat::Dat{T}) dat.z = dot(reshape(dat.cBT, length(dat.cBT)), dat.β); end
 	function update_z{T}(dat::Dat{T}, q::Int, θ::T) dat.z = dat.z + θ * dat.dJ[q]; end
 	function comp_π{T}(dat::Dat{T}) dat.π = reshape(dat.cBT * dat.Binv, length(dat.cBT)); end
-	function calc_dj{T}(dat::Dat{T}, j::Int) i = dat.iR[j]; dj = dat.prob.c[i] - dot(dat.π, dat.prob.A[:,i]); return dj; end	
-	function comp_dJ{T}(dat::Dat{T}) for j = 1:dat.n dat.dJ[j] = calc_dj(dat, j) end; end	
+	function calc_dj{T}(dat::Dat{T}, j::Int) i = dat.iR[j]; dj = dat.prob.c[i] - dot(dat.π, dat.prob.A[:,i]); return dj; end
+	function comp_dJ{T}(dat::Dat{T}) for j = 1:dat.n dat.dJ[j] = calc_dj(dat, j) end; end
 	function comp_αq{T}(dat::Dat{T}, q::Int) aq = dat.iR[q]; dat.αq = dat.Binv * (dat.prob.A[:,aq]); end
 	function check_optimal_dJ{T}(dat::Dat{T}) return all( dj->(dj >= dat.zero), dat.dJ ); end
 	function check_feasible_β{T}(dat::Dat{T}) return all( β->(β >= dat.zero), dat.β ); end
-	
-	function pivot_iB_iR{T}(dat::Dat{T}, q::Int, p::Int) tmp = dat.iR[q]; dat.iR[q] = dat.iB[p]; dat.iB[p] = tmp; end 	
+
+	function pivot_iB_iR{T}(dat::Dat{T}, q::Int, p::Int) tmp = dat.iR[q]; dat.iR[q] = dat.iB[p]; dat.iB[p] = tmp; end
 
 	function price_full_dantzig{T}(dat::Dat{T})
 		# [CTSM].p187
@@ -102,12 +110,12 @@ module lp_jad_I_1
 			if (dj < dat.zero && dj <= min_dj)
 				if (dj == min_dj)
 					println("Warning: degeneracy.")
-				end	
+				end
 				min_i = i; min_dj = dj;
-			end	
+			end
 		end
 		return min_i
-	end	
+	end
 
 	function chuzro{T}(dat::Dat{T})
 		min_i = 0; min_ratio = dat.zero;
@@ -117,7 +125,7 @@ module lp_jad_I_1
 				if (min_i == 0 || ratio <= min_ratio)
 					if (ratio == min_ratio)
 						println("Warning: degeneracy.")
-					end	
+					end
 					min_i = i; min_ratio = ratio;
 				end
 			end
@@ -126,7 +134,7 @@ module lp_jad_I_1
 	end
 
 	function succeed_solution{T}(dat::Dat{T}, sol::lp.Solution)
-		sol.solved = true 
+		sol.solved = true
 		sol.status = :Optimal
 		sol.z = dat.z
 		sol.x = eval(parse( "zeros($(dat.prob.numtype), $(dat.n))" ))
@@ -147,51 +155,56 @@ module lp_jad_I_1
 		set_basis_logical(dat)
 		dcd.@set(dbg, "iB", dat.iB)
 		#Initializations
-		comp_cBT(dat); comp_B_R(dat); comp_Binv(dat); 
+		comp_cBT(dat); comp_B_R(dat); comp_Binv(dat);
 		init_β(dat); init_z(dat);
-		dcd.@set(dbg, "β0", dat.β) 
+		dcd.@set(dbg, "β0", dat.β)
 		#todo phaseI
 		if (check_feasible_β(dat) == false) println("Warning: phaseI."); fail_solution(sol, :Infeasible); return; end
 
 		while(dat.maxit == 0 || it < dat.maxit)
 			dcd.@it(dbg)
 			#Step 1
-			dcd.@set(dbg, "B", dat.B); dcd.@set(dbg, "Binv", dat.Binv); 
-			dcd.@set(dbg, "cBT", dat.cBT); 
-			comp_π(dat); dcd.@set(dbg, "π", dat.π); 
+			dcd.@set(dbg, "B", dat.B); dcd.@set(dbg, "Binv", dat.Binv);
+			dcd.@set(dbg, "cBT", dat.cBT);
+			comp_π(dat); dcd.@set(dbg, "π", dat.π);
 			#Step 2
-			comp_dJ(dat); dcd.@set(dbg, "dJ", dat.dJ); 
+			comp_dJ(dat); dcd.@set(dbg, "dJ", dat.dJ);
 			if check_optimal_dJ(dat) succeed_solution(dat, sol); return; end
-			q = price_full_dantzig(dat); dcd.@set(dbg, "q", q); 
+			q = price_full_dantzig(dat); dcd.@set(dbg, "q", q);
 			#Step 3
-			comp_αq(dat, q); dcd.@set(dbg, "αq", dat.αq); 
+			comp_αq(dat, q); dcd.@set(dbg, "αq", dat.αq);
 			#Step 4
-			p,θ = chuzro(dat); dcd.@set(dbg, "p", p); dcd.@set(dbg, "θ", θ); 
+			p,θ = chuzro(dat); dcd.@set(dbg, "p", p); dcd.@set(dbg, "θ", θ);
 			if (p == 0) fail_solution(sol, :Unbounded); return; end
-			dcd.@set(dbg, "pivot", (q, p)) 
+			dcd.@set(dbg, "pivot", (q, p))
 			#Step 5
 			pivot_iB_iR(dat, q, p)
 			#Updates
-			update_β(dat, p, θ); dcd.@set(dbg, "β", dat.β); 
-			update_z(dat, q, θ); dcd.@set(dbg, "z", dat.z); 
-			comp_cBT(dat); comp_B_R(dat); comp_Binv(dat); 
+			update_β(dat, p, θ); dcd.@set(dbg, "β", dat.β);
+			update_z(dat, q, θ); dcd.@set(dbg, "z", dat.z);
+			comp_cBT(dat); comp_B_R(dat); comp_Binv(dat);
 			it = it + 1
-		end	
+		end
 		fail_solution(sol, :Maxit)
 	end
 
-	function solve_problem(lp_prob) 
+	function solve_problem(lp_prob::lp.Canonical_problem)
 		expr_Dat = parse( "Dat{$(lp_prob.numtype)}()" )
 		dat = eval(expr_Dat)
 		fill_dat(lp_prob, dat)
 		sol = lp.create_solution(lp_prob.numtype, lp_prob.params)
-		solve_dat(dat, sol) 
+		solve_dat(dat, sol)
 		return sol
 	end
 end
 
+module lu_I
+	#function factorize{}(B::Array{T, 2})
+	#end
+end
 
-module lp_jad_I_2
+#=
+module lp_I_2
 	using dcd
 	using lp
 
@@ -211,10 +224,10 @@ module lp_jad_I_2
 		π::Array{T, 1}
 		cBT::Array{T, 2}
 		dJ::Array{T, 1}
-		αq::Array{T, 1} 	
+		αq::Array{T, 1}
 		z::T
 		zero::T
-		
+
 		# LPFE notation translation.
 		# αq - ΔxB, β - xB*, q - j, i - p, t - θ
 
@@ -225,19 +238,19 @@ module lp_jad_I_2
 		n = prob.n; m = prob.m;
 		dat.maxit = get(prob.params, "maxit", 0)
 		dat.prob = prob
-		dat.n = n 
+		dat.n = n
 		dat.m = m
 		dat.iB = Array(Int, m)
 		dat.iR = Array(Int, n)
-		dat.B = Array(T, (m,m)) 
-		#dat.Binv = Array(T, (m,m)) 
-		dat.β = Array(T, m) 
-		#dat.π = Array(T, m+n) 
-		#dat.cBT = Array(T, m) 
-		dat.dJ = Array(T, n) 
-		#dat.αq = Array(T, n) 
-		dat.zero = zero(T) 
-	end	
+		dat.B = Array(T, (m,m))
+		#dat.Binv = Array(T, (m,m))
+		dat.β = Array(T, m)
+		#dat.π = Array(T, m+n)
+		#dat.cBT = Array(T, m)
+		dat.dJ = Array(T, n)
+		#dat.αq = Array(T, n)
+		dat.zero = zero(T)
+	end
 
 	function sel_cols{T}(src::Matrix{T}, dst::Matrix{T}, cols::Vector{Int})
 		for i = 1:length(cols)
@@ -261,13 +274,13 @@ module lp_jad_I_2
 	function init_z{T}(dat::Dat{T}) dat.z = dot(reshape(dat.cBT, length(dat.cBT)), dat.β); end
 	function update_z{T}(dat::Dat{T}, q::Int, θ::T) dat.z = dat.z + θ * dat.dJ[q]; end
 	function comp_π{T}(dat::Dat{T}) dat.π = reshape(dat.cBT * dat.Binv, length(dat.cBT)); end
-	function calc_dj{T}(dat::Dat{T}, j::Int) i = dat.iR[j]; dj = dat.prob.c[i] - dot(dat.π, dat.prob.A[:,i]); return dj; end	
-	function comp_dJ{T}(dat::Dat{T}) for j = 1:dat.n dat.dJ[j] = calc_dj(dat, j) end; end	
+	function calc_dj{T}(dat::Dat{T}, j::Int) i = dat.iR[j]; dj = dat.prob.c[i] - dot(dat.π, dat.prob.A[:,i]); return dj; end
+	function comp_dJ{T}(dat::Dat{T}) for j = 1:dat.n dat.dJ[j] = calc_dj(dat, j) end; end
 	function comp_αq{T}(dat::Dat{T}, q::Int) aq = dat.iR[q]; dat.αq = dat.Binv * (dat.prob.A[:,aq]); end
 	function check_optimal_dJ{T}(dat::Dat{T}) return all( dj->(dj >= dat.zero), dat.dJ ); end
 	function check_feasible_β{T}(dat::Dat{T}) return all( β->(β >= dat.zero), dat.β ); end
-	
-	function pivot_iB_iR{T}(dat::Dat{T}, q::Int, p::Int) tmp = dat.iR[q]; dat.iR[q] = dat.iB[p]; dat.iB[p] = tmp; end 	
+
+	function pivot_iB_iR{T}(dat::Dat{T}, q::Int, p::Int) tmp = dat.iR[q]; dat.iR[q] = dat.iB[p]; dat.iB[p] = tmp; end
 
 	function price_full_dantzig{T}(dat::Dat{T})
 		# [CTSM].p187
@@ -277,12 +290,12 @@ module lp_jad_I_2
 			if (dj < dat.zero && dj <= min_dj)
 				if (dj == min_dj)
 					println("Warning: degeneracy.")
-				end	
+				end
 				min_i = i; min_dj = dj;
-			end	
+			end
 		end
 		return min_i
-	end	
+	end
 
 	function chuzro{T}(dat::Dat{T})
 		min_i = 0; min_ratio = dat.zero;
@@ -292,7 +305,7 @@ module lp_jad_I_2
 				if (min_i == 0 || ratio <= min_ratio)
 					if (ratio == min_ratio)
 						println("Warning: degeneracy.")
-					end	
+					end
 					min_i = i; min_ratio = ratio;
 				end
 			end
@@ -301,7 +314,7 @@ module lp_jad_I_2
 	end
 
 	function succeed_solution{T}(dat::Dat{T}, sol::lp.Solution)
-		sol.solved = true 
+		sol.solved = true
 		sol.status = :Optimal
 		sol.z = dat.z
 		sol.x = eval(parse( "zeros($(dat.prob.numtype), $(dat.n))" ))
@@ -313,7 +326,7 @@ module lp_jad_I_2
 
 	function fail_solution(sol::lp.Solution, status::Symbol) sol.solved = false; sol.status = status; end
 
-	function solve_dat{T}(dat::Dat{T}, sol::lp.Solution)
+	function solve_canonical_dat{T}(dat::Dat{T}, sol::lp.Solution)
 		# [CTSM].p33,p30, but with naive basis reinversion instead of update.
 		dbg = sol.dcd
 		dcd.@it(dbg)
@@ -322,47 +335,48 @@ module lp_jad_I_2
 		set_basis_logical(dat)
 		dcd.@set(dbg, "iB", dat.iB)
 		#Initializations
-		comp_cBT(dat); comp_B_R(dat); comp_Binv(dat); 
+		comp_cBT(dat); comp_B_R(dat); comp_Binv(dat);
 		init_β(dat); init_z(dat);
-		dcd.@set(dbg, "β0", dat.β) 
+		dcd.@set(dbg, "β0", dat.β)
 		#todo phaseI
 		if (check_feasible_β(dat) == false) println("Warning: phaseI."); fail_solution(sol, :Infeasible); return; end
 
 		while(dat.maxit == 0 || it < dat.maxit)
 			dcd.@it(dbg)
 			#Step 1
-			dcd.@set(dbg, "B", dat.B); dcd.@set(dbg, "Binv", dat.Binv); 
-			dcd.@set(dbg, "cBT", dat.cBT); 
-			comp_π(dat); dcd.@set(dbg, "π", dat.π); 
+			dcd.@set(dbg, "B", dat.B); dcd.@set(dbg, "Binv", dat.Binv);
+			dcd.@set(dbg, "cBT", dat.cBT);
+			comp_π(dat); dcd.@set(dbg, "π", dat.π);
 			#Step 2
-			comp_dJ(dat); dcd.@set(dbg, "dJ", dat.dJ); 
+			comp_dJ(dat); dcd.@set(dbg, "dJ", dat.dJ);
 			if check_optimal_dJ(dat) succeed_solution(dat, sol); return; end
-			q = price_full_dantzig(dat); dcd.@set(dbg, "q", q); 
+			q = price_full_dantzig(dat); dcd.@set(dbg, "q", q);
 			#Step 3
-			comp_αq(dat, q); dcd.@set(dbg, "αq", dat.αq); 
+			comp_αq(dat, q); dcd.@set(dbg, "αq", dat.αq);
 			#Step 4
-			p,θ = chuzro(dat); dcd.@set(dbg, "p", p); dcd.@set(dbg, "θ", θ); 
+			p,θ = chuzro(dat); dcd.@set(dbg, "p", p); dcd.@set(dbg, "θ", θ);
 			if (p == 0) fail_solution(sol, :Unbounded); return; end
-			dcd.@set(dbg, "pivot", (q, p)) 
+			dcd.@set(dbg, "pivot", (q, p))
 			#Step 5
 			pivot_iB_iR(dat, q, p)
 			#Updates
-			update_β(dat, p, θ); dcd.@set(dbg, "β", dat.β); 
-			update_z(dat, q, θ); dcd.@set(dbg, "z", dat.z); 
-			comp_cBT(dat); comp_B_R(dat); comp_Binv(dat); 
+			update_β(dat, p, θ); dcd.@set(dbg, "β", dat.β);
+			update_z(dat, q, θ); dcd.@set(dbg, "z", dat.z);
+			comp_cBT(dat); comp_B_R(dat); comp_Binv(dat);
 			it = it + 1
-		end	
+		end
 		fail_solution(sol, :Maxit)
 	end
 
-	function solve_problem(lp_prob) 
+	function solve_canonical_problem(lp_prob)
 		expr_Dat = parse( "Dat{$(lp_prob.numtype)}()" )
 		dat = eval(expr_Dat)
 		fill_dat(lp_prob, dat)
 		sol = lp.create_solution(lp_prob.numtype, lp_prob.params)
-		solve_dat(dat, sol) 
+		solve_canonical_dat(dat, sol)
 		return sol
 	end
 end
+=#
 
-
+end #module jad

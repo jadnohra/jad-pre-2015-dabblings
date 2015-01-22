@@ -6,13 +6,13 @@ module arg
 	export arg_has
 	export arg_get
 
-	type ArgPart 
+	type ArgPart
 		start::Int
-		sz::Int 
+		sz::Int
 		pid::Int
 
 		ArgPart() = ( x = new(); x.start = 1; x.sz = 0; x.pid = -1; return x; )
-	end	
+	end
 
 	type ArgKey
 		keys::Vector{String}
@@ -33,7 +33,7 @@ module arg
 	function add_key(ak::ArgKey, prev_ak::ArgKey, k::String)
 		for i=1:length(prev_ak.keys)
 			add_key(ak, prev_ak.keys[i]. prev_ak.iter[i], prev_ak.match[i])
-		end	
+		end
 		add_key(ak, k)
 	end
 
@@ -66,7 +66,7 @@ module arg
 		const char0 = char(0)
 		str = args.str
 		while(isempty(str) == false && str[str_i] != char0)
-			if (str[str_i] == '/') 
+			if (str[str_i] == '/')
 				str[str_i] = char0
 				id = length(args.nodes)
 				key_start = str_i+1; i = key_start;
@@ -89,17 +89,17 @@ module arg
 						str_i = cont_str_i[0]
 					end
 				end
-				
+
 				if (success)
 					push!(args.nodes, node)
-				end	
+				end
 
 				if (str[str_i] == '}')
 					str[str_i] = char0
-					if (length(next_str_i)) next_str_i[1] = str_i + 1; end
+					if (length(next_str_i) > 0 ) next_str_i[1] = str_i + 1; end
 					return true
 				end
-			elseif (length(next_str_i) && str[str_i] == '}')
+			elseif (length(next_str_i) > 0 && str[str_i] == '}')
 				str[str_i] = char0
 				next_str_i[1] = str_i + 1
 				return true
@@ -132,13 +132,13 @@ module arg
 		ret = _get_empty_sub()
 		if (ni >= 1 && ni <= length(args.nodes))
 			ret.start = args.nodes[ni].val_start; ret.sz = args.nodes[ni].val_sz; ret.pid = args.nodes[ni].id;
-		end	
-		return ret 
+		end
+		return ret
 	end
 
 	function _find_recurse(args::Args, sub::ArgPart, key::ArgKey, ki::Int)
 		if (ki > key_length(key)) return -1; end;
-		if (key.match[ki] != -1) 
+		if (key.match[ki] != -1)
 			found_ni = key.match[ki]
 			if (ki == key_length(key)) return found_ni; end;
 			return _find_recurse(args, _to_part(args, found_ni), key, ki+1)
@@ -167,15 +167,15 @@ module arg
 
 	function _find(args::Args, key::ArgKey)
 		return _find_recurse(args, _get_root_sub(args), key, 1)
-	end	
+	end
 
 	function _iter_key(args::Args, index::Int, key::ArgKey)
 		found_ni = _find(args, key)
 		if (found_ni < 0 || args.nodes[found_ni].val_is_node == false || args.nodes[found_ni].val_sz <= index) return -1; end;
 		return args.nodes[found_ni].val_start + index
-	end	
-	
-	function arg_create(str::String) 
+	end
+
+	function arg_create(str::String)
 		args = Args()
 		args.str_orig = str
 		args.str = Array(Char, length(str)+1); args.str[end] = char(0);
@@ -184,46 +184,46 @@ module arg
 		return args
 	end
 
-	function root(args::Args) 
+	function root(args::Args)
 		return _get_root_sub(args)
-	end	
+	end
 
 	function to_key(k::Any)
 		return typeof(k) == ArgKey ? k : arg_key(k)
 	end
 
-	function get_part(args::Args, key) 
+	function get_part(args::Args, key)
 		key = to_key(key)
-		ni = _find(args, key); val = _to_part(args, ni); 
+		ni = _find(args, key); val = _to_part(args, ni);
 		return ((ni != -1 && !args.nodes[ni].val_is_node), val)
 	end
 
-	function arg_has(args::Args, key) 
+	function arg_has(args::Args, key)
 		key = to_key(key)
 		return get_part(args, key)[1]
-	end	
+	end
 
-	function has_sub(args::Args, key) 
+	function has_sub(args::Args, key)
 		key = to_key(key)
-		ni = _find(args, key); 
+		ni = _find(args, key);
 		return (ni != -1 && args.nodes[ni].val_is_node)
-	end	
+	end
 
-	function iter(args::Args, key) 
+	function iter(args::Args, key)
 		key = to_key(key)
 		if (key.match[key_length(key)] == -1) return has_sub(key); end;
 		if (key_length(key)) key.iter[end] = key.iter[end]+1; key.match[end] = -1; end;
 		return has_sub(args, key)
 	end
 
-	function parse_s(args::Args, key, dflt::String) 
+	function parse_s(args::Args, key, dflt::String)
 		key = to_key(key)
 		found, val = get_part(args, key)
 		if (found == false) return dflt; end;
 		return join(args.str[val.start:val.start+val.sz-1])
 	end
 
-	function arg_get(args::Args, key, dflt::Any) 
+	function arg_get(args::Args, key, dflt::Any)
 		key = to_key(key)
 		typ = string(typeof(dflt))
 		str = parse_s(args, key, "")
@@ -237,7 +237,7 @@ module arg
 		return ret
 	end
 
-	function arg_get(args::Args, keys::Dict{Any, Any}) 
+	function arg_get(args::Args, keys::Dict{Any, Any})
 		for k in keys
 			keys[k[1]] = arg_get(args, k[1], k[2])
 		end
