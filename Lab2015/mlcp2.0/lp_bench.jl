@@ -20,44 +20,64 @@ module lp_bench
 
 	prob_db = Any[]
 
-	function problem_t1(numtype, params::lp.Params)
-		return lp.create_min_canonical_problem(numtype, [1, 1], [2 3;], [10], {"maxit" => 5})
+	function problem_t1(params::lp.Params)
+		return lp.create_min_canonical_problem(merge(params, {"maxit" => 5}),
+			[1, 1], [2 3;], [10]
+			)
 	end; push!(prob_db, DbProblem(problem_t1, "t1", :Optimal, :Unset, [0, 0]))
 
-	function problem_LPFE_p88(numtype)
-		return lp.create_max_canonical_problem(numtype, [4,3], [1 -1; 2 -1; 0 1], [1, 3, 5], {"maxit" => 5})
+	function problem_LPFE_p88(params::lp.Params)
+		return lp.create_max_canonical_problem(merge(params, {"maxit" => 5}),
+			[4,3], [1 -1; 2 -1; 0 1], [1, 3, 5]
+			)
 	end; push!(prob_db, DbProblem(problem_LPFE_p88, "LPFE_p88", :Optimal, 31, [4, 5]))
 
-	function problem_LPFE_p11(numtype)
-		return lp.create_max_canonical_problem(numtype, [5,4,3], [2 3 1; 4 1 2; 3 4 2], [5, 11, 8], {"maxit" => 5})
+	function problem_LPFE_p11(params::lp.Params)
+		return lp.create_max_canonical_problem(merge(params, {"maxit" => 5}),
+			[5,4,3], [2 3 1; 4 1 2; 3 4 2], [5, 11, 8]
+			)
 	end; push!(prob_db, DbProblem(problem_LPFE_p11, "LPFE_p11", :Optimal, 13, [2, 0, 1]))
 
-	function problem_LPFE_p27(numtype)
-		return lp.create_max_canonical_problem(numtype, [10,-57,-9,-24], [0.5 -5.5 -2.5 9; 0.5 -1.5 -0.5 1; 1 0 0 0], [0, 0, 1], {"maxit" => 5})
+	function problem_LPFE_p27(params::lp.Params)
+		return lp.create_max_canonical_problem(merge(params, {"maxit" => 5}),
+			[10,-57,-9,-24], [0.5 -5.5 -2.5 9; 0.5 -1.5 -0.5 1; 1 0 0 0], [0, 0, 1]
+			)
 	end; push!(prob_db, DbProblem(problem_LPFE_p27, "LPFE_p27 degen", :Optimal, 1, [1, 0, 1, 0]))
 
-	function problem_LPFE_m27(numtype)
-		return lp.create_max_canonical_problem(numtype, [10,-57,-9,-24], [0.5 -5.5 -2.5 9; 0.5 -1.5 -0.5 1; 1 0 0 0], [1.e-5, 0, 1], {"maxit" => 5})
+	function problem_LPFE_m27(params::lp.Params)
+		return lp.create_max_canonical_problem(merge(params, {"maxit" => 5}),
+			[10,-57,-9,-24], [0.5 -5.5 -2.5 9; 0.5 -1.5 -0.5 1; 1 0 0 0], [1.e-5, 0, 1]
+			)
 	end; push!(prob_db, DbProblem(problem_LPFE_m27, "LPFE_m27 pert", :Optimal, 1, [1, 0, 1, 0]))
 
-	function problem_LPFE_p18(numtype)
-		return lp.create_max_canonical_problem(numtype, [-2 -1], [-1 1; -1 -2; 0 1], [-1, -2, 1], {"maxit" => 5})
+	function problem_LPFE_p18(params::lp.Params)
+		return lp.create_max_canonical_problem(merge(params, {"maxit" => 5}),
+			[-2 -1], [-1 1; -1 -2; 0 1], [-1, -2, 1]
+			)
 	end; push!(prob_db, DbProblem(problem_LPFE_p18, "LPFE_p18 phaseI", :Optimal, -3, [4/3, 1/3]))
 
-	function problem_LPFE_p23_9(numtype)
-		return lp.create_min_canonical_problem(numtype, [2 3 4], [0 2 3; 1 1 2; 1 2 3], [5, 4, 7], {"maxit" => 10})
+	function problem_LPFE_p23_9(params::lp.Params)
+		return lp.create_min_canonical_problem(merge(params, {"maxit" => 10}),
+			[2 3 4], [0 2 3; 1 1 2; 1 2 3], [5, 4, 7]
+			)
 	end; push!(prob_db, DbProblem(problem_LPFE_p23_9, "problem_LPFE_p23_9", :Optimal, 0, [0, 0, 0]))
 
-	function problem_LPFE_p23_8(numtype)
-		return lp.create_max_canonical_problem(numtype, [3 2], [1 -2; 1 -1; 2 -1; 1 0; 2 1; 1 1; 1 2; 0 1], [1, 2, 6, 5, 16, 12, 21, 10], {"maxit" => 10})
+	function problem_LPFE_p23_8(params::lp.Params)
+		return lp.create_max_canonical_problem(merge(params, {"maxit" => 10}),
+			[3 2], [1 -2; 1 -1; 2 -1; 1 0; 2 1; 1 1; 1 2; 0 1], [1, 2, 6, 5, 16, 12, 21, 10]
+			)
 	end; push!(prob_db, DbProblem(problem_LPFE_p23_8, "problem_LPFE_p23_8", :Optimal, 28, [4, 8]))
 
-	function problem_LPFE_p22_4(numtype)
-		return lp.create_max_canonical_problem(numtype, [-1 -3 -1], [2 -5 1; 2 -1 2], [-5, 4], {"maxit" => 100})
+	function problem_LPFE_p22_4(params::lp.Params)
+		return lp.create_max_canonical_problem(merge(params, {"maxit" => 10}),
+			[-1 -3 -1], [2 -5 1; 2 -1 2], [-5, 4]
+			)
 	end; push!(prob_db, DbProblem(problem_LPFE_p22_4, "problem_LPFE_p22_4", :Optimal, -3, [0, 1, 0]))
 
-	function random_problem(numtype)
-		return lp.create_max_canonical_problem(numtype, [-1 -3 -1], [2 -5 1; 2 -1 2], [-5, 4], {"maxit" => 100})
+	function random_problem(params::lp.Params)
+		return lp.create_max_canonical_problem(merge(params, {"maxit" => 100}),
+			[-1 -3 -1], [2 -5 1; 2 -1 2], [-5, 4]
+			)
 	end; push!(prob_db, DbProblem(problem_LPFE_p22_4, "random", :Optimal, :Unset, [0, 1, 0]))
 
 	#p184
@@ -76,7 +96,7 @@ module lp_bench
 		end
 
 		if (dbprob.check_z != :Unset)
-			check_z = lp.conv_scalar(params["type"], dbprob.check_z)
+			check_z = lp.conv(params["type"], dbprob.check_z)
 			if (check_z != sol.z)
 				print_with_color(:red, "$(prefix)z: '$(sol.z)' should be '$(check_z)' \n")
 			else
@@ -89,7 +109,7 @@ module lp_bench
 		end
 
 		if (dbprob.check_x != :Unset)
-			check_x = lp.conv_vec(params["type"], dbprob.check_x)
+			check_x = lp.conv(params["type"], dbprob.check_x)
 			if (sol.solved == false || check_x != sol.x)
 				sol_x = sol.solved ? sol.x : ()
 				print_with_color(:red, "$(prefix)x: '$(sol_x)' should be '$(check_x)' \n")
@@ -111,7 +131,8 @@ module lp_bench
 	end
 
 	function solve(arg_str::String = "/prob:p88", code_module = lp_I_1)
-		params = { "prob" => "p88", "type" => "Float32", "dcd" => false }
+		def_params = { "prob" => "p88", "type" => "Float32", "dcd" => false }
+		params = deepcopy(def_params)
 		arg_get(arg_create(arg_str), params)
 
 		prob_key = params["prob"]
@@ -132,8 +153,7 @@ module lp_bench
 		if (found_prob)
 			println()
 			@printf "Problem: '%s'\n" dbprob.descr
-			lp_prob = dbprob.creator(params["type"])
-			lp_prob.params["dcd"] = params["dcd"]
+			lp_prob = dbprob.creator(params)
 
 			println("\n------")
 			can_sol = code_module.solve_problem(lp_prob)
