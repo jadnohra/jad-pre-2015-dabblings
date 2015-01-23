@@ -110,6 +110,10 @@ module arg
 		return true
 	end
 
+	function _key_str(str, node::Node)
+		return join(str[node.key_start:node.key_start+node.key_sz-1])
+	end
+
 	function _matches(str, node::Node, key, depth::Int)
 		if (node.depth == depth && node.key_first == key[1] && node.key_sz == length(key))
 			for j = 1:node.key_sz
@@ -240,6 +244,16 @@ module arg
 	function arg_get(args::Args, keys::Dict{Any, Any})
 		for k in keys
 			keys[k[1]] = arg_get(args, k[1], k[2])
+		end
+
+		for i = 1:length(args.nodes)
+			node = args.nodes[i]
+			if (node.val_is_node == false)
+				key = _key_str(args.str, node)
+				if (haskey(keys, key) == false)
+					keys[key] = parse_s(args, key, "")
+				end
+			end
 		end
 	end
 

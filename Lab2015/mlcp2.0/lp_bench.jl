@@ -19,6 +19,7 @@ module lp_bench
 	end
 
 	prob_db = Any[]
+	prob_last = [ lp.Canonical_problem{Float32}() ]
 
 	function problem_t1(params::lp.Params)
 		return lp.create_min_canonical_problem(merge(params, {"maxit" => 5}),
@@ -75,12 +76,22 @@ module lp_bench
 	end; push!(prob_db, DbProblem(problem_LPFE_p22_4, "problem_LPFE_p22_4", :Optimal, -3, [0, 1, 0]))
 
 	function random_problem(params::lp.Params)
-		return lp.create_max_canonical_problem(merge(params, {"maxit" => 100}),
-			[-1,-3,-1], [2 -5 1; 2 -1 2], [-5, 4]
+		n = int(get(params, "n", 10))
+		m = int(get(params, "m", n))
+		maxit = int(get(params, "maxit", 2*(m+n)))
+		c = rand(n)
+		A = rand((m, n))
+		b = rand(m)
+		return lp.create_max_canonical_problem(merge(params, {"maxit" => maxit}),
+			c, A, b
 			)
-	end; push!(prob_db, DbProblem(problem_LPFE_p22_4, "random", :Optimal, :Unset, [0, 1, 0]))
+	end; push!(prob_db, DbProblem(random_problem, "random", :Unset, :Unset, :Unset))
 
-	#p184
+	function last_problem(params::lp.Params)
+		return lp_bench.prob_last[1]
+	end; push!(prob_db, DbProblem(last_problem, "last", :Unset, :Unset, :Unset))
+
+	#p184 (general)
 
 	function check_sol(dbprob, lp_prob, sol, params)
 
@@ -131,7 +142,7 @@ module lp_bench
 	end
 
 	function solve(arg_str::String = "/prob:p88", code_module = lp_I_1)
-		def_params = { "prob" => "p88", "type" => "Float32", "dcd" => false }
+		def_params = { "prob"=>"p88", "type"=>"Float32", "dcd"=>false }
 		params = deepcopy(def_params)
 		arg_get(arg_create(arg_str), params)
 
@@ -154,6 +165,7 @@ module lp_bench
 			println()
 			@printf "Problem: '%s'\n" dbprob.descr
 			lp_prob = dbprob.creator(params)
+			lp_bench.prob_last[1] = deepcopy(lp_prob)
 
 			println("\n------")
 			can_sol = code_module.solve_problem(lp_prob)
