@@ -31,5 +31,4 @@ module lp_glpk
 		end
 		return sol
 	end
-
 end
