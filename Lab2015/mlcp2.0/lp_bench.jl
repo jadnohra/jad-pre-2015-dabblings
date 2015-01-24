@@ -77,14 +77,24 @@ module lp_bench
 
 	function random_problem(params::lp.Params)
 		seed = int(get(params, "seed", int(time_ns()) % 32768 ))
-		srand(seed)
+		dense = int(get(params, "dense", 100 ))
 		println("/seed:", seed)
+
 		n = int(get(params, "n", 10))
 		m = int(get(params, "m", n))
 		maxit = int(get(params, "maxit", 2*(m+n)))
-		c = rand(n)
-		A = rand((m, n))
-		b = rand(m)
+
+		rng = MersenneTwister(seed)
+
+		c = rand(rng, (n))
+		b = rand(rng, (m))
+		if (dense == 100)
+			A = rand(rng, (m, n))
+		else
+			rng_randn = dims -> randn(rng, dims)
+			A = full(sprand(m, n, dense/100.0, rng_randn))
+		end
+
 		return lp.create_max_canonical_problem(merge(params, {"maxit" => maxit}),
 			c, A, b
 			)
@@ -148,6 +158,10 @@ module lp_bench
 		println();
 	end
 
+	function format_percent(v)
+		return strip(strip(@sprintf("%0.2f", 100.0 * v), '0'), '.') * "%"
+	end
+
 	function solve(arg_str::String = "/prob:p88", code_module = lp_I_1)
 		def_params = { "prob"=>"p88", "type"=>"Float32", "dcd"=>false }
 		params = deepcopy(def_params)
@@ -176,7 +190,10 @@ module lp_bench
 			if (length(lp_bench.prob_last) > 0) pop!(lp_bench.prob_last) end
 			push!(lp_bench.prob_last, deepcopy(lp_prob))
 			#lp_bench.prob_last[1] =
-			println("+++++++", " n:", lp_prob.n, ", m:", lp_prob.m, ", type:", lp_prob.numtype, " +++++++")
+			println("+++++++",
+				" n:", lp_prob.n, ", m:", lp_prob.m,
+				", density:", format_percent(lp.comp_density(lp_prob)),
+				", type:", lp_prob.numtype, " +++++++")
 
 			@time can_sol = code_module.solve_problem(lp_prob)
 			println("************\n")

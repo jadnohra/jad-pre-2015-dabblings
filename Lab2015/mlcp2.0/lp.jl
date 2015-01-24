@@ -94,6 +94,15 @@ module lp
 		return ret
 	end
 
+	function comp_density{T}(prob::Canonical_problem{T})
+		A = prob.A[1:prob.m,1:prob.n]
+		nz = 0
+		for a in A
+			nz = nz + ((a == zero(T)) ? 1 : 0)
+		end
+		return one(T) - (convert(T, nz) / convert(T, prob.m*prob.n))
+	end
+
 	function create_solution(numtype::String, params::Params)
 		expr_create = parse( "Solution{$numtype}($params)" )
 		ret = eval(expr_create)
@@ -127,14 +136,16 @@ module lp
 		gen_sol.z = transl_single(transl.z_transl, can_sol.z)
 		gen_sol.dcd = can_sol.dcd
 
-		if (length(transl.x_transl) > 0)
-			x_n = length(transl.x_transl)
-			gen_sol.x = Array(T, x_n)
-			for i = 1:x_n
-				gen_sol.x[i] = transl_any(prob, transl.x_transl[i], can_sol.x)
+		if (can_sol.solved)
+			if (length(transl.x_transl) > 0)
+				x_n = length(transl.x_transl)
+				gen_sol.x = Array(T, x_n)
+				for i = 1:x_n
+					gen_sol.x[i] = transl_any(prob, transl.x_transl[i], can_sol.x)
+				end
+			else
+				gen_sol.x = can_sol.x
 			end
-		else
-			gen_sol.x = can_sol.x
 		end
 
 		return gen_sol
