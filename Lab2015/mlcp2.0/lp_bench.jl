@@ -141,6 +141,7 @@ module lp_bench
 	function check_sol(dbprob, lp_prob, sol, params)
 
 		prefix = " "
+
 		if (dbprob.check_status != :Unset)
 			if (dbprob.check_status != sol.status)
 				print_with_color(:red, "$(prefix)status: '$(sol.status)' should be '$(dbprob.check_status)' \n")
@@ -181,6 +182,10 @@ module lp_bench
 					lp.dcd_nbasis(sol)
 				end
 			end
+		end
+
+		if (sol.iter != 0)
+			println("$(prefix)it: $(sol.iter)")
 		end
 
 		println();

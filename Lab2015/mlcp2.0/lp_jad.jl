@@ -133,7 +133,8 @@ module lp_I_1
 		return (min_i, min_ratio)
 	end
 
-	function succeed_solution{T}(dat::Dat{T}, sol::lp.Solution)
+	function succeed_solution{T}(it::Int, dat::Dat{T}, sol::lp.Solution)
+		sol.iter = it
 		sol.solved = true
 		sol.status = :Optimal
 		sol.z = dat.z
@@ -144,7 +145,7 @@ module lp_I_1
 		end
 	end
 
-	function fail_solution(sol::lp.Solution, status::Symbol) sol.solved = false; sol.status = status; end
+	function fail_solution(it::Int, sol::lp.Solution, status::Symbol) sol.iter = it, sol.solved = false; sol.status = status; end
 
 	function solve_dat{T}(dat::Dat{T}, sol::lp.Solution)
 		# [CTSM].p33,p30, but with naive basis reinversion instead of update.
@@ -159,7 +160,7 @@ module lp_I_1
 		init_β(dat); init_z(dat);
 		dcd.@set(dbg, "β0", dat.β)
 		#todo phaseI
-		if (check_feasible_β(dat) == false) println("Warning: phaseI."); fail_solution(sol, :Infeasible); return; end
+		if (check_feasible_β(dat) == false) println("Warning: phaseI."); fail_solution(it, sol, :Infeasible); return; end
 
 		while(dat.maxit == 0 || it < dat.maxit)
 			dcd.@it(dbg)
@@ -169,13 +170,13 @@ module lp_I_1
 			comp_π(dat); dcd.@set(dbg, "π", dat.π);
 			#Step 2
 			comp_dJ(dat); dcd.@set(dbg, "dJ", dat.dJ);
-			if check_optimal_dJ(dat) succeed_solution(dat, sol); return; end
+			if check_optimal_dJ(dat) succeed_solution(it, dat, sol); return; end
 			q = price_full_dantzig(dat); dcd.@set(dbg, "q", q);
 			#Step 3
 			comp_αq(dat, q); dcd.@set(dbg, "αq", dat.αq);
 			#Step 4
 			p,θ = chuzro(dat); dcd.@set(dbg, "p", p); dcd.@set(dbg, "θ", θ);
-			if (p == 0) fail_solution(sol, :Unbounded); return; end
+			if (p == 0) fail_solution(it, sol, :Unbounded); return; end
 			dcd.@set(dbg, "pivot", (q, p))
 			#Step 5
 			pivot_iB_iR(dat, q, p)
@@ -185,7 +186,7 @@ module lp_I_1
 			comp_cBT(dat); comp_B_R(dat); comp_Binv(dat);
 			it = it + 1
 		end
-		fail_solution(sol, :Maxit)
+		fail_solution(it, sol, :Maxit)
 	end
 
 	function solve_problem(lp_prob::lp.Canonical_problem)

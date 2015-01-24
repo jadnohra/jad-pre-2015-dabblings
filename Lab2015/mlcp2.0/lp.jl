@@ -60,6 +60,7 @@ module lp
 		status::Symbol
 		z::T
 		x::Vector{T}
+		iter::Int
 
 		dcd::dcd.Session
 
@@ -68,6 +69,7 @@ module lp
 			x.solved = false
 			x.status = :Created
 			x.dcd = dcd.Session(get(params, "dcd", false))
+			x.iter = 0
 			return x
 		end
 	end
@@ -135,6 +137,7 @@ module lp
 		gen_sol.status = can_sol.status
 		gen_sol.z = transl_single(transl.z_transl, can_sol.z)
 		gen_sol.dcd = can_sol.dcd
+		gen_sol.iter = can_sol.iter
 
 		if (can_sol.solved)
 			if (length(transl.x_transl) > 0)
