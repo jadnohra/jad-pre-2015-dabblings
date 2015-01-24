@@ -75,25 +75,36 @@ module lp_bench
 			)
 	end; push!(prob_db, DbProblem(problem_LPFE_p22_4, "problem_LPFE_p22_4", :Optimal, -3, [0, 1, 0]))
 
-	function random_problem_impl(seed, dense, n, m, maxit, params::lp.Params)
+	function random_problem_impl(seed, scale, dense, n, m, maxit, show, params::lp.Params)
 		rng = MersenneTwister(seed)
 
-		c = rand(rng, (n))
-		b = rand(rng, (m))
-		A = rand(rng, (m, n))
+		c = scale * rand(rng, (n))
+		b = scale * rand(rng, (m))
+		A = scale * rand(rng, (m, n))
 		if dense != 100
 			#zeros = rand(rng, 1:(m*n), zero_n) # Needs next version of Julia
 			zero_n = int(round((m*n) * (1.0 - dense / 100.0)))
 			if (zero_n > 0)
 				#sprand is useless, the output will not be the same even with fixed seed.
-
-				xs = randn(rng, zero_n)
-				for i=1:length(xs) while abs(xs[i] >= 1.0) xs[i] = rand(rng) end; end
-				zeros = [ clamp(int((m*n)* 0.5*(1.0+x)), 1, (m*n) ) for x in xs]
-				for i in zeros
+				toindex = x -> clamp(int((m*n)* 0.5*(1.0+x)), 1, m*n)
+				xis = [ toindex(x) for x in randn(rng, zero_n) ]
+				for i=2:length(xis)
+					it = 0
+					while (it < 5 && xis[i] in xis[1:i-1]) 
+						xis[i] = toindex(rand(rng))
+						it = it + 1
+					end
+				end
+				for i in xis
 					A[i] = 0
 				end
 			end
+		end
+
+		if (show)
+			println("c", c)
+			println("b", b)
+			println("A", A)
 		end
 
 		return lp.create_max_canonical_problem(merge(params, {"maxit" => maxit}),
@@ -103,16 +114,18 @@ module lp_bench
 
 	function random_problem(params::lp.Params)
 		seed = int(get(params, "seed", int(time_ns()) % 32768 ))
+		scale = int(float(get(params, "scale", 1 )))
 		dense = int(get(params, "dense", 100 ))
 		n = int(get(params, "n", 10))
 		m = int(get(params, "m", n))
 		maxit = int(get(params, "maxit", 2*(m+n)))
+		show = get(params, "show", false)
 		println("/seed:", seed)
-		return random_problem_impl(seed, dense, n, m, maxit, params)
+		return random_problem_impl(seed, scale, dense, n, m, maxit, show, params)
 	end; push!(prob_db, DbProblem(random_problem, "random", :Unset, :Unset, :Unset))
 
 	function seed_problem_1(params::lp.Params)
-		return random_problem_impl(15578, 60, 20, 20, 2*(20+20), params)
+		return random_problem_impl(15578, 1, 60, 20, 20, 2*(20+20), false, params)
 	end; push!(prob_db, DbProblem(seed_problem_1, "seed_1", :Unset, :Unset, :Unset))
 
 	function last_problem(params::lp.Params)

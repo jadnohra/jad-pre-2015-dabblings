@@ -251,7 +251,9 @@ module arg
 			if (node.val_is_node == false)
 				key = _key_str(args.str, node)
 				if (haskey(keys, key) == false)
-					keys[key] = parse_s(args, key, "")
+					val = parse_s(args, key, "")
+					val = (length(val) == 0) ? true : val
+					keys[key] = val
 				end
 			end
 		end
