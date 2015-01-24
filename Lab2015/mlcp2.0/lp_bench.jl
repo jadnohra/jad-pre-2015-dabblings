@@ -19,7 +19,7 @@ module lp_bench
 	end
 
 	prob_db = Any[]
-	prob_last = [ lp.Canonical_problem{Float32}() ]
+	prob_last = Array(Any, 0)
 
 	function problem_t1(params::lp.Params)
 		return lp.create_min_canonical_problem(merge(params, {"maxit" => 5}),
@@ -76,6 +76,9 @@ module lp_bench
 	end; push!(prob_db, DbProblem(problem_LPFE_p22_4, "problem_LPFE_p22_4", :Optimal, -3, [0, 1, 0]))
 
 	function random_problem(params::lp.Params)
+		seed = int(get(params, "seed", int(time_ns()) % 32768 ))
+		srand(seed)
+		println("/seed:", seed)
 		n = int(get(params, "n", 10))
 		m = int(get(params, "m", n))
 		maxit = int(get(params, "maxit", 2*(m+n)))
@@ -88,7 +91,11 @@ module lp_bench
 	end; push!(prob_db, DbProblem(random_problem, "random", :Unset, :Unset, :Unset))
 
 	function last_problem(params::lp.Params)
-		return lp_bench.prob_last[1]
+		if (length(lp_bench.prob_last) > 0)
+			return lp_bench.prob_last[end]
+		else
+			return problem_LPFE_p88(params)
+		end
 	end; push!(prob_db, DbProblem(last_problem, "last", :Unset, :Unset, :Unset))
 
 	#p184 (general)
@@ -148,7 +155,7 @@ module lp_bench
 
 		prob_key = params["prob"]
 		if (length(prob_key) == 0 || prob_key == "all")
-			@time for i = 1:length(prob_db) solve(i, arg_str); end;
+			for i = 1:length(prob_db) solve(i, arg_str); end;
 			return
 		end
 
@@ -163,13 +170,16 @@ module lp_bench
 
 		if (found_prob)
 			println()
-			@printf "Problem: '%s'\n" dbprob.descr
+			print("Problem: '", dbprob.descr, "'")
+			println("\n------------")
 			lp_prob = dbprob.creator(params)
-			lp_bench.prob_last[1] = deepcopy(lp_prob)
+			if (length(lp_bench.prob_last) > 0) pop!(lp_bench.prob_last) end
+			push!(lp_bench.prob_last, deepcopy(lp_prob))
+			#lp_bench.prob_last[1] =
+			println("+++++++", " n:", lp_prob.n, ", m:", lp_prob.m, ", type:", lp_prob.numtype, " +++++++")
 
-			println("\n------")
-			can_sol = code_module.solve_problem(lp_prob)
-			println("------\n")
+			@time can_sol = code_module.solve_problem(lp_prob)
+			println("************\n")
 
 			sol = lp.translate_solution(lp_prob, can_sol)
 			check_sol(dbprob, lp_prob, sol, params)
