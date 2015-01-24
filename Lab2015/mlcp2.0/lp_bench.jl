@@ -153,7 +153,7 @@ module lp_bench
 		end
 
 		if (dbprob.check_z != :Unset)
-			check_z = lp.conv(params["type"], dbprob.check_z)
+			check_z = lp._conv(params["type"], dbprob.check_z)
 			if (check_z != sol.z)
 				print_with_color(:red, "$(prefix)z: '$(sol.z)' should be '$(check_z)' \n")
 			else
@@ -166,7 +166,7 @@ module lp_bench
 		end
 
 		if (dbprob.check_x != :Unset)
-			check_x = lp.conv(params["type"], dbprob.check_x)
+			check_x = lp._conv(params["type"], dbprob.check_x)
 			if (sol.solved == false || check_x != sol.x)
 				sol_x = sol.solved ? sol.x : ()
 				print_with_color(:red, "$(prefix)x: '$(sol_x)' should be '$(check_x)' \n")
@@ -220,6 +220,7 @@ module lp_bench
 			print("Problem: '", dbprob.descr, "'")
 			println("\n------------")
 			lp_prob = dbprob.creator(params)
+			#Profile.print()
 			if (length(lp_bench.prob_last) > 0) pop!(lp_bench.prob_last) end
 			push!(lp_bench.prob_last, deepcopy(lp_prob))
 			#lp_bench.prob_last[1] =
