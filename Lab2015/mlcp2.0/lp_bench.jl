@@ -90,7 +90,7 @@ module lp_bench
 				xis = [ toindex(x) for x in randn(rng, zero_n) ]
 				for i=2:length(xis)
 					it = 0
-					while (it < 5 && xis[i] in xis[1:i-1]) 
+					while (it < 5 && xis[i] in xis[1:i-1])
 						xis[i] = toindex(rand(rng))
 						it = it + 1
 					end
@@ -113,13 +113,13 @@ module lp_bench
 	end
 
 	function random_problem(params::lp.Params)
-		seed = int(get(params, "seed", int(time_ns()) % 32768 ))
-		scale = int(float(get(params, "scale", 1 )))
-		dense = int(get(params, "dense", 100 ))
-		n = int(get(params, "n", 10))
-		m = int(get(params, "m", n))
-		maxit = int(get(params, "maxit", 2*(m+n)))
-		show = get(params, "show", false)
+		seed = arg.dict_get(params, "seed", int(time_ns()) % 32768 )
+		scale = int(arg.dict_get(params, "scale", 1.0))
+		dense = arg.dict_get(params, "dense", 100 )
+		n = arg.dict_get(params, "n", 10)
+		m = arg.dict_get(params, "m", n)
+		maxit = arg.dict_get(params, "maxit", 2*(m+n))
+		show = arg.dict_get(params, "show", false)
 		println("/seed:", seed)
 		return random_problem_impl(seed, scale, dense, n, m, maxit, show, params)
 	end; push!(prob_db, DbProblem(random_problem, "random", :Unset, :Unset, :Unset))

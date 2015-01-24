@@ -227,6 +227,20 @@ module arg
 		return join(args.str[val.start:val.start+val.sz-1])
 	end
 
+	function dict_get(dict::Dict, key, dflt::Any)
+		val = get(dict, key, dflt)
+		ret = val
+		if (typeof(ret) != typeof(dflt))
+			typ = typeof(dflt)
+			try
+				ret = eval(Base.parse("convert($(typ), \"$val\")"))
+			catch
+				ret = eval(Base.parse("convert($(typ), $val)"))
+			end
+		end
+		return ret
+		end
+
 	function arg_get(args::Args, key, dflt::Any)
 		key = to_key(key)
 		typ = string(typeof(dflt))
