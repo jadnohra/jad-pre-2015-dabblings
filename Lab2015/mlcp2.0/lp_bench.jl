@@ -82,10 +82,14 @@ module lp_bench
 		b = rand(rng, (m))
 		A = rand(rng, (m, n))
 		if dense != 100
-			zero_n = (int) ((m*n) * (1.0 - dense / 100.0))
+			#zeros = rand(rng, 1:(m*n), zero_n) # Needs next version of Julia
+			zero_n = int(round((m*n) * (1.0 - dense / 100.0)))
 			if (zero_n > 0)
-				#zeros = rand(rng, 1:(m*n), zero_n), needs next version of Julia
-				zeros = [ clamp(int((m*n)* 0.5*(1.0+x)), 1, (m*n) ) for x in randn(rng, zero_n)]
+				#sprand is useless, the output will not be the same even with fixed seed.
+
+				xs = randn(rng, zero_n)
+				for i=1:length(xs) while abs(xs[i] >= 1.0) xs[i] = rand(rng) end; end
+				zeros = [ clamp(int((m*n)* 0.5*(1.0+x)), 1, (m*n) ) for x in xs]
 				for i in zeros
 					A[i] = 0
 				end
@@ -109,7 +113,7 @@ module lp_bench
 
 	function seed_problem_1(params::lp.Params)
 		return random_problem_impl(15578, 60, 20, 20, 2*(20+20), params)
-	end; push!(prob_db, DbProblem(seed_problem_1, "seed_1 slow-glpk", :Unset, :Unset, :Unset))
+	end; push!(prob_db, DbProblem(seed_problem_1, "seed_1", :Unset, :Unset, :Unset))
 
 	function last_problem(params::lp.Params)
 		if (length(lp_bench.prob_last) > 0)
