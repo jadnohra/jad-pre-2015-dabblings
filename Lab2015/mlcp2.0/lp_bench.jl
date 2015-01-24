@@ -75,30 +75,41 @@ module lp_bench
 			)
 	end; push!(prob_db, DbProblem(problem_LPFE_p22_4, "problem_LPFE_p22_4", :Optimal, -3, [0, 1, 0]))
 
-	function random_problem(params::lp.Params)
-		seed = int(get(params, "seed", int(time_ns()) % 32768 ))
-		dense = int(get(params, "dense", 100 ))
-		println("/seed:", seed)
-
-		n = int(get(params, "n", 10))
-		m = int(get(params, "m", n))
-		maxit = int(get(params, "maxit", 2*(m+n)))
-
+	function random_problem_impl(seed, dense, n, m, maxit, params::lp.Params)
 		rng = MersenneTwister(seed)
 
 		c = rand(rng, (n))
 		b = rand(rng, (m))
-		if (dense == 100)
-			A = rand(rng, (m, n))
-		else
-			rng_randn = dims -> randn(rng, dims)
-			A = full(sprand(m, n, dense/100.0, rng_randn))
+		A = rand(rng, (m, n))
+		if dense != 100
+			zero_n = (int) ((m*n) * (1.0 - dense / 100.0))
+			if (zero_n > 0)
+				#zeros = rand(rng, 1:(m*n), zero_n), needs next version of Julia
+				zeros = [ clamp(int((m*n)* 0.5*(1.0+x)), 1, (m*n) ) for x in randn(rng, zero_n)]
+				for i in zeros
+					A[i] = 0
+				end
+			end
 		end
 
 		return lp.create_max_canonical_problem(merge(params, {"maxit" => maxit}),
-			c, A, b
-			)
+		c, A, b
+		)
+	end
+
+	function random_problem(params::lp.Params)
+		seed = int(get(params, "seed", int(time_ns()) % 32768 ))
+		dense = int(get(params, "dense", 100 ))
+		n = int(get(params, "n", 10))
+		m = int(get(params, "m", n))
+		maxit = int(get(params, "maxit", 2*(m+n)))
+		println("/seed:", seed)
+		return random_problem_impl(seed, dense, n, m, maxit, params)
 	end; push!(prob_db, DbProblem(random_problem, "random", :Unset, :Unset, :Unset))
+
+	function seed_problem_1(params::lp.Params)
+		return random_problem_impl(15578, 60, 20, 20, 2*(20+20), params)
+	end; push!(prob_db, DbProblem(seed_problem_1, "seed_1 slow-glpk", :Unset, :Unset, :Unset))
 
 	function last_problem(params::lp.Params)
 		if (length(lp_bench.prob_last) > 0)
