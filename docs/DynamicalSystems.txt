@@ -207,6 +207,9 @@ Complementarity Problems in Many-Body Contact Dynamics Simulation)
 * pyHavok!
 * Phys revealer: inert, damp,max,...
 * Hvk: usable vehicle ai, at last!
+* Proving the rigidity of simd is an exercise in formal logic!
+	http://pages.cs.wisc.edu/~venkatra/papers/pact13-dyser.pdf
+* vip perf tool: how much utiliz (babdwidth, aruthm, etc,) is left!?!	
 
 ------- Delegate
 * Multi-threading accums
@@ -395,6 +398,7 @@ Complementarity Problems in Many-Body Contact Dynamics Simulation)
 * hkds for game phys: blackbox system control 'theory'
 * why not hvk destr?https://bisimulations.com/vbs3/technology
 * integ to np: kinetic version of all constraints.
+* work out: approximate, diagonally dominant, fast convergent, ???, rb dynamics.
 
 ------- Roadmap / KMW
 * Solve lin-sys separatly! and faster!
@@ -457,11 +461,12 @@ Complementarity Problems in Many-Body Contact Dynamics Simulation)
 * 400 vehicles:
 	- milsim: integr. kinematic mode
 
------- Commertical solvers
+------ Commercial solvers
 * solvers: http://ampl.com/products/solvers/
 
 ------ Piece of Mathematics weeks.
 	- Hkds: add to report: fallacy (misconception, partial truth) of 'mass ratio' see off axis, rotation, eyc.		
+	- exercise!!! derive 'rigid segment dynamics' pos:3d, rot:2d!
 
 ------- Employment
 	- List of intership projs, like dlr.
