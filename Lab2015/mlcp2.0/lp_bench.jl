@@ -153,7 +153,7 @@ module lp_bench
 		end
 
 		if (dbprob.check_z != :Unset)
-			check_z = lp._conv(params["type"], dbprob.check_z)
+			check_z = lp.conv(lp.conv_func(params["type"]), dbprob.check_z)
 			if (check_z != sol.z)
 				print_with_color(:red, "$(prefix)z: '$(sol.z)' should be '$(check_z)' \n")
 			else
@@ -166,7 +166,7 @@ module lp_bench
 		end
 
 		if (dbprob.check_x != :Unset)
-			check_x = lp._conv(params["type"], dbprob.check_x)
+			check_x = lp.conv(lp.conv_func(params["type"]), dbprob.check_x)
 			if (sol.solved == false || check_x != sol.x)
 				sol_x = sol.solved ? sol.x : ()
 				print_with_color(:red, "$(prefix)x: '$(sol_x)' should be '$(check_x)' \n")
@@ -193,6 +193,57 @@ module lp_bench
 
 	function format_percent(v)
 		return strip(strip(@sprintf("%0.2f", 100.0 * v), '0'), '.') * "%"
+	end
+
+	function introspect(arg_str::String = "", code_module = lp_I_1)
+		def_params = { "type"=>"Float32", "kind"=>"native" }
+		params = deepcopy(def_params)
+		arg_get(arg_create(arg_str), params)
+
+
+		function do_introspect(kind, out, code_func, intr_func, intr_arg_types)
+			str = ""
+			if (out == :Str)
+				str = join(code_func(intr_func, intr_arg_types))
+			else
+				orig_stdout = STDOUT
+				try
+					(outRead, outWrite) = redirect_stdout()
+					code_func(intr_func, intr_arg_types)
+					str = readavailable(outRead)
+				catch exc
+					redirect_stdout(orig_stdout)
+					println(exc)
+				end
+				redirect_stdout(orig_stdout)
+			end
+			println("--------------: ", kind)
+			println(str)
+			nlines = length(matchall(r"\n", str))
+			println("--------------> ", nlines, " lines")
+		end
+
+		code_info_map = {"typed" => (:Str, code_typed), "lowered" => (:Str, code_lowered), "llvm" => (:Stdout, code_llvm), "native" => (:Stdout, code_native) }
+		kind = params["kind"]
+		intr_func = code_module.solve_problem
+		numtype = params["type"]
+		solve_arg_types = ( eval(parse("lp.Canonical_problem{$(numtype)}")), )
+		intr_arg_types = solve_arg_types
+
+		# refactor
+		intr_func = code_module.solve_dat
+		intr_arg_types = ( eval(parse("lp_I_1.Dat{$(numtype)}")), lp.Solution, )
+
+
+		if (kind != "all")
+			code_info = code_info_map[params["kind"]]
+			do_introspect(kind, code_info[1], code_info[2], intr_func, intr_arg_types)
+		else
+			for k in code_func_map
+				code_info = code_info_map[k]
+				do_introspect(code_info[1], code_info[2], intr_func, intr_arg_types)
+			end
+		end
 	end
 
 	function solve(arg_str::String = "/prob:p88", code_module = lp_I_1)
@@ -227,7 +278,7 @@ module lp_bench
 			println("+++++++",
 				" n:", lp_prob.n, ", m:", lp_prob.m,
 				", density:", format_percent(lp.comp_density(lp_prob)),
-				", type:", lp_prob.numtype, " +++++++")
+				", type:", lp_prob.type_s, " +++++++")
 
 			@time can_sol = code_module.solve_problem(lp_prob)
 			println("************\n")

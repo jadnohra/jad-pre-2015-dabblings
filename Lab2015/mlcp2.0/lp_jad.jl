@@ -138,7 +138,7 @@ module lp_I_1
 		sol.solved = true
 		sol.status = :Optimal
 		sol.z = dat.z
-		sol.x = eval(parse( "zeros($(dat.prob.numtype), $(dat.n))" ))
+		sol.x = eval(parse( "zeros($(dat.prob.type_s), $(dat.n))" ))
 		for i = 1:length(dat.iB)
 			xi = dat.iB[i]
 			if (xi <= dat.n) sol.x[xi] = dat.β[i]; end
@@ -190,10 +190,10 @@ module lp_I_1
 	end
 
 	function solve_problem(lp_prob::lp.Canonical_problem)
-		expr_Dat = parse( "Dat{$(lp_prob.numtype)}()" )
+		expr_Dat = parse( "Dat{$(lp_prob.type_s)}()" )
 		dat = eval(expr_Dat)
 		fill_dat(lp_prob, dat)
-		sol = lp.create_solution(lp_prob.numtype, lp_prob.params)
+		sol = lp.construct_solution(lp_prob.type_t, lp_prob.params)
 		solve_dat(dat, sol)
 		return sol
 	end
@@ -318,7 +318,7 @@ module lp_I_2
 		sol.solved = true
 		sol.status = :Optimal
 		sol.z = dat.z
-		sol.x = eval(parse( "zeros($(dat.prob.numtype), $(dat.n))" ))
+		sol.x = eval(parse( "zeros($(dat.prob.type_s), $(dat.n))" ))
 		for i = 1:length(dat.iB)
 			xi = dat.iB[i]
 			if (xi <= dat.n) sol.x[xi] = dat.β[i]; end
@@ -370,13 +370,14 @@ module lp_I_2
 	end
 
 	function solve_canonical_problem(lp_prob)
-		expr_Dat = parse( "Dat{$(lp_prob.numtype)}()" )
+		expr_Dat = parse( "Dat{$(lp_prob.type_s)}()" )
 		dat = eval(expr_Dat)
 		fill_dat(lp_prob, dat)
-		sol = lp.create_solution(lp_prob.numtype, lp_prob.params)
+		sol = lp.construct_solution(lp_prob.type_t, lp_prob.params)
 		solve_canonical_dat(dat, sol)
 		return sol
 	end
+
 end
 =#
 
