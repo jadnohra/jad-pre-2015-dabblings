@@ -5,6 +5,12 @@ module Lp_glpk
 	importall JuMP
 	importall GLPKMathProgInterface
 
+	function install()
+		Pkg.add("JuMP")
+		Pkg.add("GLPK")
+		Pkg.add("GLPKMathProgInterface")
+	end
+
 	function solve_problem(lp_prob::Lp.Canonical_problem)
 		m = Model(solver = GLPKSolverLP(method=:Exact))
 
