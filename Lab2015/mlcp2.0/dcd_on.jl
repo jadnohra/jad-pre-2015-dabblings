@@ -1,6 +1,6 @@
 # Data Crunching Debugger
 
-module dcd
+module Dcd
 
 	type Session
 		enable::Bool
@@ -10,8 +10,8 @@ module dcd
 	end
 
 	macro set(sess, key, val)
-		return :( 
-			 $(esc(sess)).iters[end][$key] = deepcopy( $(esc(val)) )  
+		return :(
+			 $(esc(sess)).iters[end][$key] = deepcopy( $(esc(val)) )
 		)
 	end
 
@@ -21,4 +21,3 @@ module dcd
 		)
 	end
 end
-

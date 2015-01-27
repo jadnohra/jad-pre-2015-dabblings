@@ -1,11 +1,11 @@
 
-module lp_glpk
-	using lp
+module Lp_glpk
+	using Lp
 	# Waiting for https://github.com/JuliaLang/julia/pull/6884
 	importall JuMP
 	importall GLPKMathProgInterface
 
-	function solve_problem(lp_prob::lp.Canonical_problem)
+	function solve_problem(lp_prob::Lp.Canonical_problem)
 		m = Model(solver = GLPKSolverLP(method=:Exact))
 
 		@defVar(m, lp_x[1:lp_prob.n] >= 0 )
@@ -19,7 +19,7 @@ module lp_glpk
 		@time status = JuMP.solve(m)
 
 		status_dict = { :Optimal => :Optimal, :Unbounded => :Unbounded, :Infeasible => :Infeasible, :UserLimit => :Maxit, :Error => :Error, :NotSolved => :Created }
-		sol = lp.construct_solution(lp_prob.type_t, lp_prob.params)
+		sol = Lp.construct_solution(lp_prob.type_t, lp_prob.params)
 		sol.status = status_dict[status]
 		sol.solved = (sol.status == :Optimal)
 		sol.z = getObjectiveValue(m)

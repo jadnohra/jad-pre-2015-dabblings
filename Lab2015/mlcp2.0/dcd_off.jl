@@ -1,6 +1,6 @@
 # Data Crunching Debugger
 
-module dcd
+module Dcd
 
 	type Session
 		enable::Bool

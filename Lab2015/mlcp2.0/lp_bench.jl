@@ -5,10 +5,10 @@
 #http://netlib.org/ampl/models/
 
 
-module lp_bench
-	using lp
-	using jad.lp_I_1
-	importall arg
+module Lp_bench
+	using Lp
+	using Jad.lp_I_1
+	importall Arg
 
 	type DbProblem
 		creator::Function
@@ -21,61 +21,61 @@ module lp_bench
 	prob_db = Any[]
 	prob_last = Array(Any, 0)
 
-	function problem_t1(params::lp.Params)
-		return lp.create_min_canonical_problem(merge(params, {"maxit" => 5}),
+	function problem_t1(params::Lp.Params)
+		return Lp.create_min_canonical_problem(merge(params, {"maxit" => 5}),
 			[1, 1], [2 3;], [10]
 			)
 	end; push!(prob_db, DbProblem(problem_t1, "t1", :Optimal, :Unset, [0, 0]))
 
-	function problem_LPFE_p88(params::lp.Params)
-		return lp.create_max_canonical_problem(merge(params, {"maxit" => 5}),
+	function problem_LPFE_p88(params::Lp.Params)
+		return Lp.create_max_canonical_problem(merge(params, {"maxit" => 5}),
 			[4,3], [1 -1; 2 -1; 0 1], [1, 3, 5]
 			)
 	end; push!(prob_db, DbProblem(problem_LPFE_p88, "LPFE_p88", :Optimal, 31, [4, 5]))
 
-	function problem_LPFE_p11(params::lp.Params)
-		return lp.create_max_canonical_problem(merge(params, {"maxit" => 5}),
+	function problem_LPFE_p11(params::Lp.Params)
+		return Lp.create_max_canonical_problem(merge(params, {"maxit" => 5}),
 			[5,4,3], [2 3 1; 4 1 2; 3 4 2], [5, 11, 8]
 			)
 	end; push!(prob_db, DbProblem(problem_LPFE_p11, "LPFE_p11", :Optimal, 13, [2, 0, 1]))
 
-	function problem_LPFE_p27(params::lp.Params)
-		return lp.create_max_canonical_problem(merge(params, {"maxit" => 5}),
+	function problem_LPFE_p27(params::Lp.Params)
+		return Lp.create_max_canonical_problem(merge(params, {"maxit" => 5}),
 			[10,-57,-9,-24], [0.5 -5.5 -2.5 9; 0.5 -1.5 -0.5 1; 1 0 0 0], [0, 0, 1]
 			)
 	end; push!(prob_db, DbProblem(problem_LPFE_p27, "LPFE_p27 degen", :Optimal, 1, [1, 0, 1, 0]))
 
-	function problem_LPFE_m27(params::lp.Params)
-		return lp.create_max_canonical_problem(merge(params, {"maxit" => 5}),
+	function problem_LPFE_m27(params::Lp.Params)
+		return Lp.create_max_canonical_problem(merge(params, {"maxit" => 5}),
 			[10,-57,-9,-24], [0.5 -5.5 -2.5 9; 0.5 -1.5 -0.5 1; 1 0 0 0], [1.e-5, 0, 1]
 			)
 	end; push!(prob_db, DbProblem(problem_LPFE_m27, "LPFE_m27 pert", :Optimal, 1, [1, 0, 1, 0]))
 
-	function problem_LPFE_p18(params::lp.Params)
-		return lp.create_max_canonical_problem(merge(params, {"maxit" => 5}),
+	function problem_LPFE_p18(params::Lp.Params)
+		return Lp.create_max_canonical_problem(merge(params, {"maxit" => 5}),
 			[-2,-1], [-1 1; -1 -2; 0 1], [-1, -2, 1]
 			)
 	end; push!(prob_db, DbProblem(problem_LPFE_p18, "LPFE_p18 phaseI", :Optimal, -3, [4/3, 1/3]))
 
-	function problem_LPFE_p23_9(params::lp.Params)
-		return lp.create_min_canonical_problem(merge(params, {"maxit" => 10}),
+	function problem_LPFE_p23_9(params::Lp.Params)
+		return Lp.create_min_canonical_problem(merge(params, {"maxit" => 10}),
 			[2,3,4], [0 2 3; 1 1 2; 1 2 3], [5, 4, 7]
 			)
 	end; push!(prob_db, DbProblem(problem_LPFE_p23_9, "problem_LPFE_p23_9", :Optimal, 0, [0, 0, 0]))
 
-	function problem_LPFE_p23_8(params::lp.Params)
-		return lp.create_max_canonical_problem(merge(params, {"maxit" => 10}),
+	function problem_LPFE_p23_8(params::Lp.Params)
+		return Lp.create_max_canonical_problem(merge(params, {"maxit" => 10}),
 			[3,2], [1 -2; 1 -1; 2 -1; 1 0; 2 1; 1 1; 1 2; 0 1], [1, 2, 6, 5, 16, 12, 21, 10]
 			)
 	end; push!(prob_db, DbProblem(problem_LPFE_p23_8, "problem_LPFE_p23_8", :Optimal, 28, [4, 8]))
 
-	function problem_LPFE_p22_4(params::lp.Params)
-		return lp.create_max_canonical_problem(merge(params, {"maxit" => 10}),
+	function problem_LPFE_p22_4(params::Lp.Params)
+		return Lp.create_max_canonical_problem(merge(params, {"maxit" => 10}),
 			[-1,-3,-1], [2 -5 1; 2 -1 2], [-5, 4]
 			)
 	end; push!(prob_db, DbProblem(problem_LPFE_p22_4, "problem_LPFE_p22_4", :Optimal, -3, [0, 1, 0]))
 
-	function random_problem_impl(seed, scale, dense, n, m, maxit, show, params::lp.Params)
+	function random_problem_impl(seed, scale, dense, n, m, maxit, show, params::Lp.Params)
 		rng = MersenneTwister(seed)
 
 		c = scale * rand(rng, (n))
@@ -107,30 +107,30 @@ module lp_bench
 			println("A", A)
 		end
 
-		return lp.create_max_canonical_problem(merge(params, {"maxit" => maxit}),
+		return Lp.create_max_canonical_problem(merge(params, {"maxit" => maxit}),
 		c, A, b
 		)
 	end
 
-	function random_problem(params::lp.Params)
-		seed = arg.dict_get(params, "seed", int(time_ns()) % 32768 )
-		scale = int(arg.dict_get(params, "scale", 1.0))
-		dense = arg.dict_get(params, "dense", 100 )
-		n = arg.dict_get(params, "n", 10)
-		m = arg.dict_get(params, "m", n)
-		maxit = arg.dict_get(params, "maxit", 2*(m+n))
-		show = arg.dict_get(params, "show", false)
+	function random_problem(params::Lp.Params)
+		seed = Arg.dict_get(params, "seed", int(time_ns()) % 32768 )
+		scale = int(Arg.dict_get(params, "scale", 1.0))
+		dense = Arg.dict_get(params, "dense", 100 )
+		n = Arg.dict_get(params, "n", 10)
+		m = Arg.dict_get(params, "m", n)
+		maxit = Arg.dict_get(params, "maxit", 2*(m+n))
+		show = Arg.dict_get(params, "show", false)
 		println("/seed:", seed)
 		return random_problem_impl(seed, scale, dense, n, m, maxit, show, params)
 	end; push!(prob_db, DbProblem(random_problem, "random", :Unset, :Unset, :Unset))
 
-	function seed_problem_1(params::lp.Params)
+	function seed_problem_1(params::Lp.Params)
 		return random_problem_impl(15578, 1, 60, 20, 20, 2*(20+20), false, params)
 	end; push!(prob_db, DbProblem(seed_problem_1, "seed_1", :Unset, :Unset, :Unset))
 
-	function last_problem(params::lp.Params)
-		if (length(lp_bench.prob_last) > 0)
-			return lp_bench.prob_last[end]
+	function last_problem(params::Lp.Params)
+		if (length(Lp_bench.prob_last) > 0)
+			return Lp_bench.prob_last[end]
 		else
 			return problem_LPFE_p88(params)
 		end
@@ -153,7 +153,7 @@ module lp_bench
 		end
 
 		if (dbprob.check_z != :Unset)
-			check_z = lp.conv(lp.conv_func(params["type"]), dbprob.check_z)
+			check_z = Lp.conv(Lp.conv_func(params["type"]), dbprob.check_z)
 			if (check_z != sol.z)
 				print_with_color(:red, "$(prefix)z: '$(sol.z)' should be '$(check_z)' \n")
 			else
@@ -166,7 +166,7 @@ module lp_bench
 		end
 
 		if (dbprob.check_x != :Unset)
-			check_x = lp.conv(lp.conv_func(params["type"]), dbprob.check_x)
+			check_x = Lp.conv(Lp.conv_func(params["type"]), dbprob.check_x)
 			if (sol.solved == false || check_x != sol.x)
 				sol_x = sol.solved ? sol.x : ()
 				print_with_color(:red, "$(prefix)x: '$(sol_x)' should be '$(check_x)' \n")
@@ -177,9 +177,9 @@ module lp_bench
 			if (sol.solved)
 				println("$(prefix)x: $(sol.x)")
 			else
-				if (params["dcd"] == true)
+				if (params["Dcd"] == true)
 					println("$(prefix)nbasis:")
-					lp.dcd_nbasis(sol)
+					Lp.dcd_nbasis(sol)
 				end
 			end
 		end
@@ -227,12 +227,12 @@ module lp_bench
 		kind = params["kind"]
 		intr_func = code_module.solve_problem
 		numtype = params["type"]
-		solve_arg_types = ( eval(parse("lp.Canonical_problem{$(numtype)}")), )
+		solve_arg_types = ( eval(parse("Lp.Canonical_problem{$(numtype)}")), )
 		intr_arg_types = solve_arg_types
 
 		# refactor
 		intr_func = code_module.solve_dat
-		intr_arg_types = ( eval(parse("lp_I_1.Dat{$(numtype)}")), lp.Solution, )
+		intr_arg_types = ( eval(parse("lp_I_1.Dat{$(numtype)}")), Lp.Solution, )
 
 
 		if (kind != "all")
@@ -247,7 +247,7 @@ module lp_bench
 	end
 
 	function solve(arg_str::String = "/prob:p88", code_module = lp_I_1)
-		def_params = { "prob"=>"p88", "type"=>"Float32", "dcd"=>false }
+		def_params = { "prob"=>"p88", "type"=>"Float32", "Dcd"=>false }
 		params = deepcopy(def_params)
 		arg_get(arg_create(arg_str), params)
 
@@ -272,18 +272,18 @@ module lp_bench
 			println("\n------------")
 			lp_prob = dbprob.creator(params)
 			#Profile.print()
-			if (length(lp_bench.prob_last) > 0) pop!(lp_bench.prob_last) end
-			push!(lp_bench.prob_last, deepcopy(lp_prob))
-			#lp_bench.prob_last[1] =
+			if (length(Lp_bench.prob_last) > 0) pop!(Lp_bench.prob_last) end
+			push!(Lp_bench.prob_last, deepcopy(lp_prob))
+			#Lp_bench.prob_last[1] =
 			println("+++++++",
 				" n:", lp_prob.n, ", m:", lp_prob.m,
-				", density:", format_percent(lp.comp_density(lp_prob)),
+				", density:", format_percent(Lp.comp_density(lp_prob)),
 				", type:", lp_prob.type_s, " +++++++")
 
 			@time can_sol = code_module.solve_problem(lp_prob)
 			println("************\n")
 
-			sol = lp.translate_solution(lp_prob, can_sol)
+			sol = Lp.translate_solution(lp_prob, can_sol)
 			check_sol(dbprob, lp_prob, sol, params)
 		end
 		return sol

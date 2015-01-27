@@ -1,5 +1,5 @@
 
-module arg
+module Arg
 
 	export arg_create
 	export arg_key
@@ -53,13 +53,13 @@ module arg
 		depth::Int
 	end
 
-	type Args
+	type Tree
 		str::Vector{Char}
 		len::Int
 		str_orig::String
 		nodes::Vector{Node}
 
-		Args() = ( x = new(); x.str = []; x.str_orig = ""; x.len = 0; x.nodes = Node[]; return x; )
+		Tree() = ( x = new(); x.str = []; x.str_orig = ""; x.len = 0; x.nodes = Node[]; return x; )
 	end
 
 	function _parse_recurse(args, depth::Int, pid::Int, str_i::Int, next_str_i::Array{Int, 1})
@@ -128,11 +128,11 @@ module arg
 		return ArgPart()
 	end
 
-	function _get_root_sub(args::Args)
+	function _get_root_sub(args::Tree)
 		ret = ArgPart(); ret.start = 1; ret.sz = length(args.nodes); ret.pid = -1; return ret;
 	end
 
-	function _to_part(args::Args, ni::Int)
+	function _to_part(args::Tree, ni::Int)
 		ret = _get_empty_sub()
 		if (ni >= 1 && ni <= length(args.nodes))
 			ret.start = args.nodes[ni].val_start; ret.sz = args.nodes[ni].val_sz; ret.pid = args.nodes[ni].id;
@@ -140,7 +140,7 @@ module arg
 		return ret
 	end
 
-	function _find_recurse(args::Args, sub::ArgPart, key::ArgKey, ki::Int)
+	function _find_recurse(args::Tree, sub::ArgPart, key::ArgKey, ki::Int)
 		if (ki > key_length(key)) return -1; end;
 		if (key.match[ki] != -1)
 			found_ni = key.match[ki]
@@ -169,18 +169,18 @@ module arg
 		return -1
 	end
 
-	function _find(args::Args, key::ArgKey)
+	function _find(args::Tree, key::ArgKey)
 		return _find_recurse(args, _get_root_sub(args), key, 1)
 	end
 
-	function _iter_key(args::Args, index::Int, key::ArgKey)
+	function _iter_key(args::Tree, index::Int, key::ArgKey)
 		found_ni = _find(args, key)
 		if (found_ni < 0 || args.nodes[found_ni].val_is_node == false || args.nodes[found_ni].val_sz <= index) return -1; end;
 		return args.nodes[found_ni].val_start + index
 	end
 
 	function arg_create(str::String)
-		args = Args()
+		args = Tree()
 		args.str_orig = str
 		args.str = Array(Char, length(str)+1); args.str[end] = char(0);
 		for i = 1:length(str) args.str[i] = str[i]; end
@@ -188,7 +188,7 @@ module arg
 		return args
 	end
 
-	function root(args::Args)
+	function root(args::Tree)
 		return _get_root_sub(args)
 	end
 
@@ -196,31 +196,31 @@ module arg
 		return typeof(k) == ArgKey ? k : arg_key(k)
 	end
 
-	function get_part(args::Args, key)
+	function get_part(args::Tree, key)
 		key = to_key(key)
 		ni = _find(args, key); val = _to_part(args, ni);
 		return ((ni != -1 && !args.nodes[ni].val_is_node), val)
 	end
 
-	function arg_has(args::Args, key)
+	function arg_has(args::Tree, key)
 		key = to_key(key)
 		return get_part(args, key)[1]
 	end
 
-	function has_sub(args::Args, key)
+	function has_sub(args::Tree, key)
 		key = to_key(key)
 		ni = _find(args, key);
 		return (ni != -1 && args.nodes[ni].val_is_node)
 	end
 
-	function iter(args::Args, key)
+	function iter(args::Tree, key)
 		key = to_key(key)
 		if (key.match[key_length(key)] == -1) return has_sub(key); end;
 		if (key_length(key)) key.iter[end] = key.iter[end]+1; key.match[end] = -1; end;
 		return has_sub(args, key)
 	end
 
-	function parse_s(args::Args, key, dflt::String)
+	function parse_s(args::Tree, key, dflt::String)
 		key = to_key(key)
 		found, val = get_part(args, key)
 		if (found == false) return dflt; end;
@@ -241,7 +241,7 @@ module arg
 		return ret
 		end
 
-	function arg_get(args::Args, key, dflt::Any)
+	function arg_get(args::Tree, key, dflt::Any)
 		key = to_key(key)
 		typ = string(typeof(dflt))
 		str = parse_s(args, key, "")
@@ -255,7 +255,7 @@ module arg
 		return ret
 	end
 
-	function arg_get(args::Args, keys::Dict{Any, Any})
+	function arg_get(args::Tree, keys::Dict{Any, Any})
 		for k in keys
 			keys[k[1]] = arg_get(args, k[1], k[2])
 		end
