@@ -110,8 +110,8 @@ module Arg
 		return true
 	end
 
-	function _key_str(str, node::Node)
-		return join(str[node.key_start:node.key_start+node.key_sz-1])
+	function _sub_str(str, start::Int, sz::Int)
+		return join(str[start:start+sz-1])
 	end
 
 	function _matches(str, node::Node, key, depth::Int)
@@ -222,37 +222,36 @@ module Arg
 
 	function parse_s(args::Tree, key, dflt::String)
 		key = to_key(key)
-		found, val = get_part(args, key)
+		found, part = get_part(args, key)
 		if (found == false) return dflt; end;
-		return join(args.str[val.start:val.start+val.sz-1])
+		return _sub_str(args.str, part.start, part.sz)
+	end
+
+	function conv_get(v::Any, dflt::Any)
+		ret = v
+		if (typeof(v) != typeof(dflt))
+			typ = typeof(dflt)
+			try
+				ret = convert(typ, eval(Base.parse(string(v))))
+			catch
+			end
+		end
+		return ret
 	end
 
 	function dict_get(dict::Dict, key, dflt::Any)
 		val = get(dict, key, dflt)
-		ret = val
-		if (typeof(ret) != typeof(dflt))
-			typ = typeof(dflt)
-			try
-				ret = eval(Base.parse("convert($(typ), \"$val\")"))
-			catch
-				ret = eval(Base.parse("convert($(typ), $val)"))
-			end
-		end
-		return ret
-		end
+		return conv_get(val, dflt)
+	end
 
 	function arg_get(args::Tree, key, dflt::Any)
 		key = to_key(key)
-		typ = string(typeof(dflt))
-		str = parse_s(args, key, "")
-		if (length(str) == 0 || typeof(dflt) == String) return dflt; end;
-		ret = dflt
-		try
-			ret = eval(Base.parse("convert($(typ), \"$str\")"))
-		catch
-			ret = eval(Base.parse("convert($(typ), $str)"))
+		has, part = get_part(args, key)
+		if (has)
+			val = _sub_str(args.str, part.start, part.sz)
+			return conv_get(val, dflt)
 		end
-		return ret
+		return dflt
 	end
 
 	function arg_get(args::Tree, keys::Dict{Any, Any})
@@ -263,7 +262,7 @@ module Arg
 		for i = 1:length(args.nodes)
 			node = args.nodes[i]
 			if (node.val_is_node == false)
-				key = _key_str(args.str, node)
+				key = _sub_str(args.str, node.key_start, node.key_sz)
 				if (haskey(keys, key) == false)
 					val = parse_s(args, key, "")
 					val = (length(val) == 0) ? true : val

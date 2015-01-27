@@ -252,6 +252,7 @@ module Lp_bench
 		arg_get(arg_create(arg_str), params)
 
 		prob_key = params["prob"]
+		println(prob_key)
 		if (length(prob_key) == 0 || prob_key == "all")
 			for i = 1:length(prob_db) solve(i, arg_str); end;
 			return
@@ -286,7 +287,7 @@ module Lp_bench
 			sol = Lp.translate_solution(lp_prob, can_sol)
 			check_sol(dbprob, lp_prob, sol, params)
 		end
-		return sol
+		return 0
 	end
 
 end
