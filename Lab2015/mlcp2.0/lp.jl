@@ -2,6 +2,7 @@
 
 module Lp
 	using Dcd
+	using Conv
 
 	:Created
 	:Infeasible
@@ -43,9 +44,7 @@ module Lp
 	end
 
 	type Canonical_problem{T} #Minimize
-		type_s::String
-		type_t::DataType
-		cfunc::Function
+		conv::Conv.Converter
 		n::Int
 		m::Int
 		c::Vector{T}
@@ -75,61 +74,6 @@ module Lp
 			return x
 		end
 	end
-
-	function conv_func{T}(witness::T)
-		return (x -> convert(T, x))
-	end
-
-	function conv_func(numtype::String)
-		return eval(parse(" x -> convert($(numtype), x)"))
-	end
-
-	function conv(cfunc::Function, v)
-		return cfunc(v)
-	end
-
-	function conv(type_t::DataType, cfunc::Function, V::Vector)
-		n = length(V)
-		ret = Array(type_t, n)
-		for i = 1:n
-			ret[i] = cfunc(V[i])
-		end
-		return ret
-	end
-
-	function conv(type_t::DataType, cfunc::Function, M::Matrix)
-		r = size(M)[1]; c = size(M)[2];
-		ret = Array(type_t, (r, c))
-		for i = 1:length(M)
-			ret[i] = cfunc(M[i])
-		end
-		return ret
-	end
-
-
-	#=
-	function _conv(numtype::String, v)
-		return eval(parse("convert($(numtype), $v)"))
-	end
-
-	function _conv(numtype::String, V::Vector)
-		n = length(V)
-		ret = eval(parse( "Array($numtype, $n)" ))
-		for i = 1:n
-			ret[i] = conv(numtype, V[i])
-		end
-		return ret
-	end
-
-	function _conv(numtype::String, M::Matrix)
-		r = size(M)[1]; c = size(M)[2];
-		ret = eval(parse( "Array($numtype, ($r, $c))" ))
-		for i = 1:length(M)
-			ret[i] = eval(parse("convert($(numtype), $M[$i])"))
-		end
-		return ret
-	end
-	=#
 
 	function comp_density{T}(prob::Canonical_problem{T})
 		A = prob.A[1:prob.m,1:prob.n]
@@ -165,7 +109,7 @@ module Lp
 	function translate_solution{T}(prob::Canonical_problem{T}, can_sol::Solution{T})
 		transl = prob.transl
 
-		gen_sol =construct_solution(prob.type_t, prob.params)
+		gen_sol =construct_solution(prob.conv.t, prob.params)
 		gen_sol.solved = can_sol.solved
 		gen_sol.status = can_sol.status
 		gen_sol.z = transl_single(transl.z_transl, can_sol.z)
@@ -188,22 +132,20 @@ module Lp
 	end
 
 	function construct_canonical_problem(params::Params)
-		numtype = params["type"]
-		prob = eval(parse("Canonical_problem{$numtype}()"))
-		prob.transl = eval(parse( "Canonical_translation{$numtype}()" ))
+		conv = Conv.converter(params["type"])
+		prob = Canonical_problem{conv.t}()
+		prob.conv = conv
+		prob.transl = Canonical_translation{prob.conv.t}()
 		prob.params = params
-		prob.type_s = numtype
-		prob.type_t = eval(parse("$numtype"))
-		prob.cfunc = conv_func(numtype);
 		return prob
 	end
 
 	function fill_min_canonical_problem{T}(params::Params, prob::Canonical_problem{T}, c::Vector, A::Matrix, b::Vector)
 		prob.n = length(c)
 		prob.m = length(b)
-		prob.c = vcat( conv(T, prob.cfunc, c), zeros(T, prob.m))
-		prob.A = hcat( conv(T, prob.cfunc, A), conv(T, prob.cfunc, eye(prob.m)) )
-		prob.b = conv(T, prob.cfunc, b)
+		prob.c = vcat( Conv.vector(prob.conv, c), zeros(T, prob.m) )
+		prob.A = hcat( Conv.matrix(prob.conv, A), Conv.matrix(prob.conv, eye(prob.m)) )
+		prob.b = Conv.vector(prob.conv, b)
 	end
 
 	# min: z = cx, subj: Ax <= b, x >= 0
@@ -215,7 +157,7 @@ module Lp
 
 	# max: z = cx, subj: Ax <= b, x >= 0
 	function create_max_canonical_problem(params::Params, c::Vector, A::Matrix, b::Vector)
-		mone = conv(conv_func(params["type"]), -1)
+		mone = Conv.conv(params["type"], -1)
 		prob = create_min_canonical_problem(params, mone*(c), A, b)
 		prob.transl.z_transl.op1_mul = mone
 		return prob
@@ -224,11 +166,11 @@ module Lp
 	#=
 	# min: z = cx, subj: a <= Ax <= b, xlo <= x <= xhi
 	function create_min_gen_problem(params::Params, c::Vector, A::Matrix, a::Vector, b::Vector, xlo::Vector, xhi::Vector)
-		numtype = params["type"]
-		transl = eval( parse( "Canonical_translation{$numtype}()" ) )
+		typestr = params["type"]
+		transl = eval( parse( "Canonical_translation{$typestr}()" ) )
 		n = length(c)
-		mone = conv(numtype, -1)
-		one = conv(numtype, 1)
+		mone = conv(typestr, -1)
+		one = conv(typestr, 1)
 
 		# translate a,b bounds
 		# todo: detect conflicts, or constraints that only bound a single variable, etc.

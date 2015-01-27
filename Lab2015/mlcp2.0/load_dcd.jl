@@ -1,3 +1,4 @@
+include("conv.jl")
 include("arg.jl")
 include("dcd_on.jl")
 include("lp.jl")

@@ -14,8 +14,8 @@ module Lp_bench
 		creator::Function
 		descr::String
 		check_status::Symbol
-		check_z#::Array{numtype, 1}
-		check_x#::Array{numtype, 1}
+		check_z#::Array{typestr, 1}
+		check_x#::Array{typestr, 1}
 	end
 
 	prob_db = Any[]
@@ -153,7 +153,7 @@ module Lp_bench
 		end
 
 		if (dbprob.check_z != :Unset)
-			check_z = Lp.conv(Lp.conv_func(params["type"]), dbprob.check_z)
+			check_z = lp_prob.conv.f(dbprob.check_z)
 			if (check_z != sol.z)
 				print_with_color(:red, "$(prefix)z: '$(sol.z)' should be '$(check_z)' \n")
 			else
@@ -166,7 +166,7 @@ module Lp_bench
 		end
 
 		if (dbprob.check_x != :Unset)
-			check_x = Lp.conv(Lp.conv_func(params["type"]), dbprob.check_x)
+			check_x = [ lp_prob.conv.f(x) for x in dbprob.check_x ]
 			if (sol.solved == false || check_x != sol.x)
 				sol_x = sol.solved ? sol.x : ()
 				print_with_color(:red, "$(prefix)x: '$(sol_x)' should be '$(check_x)' \n")
@@ -226,13 +226,13 @@ module Lp_bench
 		code_info_map = {"typed" => (:Str, code_typed), "lowered" => (:Str, code_lowered), "llvm" => (:Stdout, code_llvm), "native" => (:Stdout, code_native) }
 		kind = params["kind"]
 		intr_func = code_module.solve_problem
-		numtype = params["type"]
-		solve_arg_types = ( eval(parse("Lp.Canonical_problem{$(numtype)}")), )
+		typestr = params["type"]
+		solve_arg_types = ( eval(parse("Lp.Canonical_problem{$(typestr)}")), )
 		intr_arg_types = solve_arg_types
 
 		# refactor
 		intr_func = code_module.solve_dat
-		intr_arg_types = ( eval(parse("lp_I_1.Dat{$(numtype)}")), Lp.Solution, )
+		intr_arg_types = ( eval(parse("lp_I_1.Dat{$(typestr)}")), Lp.Solution, )
 
 
 		if (kind != "all")
@@ -278,7 +278,7 @@ module Lp_bench
 			println("+++++++",
 				" n:", lp_prob.n, ", m:", lp_prob.m,
 				", density:", format_percent(Lp.comp_density(lp_prob)),
-				", type:", lp_prob.type_s, " +++++++")
+				", type:", lp_prob.conv.t, " +++++++")
 
 			@time can_sol = code_module.solve_problem(lp_prob)
 			println("************\n")

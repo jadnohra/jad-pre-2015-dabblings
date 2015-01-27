@@ -138,7 +138,7 @@ module lp_I_1
 		sol.solved = true
 		sol.status = :Optimal
 		sol.z = dat.z
-		sol.x = eval(parse( "zeros($(dat.prob.type_s), $(dat.n))" ))
+		sol.x = zeros(dat.prob.conv.t, dat.n)
 		for i = 1:length(dat.iB)
 			xi = dat.iB[i]
 			if (xi <= dat.n) sol.x[xi] = dat.β[i]; end
@@ -190,10 +190,9 @@ module lp_I_1
 	end
 
 	function solve_problem(lp_prob::Lp.Canonical_problem)
-		expr_Dat = parse( "Dat{$(lp_prob.type_s)}()" )
-		dat = eval(expr_Dat)
+		dat = Dat{lp_prob.conv.t}()
 		fill_dat(lp_prob, dat)
-		sol = Lp.construct_solution(lp_prob.type_t, lp_prob.params)
+		sol = Lp.construct_solution(lp_prob.conv.t, lp_prob.params)
 		solve_dat(dat, sol)
 		return sol
 	end
@@ -327,7 +326,7 @@ module lp_I_2
 
 	function fail_solution(sol::Lp.Solution, status::Symbol) sol.solved = false; sol.status = status; end
 
-	function solve_canonical_dat{T}(dat::Dat{T}, sol::Lp.Solution)
+	function solve_dat{T}(dat::Dat{T}, sol::Lp.Solution)
 		# [CTSM].p33,p30, but with naive basis reinversion instead of update.
 		dbg = sol.Dcd
 		Dcd.@it(dbg)
@@ -370,11 +369,10 @@ module lp_I_2
 	end
 
 	function solve_canonical_problem(lp_prob)
-		expr_Dat = parse( "Dat{$(lp_prob.type_s)}()" )
-		dat = eval(expr_Dat)
+		dat = Dat{lp_prob.conv.t}()
 		fill_dat(lp_prob, dat)
-		sol = Lp.construct_solution(lp_prob.type_t, lp_prob.params)
-		solve_canonical_dat(dat, sol)
+		sol = Lp.construct_solution(lp_prob.conv.t, lp_prob.params)
+		solve_dat(dat, sol)
 		return sol
 	end
 
