@@ -17,6 +17,10 @@ function conv(typestr::String, v::Any)
 	return conv_func(typestr)(v)
 end
 
+function conv_type(typestr::String)
+	return eval(parse("$typestr"))
+end
+
 type Converter
 	f::Function
 	t::DataType
@@ -27,8 +31,7 @@ function converter(t::DataType)
 end
 
 function converter(typestr::String)
-	t = eval(parse("$typestr"))
-	return converter(t)
+	return converter(conv_type(typestr))
 end
 
 function vector(conv::Converter, V::Vector)
@@ -48,5 +51,6 @@ function matrix(conv::Converter, M::Matrix)
 	end
 	return ret
 end
+
 
 end

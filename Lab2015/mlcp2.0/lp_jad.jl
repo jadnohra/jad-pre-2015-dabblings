@@ -6,19 +6,20 @@
 
 	Linear Programming
 		I. Solve, Revised, Canonical Simplex.
-		1. revised simplex, basis inversion, no reuse
-		2. revised simplex, basis factorization, no reuse
-		3. revised simplex, basis factorization, reuse, no re-factorization
-		4. revised simplex, basis factorization, reuse, re-factorization
-		5. revised simplex, basis factorization, reuse, re-factorization, degen (CTSM p230), sing
-		6. 5. with 'textbook' Phase-I
-		7. 5. with Maros' Phase-I (p203)
+			1. revised simplex, basis inversion, no reuse
+			2. revised simplex, basis factorization, no reuse
+			3. revised simplex, basis factorization, reuse, no re-factorization
+			4. revised simplex, basis factorization, reuse, re-factorization
+			5. revised simplex, basis factorization, reuse, re-factorization, degen (CTSM p230), sing
+			6. 5. with 'textbook' Phase-I
+			7. 5. with Maros' Phase-I (p203)
 
 		II. Solve, Revised, Sparse, Canonical Simplex.
-		1. revised sparse simplex
+			1. revised sparse simplex
 
 		III. Generalized Simplex variants of I, then II (Presolve, Postsolve)
-		1. ??
+			1. generalized version of I.1, using Maros' CF-2 (p13-17)
+			2. 1. with infeasibility tolerance, type-0 handling and Harris ratio. (CSTM p178)
 
 	LU Factorization
 		I. Suhl-suhl (CTSM p136)
@@ -31,7 +32,7 @@ module lp_I_1
 	using Lp
 
 	type Dat{T}
-		prob::Lp.Canonical_problem
+		prob::Lp.Cf0_problem
 		maxit::Int
 		n::Int
 		m::Int
@@ -54,7 +55,7 @@ module lp_I_1
 		Dat() = new()
 	end
 
-	function fill_dat{T}(prob::Lp.Canonical_problem, dat::Dat{T})
+	function fill_dat{T}(prob::Lp.Cf0_problem, dat::Dat{T})
 		n = prob.n; m = prob.m;
 		dat.maxit = get(prob.params, "maxit", 0)
 		dat.prob = prob
@@ -189,7 +190,7 @@ module lp_I_1
 		fail_solution(it, sol, :Maxit)
 	end
 
-	function solve_problem(lp_prob::Lp.Canonical_problem)
+	function solve_problem(lp_prob::Lp.Cf0_problem)
 		dat = Dat{lp_prob.conv.t}()
 		fill_dat(lp_prob, dat)
 		sol = Lp.construct_solution(lp_prob.conv.t, lp_prob.params)
@@ -209,7 +210,7 @@ module lp_I_2
 	using Lp
 
 	type Dat{T}
-		prob::Lp.Canonical_problem
+		prob::Lp.Cf0_problem
 		maxit::Int
 		n::Int
 		m::Int
@@ -234,7 +235,7 @@ module lp_I_2
 		Dat() = new()
 	end
 
-	function fill_dat{T}(prob::Lp.Canonical_problem, dat::Dat{T})
+	function fill_dat{T}(prob::Lp.Cf0_problem, dat::Dat{T})
 		n = prob.n; m = prob.m;
 		dat.maxit = get(prob.params, "maxit", 0)
 		dat.prob = prob
@@ -368,7 +369,7 @@ module lp_I_2
 		fail_solution(sol, :Maxit)
 	end
 
-	function solve_canonical_problem(lp_prob)
+	function solve_cf0_problem(lp_prob)
 		dat = Dat{lp_prob.conv.t}()
 		fill_dat(lp_prob, dat)
 		sol = Lp.construct_solution(lp_prob.conv.t, lp_prob.params)

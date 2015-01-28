@@ -11,7 +11,7 @@ module Lp_glpk
 		Pkg.add("GLPKMathProgInterface")
 	end
 
-	function solve_problem(lp_prob::Lp.Canonical_problem)
+	function solve_problem(lp_prob::Lp.Cf0_problem)
 		m = Model(solver = GLPKSolverLP(method=:Exact))
 
 		@defVar(m, lp_x[1:lp_prob.n] >= 0 )

@@ -22,55 +22,55 @@ module Lp_bench
 	prob_last = Array(Any, 0)
 
 	function problem_t1(params::Lp.Params)
-		return Lp.create_min_canonical_problem(merge(params, {"maxit" => 5}),
+		return Lp.create_min_cf0_problem(merge(params, {"maxit" => 5}),
 			[1, 1], [2 3;], [10]
 			)
 	end; push!(prob_db, DbProblem(problem_t1, "t1", :Optimal, :Unset, [0, 0]))
 
 	function problem_LPFE_p88(params::Lp.Params)
-		return Lp.create_max_canonical_problem(merge(params, {"maxit" => 5}),
+		return Lp.create_max_cf0_problem(merge(params, {"maxit" => 5}),
 			[4,3], [1 -1; 2 -1; 0 1], [1, 3, 5]
 			)
 	end; push!(prob_db, DbProblem(problem_LPFE_p88, "LPFE_p88", :Optimal, 31, [4, 5]))
 
 	function problem_LPFE_p11(params::Lp.Params)
-		return Lp.create_max_canonical_problem(merge(params, {"maxit" => 5}),
+		return Lp.create_max_cf0_problem(merge(params, {"maxit" => 5}),
 			[5,4,3], [2 3 1; 4 1 2; 3 4 2], [5, 11, 8]
 			)
 	end; push!(prob_db, DbProblem(problem_LPFE_p11, "LPFE_p11", :Optimal, 13, [2, 0, 1]))
 
 	function problem_LPFE_p27(params::Lp.Params)
-		return Lp.create_max_canonical_problem(merge(params, {"maxit" => 5}),
+		return Lp.create_max_cf0_problem(merge(params, {"maxit" => 5}),
 			[10,-57,-9,-24], [0.5 -5.5 -2.5 9; 0.5 -1.5 -0.5 1; 1 0 0 0], [0, 0, 1]
 			)
 	end; push!(prob_db, DbProblem(problem_LPFE_p27, "LPFE_p27 degen", :Optimal, 1, [1, 0, 1, 0]))
 
 	function problem_LPFE_m27(params::Lp.Params)
-		return Lp.create_max_canonical_problem(merge(params, {"maxit" => 5}),
+		return Lp.create_max_cf0_problem(merge(params, {"maxit" => 5}),
 			[10,-57,-9,-24], [0.5 -5.5 -2.5 9; 0.5 -1.5 -0.5 1; 1 0 0 0], [1.e-5, 0, 1]
 			)
 	end; push!(prob_db, DbProblem(problem_LPFE_m27, "LPFE_m27 pert", :Optimal, 1, [1, 0, 1, 0]))
 
 	function problem_LPFE_p18(params::Lp.Params)
-		return Lp.create_max_canonical_problem(merge(params, {"maxit" => 5}),
+		return Lp.create_max_cf0_problem(merge(params, {"maxit" => 5}),
 			[-2,-1], [-1 1; -1 -2; 0 1], [-1, -2, 1]
 			)
 	end; push!(prob_db, DbProblem(problem_LPFE_p18, "LPFE_p18 phaseI", :Optimal, -3, [4/3, 1/3]))
 
 	function problem_LPFE_p23_9(params::Lp.Params)
-		return Lp.create_min_canonical_problem(merge(params, {"maxit" => 10}),
+		return Lp.create_min_cf0_problem(merge(params, {"maxit" => 10}),
 			[2,3,4], [0 2 3; 1 1 2; 1 2 3], [5, 4, 7]
 			)
 	end; push!(prob_db, DbProblem(problem_LPFE_p23_9, "problem_LPFE_p23_9", :Optimal, 0, [0, 0, 0]))
 
 	function problem_LPFE_p23_8(params::Lp.Params)
-		return Lp.create_max_canonical_problem(merge(params, {"maxit" => 10}),
+		return Lp.create_max_cf0_problem(merge(params, {"maxit" => 10}),
 			[3,2], [1 -2; 1 -1; 2 -1; 1 0; 2 1; 1 1; 1 2; 0 1], [1, 2, 6, 5, 16, 12, 21, 10]
 			)
 	end; push!(prob_db, DbProblem(problem_LPFE_p23_8, "problem_LPFE_p23_8", :Optimal, 28, [4, 8]))
 
 	function problem_LPFE_p22_4(params::Lp.Params)
-		return Lp.create_max_canonical_problem(merge(params, {"maxit" => 10}),
+		return Lp.create_max_cf0_problem(merge(params, {"maxit" => 10}),
 			[-1,-3,-1], [2 -5 1; 2 -1 2], [-5, 4]
 			)
 	end; push!(prob_db, DbProblem(problem_LPFE_p22_4, "problem_LPFE_p22_4", :Optimal, -3, [0, 1, 0]))
@@ -107,7 +107,7 @@ module Lp_bench
 			println("A", A)
 		end
 
-		return Lp.create_max_canonical_problem(merge(params, {"maxit" => maxit}),
+		return Lp.create_max_cf0_problem(merge(params, {"maxit" => maxit}),
 		c, A, b
 		)
 	end
@@ -227,7 +227,7 @@ module Lp_bench
 		kind = params["kind"]
 		intr_func = code_module.solve_problem
 		typestr = params["type"]
-		solve_arg_types = ( eval(parse("Lp.Canonical_problem{$(typestr)}")), )
+		solve_arg_types = ( eval(parse("Lp.Cf0_problem{$(typestr)}")), )
 		intr_arg_types = solve_arg_types
 
 		# refactor
@@ -281,10 +281,10 @@ module Lp_bench
 				", density:", format_percent(Lp.comp_density(lp_prob)),
 				", type:", lp_prob.conv.t, " +++++++")
 
-			@time can_sol = code_module.solve_problem(lp_prob)
+			@time raw_sol = code_module.solve_problem(lp_prob)
 			println("************\n")
 
-			sol = Lp.translate_solution(lp_prob, can_sol)
+			sol = Lp.translate_solution(lp_prob, raw_sol)
 			check_sol(dbprob, lp_prob, sol, params)
 		end
 		return 0
