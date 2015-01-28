@@ -43,6 +43,7 @@ function vector(conv::Converter, V::Vector)
 	return ret
 end
 
+
 function matrix(conv::Converter, M::Matrix)
 	r = size(M)[1]; c = size(M)[2];
 	ret = Array(conv.t, (r, c))

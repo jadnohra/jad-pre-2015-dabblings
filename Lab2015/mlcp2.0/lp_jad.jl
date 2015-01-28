@@ -124,7 +124,7 @@ module lp_I_1
 	function chuzro{T}(dat::Dat{T})
 		min_i = 0; min_ratio = dat.zero;
 		for i = 1:length(dat.αq)
-			if (dat.αq[i] > dat.zero)
+			if (dat.αq[i] != dat.zero)
 				ratio = dat.β[i] / dat.αq[i]
 				if (min_i == 0 || ratio <= min_ratio)
 					if (ratio == min_ratio)
@@ -216,21 +216,42 @@ module lp_III_1
 		dat.prob = prob
 	end
 
-	function comp_αq{T}(dat::Dat{T}, q::Int) aq = dat.iR[q]; dat.αq = dat.Binv * (dat.prob.A[:,aq]); end
+	function get_lohi{T}(dat::Dat{T}, i::Int)
+		bi = 2*dat.iB[i]
+		return dat.prob.lohi[bi], dat.prob.lohi[bi+1]
+	end
+
+	function warn{T}(dat::Dat{T}, warning::Symbol)
+		println("Warning:", warning)
+	end
 
 	function chuzro{T}(dat::Dat{T})
-		min_i = 0; min_ratio = dat.zero;
+		# Handwritten notes (p29)
+		i_θhi = 0; min_θhi = dat.zero;
+		i_θlo = 0; max_θlo = dat.zero;
+
 		for i = 1:length(dat.αq)
 			if (dat.αq[i] > dat.zero)
-				ratio = dat.β[i] / dat.αq[i]
-				if (min_i == 0 || ratio <= min_ratio)
-					if (ratio == min_ratio)
-						println("Warning: degeneracy.")
+				lo, hi = get_lohi(dat, i)
+				θhi, θlo = (dat.β[i] - lo) / dat.αq[i], (dat.β[i] - hi) / dat.αq[i]
+
+				if (i_θlo == 0 || θlo >= max_θlo)
+					if (θlo == max_θlo)
+						warn(dat, :Degen)
 					end
-					min_i = i; min_ratio = ratio;
+					i_θlo = i; max_θlo = θlo;
 				end
+
+				if (i_θhi == 0 || θhi <= min_θhi)
+					if (θhi == min_θhi)
+						warn(dat, :Degen)
+					end
+					i_θhi = i; min_θhi = θhi;
+				end
+
 			end
 		end
+
 		return (min_i, min_ratio)
 	end
 
@@ -263,7 +284,6 @@ module lp_III_1
 			if Base.check_optimal_dJ(dat) Base.succeed_solution(it, dat, sol); return; end
 			q = Base.price_full_dantzig(dat); Dcd.@set(dbg, "q", q);
 			#Step 3
-			#############
 			Base.comp_αq(dat, q); Dcd.@set(dbg, "αq", dat.αq);
 			#Step 4
 			##########
