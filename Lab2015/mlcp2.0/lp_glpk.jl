@@ -14,8 +14,10 @@ module Lp_glpk
 	type Dat{T}
 		prob::Lp.Cf0_problem{T}
 
-		Dat = new()
+		Dat() = new()
 	end
+
+	function construct_dat(T::DataType) return Dat{T}() end
 
 	function fill_dat{T}(prob::Lp.Cf0_problem, dat::Dat{T})
 		dat.prob = prob

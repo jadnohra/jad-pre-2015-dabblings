@@ -56,6 +56,8 @@ module lp_I_1
 		Dat() = new()
 	end
 
+	function construct_dat(T::DataType) return Dat{T}() end
+
 	function fill_dat{T}(prob::Lp.Cf0_problem, dat::Dat{T})
 		n = prob.n; m = prob.m;
 		dat.maxit = get(prob.params, "maxit", 0)
@@ -102,7 +104,7 @@ module lp_I_1
 	function check_optimal_dJ{T}(dat::Dat{T}) return all( dj->(dj >= dat.zero), dat.dJ ); end
 	function check_feasible_β{T}(dat::Dat{T}) return all( β->(β >= dat.zero), dat.β ); end
 
-	function pivot_iB_iR{T}(dat::Dat{T}, q::Int, p::Int) tmp = dat.iR[q]; dat.iR[q] = dat.iB[p]; dat.iB[p] = tmp; end
+	function pivot_iB_iR{T}(dat::Dat{T}, q::Int, p::Int) dat.iR[q], dat.iB[p] = dat.iB[p], dat.iR[q] end
 
 	function price_full_dantzig{T}(dat::Dat{T})
 		# [CTSM].p187
@@ -200,13 +202,17 @@ module lp_III_1
 
 	type Dat{T}
 		cf0::lp_I_1.Dat{T}
-		prob::Lp.Cf2b_problem
+		prob::Lp.Cf2b_problem{T}
 
 		Dat() = new()
 	end
 
-	function fill_dat{T}(prob::Lp.Cf2b_problem, dat::Dat{T})
-		lp_I_1.fill_dat(prob.cf0, dat.cf0)
+	function construct_dat(T::DataType) return Dat{T}() end
+
+	function fill_dat{T}(prob::Lp.Cf2b_problem{T}, dat::Dat{T})
+		Base = lp_I_1
+		dat.cf0 = Base.construct_dat(T)
+		Base.fill_dat(prob.cf0, dat.cf0)
 		dat.prob = prob
 	end
 
@@ -228,47 +234,51 @@ module lp_III_1
 		return (min_i, min_ratio)
 	end
 
-	function solve_dat{T}(dat::Dat{T}, sol::Lp.Solution{T})
+	function solve_dat{T}(dat2b::Dat{T}, sol::Lp.Solution{T})
 		# [CTSM].p33,p30, but with naive basis reinversion instead of update.
 		# Additionally, the generalized (w/o translation) chuzro as in handwritten notes.
+		Base = lp_I_1
+		dat = dat2b.cf0
 		dbg = sol.Dcd
 		Dcd.@it(dbg)
 		it = 0
 		#Step 0
-		lp_I_1.set_basis_logical(dat)
+		Base.set_basis_logical(dat)
 		Dcd.@set(dbg, "iB", dat.iB)
 		#Initializations
-		lp_I_1.comp_cBT(dat); lp_I_1.comp_B_R(dat); lp_I_1.comp_Binv(dat);
-		lp_I_1.init_β(dat); lp_I_1.init_z(dat);
+		Base.comp_cBT(dat); Base.comp_B_R(dat); Base.comp_Binv(dat);
+		Base.init_β(dat); Base.init_z(dat);
 		Dcd.@set(dbg, "β0", dat.β)
 		#todo phaseI
-		if (lp_I_1.check_feasible_β(dat) == false) println("Warning: phaseI."); fail_solution(it, sol, :Infeasible); return; end
+		if (Base.check_feasible_β(dat) == false) println("Warning: phaseI."); fail_solution(it, sol, :Infeasible); return; end
 
 		while(dat.maxit == 0 || it < dat.maxit)
 			Dcd.@it(dbg)
 			#Step 1
 			Dcd.@set(dbg, "B", dat.B); Dcd.@set(dbg, "Binv", dat.Binv);
 			Dcd.@set(dbg, "cBT", dat.cBT);
-			lp_I_1.comp_π(dat); Dcd.@set(dbg, "π", dat.π);
+			Base.comp_π(dat); Dcd.@set(dbg, "π", dat.π);
 			#Step 2
-			lp_I_1.comp_dJ(dat); Dcd.@set(dbg, "dJ", dat.dJ);
-			if lp_I_1.check_optimal_dJ(dat) lp_I_1.succeed_solution(it, dat, sol); return; end
-			q = lp_I_1.price_full_dantzig(dat); Dcd.@set(dbg, "q", q);
+			Base.comp_dJ(dat); Dcd.@set(dbg, "dJ", dat.dJ);
+			if Base.check_optimal_dJ(dat) Base.succeed_solution(it, dat, sol); return; end
+			q = Base.price_full_dantzig(dat); Dcd.@set(dbg, "q", q);
 			#Step 3
-			############# comp_αq(dat, q); Dcd.@set(dbg, "αq", dat.αq);
+			#############
+			Base.comp_αq(dat, q); Dcd.@set(dbg, "αq", dat.αq);
 			#Step 4
-			##########p,θ = chuzro(dat); Dcd.@set(dbg, "p", p); Dcd.@set(dbg, "θ", θ);
-			if (p == 0) lp_I_1.fail_solution(it, sol, :Unbounded); return; end
+			##########
+			p,θ = Base.chuzro(dat); Dcd.@set(dbg, "p", p); Dcd.@set(dbg, "θ", θ);
+			if (p == 0) Base.fail_solution(it, sol, :Unbounded); return; end
 			Dcd.@set(dbg, "pivot", (q, p))
 			#Step 5
-			lp_I_1.pivot_iB_iR(dat, q, p)
+			Base.pivot_iB_iR(dat, q, p)
 			#Updates
-			lp_I_1.update_β(dat, p, θ); Dcd.@set(dbg, "β", dat.β);
-			lp_I_1.update_z(dat, q, θ); Dcd.@set(dbg, "z", dat.z);
-			lp_I_1.comp_cBT(dat); lp_I_1.comp_B_R(dat); lp_I_1.comp_Binv(dat);
+			Base.update_β(dat, p, θ); Dcd.@set(dbg, "β", dat.β);
+			Base.update_z(dat, q, θ); Dcd.@set(dbg, "z", dat.z);
+			Base.comp_cBT(dat); Base.comp_B_R(dat); Base.comp_Binv(dat);
 			it = it + 1
 		end
-		lp_I_1.fail_solution(it, sol, :Maxit)
+		Base.fail_solution(it, sol, :Maxit)
 	end
 
 end
@@ -355,7 +365,7 @@ module lp_I_2
 	function check_optimal_dJ{T}(dat::Dat{T}) return all( dj->(dj >= dat.zero), dat.dJ ); end
 	function check_feasible_β{T}(dat::Dat{T}) return all( β->(β >= dat.zero), dat.β ); end
 
-	function pivot_iB_iR{T}(dat::Dat{T}, q::Int, p::Int) tmp = dat.iR[q]; dat.iR[q] = dat.iB[p]; dat.iB[p] = tmp; end
+	function pivot_iB_iR{T}(dat::Dat{T}, q::Int, p::Int) dat.iR[q], dat.iB[p] = dat.iB[p], dat.iR[q] end
 
 	function price_full_dantzig{T}(dat::Dat{T})
 		# [CTSM].p187

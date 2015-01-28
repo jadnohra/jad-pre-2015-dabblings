@@ -7,7 +7,7 @@
 
 module Lp_bench
 	using Lp
-	using Jad.lp_I_1
+	using Jad
 	importall Arg
 
 	type DbProblem
@@ -22,65 +22,78 @@ module Lp_bench
 	prob_last = Array(Any, 0)
 
 	function problem_t1(params::Lp.Params)
-		return Lp.create_min_cf0_problem(merge(params, {"maxit" => 5}),
+		return Lp.create_min_Cf0_problem(merge(params, {"maxit" => 5}),
 			[1, 1], [2 3;], [10]
 			)
 	end; push!(prob_db, DbProblem(problem_t1, "t1", :Optimal, :Unset, [0, 0]))
 
 	function problem_LPFE_p88(params::Lp.Params)
-		return Lp.create_max_cf0_problem(merge(params, {"maxit" => 5}),
+		return Lp.create_max_Cf0_problem(merge(params, {"maxit" => 5}),
 			[4,3], [1 -1; 2 -1; 0 1], [1, 3, 5]
 			)
 	end; push!(prob_db, DbProblem(problem_LPFE_p88, "LPFE_p88", :Optimal, 31, [4, 5]))
 
 	function problem_LPFE_p11(params::Lp.Params)
-		return Lp.create_max_cf0_problem(merge(params, {"maxit" => 5}),
+		return Lp.create_max_Cf0_problem(merge(params, {"maxit" => 5}),
 			[5,4,3], [2 3 1; 4 1 2; 3 4 2], [5, 11, 8]
 			)
 	end; push!(prob_db, DbProblem(problem_LPFE_p11, "LPFE_p11", :Optimal, 13, [2, 0, 1]))
 
 	function problem_LPFE_p27(params::Lp.Params)
-		return Lp.create_max_cf0_problem(merge(params, {"maxit" => 5}),
+		return Lp.create_max_Cf0_problem(merge(params, {"maxit" => 5}),
 			[10,-57,-9,-24], [0.5 -5.5 -2.5 9; 0.5 -1.5 -0.5 1; 1 0 0 0], [0, 0, 1]
 			)
 	end; push!(prob_db, DbProblem(problem_LPFE_p27, "LPFE_p27 degen", :Optimal, 1, [1, 0, 1, 0]))
 
 	function problem_LPFE_m27(params::Lp.Params)
-		return Lp.create_max_cf0_problem(merge(params, {"maxit" => 5}),
+		return Lp.create_max_Cf0_problem(merge(params, {"maxit" => 5}),
 			[10,-57,-9,-24], [0.5 -5.5 -2.5 9; 0.5 -1.5 -0.5 1; 1 0 0 0], [1.e-5, 0, 1]
 			)
 	end; push!(prob_db, DbProblem(problem_LPFE_m27, "LPFE_m27 pert", :Optimal, 1, [1, 0, 1, 0]))
 
 	function problem_LPFE_p18(params::Lp.Params)
-		return Lp.create_max_cf0_problem(merge(params, {"maxit" => 5}),
+		return Lp.create_max_Cf0_problem(merge(params, {"maxit" => 5}),
 			[-2,-1], [-1 1; -1 -2; 0 1], [-1, -2, 1]
 			)
 	end; push!(prob_db, DbProblem(problem_LPFE_p18, "LPFE_p18 phaseI", :Optimal, -3, [4/3, 1/3]))
 
 	function problem_LPFE_p23_9(params::Lp.Params)
-		return Lp.create_min_cf0_problem(merge(params, {"maxit" => 10}),
+		return Lp.create_min_Cf0_problem(merge(params, {"maxit" => 10}),
 			[2,3,4], [0 2 3; 1 1 2; 1 2 3], [5, 4, 7]
 			)
 	end; push!(prob_db, DbProblem(problem_LPFE_p23_9, "problem_LPFE_p23_9", :Optimal, 0, [0, 0, 0]))
 
 	function problem_LPFE_p23_8(params::Lp.Params)
-		return Lp.create_max_cf0_problem(merge(params, {"maxit" => 10}),
+		return Lp.create_max_Cf0_problem(merge(params, {"maxit" => 10}),
 			[3,2], [1 -2; 1 -1; 2 -1; 1 0; 2 1; 1 1; 1 2; 0 1], [1, 2, 6, 5, 16, 12, 21, 10]
 			)
 	end; push!(prob_db, DbProblem(problem_LPFE_p23_8, "problem_LPFE_p23_8", :Optimal, 28, [4, 8]))
 
 	function problem_LPFE_p22_4(params::Lp.Params)
-		return Lp.create_max_cf0_problem(merge(params, {"maxit" => 10}),
+		return Lp.create_max_Cf0_problem(merge(params, {"maxit" => 10}),
 			[-1,-3,-1], [2 -5 1; 2 -1 2], [-5, 4]
 			)
 	end; push!(prob_db, DbProblem(problem_LPFE_p22_4, "problem_LPFE_p22_4", :Optimal, -3, [0, 1, 0]))
 
-	function random_problem_impl(seed, scale, dense, n, m, maxit, show, params::Lp.Params)
+	function random_problem_impl(form, seed, scale, dense, n, m, maxit, show, params::Lp.Params)
 		rng = MersenneTwister(seed)
 
 		c = scale * rand(rng, (n))
 		b = scale * rand(rng, (m))
 		A = scale * rand(rng, (m, n))
+		lohi = Array(typeof(1.0), (0, 2))
+		has_lohi = false
+
+		if (form == string(:Cf2b))
+			has_lohi = true
+			lohi = scale * rand(rng, (n, 2))
+			for r = 1:size(lohi)[1]
+				if (lohi[r,2] < lohi[r,1])
+					lohi[r,1], lohi[r,2] = lohi[r,2], lohi[r,1]
+				end
+			end
+		end
+
 		if dense != 100
 			#zeros = rand(rng, 1:(m*n), zero_n) # Needs next version of Julia
 			zero_n = int(round((m*n) * (1.0 - dense / 100.0)))
@@ -105,11 +118,15 @@ module Lp_bench
 			println("c", c)
 			println("b", b)
 			println("A", A)
+			if (has_lohi) println("lohi", lohi) end
 		end
 
-		return Lp.create_max_cf0_problem(merge(params, {"maxit" => maxit}),
-		c, A, b
-		)
+		nparams = merge(params, {"maxit" => maxit})
+		if (form == string(:Cf0))
+			return Lp.create_max_Cf0_problem(nparams, c, A, b)
+		else
+			return Lp.create_max_Cf2b_problem(nparams, c, A, b, lohi)
+		end
 	end
 
 	function random_problem(params::Lp.Params)
@@ -120,8 +137,9 @@ module Lp_bench
 		m = Arg.dict_get(params, "m", n)
 		maxit = Arg.dict_get(params, "maxit", 2*(m+n))
 		show = Arg.dict_get(params, "show", false)
+		form = Arg.dict_get(params, "form", string(:Cf0))
 		println("/seed:", seed)
-		return random_problem_impl(seed, scale, dense, n, m, maxit, show, params)
+		return random_problem_impl(form, seed, scale, dense, n, m, maxit, show, params)
 	end; push!(prob_db, DbProblem(random_problem, "random", :Unset, :Unset, :Unset))
 
 	function seed_problem_1(params::Lp.Params)
@@ -195,7 +213,7 @@ module Lp_bench
 		return strip(strip(@sprintf("%0.2f", 100.0 * v), '0'), '.') * "%"
 	end
 
-	function introspect(arg_str::String = "", code_module = lp_I_1)
+	function introspect(arg_str::String = "", code_module::Module = lp_defaults)
 		def_params = { "type"=>"Float32", "kind"=>"native" }
 		params = deepcopy(def_params)
 		arg_get(arg_create(arg_str), params)
@@ -246,15 +264,26 @@ module Lp_bench
 		end
 	end
 
-	function solve_problem(code_module::Module, t::DataType, params::Lp.Params, lp_prob)
-		dat = code_module.Dat{t}()
+	function solve_problem(code_module::Module, params::Lp.Params, lp_prob)
+		T = Lp.get_t(lp_prob)
+		dat = code_module.construct_dat(T)
 		code_module.fill_dat(lp_prob, dat)
-		sol = Lp.construct_solution(t, params)
+		sol = Lp.construct_solution(T, params)
 		code_module.solve_dat(dat, sol)
 		return sol
 	end
 
-	function solve(arg_str::String = "/prob:p88", code_module::Module = lp_I_1)
+	function solve_problem(code_module::Symbol, params::Lp.Params, lp_prob::Lp.Cf0_problem)
+		code_module = ( code_module == :Unset ? Jad.lp_I_1 : code_module )
+		return solve_problem(code_module, params, lp_prob)
+	end
+
+	function solve_problem(code_module::Symbol, params::Lp.Params, lp_prob::Lp.Cf2b_problem)
+		code_module = ( code_module == :Unset ? Jad.lp_III_1 : code_module )
+		return solve_problem(code_module, params, lp_prob)
+	end
+
+	function solve(arg_str::String = "/prob:p88", code_module = :Unset)
 		def_params = { "prob"=>"p88", "type"=>"Float32", "Dcd"=>false }
 		params = deepcopy(def_params)
 		arg_get(arg_create(arg_str), params)
@@ -285,15 +314,18 @@ module Lp_bench
 			push!(Lp_bench.prob_last, deepcopy(lp_prob))
 			#Lp_bench.prob_last[1] =
 			println("+++++++",
-				" n:", lp_prob.n, ", m:", lp_prob.m,
+				" n:", Lp.get_n(lp_prob), ", m:", Lp.get_m(lp_prob),
 				", density:", format_percent(Lp.comp_density(lp_prob)),
-				", type:", lp_prob.conv.t, " +++++++")
+				", type:", Lp.get_t(lp_prob),
+				", form:", Lp.get_form(lp_prob),
+				" +++++++")
 
-			@time raw_sol = solve_problem(code_module, lp_prob.conv.t, params, lp_prob)
+			@time raw_sol = solve_problem(code_module, params, lp_prob)
 			println("************\n")
 
 			sol = Lp.translate_solution(lp_prob, raw_sol)
 			check_sol(dbprob, lp_prob, sol, params)
+			return sol
 		end
 		return 0
 	end

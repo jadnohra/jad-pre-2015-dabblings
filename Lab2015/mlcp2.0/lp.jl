@@ -11,6 +11,9 @@ module Lp
 	:Maxit
 	:Error
 
+	:Cf0
+	:Cf2b
+
 	typealias Params Dict{Any,Any}
 
 	type SingleVar_translation{T}
@@ -59,14 +62,26 @@ module Lp
 		end
 	end
 
-	function comp_density{T}(prob::Cf0_problem{T})
-		A = prob.A[1:prob.m,1:prob.n]
+	function get_form(prob::Cf0_problem) return :CF0 end
+	function get_form(prob::Cf2b_problem) return :CF2b end
+	function get_t(prob::Cf0_problem) return prob.conv.t end
+	function get_t(prob::Cf2b_problem) return get_t(prob.cf0) end
+	function get_n(prob::Cf0_problem) return prob.n end
+	function get_m(prob::Cf0_problem) return prob.m end
+	function get_n(prob::Cf2b_problem) return get_n(prob.cf0) end
+	function get_m(prob::Cf2b_problem) return get_m(prob.cf0) end
+
+	function comp_density{T}(A::Matrix{T}, m::Int, n::Int)
+		A = A[1:m,1:n]
 		nz = 0
 		for a in A
 			nz = nz + ((a == zero(T)) ? 1 : 0)
 		end
-		return one(T) - (convert(T, nz) / convert(T, prob.m*prob.n))
+		return one(T) - (convert(T, nz) / convert(T, m*n))
 	end
+
+	function comp_density(prob::Cf0_problem) return comp_density(prob.A, prob.m, prob.n) end
+	function comp_density(prob::Cf2b_problem) return comp_density(prob.cf0) end
 
 	function construct_solution(type_t::DataType, params::Params)
 		return Solution{type_t}(params)
@@ -88,7 +103,11 @@ module Lp
 		return sol
 	end
 
-	function construct_cf0_problem(params::Params)
+	function translate_solution{T}(prob::Cf2b_problem{T}, raw_sol::Solution{T})
+		return translate_solution(prob.cf0, raw_sol)
+	end
+
+	function construct_Cf0_problem(params::Params)
 		conv = Conv.converter(params["type"])
 		prob = Cf0_problem{conv.t}()
 		prob.conv = conv
@@ -97,8 +116,8 @@ module Lp
 		return prob
 	end
 
-	function construct_cf2b_problem(params::Params)
-		cf0 = construct_cf0_problem(params)
+	function construct_Cf2b_problem(params::Params)
+		cf0 = construct_Cf0_problem(params)
 		prob = Cf2b_problem{cf0.conv.t}()
 		prob.cf0 = cf0
 		return prob
@@ -114,16 +133,16 @@ module Lp
 	end
 
 	# min: z = cx, subj: Ax <= b, x >= 0
-	function create_min_cf0_problem(params::Params, c::Vector, A::Matrix, b::Vector)
-		prob = construct_cf0_problem(params)
+	function create_min_Cf0_problem(params::Params, c::Vector, A::Matrix, b::Vector)
+		prob = construct_Cf0_problem(params)
 		fill_problem(params, prob, c, A, b)
 		return prob
 	end
 
 	# max: z = cx, subj: Ax <= b, x >= 0
-	function create_max_cf0_problem(params::Params, c::Vector, A::Matrix, b::Vector)
+	function create_max_Cf0_problem(params::Params, c::Vector, A::Matrix, b::Vector)
 		mone = Conv.conv(params["type"], -1)
-		prob = create_min_cf0_problem(params, mone*(c), A, b)
+		prob = create_min_Cf0_problem(params, mone*(c), A, b)
 		prob.z_transl.op1_mul = mone
 		return prob
 	end
@@ -135,17 +154,17 @@ module Lp
 	end
 
 	# min: z = cx, subj: Ax = b, lo <= x <= hi
-	function create_min_cf2b_problem(params::Params, c::Vector, A::Matrix, b::Vector, lohi::Matrix)
-		prob = construct_cf0_problem(params)
+	function create_min_Cf2b_problem(params::Params, c::Vector, A::Matrix, b::Vector, lohi::Matrix)
+		prob = construct_Cf2b_problem(params)
 		fill_problem(params, prob, c, A, b, lohi)
 		return prob
 	end
 
 	# max: z = cx, subj: Ax = b, lo <= x <= hi
-	function create_max_cf2b_problem(params::Params, c::Vector, A::Matrix, b::Vector, lohi::Matrix)
+	function create_max_Cf2b_problem(params::Params, c::Vector, A::Matrix, b::Vector, lohi::Matrix)
 		mone = Conv.conv(params["type"], -1)
-		prob = create_min_cf2b_problem(params, mone*(c), A, b, lohi)
-		prob.z_transl.op1_mul = mone
+		prob = create_min_Cf2b_problem(params, mone*(c), A, b, lohi)
+		prob.cf0.z_transl.op1_mul = mone
 		return prob
 	end
 
@@ -181,7 +200,7 @@ module Lp
 			if (haskey(iter, "pivot"))
 				c,r = iter["pivot"]
 				if (typ == 1) println( i, ". ",  dcd_var(n, iR[c]), ",", dcd_var(n, iB[r]) ) end
-				tmp = iR[c]; iR[c] = iB[r]; iB[r] = tmp;
+				iR[c], iB[r] = iB[r], iR[c]
 				if (typ != 1) dcd_print_pivot_type(n, iB, iR, typ) end
 			end
 		end
