@@ -33,11 +33,11 @@ module Lp
 		Cf0_problem() = new()
 	end
 
-	type Cf2_problem{T} #Minimize
+	type Cf2b_problem{T} #Minimize
 		cf0::Cf0_problem{T}
 		lohi::Matrix{T}
 
-		Cf2_problem() = new()
+		Cf2b_problem() = new()
 	end
 
 	type Solution{T}
@@ -97,13 +97,14 @@ module Lp
 		return prob
 	end
 
-	function construct_cf2_problem(params::Params)
+	function construct_cf2b_problem(params::Params)
 		cf0 = construct_cf0_problem(params)
-		prob = Cf2_problem{cf0.conv.t}()
+		prob = Cf2b_problem{cf0.conv.t}()
 		prob.cf0 = cf0
 		return prob
 	end
 
+	# min: z = cx, subj: Ax <= b, x >= 0
 	function fill_problem{T}(params::Params, prob::Cf0_problem{T}, c::Vector, A::Matrix, b::Vector)
 		prob.n = length(c)
 		prob.m = length(b)
@@ -127,11 +128,26 @@ module Lp
 		return prob
 	end
 
-	function fill_problem{T}(params::Params, prob::Cf2_problem{T}, c::Vector, A::Matrix, b::Vector, lohi::Matrix)
+	# min: z = cx, subj: Ax = b, lo <= x <= hi
+	function fill_problem{T}(params::Params, prob::Cf2b_problem{T}, c::Vector, A::Matrix, b::Vector, lohi::Matrix)
 		fill_problem(params, prob.cf0, c, A, b)
 		prob.lohi = Conv.matrix(prob.cf0.conv, lohi)
 	end
 
+	# min: z = cx, subj: Ax = b, lo <= x <= hi
+	function create_min_cf2b_problem(params::Params, c::Vector, A::Matrix, b::Vector, lohi::Matrix)
+		prob = construct_cf0_problem(params)
+		fill_problem(params, prob, c, A, b, lohi)
+		return prob
+	end
+
+	# max: z = cx, subj: Ax = b, lo <= x <= hi
+	function create_max_cf2b_problem(params::Params, c::Vector, A::Matrix, b::Vector, lohi::Matrix)
+		mone = Conv.conv(params["type"], -1)
+		prob = create_min_cf2b_problem(params, mone*(c), A, b, lohi)
+		prob.z_transl.op1_mul = mone
+		return prob
+	end
 
 	function dcd_var_info(n, i) return i <= n ? ("x", i) : ("w", i-n); end
 	function dcd_var(n, i) s,i = dcd_var_info(n, i); return @sprintf "%s%d" s i; end

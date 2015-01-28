@@ -18,8 +18,9 @@
 			1. revised sparse simplex
 
 		III. Generalized Simplex variants of I, then II (Presolve, Postsolve)
-			1. generalized version of I.1, using Maros' CF-2 (p13-17)
-			2. 1. with infeasibility tolerance, type-0 handling and Harris ratio. (CSTM p178)
+			1. generalized version of I.1, using Maros' CF-2 (p13-17), but without translation, calling it CF-2b
+			2. 1. with variable transformation for less lohi calculations, the proper CF-2 formulation
+			3. 2. with infeasibility tolerance, type-0 handling and Harris ratio. (CSTM p178)
 
 	LU Factorization
 		I. Suhl-suhl (CTSM p136)
@@ -148,7 +149,7 @@ module lp_I_1
 
 	function fail_solution(it::Int, sol::Lp.Solution, status::Symbol) sol.iter = it, sol.solved = false; sol.status = status; end
 
-	function solve_dat{T}(dat::Dat{T}, sol::Lp.Solution)
+	function solve_dat{T}(dat::Dat{T}, sol::Lp.Solution{T})
 		# [CTSM].p33,p30, but with naive basis reinversion instead of update.
 		dbg = sol.Dcd
 		Dcd.@it(dbg)
@@ -190,13 +191,86 @@ module lp_I_1
 		fail_solution(it, sol, :Maxit)
 	end
 
-	function solve_problem(lp_prob::Lp.Cf0_problem)
-		dat = Dat{lp_prob.conv.t}()
-		fill_dat(lp_prob, dat)
-		sol = Lp.construct_solution(lp_prob.conv.t, lp_prob.params)
-		solve_dat(dat, sol)
-		return sol
+end
+
+module lp_III_1
+	using Dcd
+	using Lp
+	using Jad.lp_I_1
+
+	type Dat{T}
+		cf0::lp_I_1.Dat{T}
+		prob::Lp.Cf2b_problem
+
+		Dat() = new()
 	end
+
+	function fill_dat{T}(prob::Lp.Cf2b_problem, dat::Dat{T})
+		lp_I_1.fill_dat(prob.cf0, dat.cf0)
+		dat.prob = prob
+	end
+
+	function comp_αq{T}(dat::Dat{T}, q::Int) aq = dat.iR[q]; dat.αq = dat.Binv * (dat.prob.A[:,aq]); end
+
+	function chuzro{T}(dat::Dat{T})
+		min_i = 0; min_ratio = dat.zero;
+		for i = 1:length(dat.αq)
+			if (dat.αq[i] > dat.zero)
+				ratio = dat.β[i] / dat.αq[i]
+				if (min_i == 0 || ratio <= min_ratio)
+					if (ratio == min_ratio)
+						println("Warning: degeneracy.")
+					end
+					min_i = i; min_ratio = ratio;
+				end
+			end
+		end
+		return (min_i, min_ratio)
+	end
+
+	function solve_dat{T}(dat::Dat{T}, sol::Lp.Solution{T})
+		# [CTSM].p33,p30, but with naive basis reinversion instead of update.
+		# Additionally, the generalized (w/o translation) chuzro as in handwritten notes.
+		dbg = sol.Dcd
+		Dcd.@it(dbg)
+		it = 0
+		#Step 0
+		lp_I_1.set_basis_logical(dat)
+		Dcd.@set(dbg, "iB", dat.iB)
+		#Initializations
+		lp_I_1.comp_cBT(dat); lp_I_1.comp_B_R(dat); lp_I_1.comp_Binv(dat);
+		lp_I_1.init_β(dat); lp_I_1.init_z(dat);
+		Dcd.@set(dbg, "β0", dat.β)
+		#todo phaseI
+		if (lp_I_1.check_feasible_β(dat) == false) println("Warning: phaseI."); fail_solution(it, sol, :Infeasible); return; end
+
+		while(dat.maxit == 0 || it < dat.maxit)
+			Dcd.@it(dbg)
+			#Step 1
+			Dcd.@set(dbg, "B", dat.B); Dcd.@set(dbg, "Binv", dat.Binv);
+			Dcd.@set(dbg, "cBT", dat.cBT);
+			lp_I_1.comp_π(dat); Dcd.@set(dbg, "π", dat.π);
+			#Step 2
+			lp_I_1.comp_dJ(dat); Dcd.@set(dbg, "dJ", dat.dJ);
+			if lp_I_1.check_optimal_dJ(dat) lp_I_1.succeed_solution(it, dat, sol); return; end
+			q = lp_I_1.price_full_dantzig(dat); Dcd.@set(dbg, "q", q);
+			#Step 3
+			############# comp_αq(dat, q); Dcd.@set(dbg, "αq", dat.αq);
+			#Step 4
+			##########p,θ = chuzro(dat); Dcd.@set(dbg, "p", p); Dcd.@set(dbg, "θ", θ);
+			if (p == 0) lp_I_1.fail_solution(it, sol, :Unbounded); return; end
+			Dcd.@set(dbg, "pivot", (q, p))
+			#Step 5
+			lp_I_1.pivot_iB_iR(dat, q, p)
+			#Updates
+			lp_I_1.update_β(dat, p, θ); Dcd.@set(dbg, "β", dat.β);
+			lp_I_1.update_z(dat, q, θ); Dcd.@set(dbg, "z", dat.z);
+			lp_I_1.comp_cBT(dat); lp_I_1.comp_B_R(dat); lp_I_1.comp_Binv(dat);
+			it = it + 1
+		end
+		lp_I_1.fail_solution(it, sol, :Maxit)
+	end
+
 end
 
 module lu_I
@@ -327,7 +401,7 @@ module lp_I_2
 
 	function fail_solution(sol::Lp.Solution, status::Symbol) sol.solved = false; sol.status = status; end
 
-	function solve_dat{T}(dat::Dat{T}, sol::Lp.Solution)
+	function solve_dat{T}(dat::Dat{T}, sol::Lp.Solution{T})
 		# [CTSM].p33,p30, but with naive basis reinversion instead of update.
 		dbg = sol.Dcd
 		Dcd.@it(dbg)
@@ -369,13 +443,6 @@ module lp_I_2
 		fail_solution(sol, :Maxit)
 	end
 
-	function solve_cf0_problem(lp_prob)
-		dat = Dat{lp_prob.conv.t}()
-		fill_dat(lp_prob, dat)
-		sol = Lp.construct_solution(lp_prob.conv.t, lp_prob.params)
-		solve_dat(dat, sol)
-		return sol
-	end
 
 end
 =#

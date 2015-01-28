@@ -246,7 +246,15 @@ module Lp_bench
 		end
 	end
 
-	function solve(arg_str::String = "/prob:p88", code_module = lp_I_1)
+	function solve_problem(code_module::Module, t::DataType, params::Lp.Params, lp_prob)
+		dat = code_module.Dat{t}()
+		code_module.fill_dat(lp_prob, dat)
+		sol = Lp.construct_solution(t, params)
+		code_module.solve_dat(dat, sol)
+		return sol
+	end
+
+	function solve(arg_str::String = "/prob:p88", code_module::Module = lp_I_1)
 		def_params = { "prob"=>"p88", "type"=>"Float32", "Dcd"=>false }
 		params = deepcopy(def_params)
 		arg_get(arg_create(arg_str), params)
@@ -281,7 +289,7 @@ module Lp_bench
 				", density:", format_percent(Lp.comp_density(lp_prob)),
 				", type:", lp_prob.conv.t, " +++++++")
 
-			@time raw_sol = code_module.solve_problem(lp_prob)
+			@time raw_sol = solve_problem(code_module, lp_prob.conv.t, params, lp_prob)
 			println("************\n")
 
 			sol = Lp.translate_solution(lp_prob, raw_sol)
