@@ -34,10 +34,16 @@ module lp_I_1
 
 	type Dat{T}
 		prob::Lp.Cf0_problem
+		sol::Lp.Solution
 		maxit::Int
 		n::Int
 		m::Int
+		status::Symbol
+
 		# Using CTSM notation.
+		# LPFE notation translation.
+		# αq - ΔxB, β - xB*, q - j, i - p, t - θ
+
 		iB::Array{Int, 1}
 		iR::Array{Int, 1}
 		B::Array{T, 2}
@@ -50,8 +56,11 @@ module lp_I_1
 		z::T
 		zero::T
 
-		# LPFE notation translation.
-		# αq - ΔxB, β - xB*, q - j, i - p, t - θ
+		dcd::Dcd.Session
+		it::Int
+		q::Int
+		p::Int
+		θ::T
 
 		Dat() = new()
 	end
@@ -74,6 +83,36 @@ module lp_I_1
 		dat.dJ = Array(T, n)
 		#dat.αq = Array(T, n)
 		dat.zero = zero(T)
+	end
+
+	function warn{T}(dat::Dat{T}, warning::Symbol)
+		println("Warning:", warning)
+	end
+
+	function succeed{T}(dat::Dat{T})
+		dat.status = :Ended
+		sol = dat.sol
+		sol.iter = dat.it
+		sol.solved = true
+		sol.status = :Optimal
+		sol.z = dat.z
+		sol.x = zeros(dat.prob.conv.t, dat.n)
+		for i = 1:length(dat.iB)
+			xi = dat.iB[i]
+			if (xi <= dat.n) sol.x[xi] = dat.β[i]; end
+		end
+		println(sol)
+
+	end
+
+	function fail{T}(dat::Dat{T}, status::Symbol)
+		dat.status = :Ended
+		sol = dat.sol
+		sol.iter = dat.it
+		sol.solved = false
+		sol.status = status
+		println(sol)
+
 	end
 
 	function sel_cols{T}(src::Matrix{T}, dst::Matrix{T}, cols::Vector{Int})
@@ -113,7 +152,7 @@ module lp_I_1
 			dj = dat.dJ[i]
 			if (dj < dat.zero && dj <= min_dj)
 				if (dj == min_dj)
-					println("Warning: degeneracy.")
+					warn(dat, :Degen)
 				end
 				min_i = i; min_dj = dj;
 			end
@@ -128,7 +167,7 @@ module lp_I_1
 				ratio = dat.β[i] / dat.αq[i]
 				if (min_i == 0 || ratio <= min_ratio)
 					if (ratio == min_ratio)
-						println("Warning: degeneracy.")
+						warn(dat, :Degen)
 					end
 					min_i = i; min_ratio = ratio;
 				end
@@ -137,60 +176,102 @@ module lp_I_1
 		return (min_i, min_ratio)
 	end
 
-	function succeed_solution{T}(it::Int, dat::Dat{T}, sol::Lp.Solution)
-		sol.iter = it
-		sol.solved = true
-		sol.status = :Optimal
-		sol.z = dat.z
-		sol.x = zeros(dat.prob.conv.t, dat.n)
-		for i = 1:length(dat.iB)
-			xi = dat.iB[i]
-			if (xi <= dat.n) sol.x[xi] = dat.β[i]; end
-		end
+
+	function solve_init{T}(dat::Dat{T}, sol::Lp.Solution{T})
+		dat.sol = sol
+		dat.dcd = sol.dcd
+		Dcd.@it(dcd)
+		dat.it = 0
+		dat.status = :Iterating
 	end
 
-	function fail_solution(it::Int, sol::Lp.Solution, status::Symbol) sol.iter = it, sol.solved = false; sol.status = status; end
-
-	function solve_dat{T}(dat::Dat{T}, sol::Lp.Solution{T})
-		# [CTSM].p33,p30, but with naive basis reinversion instead of update.
-		dbg = sol.Dcd
-		Dcd.@it(dbg)
-		it = 0
-		#Step 0
+	function solve_step0{T}(dat::Dat{T})
 		set_basis_logical(dat)
-		Dcd.@set(dbg, "iB", dat.iB)
+		Dcd.@set(dcd, "iB", dat.iB)
 		#Initializations
 		comp_cBT(dat); comp_B_R(dat); comp_Binv(dat);
 		init_β(dat); init_z(dat);
-		Dcd.@set(dbg, "β0", dat.β)
-		#todo phaseI
-		if (check_feasible_β(dat) == false) println("Warning: phaseI."); fail_solution(it, sol, :Infeasible); return; end
+		Dcd.@set(dcd, "β0", dat.β)
+	end
 
-		while(dat.maxit == 0 || it < dat.maxit)
-			Dcd.@it(dbg)
-			#Step 1
-			Dcd.@set(dbg, "B", dat.B); Dcd.@set(dbg, "Binv", dat.Binv);
-			Dcd.@set(dbg, "cBT", dat.cBT);
-			comp_π(dat); Dcd.@set(dbg, "π", dat.π);
-			#Step 2
-			comp_dJ(dat); Dcd.@set(dbg, "dJ", dat.dJ);
-			if check_optimal_dJ(dat) succeed_solution(it, dat, sol); return; end
-			q = price_full_dantzig(dat); Dcd.@set(dbg, "q", q);
-			#Step 3
-			comp_αq(dat, q); Dcd.@set(dbg, "αq", dat.αq);
-			#Step 4
-			p,θ = chuzro(dat); Dcd.@set(dbg, "p", p); Dcd.@set(dbg, "θ", θ);
-			if (p == 0) fail_solution(it, sol, :Unbounded); return; end
-			Dcd.@set(dbg, "pivot", (q, p))
-			#Step 5
-			pivot_iB_iR(dat, q, p)
-			#Updates
-			update_β(dat, p, θ); Dcd.@set(dbg, "β", dat.β);
-			update_z(dat, q, θ); Dcd.@set(dbg, "z", dat.z);
-			comp_cBT(dat); comp_B_R(dat); comp_Binv(dat);
-			it = it + 1
+	function solve_step_phaseI{T}(dat::Dat{T})
+		if (check_feasible_β(dat) == false)
+			warn(degen, :PhaseI)
+			fail(dat, sol, :Infeasible)
 		end
-		fail_solution(it, sol, :Maxit)
+	end
+
+	function solve_iter{T}(dat::Dat{T})
+		return (dat.status == :Iterating && (dat.maxit == 0 || dat.it < dat.maxit))
+	end
+
+	function solve_next{T}(dat::Dat{T})
+		dat.it = dat.it + 1
+	end
+
+	function solve_step1{T}(dat::Dat{T})
+		Dcd.@it(dcd)
+		#Step 1
+		Dcd.@set(dcd, "B", dat.B); Dcd.@set(dcd, "Binv", dat.Binv);
+		Dcd.@set(dcd, "cBT", dat.cBT);
+		comp_π(dat); Dcd.@set(dcd, "π", dat.π);
+	end
+
+	function solve_step_price{T}(dat::Dat{T})
+		comp_dJ(dat); Dcd.@set(dcd, "dJ", dat.dJ);
+		if check_optimal_dJ(dat)
+			println("success")
+			succeed(dat);
+			return;
+		end
+		dat.q = price_full_dantzig(dat); Dcd.@set(dcd, "q", dat.q);
+	end
+
+	function solve_step3{T}(dat::Dat{T})
+		comp_αq(dat, dat.q); Dcd.@set(dcd, "αq", dat.αq);
+	end
+
+	function solve_step_chuzro{T}(dat::Dat{T})
+		dat.p, dat.θ = chuzro(dat); Dcd.@set(dcd, "p", dat.p); Dcd.@set(dcd, "θ", dat.θ);
+		println(dat.p, ", ", dat.θ)
+		if (dat.p == 0) fail(dat, :Unbounded); return; end
+		println("move on")
+		Dcd.@set(dcd, "pivot", (dat.q, dat.p))
+	end
+
+	function solve_step5{T}(dat::Dat{T})
+		pivot_iB_iR(dat, dat.q, dat.p)
+	end
+
+	function solve_update{T}(dat::Dat{T})
+		update_β(dat, dat.p, dat.θ); Dcd.@set(dcd, "β", dat.β);
+		update_z(dat, dat.q, dat.θ); Dcd.@set(dcd, "z", dat.z);
+		comp_cBT(dat); comp_B_R(dat); comp_Binv(dat);
+	end
+
+	function solve_dat{T}(dat::Dat{T}, sol::Lp.Solution{T})
+		# [CTSM].p33,p30, but with naive basis reinversion instead of update.
+		solve_init(dat, sol)
+		solve_step0(dat)
+		solve_step_phaseI(dat)
+
+		println(dat)
+		while solve_iter(dat)
+			println(dat.it)
+			solve_step1(dat)
+			solve_step_price(dat);
+			if (dat.status != :Iterating)
+				println("xxx")
+				break;
+			end
+			solve_step3(dat)
+			solve_step_chuzro(dat); if (dat.status != :Iterating) break; end
+			solve_step5(dat)
+			solve_update(dat)
+			solve_next(dat)
+		end
+		println("here")
+		if (dat.status == :Iterating) fail(dat, :Maxit); end
 	end
 
 end
@@ -203,6 +284,7 @@ module lp_III_1
 	type Dat{T}
 		cf0::lp_I_1.Dat{T}
 		prob::Lp.Cf2b_problem{T}
+
 
 		Dat() = new()
 	end
@@ -221,20 +303,14 @@ module lp_III_1
 		return dat.prob.lohi[bi], dat.prob.lohi[bi+1]
 	end
 
-	function warn{T}(dat::Dat{T}, warning::Symbol)
-		println("Warning:", warning)
-	end
-
 	function chuzro{T}(dat::Dat{T})
 		# Handwritten notes (p29)
 		i_θhi = 0; min_θhi = dat.zero;
 		i_θlo = 0; max_θlo = dat.zero;
-
 		for i = 1:length(dat.αq)
 			if (dat.αq[i] > dat.zero)
 				lo, hi = get_lohi(dat, i)
 				θhi, θlo = (dat.β[i] - lo) / dat.αq[i], (dat.β[i] - hi) / dat.αq[i]
-
 				if (i_θlo == 0 || θlo >= max_θlo)
 					if (θlo == max_θlo)
 						warn(dat, :Degen)
@@ -248,57 +324,34 @@ module lp_III_1
 					end
 					i_θhi = i; min_θhi = θhi;
 				end
-
 			end
 		end
+		return (max_θlo <= min_θhi ? i_θhi : 0, min_θhi)
+	end
 
-		return (min_i, min_ratio)
+	function solve_step_chuzro{T}(dat::Dat{T})
+		dat.p, dat.θ = chuzro(dat); Dcd.@set(dcd, "p", dat.p); Dcd.@set(dcd, "θ", dat.θ);
+		if (dat.p == 0) fail(dat, :Unbounded); return; end
+		Dcd.@set(dcd, "pivot", (dat.q, dat.p))
 	end
 
 	function solve_dat{T}(dat2b::Dat{T}, sol::Lp.Solution{T})
-		# [CTSM].p33,p30, but with naive basis reinversion instead of update.
-		# Additionally, the generalized (w/o translation) chuzro as in handwritten notes.
+		# lp_I_1, with generalized forumulation (w/o translation)
 		Base = lp_I_1
-		dat = dat2b.cf0
-		dbg = sol.Dcd
-		Dcd.@it(dbg)
-		it = 0
-		#Step 0
-		Base.set_basis_logical(dat)
-		Dcd.@set(dbg, "iB", dat.iB)
-		#Initializations
-		Base.comp_cBT(dat); Base.comp_B_R(dat); Base.comp_Binv(dat);
-		Base.init_β(dat); Base.init_z(dat);
-		Dcd.@set(dbg, "β0", dat.β)
-		#todo phaseI
-		if (Base.check_feasible_β(dat) == false) println("Warning: phaseI."); fail_solution(it, sol, :Infeasible); return; end
+		Base.solve_init(dat, sol)
+		Base.solve_step0(dat)
+		Base.solve_step_phaseI(dat)
 
-		while(dat.maxit == 0 || it < dat.maxit)
-			Dcd.@it(dbg)
-			#Step 1
-			Dcd.@set(dbg, "B", dat.B); Dcd.@set(dbg, "Binv", dat.Binv);
-			Dcd.@set(dbg, "cBT", dat.cBT);
-			Base.comp_π(dat); Dcd.@set(dbg, "π", dat.π);
-			#Step 2
-			Base.comp_dJ(dat); Dcd.@set(dbg, "dJ", dat.dJ);
-			if Base.check_optimal_dJ(dat) Base.succeed_solution(it, dat, sol); return; end
-			q = Base.price_full_dantzig(dat); Dcd.@set(dbg, "q", q);
-			#Step 3
-			Base.comp_αq(dat, q); Dcd.@set(dbg, "αq", dat.αq);
-			#Step 4
-			##########
-			p,θ = Base.chuzro(dat); Dcd.@set(dbg, "p", p); Dcd.@set(dbg, "θ", θ);
-			if (p == 0) Base.fail_solution(it, sol, :Unbounded); return; end
-			Dcd.@set(dbg, "pivot", (q, p))
-			#Step 5
-			Base.pivot_iB_iR(dat, q, p)
-			#Updates
-			Base.update_β(dat, p, θ); Dcd.@set(dbg, "β", dat.β);
-			Base.update_z(dat, q, θ); Dcd.@set(dbg, "z", dat.z);
-			Base.comp_cBT(dat); Base.comp_B_R(dat); Base.comp_Binv(dat);
-			it = it + 1
+		while solve_iter(dat)
+			Base.solve_step1(dat)
+			Base.solve_step_price(dat); if (dat.status != :Iterating) break; end
+			Base.solve_step3(dat)
+			solve_step_chuzro(dat); if (dat.status != :Iterating) break; end
+			Base.solve_step5(dat)
+			Base.solve_update(dat)
+			Base.solve_next(dat)
 		end
-		Base.fail_solution(it, sol, :Maxit)
+		if (dat.status == Iterating) Base.fail(dat, :Maxit); end
 	end
 
 end
@@ -418,7 +471,7 @@ module lp_I_2
 		return (min_i, min_ratio)
 	end
 
-	function succeed_solution{T}(dat::Dat{T}, sol::Lp.Solution)
+	function succeed{T}(dat::Dat{T})
 		sol.solved = true
 		sol.status = :Optimal
 		sol.z = dat.z
@@ -429,48 +482,48 @@ module lp_I_2
 		end
 	end
 
-	function fail_solution(sol::Lp.Solution, status::Symbol) sol.solved = false; sol.status = status; end
+	function fail(dat, sol::Lp.Solution, status::Symbol) sol.solved = false; sol.status = status; end
 
 	function solve_dat{T}(dat::Dat{T}, sol::Lp.Solution{T})
 		# [CTSM].p33,p30, but with naive basis reinversion instead of update.
-		dbg = sol.Dcd
-		Dcd.@it(dbg)
+		dcd = sol.dcd
+		Dcd.@it(dcd)
 		it = 0
 		#Step 0
 		set_basis_logical(dat)
-		Dcd.@set(dbg, "iB", dat.iB)
+		Dcd.@set(dcd, "iB", dat.iB)
 		#Initializations
 		comp_cBT(dat); comp_B_R(dat); comp_Binv(dat);
 		init_β(dat); init_z(dat);
-		Dcd.@set(dbg, "β0", dat.β)
+		Dcd.@set(dcd, "β0", dat.β)
 		#todo phaseI
-		if (check_feasible_β(dat) == false) println("Warning: phaseI."); fail_solution(sol, :Infeasible); return; end
+		if (check_feasible_β(dat) == false) println("Warning: phaseI."); fail(dat, sol, :Infeasible); return; end
 
 		while(dat.maxit == 0 || it < dat.maxit)
-			Dcd.@it(dbg)
+			Dcd.@it(dcd)
 			#Step 1
-			Dcd.@set(dbg, "B", dat.B); Dcd.@set(dbg, "Binv", dat.Binv);
-			Dcd.@set(dbg, "cBT", dat.cBT);
-			comp_π(dat); Dcd.@set(dbg, "π", dat.π);
+			Dcd.@set(dcd, "B", dat.B); Dcd.@set(dcd, "Binv", dat.Binv);
+			Dcd.@set(dcd, "cBT", dat.cBT);
+			comp_π(dat); Dcd.@set(dcd, "π", dat.π);
 			#Step 2
-			comp_dJ(dat); Dcd.@set(dbg, "dJ", dat.dJ);
-			if check_optimal_dJ(dat) succeed_solution(dat, sol); return; end
-			q = price_full_dantzig(dat); Dcd.@set(dbg, "q", q);
+			comp_dJ(dat); Dcd.@set(dcd, "dJ", dat.dJ);
+			if check_optimal_dJ(dat) succeed(dat, sol); return; end
+			q = price_full_dantzig(dat); Dcd.@set(dcd, "q", q);
 			#Step 3
-			comp_αq(dat, q); Dcd.@set(dbg, "αq", dat.αq);
+			comp_αq(dat, q); Dcd.@set(dcd, "αq", dat.αq);
 			#Step 4
-			p,θ = chuzro(dat); Dcd.@set(dbg, "p", p); Dcd.@set(dbg, "θ", θ);
-			if (p == 0) fail_solution(sol, :Unbounded); return; end
-			Dcd.@set(dbg, "pivot", (q, p))
+			p,θ = chuzro(dat); Dcd.@set(dcd, "p", p); Dcd.@set(dcd, "θ", θ);
+			if (p == 0) fail(dat, sol, :Unbounded); return; end
+			Dcd.@set(dcd, "pivot", (q, p))
 			#Step 5
 			pivot_iB_iR(dat, q, p)
 			#Updates
-			update_β(dat, p, θ); Dcd.@set(dbg, "β", dat.β);
-			update_z(dat, q, θ); Dcd.@set(dbg, "z", dat.z);
+			update_β(dat, p, θ); Dcd.@set(dcd, "β", dat.β);
+			update_z(dat, q, θ); Dcd.@set(dcd, "z", dat.z);
 			comp_cBT(dat); comp_B_R(dat); comp_Binv(dat);
 			it = it + 1
 		end
-		fail_solution(sol, :Maxit)
+		fail(dat, sol, :Maxit)
 	end
 
 

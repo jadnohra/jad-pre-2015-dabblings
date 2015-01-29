@@ -50,13 +50,13 @@ module Lp
 		x::Vector{T}
 		iter::Int
 
-		Dcd::Dcd.Session
+		dcd::Dcd.Session
 
 		function Solution(params::Params)
 			x = new()
 			x.solved = false
 			x.status = :Created
-			x.Dcd = Dcd.Session(get(params, "Dcd", false))
+			x.dcd = Dcd.Session(get(params, "Dcd", false))
 			x.iter = 0
 			return x
 		end
@@ -96,7 +96,7 @@ module Lp
 		sol.solved = raw_sol.solved
 		sol.status = raw_sol.status
 		sol.z = transl_single(prob.z_transl, raw_sol.z)
-		sol.Dcd = raw_sol.Dcd
+		sol.dcd = raw_sol.dcd
 		sol.iter = raw_sol.iter
 		sol.x = raw_sol.x
 
@@ -205,13 +205,13 @@ module Lp
 			end
 		end
 
-		if isempty(sol.Dcd.iters) return; end
+		if isempty(sol.dcd.iters) return; end
 		n = sol.prob.n
-		iB = deepcopy(sol.Dcd.iters[1]["iB"])
+		iB = deepcopy(sol.dcd.iters[1]["iB"])
 		iR = dcd_iR(sol.prob.n, sol.prob.m, iB)
 		if (typ != 1) dcd_print_pivot_type(n, iB, iR, typ) end
-		for i = 1:length(sol.Dcd.iters)
-			iter = sol.Dcd.iters[i]
+		for i = 1:length(sol.dcd.iters)
+			iter = sol.dcd.iters[i]
 			dcd_print_pivot(i, iter, n, iB, iR, typ)
 		end
 	end
@@ -221,10 +221,10 @@ module Lp
 	function dcd_nbasis(sol) dcd_pivots_impl(sol, 3) end
 	function dcd_ibasis(sol) dcd_pivots_impl(sol, 4) end
 	function dcd_inbasis(sol) dcd_pivots_impl(sol, 5) end
-	function dcd_iters(sol) println(length(sol.Dcd.iters)) end
+	function dcd_iters(sol) println(length(sol.dcd.iters)) end
 	function dcd_key(sol, key)
-		for i = 1:length(sol.Dcd.iters)
-			iter = sol.Dcd.iters[i]
+		for i = 1:length(sol.dcd.iters)
+			iter = sol.dcd.iters[i]
 			if (haskey(iter, key))
 				val = iter[key]
 				println(i, ". ", val)
