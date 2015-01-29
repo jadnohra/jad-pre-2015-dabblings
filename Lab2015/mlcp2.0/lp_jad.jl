@@ -101,8 +101,6 @@ module lp_I_1
 			xi = dat.iB[i]
 			if (xi <= dat.n) sol.x[xi] = dat.β[i]; end
 		end
-		println(sol)
-
 	end
 
 	function fail{T}(dat::Dat{T}, status::Symbol)
@@ -111,8 +109,6 @@ module lp_I_1
 		sol.iter = dat.it
 		sol.solved = false
 		sol.status = status
-		println(sol)
-
 	end
 
 	function sel_cols{T}(src::Matrix{T}, dst::Matrix{T}, cols::Vector{Int})
@@ -163,7 +159,7 @@ module lp_I_1
 	function chuzro{T}(dat::Dat{T})
 		min_i = 0; min_ratio = dat.zero;
 		for i = 1:length(dat.αq)
-			if (dat.αq[i] != dat.zero)
+			if (dat.αq[i] > dat.zero)
 				ratio = dat.β[i] / dat.αq[i]
 				if (min_i == 0 || ratio <= min_ratio)
 					if (ratio == min_ratio)
@@ -219,11 +215,7 @@ module lp_I_1
 
 	function solve_step_price{T}(dat::Dat{T})
 		comp_dJ(dat); Dcd.@set(dcd, "dJ", dat.dJ);
-		if check_optimal_dJ(dat)
-			println("success")
-			succeed(dat);
-			return;
-		end
+		if check_optimal_dJ(dat) succeed(dat); return; end
 		dat.q = price_full_dantzig(dat); Dcd.@set(dcd, "q", dat.q);
 	end
 
@@ -233,9 +225,7 @@ module lp_I_1
 
 	function solve_step_chuzro{T}(dat::Dat{T})
 		dat.p, dat.θ = chuzro(dat); Dcd.@set(dcd, "p", dat.p); Dcd.@set(dcd, "θ", dat.θ);
-		println(dat.p, ", ", dat.θ)
 		if (dat.p == 0) fail(dat, :Unbounded); return; end
-		println("move on")
 		Dcd.@set(dcd, "pivot", (dat.q, dat.p))
 	end
 
@@ -255,22 +245,16 @@ module lp_I_1
 		solve_step0(dat)
 		solve_step_phaseI(dat)
 
-		println(dat)
 		while solve_iter(dat)
-			println(dat.it)
 			solve_step1(dat)
 			solve_step_price(dat);
-			if (dat.status != :Iterating)
-				println("xxx")
-				break;
-			end
+			if (dat.status != :Iterating) break; end
 			solve_step3(dat)
 			solve_step_chuzro(dat); if (dat.status != :Iterating) break; end
 			solve_step5(dat)
 			solve_update(dat)
 			solve_next(dat)
 		end
-		println("here")
 		if (dat.status == :Iterating) fail(dat, :Maxit); end
 	end
 

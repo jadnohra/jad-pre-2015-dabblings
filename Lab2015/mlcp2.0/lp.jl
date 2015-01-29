@@ -95,10 +95,15 @@ module Lp
 		sol = construct_solution(prob.conv.t, prob.params)
 		sol.solved = raw_sol.solved
 		sol.status = raw_sol.status
-		sol.z = transl_single(prob.z_transl, raw_sol.z)
 		sol.dcd = raw_sol.dcd
 		sol.iter = raw_sol.iter
-		sol.x = raw_sol.x
+		if (sol.solved)
+			sol.z = transl_single(prob.z_transl, raw_sol.z)
+			sol.x = raw_sol.x
+		else
+			sol.z = zero(T)
+			sol.x = Array(T, 0)	
+		end
 
 		return sol
 	end
