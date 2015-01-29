@@ -75,21 +75,29 @@ module Lp_bench
 			)
 	end; push!(prob_db, DbProblem(problem_LPFE_p22_4, "problem_LPFE_p22_4", :Optimal, -3, [0, 1, 0]))
 
-	function random_problem_impl(form, seed, scale, dense, n, m, maxit, show, params::Lp.Params)
+	function random_problem_impl(form, seed, scale, dense, n, m, maxit, use_lohi, show, params::Lp.Params)
 		rng = MersenneTwister(seed)
 
 		c = scale * rand(rng, (n))
 		b = scale * rand(rng, (m))
 		A = scale * rand(rng, (m, n))
-		lohi = Array(typeof(1.0), (0, 2))
+		dtype = typeof(1.0)
+		lohi = Array(dtype, 0)
 		has_lohi = false
 
 		if (form == string(:Cf2b))
 			has_lohi = true
-			lohi = scale * rand(rng, (n, 2))
-			for r = 1:size(lohi)[1]
-				if (lohi[r,2] < lohi[r,1])
-					lohi[r,1], lohi[r,2] = lohi[r,2], lohi[r,1]
+			if (use_lohi)
+				lohi = scale * rand(rng, 2*n)
+				for i = 1:length(lohi):2
+					if (lohi[i] > lohi[i+1])
+						lohi[i], lohi[i+1] = lohi[i+1], lohi[i]
+					end
+				end
+			else
+				lohi = Array(dtype, 2*n)
+				for i = 1:length(lohi):2
+					lohi[i] = zero(dtype); lohi[i] = inf(dtype)
 				end
 			end
 		end
@@ -137,9 +145,10 @@ module Lp_bench
 		m = Arg.dict_get(params, "m", n)
 		maxit = Arg.dict_get(params, "maxit", 2*(m+n))
 		show = Arg.dict_get(params, "show", false)
+		use_lohi = Arg.dict_get(params, "lohi", false)
 		form = Arg.dict_get(params, "form", string(:Cf0))
 		println("/seed:", seed)
-		return random_problem_impl(form, seed, scale, dense, n, m, maxit, show, params)
+		return random_problem_impl(form, seed, scale, dense, n, m, maxit, use_lohi, show, params)
 	end; push!(prob_db, DbProblem(random_problem, "random", :Unset, :Unset, :Unset))
 
 	function seed_problem_1(params::Lp.Params)

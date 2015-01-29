@@ -38,7 +38,8 @@ module Lp
 
 	type Cf2b_problem{T} #Minimize
 		cf0::Cf0_problem{T}
-		lohi::Vector{(T,T)}
+		l::Vector{T}
+		h::Vector{T}
 
 		Cf2b_problem() = new()
 	end
@@ -102,7 +103,7 @@ module Lp
 			sol.x = raw_sol.x
 		else
 			sol.z = zero(T)
-			sol.x = Array(T, 0)	
+			sol.x = Array(T, 0)
 		end
 
 		return sol
@@ -152,23 +153,27 @@ module Lp
 		return prob
 	end
 
-	# min: z = cx, subj: Ax = b, lo <= x <= hi
-	function fill_problem{T}(params::Params, prob::Cf2b_problem{T}, c::Vector, A::Matrix, b::Vector, lohi::Vector)
-		fill_problem(params, prob.cf0, c, A, b)
-		prob.lohi = Conv.vector(prob.cf0.conv, lohi)
+	# min: z = cx, subj: zl <= Ax <= zh, xl <= x <= xh
+	function fill_problem{T}(params::Params, prob::Cf2b_problem{T}, c::Vector, A::Matrix,
+			zl::Vector, zh::Vector, xl::Vector, xh::Vector)
+		fill_problem(params, prob.cf0, c, A, Array(T, 0))
+		prob.l = vcat( Conv.vector(prob.cf0.conv, xl), Conv.vector(prob.cf0.conv, zl) )
+		prob.h = vcat( Conv.vector(prob.cf0.conv, xh), Conv.vector(prob.cf0.conv, zh) )
 	end
 
-	# min: z = cx, subj: Ax = b, lo <= x <= hi
-	function create_min_Cf2b_problem(params::Params, c::Vector, A::Matrix, b::Vector, lohi::Vector)
+	# min: z = cx, subj: zl <= Ax <= zh, xl <= x <= xh
+	function create_min_Cf2b_problem(params::Params, c::Vector, A::Matrix,
+			zl::Vector, zh::Vector, xl::Vector, xh::Vector)
 		prob = construct_Cf2b_problem(params)
-		fill_problem(params, prob, c, A, b, lohi)
+		fill_problem(params, prob, c, A, zlh, xlh)
 		return prob
 	end
 
-	# max: z = cx, subj: Ax = b, lo <= x <= hi
-	function create_max_Cf2b_problem(params::Params, c::Vector, A::Matrix, b::Vector, lohi::Vector)
+	# max: z = cx, subj: zl <= Ax <= zh, xl <= x <= xh
+	function create_max_Cf2b_problem(params::Params, c::Vector, A::Matrix,
+			zl::Vector, zh::Vector, xl::Vector, xh::Vector)
 		mone = Conv.conv(params["type"], -1)
-		prob = create_min_Cf2b_problem(params, mone*(c), A, b, lohi)
+		prob = create_min_Cf2b_problem(params, mone*(c), A, zlh, xlh)
 		prob.cf0.z_transl.op1_mul = mone
 		return prob
 	end

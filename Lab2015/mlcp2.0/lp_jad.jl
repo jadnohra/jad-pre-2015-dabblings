@@ -18,7 +18,7 @@
 			1. revised sparse simplex
 
 		III. Generalized Simplex variants of I, then II (Presolve, Postsolve)
-			1. generalized version of I.1, using Maros' CF-2 (p13-17), but without translation, calling it CF-2b
+			1. generalized version of I.1, using Maros' CF-2 (p13-17), but without translation, calling it CF-2b. (Handwritten p29).
 			2. 1. with variable transformation for less lohi calculations, the proper CF-2 formulation
 			3. 2. with infeasibility tolerance, type-0 handling and Harris ratio. (CSTM p178)
 
@@ -266,9 +266,12 @@ module lp_III_1
 	using Jad.lp_I_1
 
 	type Dat{T}
-		cf0::lp_I_1.Dat{T}
+		Base::Module
 		prob::Lp.Cf2b_problem{T}
+		bdat::lp_I_1.Dat{T}
+		is_hi::Vector{Bool}
 
+		p_hi::Bool
 
 		Dat() = new()
 	end
@@ -276,66 +279,112 @@ module lp_III_1
 	function construct_dat(T::DataType) return Dat{T}() end
 
 	function fill_dat{T}(prob::Lp.Cf2b_problem{T}, dat::Dat{T})
-		Base = lp_I_1
-		dat.cf0 = Base.construct_dat(T)
-		Base.fill_dat(prob.cf0, dat.cf0)
+		dat.Base = lp_I_1
 		dat.prob = prob
+		dat.bdat = dat.Base.construct_dat(T)
+		Base.fill_dat(prob.base, dat.bdat)
+		dat.is_hi = zeros(Bool, dat.prob.n+dat.prob.m) # all variables at low.
 	end
 
-	function get_lohi{T}(dat::Dat{T}, i::Int)
-		bi = 2*dat.iB[i]
-		return dat.prob.lohi[bi], dat.prob.lohi[bi+1]
+	function init_β{T}(dat::Dat{T}, xlo::Vector{T})
+		R = dat.base.prob.A[:,dat.iR]
+		dat.β = dat.Binv * (dat.prob.b - R*xlo)
+	end
+
+	function init_z{T}(dat::Dat{T}, xlo::Vector{T})
+		cR = dat.prob.c[dat.iR]
+		zR = dot(cR, xlo)
+		zB = dot(reshape(dat.cBT, length(dat.cBT)), dat.β)
+		dat.z = zB + zR
+	end
+
+	function solve_step0{T}(sdat::Dat{T})
+		Base = dat.Base; dat = sdat.bdat;
+		Base.set_basis_logical(dat)
+		Dcd.@set(dcd, "iB", dat.iB)
+		#Initializations
+		Base.comp_cBT(dat); Base.comp_B_R(dat); Base.comp_Binv(dat);
+		xlo = dat.prob.l[dat.iR]
+		init_β(sdat, xlo); init_z(sdat, xlo);
+		Dcd.@set(dcd, "β0", dat.β)
+	end
+
+	function price_full_dantzig{T}(sdat::Dat{T})
+		# [CTSM].p187
+		Base = sdat.Base; dat = sdat.bdat;
+		min_i = 0; min_dj = dat.zero;
+		for i = 1:length(dat.dJ)
+			dj = dat.dJ[i]
+			if (dj < dat.zero && dj <= min_dj && (sdat.is_hi[dat.iB[dj]] == false) )
+				if (dj == min_dj)
+					Base.warn(dat, :Degen)
+				end
+				min_i = i; min_dj = dj;
+			end
+		end
+		return min_i
+	end
+
+	function solve_step_price{T}(sdat::Dat{T})
+		Base = sdat.Base; dat = sdat.bdat;
+		Base.comp_dJ(dat); Dcd.@set(dcd, "dJ", dat.dJ);
+		if Base.check_optimal_dJ(dat) Base.succeed(dat); return; end
+		dat.q = price_full_dantzig(sdat); Dcd.@set(dcd, "q", dat.q);
 	end
 
 	function chuzro{T}(dat::Dat{T})
 		# Handwritten notes (p29)
-		i_θhi = 0; min_θhi = dat.zero;
-		i_θlo = 0; max_θlo = dat.zero;
+		glob_i = 0; glob_max_θ = dat.zero; glob_hi = false;
 		for i = 1:length(dat.αq)
+			set_hi = false
 			if (dat.αq[i] > dat.zero)
-				lo, hi = get_lohi(dat, i)
-				θhi, θlo = (dat.β[i] - lo) / dat.αq[i], (dat.β[i] - hi) / dat.αq[i]
-				if (i_θlo == 0 || θlo >= max_θlo)
-					if (θlo == max_θlo)
-						warn(dat, :Degen)
-					end
-					i_θlo = i; max_θlo = θlo;
-				end
-
-				if (i_θhi == 0 || θhi <= min_θhi)
-					if (θhi == min_θhi)
-						warn(dat, :Degen)
-					end
-					i_θhi = i; min_θhi = θhi;
-				end
+				lo = dat.prob.l[dat.iB[i]]
+				max_θ = (dat.β[i] - lo) / dat.αq[i]
+				set_hi = false
+			elseif (dat.αq[i] < dat.zero)
+				hi = dat.prob.h[dat.iB[i]]
+				max_θ = (dat.β[i] - hi) / dat.αq[i]
+				set_hi = true
+			else
+				continue
+			end
+			if (glob_i == 0 || max_θ >= glob_max_θ)
+				if (max_θ == globa_max_θ) warn(dat, :Degen); end
+				glob_i = i; glob_max_θ = max_θ; glob_hi = set_hi;
 			end
 		end
-		return (max_θlo <= min_θhi ? i_θhi : 0, min_θhi)
+
+		return (glob_i, glob_max_θ, glob_hi)
 	end
 
 	function solve_step_chuzro{T}(dat::Dat{T})
-		dat.p, dat.θ = chuzro(dat); Dcd.@set(dcd, "p", dat.p); Dcd.@set(dcd, "θ", dat.θ);
+		dat.p, dat.θ, dat.p_hi = chuzro(dat); Dcd.@set(dcd, "p", dat.p); Dcd.@set(dcd, "θ", dat.θ);
 		if (dat.p == 0) fail(dat, :Unbounded); return; end
 		Dcd.@set(dcd, "pivot", (dat.q, dat.p))
 	end
 
-	function solve_dat{T}(dat2b::Dat{T}, sol::Lp.Solution{T})
-		# lp_I_1, with generalized forumulation (w/o translation)
-		Base = lp_I_1
-		Base.solve_init(dat, sol)
-		Base.solve_step0(dat)
-		Base.solve_step_phaseI(dat)
+	function solve_update{T}(dat::Dat{T})
+		dat.Base.solve_update(dat.bdat)
+		dat.is_hi[dat.p] = dat.p_hi
+	end
 
-		while solve_iter(dat)
-			Base.solve_step1(dat)
-			Base.solve_step_price(dat); if (dat.status != :Iterating) break; end
-			Base.solve_step3(dat)
-			solve_step_chuzro(dat); if (dat.status != :Iterating) break; end
-			Base.solve_step5(dat)
-			Base.solve_update(dat)
-			Base.solve_next(dat)
+	function solve_dat{T}(sdat::Dat{T}, sol::Lp.Solution{T})
+		# lp_I_1, with generalized forumulation (w/o translation)
+		Base = sdat.Base;	bdat = sdat.bdat;
+		Base.solve_init(bdat, sol)
+		solve_step0(dat)
+		Base.solve_step_phaseI(bdat)
+
+		while solve_iter(bdat)
+			Base.solve_step1(bdat)
+			solve_step_price(dat); if (bdat.status != :Iterating) break; end
+			Base.solve_step3(bdat)
+			solve_step_chuzro(dat); if (bdat.status != :Iterating) break; end
+			Base.solve_step5(bdat)
+			solve_update(dat)
+			Base.solve_next(bdat)
 		end
-		if (dat.status == Iterating) Base.fail(dat, :Maxit); end
+		if (dat.status == Iterating) Base.fail(bdat, :Maxit); end
 	end
 
 end
