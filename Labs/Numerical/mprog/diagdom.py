@@ -593,6 +593,9 @@ def main():
 	if sys_argv_has('-in'):
 		print 'Loading...'
 		problem = load_json_matrices(sys_argv_get('-in', ''), def_data_conv(), opts)
+		if (sys_argv_has('-print_diag')):
+			diag = [problem['Mlcp_A'][i][i] for i in range(mat_rows(problem['Mlcp_A']))]
+			print 'diag(MLCP_A)', diag
 		if (check_S_diagDom2(problem) and (not sys_argv_has('-force'))):
 			print 'Already diag dom'
 		else:	
