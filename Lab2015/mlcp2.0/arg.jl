@@ -64,6 +64,7 @@ module Arg
 
 	function _parse_recurse(args, depth::Int, pid::Int, str_i::Int, next_str_i::Array{Int, 1})
 		const char0 = char(0)
+		const strchar = char('\'')
 		str = args.str
 		while(isempty(str) == false && str[str_i] != char0)
 			if (str[str_i] == '/')
@@ -79,8 +80,19 @@ module Arg
 					str[i] = char0
 					if (str[i+1] != '{')
 						val_start = i+1
-						vi = val_start; while (str[vi] != char0 && str[vi] != '/' && str[vi] != '}') vi = vi+1; end;
-						node2 = Node(pid, id, key_start, i-key_start, str[key_start], false, val_start, vi-val_start, depth); node = node2; success = true;
+						vi = val_start;
+						in_string = (str[i+1] == strchar)
+						while (str[vi] != char0 && (in_string || (str[vi] != '/' && str[vi] != '}')))
+							vi = vi+1
+							if (str[vi] == strchar)
+								in_string = !in_string
+							end
+						end
+						val_sz = vi-val_start
+						if (val_sz >= 2 && str[val_start] == strchar && str[val_start+val_sz-1] == strchar)
+							val_start = val_start+1; val_sz = val_sz-2;
+						end
+						node2 = Node(pid, id, key_start, i-key_start, str[key_start], false, val_start, val_sz, depth); node = node2; success = true;
 						str_i = vi
 					elseif (str[i+1] == '{')
 						cont_str_i = [0]

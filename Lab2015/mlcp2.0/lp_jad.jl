@@ -1,5 +1,6 @@
 # István Maros. Computational Techniques of the Simplex Method. Kluwer Academic Publishers, Boston, 2003. [CTSM]
 # Robert J. Vanderbei. Linear Programming: Foundations and Extensions. Springer, second edition, 2001. [LPFE]
+# Suhl, Suhl. A fast LU update for linear programming. [LULP]
 
 #=
 	List of algorithms
@@ -23,7 +24,7 @@
 			3. 2. with infeasibility tolerance, type-0 handling and Harris ratio. (CSTM p178)
 
 	LU Factorization
-		I. Suhl-suhl (CTSM p136)
+		I. Suhl-suhl (CTSM p136), and original [LULP]
 =#
 
 module Jad

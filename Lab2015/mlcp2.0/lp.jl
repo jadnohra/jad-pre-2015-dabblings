@@ -1,6 +1,6 @@
 
-
 module Lp
+	using Shared_funcs
 	using Dcd
 	using Conv
 
@@ -13,8 +13,6 @@ module Lp
 
 	:Cf0
 	:Cf2b
-
-	typealias Params Dict{Any,Any}
 
 	type SingleVar_translation{T}
 		index::Int
@@ -72,16 +70,7 @@ module Lp
 	function get_n(prob::Cf2b_problem) return get_n(prob.cf0) end
 	function get_m(prob::Cf2b_problem) return get_m(prob.cf0) end
 
-	function comp_density{T}(A::Matrix{T}, m::Int, n::Int)
-		A = A[1:m,1:n]
-		nz = 0
-		for a in A
-			nz = nz + ((a == zero(T)) ? 1 : 0)
-		end
-		return one(T) - (convert(T, nz) / convert(T, m*n))
-	end
-
-	function comp_density(prob::Cf0_problem) return comp_density(prob.A, prob.m, prob.n) end
+	function comp_density(prob::Cf0_problem) return Shared_funcs.comp_density(prob.A[1:prob.m, 1:prob.n]) end
 	function comp_density(prob::Cf2b_problem) return comp_density(prob.cf0) end
 
 	function construct_solution(type_t::DataType, params::Params)
