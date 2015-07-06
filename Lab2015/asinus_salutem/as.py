@@ -88,14 +88,16 @@ def func_str_to_sym(_func_str, case_swap=False):
 	for symb in parse_symbols:
 		is_var = (symb.upper() != symb)
 		if ( is_var if (not case_swap) else (not is_var) ):
-			print 'Registered variable', symb
+			if arg_has('-verbose'):
+				print 'Registered variable', symb
 			def_var(fctx, symb)
 			#	if (not has_range(symb)):
 			#		def_range(symb, [-1.0,1.0,0.1])
 			if (symb not in eval_vars):
 				eval_vars.append(symb)
 		else:
-			print 'Registered constant', symb
+			if arg_has('-verbose'):
+				print 'Registered constant', symb
 			def_const(fctx, symb)
 			if (symb not in eval_constants):
 				eval_constants.append(symb)
@@ -127,11 +129,21 @@ def func_dist(fvars, lbdf1, lbdf2, (rlo, rhi, h)):
 	could_step = True
 	while could_step:
 		coords = [rlo+t*(rhi-rlo) for t in ts]
-		err.append(m_sq(lbdf1(*coords) - lbdf2(*coords)))
+		#print coords;
+		#print lbdf1(*coords); lbdf2(*coords);
+		err.append( m_sq(lbdf1(*coords) - lbdf2(*coords)) )
 		could_step = multi_step(ts, h)
-	return vec_norm(err)
+	try:
+		return vec_norm(err)
+	except:
+		print err
+		return float('inf')
 if not sys.flags.interactive:
-	if arg_has('-pyscript'):
-		execfile(arg_get('-pyscript', ''))
+	if arg_has('-pyexec'):
+		execfile(arg_get('-pyexec', ''))
+	elif arg_has('-pyscript'):
+		with open(arg_get('-pyscript', ''), "r") as ifile:
+			for line in ifile.readlines():
+				print line.strip(); exec(line);
 	else:
 		print func_str_to_sym('A*cos(x)+B*sin(y)+[1^2*cos(x)]')
