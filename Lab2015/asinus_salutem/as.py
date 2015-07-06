@@ -131,4 +131,7 @@ def func_dist(fvars, lbdf1, lbdf2, (rlo, rhi, h)):
 		could_step = multi_step(ts, h)
 	return vec_norm(err)
 if not sys.flags.interactive:
-	print func_str_to_sym('A*cos(x)+B*sin(y)+[1^2*cos(x)]')
+	if arg_has('-pyscript'):
+		execfile(arg_get('-pyscript', ''))
+	else:
+		print func_str_to_sym('A*cos(x)+B*sin(y)+[1^2*cos(x)]')
