@@ -148,3 +148,10 @@ def deg_rad(a):
     return (a/(180.0))*math.pi
 def v2_dist(a,b):
     v = [b[0]-a[0], b[1]-a[1]]; return math.sqrt(v[0]*v[0]+v[1]*v[1]);
+
+def is_float(s):
+    try:
+        float(s)
+        return True
+    except ValueError:
+        return False
