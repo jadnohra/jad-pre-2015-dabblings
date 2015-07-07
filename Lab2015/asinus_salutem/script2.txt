@@ -2,5 +2,9 @@ f f1 x
 f f2 f1+1
 f f3 f2+cos(f1)^2+tan(y)
 print f3
+bake f3 f3'
 f f1 2*x
 print f3
+print f3'
+ddist f3 f3
+ddist f3 f3'

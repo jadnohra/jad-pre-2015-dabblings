@@ -154,7 +154,7 @@ def multi_step(ts, h):
 		else:
 			ts[ti] = 0.0
 	return could_step
-def func_dist(vlen1, vlen2, lbdf1, lbdf2, (rlo, rhi, h)):
+def func_ddist(vlen1, vlen2, lbdf1, lbdf2, (rlo, rhi, h)):
 	vlen = max(vlen1, vlen2)
 	err = []; ts = [0.0 for x in range(vlen)]
 	could_step = True
@@ -204,11 +204,14 @@ def process_dsl_command(dsl, inp, quiet=False):
 			resubs_functional_vars(name, funcs, updated)
 			if (not quiet):
 				print '   [{}]'.format(', '.join(updated))
-	elif (cmd == 'dist'):
+	elif (cmd == 'bake'):
+		n1,n2 = input_splt[1], input_splt[2]
+		funcs[n2] = funcs[n1]; funcs[n2]['name'] = n2; funcs[n2]['comps'] = Set();
+	elif (cmd == 'ddist'):
 		n1,n2 = input_splt[1], input_splt[2]
 		rng = (-1.0,1.0,0.05)
 		rng = [input_splt[3:][i] if (len(input_splt[3:]) > i) else rng[i] for i in range(len(rng))]
-		print func_dist(len(funcs[n1]['lambd_vars']), len(funcs[n2]['lambd_vars']), funcs[n1]['lambd_f'], funcs[n2]['lambd_f'], rng)
+		print func_ddist(len(funcs[n1]['lambd_vars']), len(funcs[n2]['lambd_vars']), funcs[n1]['lambd_f'], funcs[n2]['lambd_f'], rng)
 	elif (cmd in ['print', 'p']):
 		name = input_splt[1]
 		print ' ', pp_func_args_val(funcs[name])
@@ -241,9 +244,9 @@ if not sys.flags.interactive:
 				print line; exec(line);
 	elif arg_has('-script'):
 		with open(arg_get('-script', ''), "r") as ifile:
-			dsl = create_dsl(); quiet = arg_has('-quiet');
+			dsl = create_dsl(); quiet = arg_has('-quiet'); echo = arg_has('-echo')
 			for line in [x.rstrip() for x in ifile.readlines()]:
-				if not quiet:
+				if echo:
 					print ' >', line;
 				process_dsl_command(dsl, line, quiet=quiet);
 	elif arg_has('-test'):
