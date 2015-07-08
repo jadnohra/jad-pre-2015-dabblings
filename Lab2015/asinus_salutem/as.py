@@ -1,3 +1,6 @@
+# Allow function names like f' (replace when doing exe with func names)
+# Fix double parenthesis, sometimes they are legal cos(f1(3))
+
 from sympy import *
 import numpy as numpy
 import re
@@ -54,6 +57,10 @@ def eval_sym_str(str, symbs, do_expand):
 	for symb in symbs:
 		exec('{} = Symbol("{}")'.format(symb, symb))
 	ev = eval(str); return expand(ev) if do_expand else ev;
+def subs_sym_str(str, func_lambds):
+	for (name,lambd) in func_lambds:
+		exec('{} = lambd;'.format(name))
+	return float( eval(str) )
 def as_list(names):
 	return names.split(',') if (type(names) is not list) else names
 def has_const(fctx, name):
@@ -186,11 +193,7 @@ def process_dsl_command(dsl, inp, quiet=False):
 	funcs = dsl['funcs']
 	input_splt = inp.split(' ')
 	cmd = input_splt[0]
-	if (cmd == 'e'):
-		go_dsl = False
-	elif (cmd == 'q'):
-		go_dsl = False; sys_exit = True;
-	elif (cmd in ['func', 'fun', 'fn', 'f']):
+	if (cmd in ['func', 'fun', 'fn', 'f']):
 		name = input_splt[1]
 		func_str = ' '.join(input_splt[2:])
 		fctx = func_str_to_sym(func_str, func_name=name, functional_var_map=funcs)
@@ -218,18 +221,19 @@ def process_dsl_command(dsl, inp, quiet=False):
 		if len(funcs[name]['comps']):
 			print ' ', pp_func_args_orig(funcs[name], empty_name = True)
 	elif (cmd in ['?', 'calc', 'eval']):
-		#coords = inp.split('(')[1].split(')')[0].split(',')
-		#coords = [float(x) for x in coords if is_float(x)]
-		#print funcs[fn]['lambd_f'](*coords)
-		print '.'
-def enter_dsl():
+		print subs_sym_str(to_sym_str(' '.join(input_splt[1:])), [ (x['name'],x['lambd_f']) for x in funcs.values()])
+def enter_dsl(dsl):
 	go_dsl = True; sys_exit = False;
-	dsl = create_dsl()
 	while go_dsl:
 		try:
 			print ' >',
 			inp = raw_input()
-			process_dsl_command(inp, dsl)
+			if (inp == 'e'):
+				go_dsl = False
+			elif (inp == 'q'):
+				go_dsl = False; sys_exit = True;
+			else:
+				process_dsl_command(dsl, inp)
 		except:
 			traceback.print_exc()
 		#e = sys.exc_info()[0]; raise e;
@@ -243,13 +247,16 @@ if not sys.flags.interactive:
 			for line in [x.rstrip() for x in ifile.readlines()]:
 				print line; exec(line);
 	elif arg_has('-script'):
+		dsl = create_dsl()
 		with open(arg_get('-script', ''), "r") as ifile:
-			dsl = create_dsl(); quiet = arg_has('-quiet'); echo = arg_has('-echo')
+			quiet = arg_has('-quiet'); echo = arg_has('-echo')
 			for line in [x.rstrip() for x in ifile.readlines()]:
 				if echo:
 					print ' >', line;
 				process_dsl_command(dsl, line, quiet=quiet);
+		if arg_has('-continue'):
+			enter_dsl(dsl)
 	elif arg_has('-test'):
 		print func_str_to_sym('A*cos(x)+B*sin(y)+[1^2*cos(x)]')
 	else:
-		enter_dsl()
+		enter_dsl(create_dsl())
