@@ -127,6 +127,15 @@ def subs_functional_vars(func_name, func_str, func_var_map, case_swap, comps = S
 		return subs_functional_vars(func_name, subs_func_str, func_var_map, case_swap, comps)
 	else:
 		return subs_func_str
+def func_update_sym_func(fctx, sym_func, eval_vars, eval_constants):
+	fctx['sym_func'] = sym_func
+	eval_func = sym_func
+	for cnt in eval_constants:
+		eval_func = eval_func.subs(cnt, val_of_const(fctx, cnt))
+	fctx['eval_vars'] = copy.copy(eval_vars); fctx['eval_constants'] = copy.copy(eval_constants);
+	fctx['eval_func'] = eval_func
+	fctx['eval_func_exp'] = expand(eval_func)
+	fctx['lambd_f'] = lambdify(eval_vars, expand(eval_func), "numpy")
 def func_str_to_sym(_func_str, case_swap=False, functional_var_map={}, func_name=''):
 	fctx = { 'eval_constants':Set(), 'eval_vars':Set(), 'values':{}, 'comp_map':{}, 'comps':Set(), 'is_comp':Set() };
 	fctx['_func_str'] = _func_str; fctx['case_swap'] = case_swap;
@@ -138,20 +147,14 @@ def func_str_to_sym(_func_str, case_swap=False, functional_var_map={}, func_name
 	for ec in eval_constants:
 		def_const(fctx, ec)
 	fctx['parse_symbols'] = parse_symbols; fctx['parse_numbers'] = parse_numbers; fctx['parse_constants'] = parse_constants;
-	sym_func = eval_sym_str(func_str, eval_vars + eval_constants, False); fctx['sym_func'] = sym_func;
-	eval_func = sym_func
-	for cnt in eval_constants:
-		eval_func = eval_func.subs(cnt, val_of_const(fctx, cnt))
-	fctx['lambd_vars'] = copy.copy(eval_vars)
-	fctx['eval_func'] = eval_func;
-	fctx['eval_func_exp'] = expand(eval_func);
-	fctx['lambd_f'] = lambdify(eval_vars, expand(eval_func), "numpy")
-	fctx['eval_df'] = []; fctx['lambd_df'] = [];
-	for ev in eval_vars:
-		df = diff(eval_func, ev)
-		fctx['eval_df'].append(df)
-		fctx['lambd_df'].append(lambdify(eval_vars, df, "numpy"))
+	sym_func = eval_sym_str(func_str, eval_vars + eval_constants, False);
+	func_update_sym_func(fctx, sym_func, eval_vars, eval_constants)
 	return fctx
+def func_sym_to_df(fctx, var):
+	dfctx = copy.copy(fctx)
+	dsym_func = diff(dfctx['sym_func'], var)
+	func_update_sym_func(dfctx, dsym_func, dfctx['eval_vars'], dfctx['eval_constants'])
+	return dfctx
 def multi_step(ts, h):
 	could_step = False
 	for ti in range(len(ts)):
@@ -175,7 +178,7 @@ def func_ddist(vlen1, vlen2, lbdf1, lbdf2, (rlo, rhi, h)):
 		print err
 		return float('inf')
 def pp_func_args(fctx):
-	return '{}({})'.format(fctx['name'], ', '.join(fctx['lambd_vars']))
+	return '{}({})'.format(fctx['name'], ', '.join(fctx['eval_vars']))
 def pp_func_args_val(fctx):
 	return '{} = {}'.format(pp_func_args(fctx), to_std_exp(str(fctx['eval_func'])))
 def pp_func_args_orig(fctx, empty_name = False):
@@ -209,12 +212,16 @@ def process_dsl_command(dsl, inp, quiet=False):
 				print '   [{}]'.format(', '.join(updated))
 	elif (cmd == 'bake'):
 		n1,n2 = input_splt[1], input_splt[2]
-		funcs[n2] = funcs[n1]; funcs[n2]['name'] = n2; funcs[n2]['comps'] = Set();
+		funcs[n2] = copy.copy(funcs[n1]); funcs[n2]['name'] = n2; funcs[n2]['comps'] = Set();
+	elif (cmd == 'd'):
+		fn,varn = input_splt[1], input_splt[2]
+		name = 'd({},{})'.format(fn, varn)
+		funcs[name] = func_sym_to_df(funcs[fn], varn); funcs[name]['name'] = name;
 	elif (cmd == 'ddist'):
 		n1,n2 = input_splt[1], input_splt[2]
 		rng = (-1.0,1.0,0.05)
 		rng = [input_splt[3:][i] if (len(input_splt[3:]) > i) else rng[i] for i in range(len(rng))]
-		print func_ddist(len(funcs[n1]['lambd_vars']), len(funcs[n2]['lambd_vars']), funcs[n1]['lambd_f'], funcs[n2]['lambd_f'], rng)
+		print func_ddist(len(funcs[n1]['eval_vars']), len(funcs[n2]['eval_vars']), funcs[n1]['lambd_f'], funcs[n2]['lambd_f'], rng)
 	elif (cmd in ['print', 'p']):
 		name = input_splt[1]
 		print ' ', pp_func_args_val(funcs[name])

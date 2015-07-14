@@ -1,0 +1,3 @@
+func f1 cos(x^2)
+d f1 x
+print d(f1,x)
