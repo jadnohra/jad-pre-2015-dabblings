@@ -1,0 +1,24 @@
+func s1 w11^2+w13^2
+func s2 w21^2+w23^2
+func r1 th1 + atan2(w11,w13)
+func r2 th2 + atan2(w21,w23)
+func t1 √(s1) * cos( r1 )
+func t2 √(s2) * cos( r2 )
+func p1 [w11*sin(th1)-w13*cos(th1) ]^2 + w12^2
+func p2 [w21*sin(th2)-w23*cos(th2) ]^2 + w22^2
+func _p1 t1^2 + w12^2
+func _p2 t2^2 + w22^2
+func e1 p1-p2
+func O1 e1^2
+#
+echo Verifying (4)
+ ftest p1 _p1
+ ftest p2 _p2
+#
+echo Verifying (39)
+ d O1 th1
+ print d(O1,th1) -latex
+ func c1 s1 + 2*w12^2 - [ s2 + 2*w22^2 ]
+ func _39 (-s1) * sin(2*r1) * [ (c1) + s1 * cos(2*r1) - s2 * cos(2*r2) ]
+ print _39 -latex
+ ftest d(O1,th1) _39

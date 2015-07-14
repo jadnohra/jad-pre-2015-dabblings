@@ -1,6 +1,8 @@
+# coding=utf-8
 # Allow function names like f' (replace when doing exe with func names)
 # Fix double parenthesis, sometimes they are legal cos(f1(3))
 
+from __future__ import division # prevent integer division (http://docs.sympy.org/0.7.1/gotchas.html)
 from sympy import *
 import numpy as numpy
 import re
@@ -24,9 +26,9 @@ _ctx = {
 def to_std_delims(frag):
 	return frag.replace('[','(').replace(']',')').replace('((', '(').replace('))', ')')
 def to_sym_exp(frag):
-	return frag.replace('^', '**')
+	return frag.replace('^', '**').replace('√', 'sqrt')
 def to_std_exp(frag):
-	return frag.replace('**', '^')
+	return frag.replace('**', '^').replace('sqrt', '√')
 def to_sym_str(func_str):
 	return to_sym_exp(to_std_delims(func_str))
 def parse_func_str(func_str):
@@ -164,25 +166,28 @@ def multi_step(ts, h):
 		else:
 			ts[ti] = 0.0
 	return could_step
-def func_ddist(vlen1, vlen2, lbdf1, lbdf2, (rlo, rhi, h)):
+def func_gridtest(vlen1, vlen2, lbdf1, lbdf2, (rlo, rhi, h)):
 	vlen = max(vlen1, vlen2)
-	err = []; ts = [0.0 for x in range(vlen)]
+	err = 0.0; ts = [0.0 for x in range(vlen)]
 	could_step = True
 	while could_step:
 		coords = [rlo+t*(rhi-rlo) for t in ts]
-		err.append( m_sq(lbdf1(*(coords[:vlen1])) - lbdf2(*(coords[:vlen2]))) )
+		err = max(err, abs(lbdf1(*(coords[:vlen1])) - lbdf2(*(coords[:vlen2]))) )
 		could_step = multi_step(ts, h)
-	try:
-		return vec_norm(err)
-	except:
-		print err
-		return float('inf')
+	return err
+def func_randtest(vlen1, vlen2, lbdf1, lbdf2, (rlo, rhi, n)):
+	vlen = max(vlen1, vlen2)
+	err = 0.0; coords = [rlo+x*(rhi-rlo) for x in numpy.random.random(int(n)+vlen-1)];
+	for i in range(len(coords)-vlen):
+		err = max(err, abs(lbdf1(*(coords[i:i+vlen1])) - lbdf2(*(coords[i:i+vlen2]))) )
+	return err
 def pp_func_args(fctx):
 	return '{}({})'.format(fctx['name'], ', '.join(fctx['eval_vars']))
-def pp_func_args_val(fctx):
-	return '{} = {}'.format(pp_func_args(fctx), to_std_exp(str(fctx['eval_func'])))
-def pp_func_args_orig(fctx, empty_name = False):
-	return '{} = {}'.format(''.join([' ']*len(pp_func_args(fctx))) if empty_name else pp_func_args(fctx), fctx['_func_str'])
+def pp_func_args_val(fctx, ltex = False):
+	eval_str = latex(fctx['eval_func']) if ltex else to_std_exp(str(fctx['eval_func']))
+	return '{} = {}'.format(pp_func_args(fctx), eval_str)
+def pp_func_args_orig(fctx, empty_name = False, ltex = False):
+	return '{} = {}'.format(''.join([' ']*len(pp_func_args(fctx))) if empty_name else pp_func_args(fctx, ltex), fctx['_func_str'])
 def resubs_functional_vars(name, funcs, updated = Set()):
 	for fn in funcs[name]['is_comp']:
 		updated.add(fn)
@@ -203,7 +208,7 @@ def process_dsl_command(dsl, inp, quiet=False):
 		old_func = funcs.get(name, None); old_is_comp = old_func['is_comp'] if old_func else None;
 		funcs[name] = fctx; fctx['name'] = name;
 		if (not quiet):
-			print ' ', pp_func_args(fctx)
+			print ' ', pp_func_args_val(fctx)
 		if (old_is_comp is not None) and len(old_is_comp):
 			fctx['is_comp'] = old_is_comp
 			updated = Set()
@@ -216,17 +221,20 @@ def process_dsl_command(dsl, inp, quiet=False):
 	elif (cmd == 'd'):
 		fn,varn = input_splt[1], input_splt[2]
 		name = 'd({},{})'.format(fn, varn)
-		funcs[name] = func_sym_to_df(funcs[fn], varn); funcs[name]['name'] = name;
-	elif (cmd == 'ddist'):
+		funcs[name] = func_sym_to_df(funcs[fn], varn); funcs[name]['name'] = name; funcs[name]['_func_str'] = 'd({},{})'.format(funcs[fn]['_func_str'], varn);
+	elif (cmd in ['ftest', 'frandtest', 'fgridtest']):
 		n1,n2 = input_splt[1], input_splt[2]
-		rng = (-1.0,1.0,0.05)
-		rng = [input_splt[3:][i] if (len(input_splt[3:]) > i) else rng[i] for i in range(len(rng))]
-		print func_ddist(len(funcs[n1]['eval_vars']), len(funcs[n2]['eval_vars']), funcs[n1]['lambd_f'], funcs[n2]['lambd_f'], rng)
+		rng = (-1.0,1.0,1000)
+		rng = [float(input_splt[3:][i]) if (len(input_splt[3:]) > i) else rng[i] for i in range(len(rng))]
+		func_test = func_randtest if (cmd != 'fgridtest') else func_gridtest
+		print func_test(len(funcs[n1]['eval_vars']), len(funcs[n2]['eval_vars']), funcs[n1]['lambd_f'], funcs[n2]['lambd_f'], rng)
 	elif (cmd in ['print', 'p']):
-		name = input_splt[1]
-		print ' ', pp_func_args_val(funcs[name])
+		name = input_splt[1]; ltex = '-latex' in input_splt;
+		print ' ', pp_func_args_val(funcs[name], ltex = ltex)
 		if len(funcs[name]['comps']):
-			print ' ', pp_func_args_orig(funcs[name], empty_name = True)
+			print ' ', pp_func_args_orig(funcs[name], empty_name = True, ltex = ltex)
+	elif (cmd in ['echo']):
+		print ' '.join(input_splt[1:])
 	elif (cmd in ['?', 'calc', 'eval']):
 		print subs_sym_str(to_sym_str(' '.join(input_splt[1:])), [ (x['name'],x['lambd_f']) for x in funcs.values()])
 def enter_dsl(dsl):
@@ -256,8 +264,8 @@ if not sys.flags.interactive:
 	elif arg_has('-script'):
 		dsl = create_dsl()
 		with open(arg_get('-script', ''), "r") as ifile:
-			quiet = arg_has('-quiet'); echo = arg_has('-echo')
-			for line in [x.rstrip() for x in ifile.readlines()]:
+			quiet = arg_has('-quiet'); echo = arg_has('-echo');
+			for line in [x.rstrip().strip() for x in ifile.readlines()]:
 				if echo:
 					print ' >', line;
 				process_dsl_command(dsl, line, quiet=quiet);
