@@ -177,11 +177,27 @@ def func_gridtest(vlen1, vlen2, lbdf1, lbdf2, (rlo, rhi, h)):
 		err = max(err, abs(lbdf1(*(coords[:vlen1])) - lbdf2(*(coords[:vlen2]))) )
 		could_step = multi_step(ts, h)
 	return err
-def func_randtest(vlen1, vlen2, lbdf1, lbdf2, (rlo, rhi, n)):
+def func_randtest(vlen1, vlen2, lbdf1, lbdf2, (rlo, rhi, n), excpt = False, seed = None, quiet = False):
+	if seed is not None:
+		numpy.random.seed(seed)
 	vlen = max(vlen1, vlen2); coords = [rlo+x*(rhi-rlo) for x in numpy.random.random(int(n)+vlen-1)];
-	err = 0.0;
-	for i in range(len(coords)-vlen+1):
-		err = max(err, abs(lbdf1(*(coords[i:i+vlen1])) - lbdf2(*(coords[i:i+vlen2]))) )
+	err = 0.0; i = 0; except_count = 0;
+	with numpy.errstate(invalid='raise'):
+		while i < len(coords)-vlen+1:
+			has_except = False
+			if excpt:
+				try:
+					err = max(err, abs(lbdf1(*(coords[i:i+vlen1])) - lbdf2(*(coords[i:i+vlen2]))) )
+				except:
+					has_except = True; except_count = except_count + 1
+			else:
+				err = max(err, abs(lbdf1(*(coords[i:i+vlen1])) - lbdf2(*(coords[i:i+vlen2]))) )
+			if has_except:
+				coords[i:i+vlen] = [rlo+x*(rhi-rlo) for x in numpy.random.random(vlen)]
+			else:
+				i = i+1
+	if (except_count  and not quiet):
+		print 'Note: Bypassed {} exceptions.'.format(except_count)
 	return err
 def func_ztest(fctx, subs, k_int, (rlo, rhi, n), excpt = False, seed = None, quiet = False):
 	if seed is not None:
