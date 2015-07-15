@@ -4,3 +4,4 @@ ztest f1 x f1z_x -k
 func f2 (2*x)^2-y^2
 func f2z_y 2*x
 ztest f2 y f2z_y
+ztest f2 x f2z_y

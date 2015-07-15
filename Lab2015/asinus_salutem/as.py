@@ -14,7 +14,7 @@ import traceback
 execfile('helper_arg.py')
 execfile('helper_math1.py')
 
-g_dbg = arg_has('-dbg')
+g_dbg = False
 
 _ctx = {
 	'parse_func_re' : re.compile(ur'((?:\d+\.*(?:0?e-\d+)?\d*(?!\w)|\w+)\b)(?!\s*\()'),
@@ -26,7 +26,7 @@ _ctx = {
 }
 
 def to_std_delims(frag):
-	return frag.replace('[','(').replace(']',')').replace('((', '(').replace('))', ')')
+	return frag.replace('[','(').replace(']',')')#.replace('((', '(').replace('))', ')')
 def to_sym_exp(frag):
 	return frag.replace('^', '**').replace('√', 'sqrt')
 def to_std_exp(frag):
@@ -183,7 +183,9 @@ def func_randtest(vlen1, vlen2, lbdf1, lbdf2, (rlo, rhi, n)):
 	for i in range(len(coords)-vlen+1):
 		err = max(err, abs(lbdf1(*(coords[i:i+vlen1])) - lbdf2(*(coords[i:i+vlen2]))) )
 	return err
-def func_ztest(fctx, subs, k_int, (rlo, rhi, n)):
+def func_ztest(fctx, subs, k_int, (rlo, rhi, n), excpt = False, seed = None, quiet = False):
+	if seed is not None:
+		numpy.random.seed(seed)
 	subs_keys = subs.keys(); subs_fctx = [subs[k] for k in subs_keys]; subs_lbds = [x['lambd_f'] for x in subs_fctx];
 	in_vars = Set()
 	for sub in subs_fctx + [fctx]:
@@ -195,26 +197,44 @@ def func_ztest(fctx, subs, k_int, (rlo, rhi, n)):
 	subs_inds = [ fctx['eval_vars'].index(x) for x in fctx['eval_vars'] if x in subs_keys ]
 	k_inds = [ in_vars.index(x) for x in in_vars if x.startswith('k') ] if k_int else []
 	vlen = len(in_vars); coords = [rlo+x*(rhi-rlo) for x in numpy.random.random(int(n)+vlen-1)];
-	k_coords = numpy.random.randint(-50, 51, int(n)+vlen-1)
+	k_coords = numpy.random.randint(-10, 11, int(n)+vlen-1)
 	subs_vals = [0.0]*len(subs);
 	lbd_f = fctx['lambd_f']; fvlen = len(fctx['eval_vars']);
-	err = 0.0
-	for i in range(len(coords)-vlen+1):
-		coords_i = coords[i:i+vlen]; coords_k = k_coords[i:i+vlen];
-		for k,j in zip(k_inds, range(len(k_inds))):
-			coords_i[k] = coords_k[j]
-		for lbd,sub_lbd_inds,si in zip(subs_lbds, lbd_inds, range(len(subs_keys))):
-			sub_coords = [coords_i[x] for x in sub_lbd_inds]
-			subs_vals[si] = lbd(*sub_coords)
-			if g_dbg:
-				print '{} ({}) = {}'.format(subs_fctx[si]['name'], zip(subs_fctx[si]['eval_vars'], sub_coords), subs_vals[si])
-		coords_f = [coords_i[x] for x in f_lbd_inds]
-		for j in range(len(subs_inds)):
-			coords_f[subs_inds[j]] = subs_vals[j]
-		f_val = lbd_f(*coords_f)
-		if g_dbg:
-			print '{} ({}) = {}'.format(fctx['name'], zip(fctx['eval_vars'], coords_f), f_val)
-		err = max(err, abs(f_val))
+	err = 0.0; except_count = 0;
+	with numpy.errstate(invalid='raise'):
+		i = 0
+		while i < (len(coords)-vlen+1):
+			has_except = False
+			coords_i = coords[i:i+vlen]; coords_k = k_coords[i:i+vlen];
+			for k,j in zip(k_inds, range(len(k_inds))):
+				coords_i[k] = coords_k[j]
+			for lbd,sub_lbd_inds,si in zip(subs_lbds, lbd_inds, range(len(subs_keys))):
+				sub_coords = [coords_i[x] for x in sub_lbd_inds]
+				if excpt:
+					try:
+						subs_vals[si] = lbd(*sub_coords)
+					except:
+						if g_dbg:
+							print 'except'
+						except_count = except_count+1; has_except = True; break;
+				else:
+					subs_vals[si] = lbd(*sub_coords)
+				if g_dbg:
+					print '{} ({}) = {}'.format(subs_fctx[si]['name'], zip(subs_fctx[si]['eval_vars'], sub_coords), subs_vals[si])
+			if has_except:
+				coords[i:i+vlen] = [rlo+x*(rhi-rlo) for x in numpy.random.random(vlen)]
+				k_coords[i:i+vlen] = numpy.random.randint(-10, 11, vlen)
+			else:
+				coords_f = [coords_i[x] for x in f_lbd_inds]
+				for j in range(len(subs_inds)):
+					coords_f[subs_inds[j]] = subs_vals[j]
+				f_val = lbd_f(*coords_f)
+				if g_dbg:
+					print '{} ({}) = {}'.format(fctx['name'], zip(fctx['eval_vars'], coords_f), f_val)
+				err = max(err, abs(f_val))
+				i = i+1
+	if (except_count  and not quiet):
+		print 'Note: Bypassed {} exceptions.'.format(except_count)
 	return err
 def pp_func_args(fctx):
 	return '{}({})'.format(fctx['name'], ', '.join(fctx['eval_vars']))
@@ -231,24 +251,29 @@ def resubs_functional_vars(name, funcs, updated = Set()):
 		resubs_functional_vars(funcs[fn]['name'], funcs, updated)
 def create_dsl():
 	print ' Asinus Salutem'
-	return { 'funcs':{} }
+	return { 'funcs':{}, 'dbg':False, 'g_dbg':arg_has('-dbg'),
+			'sections':[x for x in arg_get('-sections', '').split(',') if len(x)],
+			'cur_sec':None }
 def process_dsl_command(dsl, inp, quiet=False):
+	global g_dbg
 	funcs = dsl['funcs']
 	input_splt = inp.split(' ')
 	cmd = input_splt[0]
+	dsl['dbg'] = True if ('-dbg' in input_splt) else dsl['g_dbg']; g_dbg = dsl['dbg'];
+	run_sec = len(dsl['sections']) == 0 or dsl['cur_sec'] in dsl['sections']
 	if (cmd in ['func', 'fun', 'fn', 'f']):
 		name = input_splt[1]
 		func_str = ' '.join(input_splt[2:])
 		fctx = func_str_to_sym(func_str, func_name=name, functional_var_map=funcs)
 		old_func = funcs.get(name, None); old_is_comp = old_func['is_comp'] if old_func else None;
 		funcs[name] = fctx; fctx['name'] = name;
-		if (not quiet):
+		if (not quiet and run_sec):
 			print ' ', pp_func_args_val(fctx)
 		if (old_is_comp is not None) and len(old_is_comp):
 			fctx['is_comp'] = old_is_comp
 			updated = Set()
 			resubs_functional_vars(name, funcs, updated)
-			if (not quiet):
+			if (not quiet and run_sec):
 				print '   [{}]'.format(', '.join(updated))
 	elif (cmd == 'bake'):
 		n1,n2 = input_splt[1], input_splt[2]
@@ -257,35 +282,46 @@ def process_dsl_command(dsl, inp, quiet=False):
 		fn,varn = input_splt[1], input_splt[2]
 		name = 'd({},{})'.format(fn, varn)
 		funcs[name] = func_sym_to_df(funcs[fn], varn); funcs[name]['name'] = name; funcs[name]['_func_str'] = 'd({},{})'.format(funcs[fn]['_func_str'], varn);
-	elif (cmd in ['ftest', 'frandtest', 'fgridtest']):
+	elif (cmd in ['ftest', 'frandtest', 'fgridtest'] and run_sec):
 		n1,n2 = input_splt[1], input_splt[2]
 		rng = (-1.0,1.0,1000)
 		rng = [float(input_splt[3:][i]) if (len(input_splt[3:]) > i) else rng[i] for i in range(len(rng))]
 		func_test = func_randtest if (cmd != 'fgridtest') else func_gridtest
 		print func_test(len(funcs[n1]['eval_vars']), len(funcs[n2]['eval_vars']), funcs[n1]['lambd_f'], funcs[n2]['lambd_f'], rng)
-	elif (cmd == 'ztest'):
+	elif (cmd == 'ztest' and run_sec):
 		fn = input_splt[1]; fctx = funcs[fn];
-		k_int = False; subs = {}; lo_hi_n = [-1.0, 1.0, 1000];
-		state = ''; state_ev = ''; state_lhn = 0;
+		k_int = False; subs = {}; lo_hi_n = [-1.0, 1.0, 1000]; seed = None;
+		state = ''; state_ev = ''; state_lhn = 0; excpt = False
 		for part in input_splt[2:]:
 			if state == '':
 				if part in fctx['eval_vars']:
 					state_ev = part; state = 'ev';
 				elif part == '-k':
 					k_int = True
-				else:
+				elif part == '-except':
+					excpt = True
+				elif part == '-seed':
+					state = 'seed'
+				elif state_lhn < 3 and is_float(part):
 					lo_hi_n[state_lhn] = float(part); state_lhn = state_lhn+1;
+			elif state == 'seed':
+				seed = int(part); state = '';
 			elif state == 'ev':
 				subs[state_ev] = funcs[part]; state = '';
-		print func_ztest(fctx, subs, k_int, lo_hi_n)
-	elif (cmd in ['print', 'p']):
+		print func_ztest(fctx, subs, k_int, lo_hi_n, excpt, seed = seed, quiet = quiet)
+	elif (cmd in ['print', 'p'] and run_sec):
 		name = input_splt[1]; ltex = '-latex' in input_splt;
 		print ' ', pp_func_args_val(funcs[name], ltex = ltex)
 		if len(funcs[name]['comps']):
 			print ' ', pp_func_args_orig(funcs[name], empty_name = True, ltex = ltex)
-	elif (cmd in ['echo']):
+	elif (cmd in ['echo'] and run_sec):
 		print ' '.join(input_splt[1:])
-	elif (cmd in ['?', 'calc', 'eval']):
+	elif (cmd in ['section']):
+		sec = input_splt[1]; dsl['cur_sec'] = sec;
+		run_sec = len(dsl['sections']) == 0 or dsl['cur_sec'] in dsl['sections']
+		if len(input_splt) >= 2 and run_sec:
+			print ' '.join(input_splt[2:])
+	elif (cmd in ['?', 'calc', 'eval'] and run_sec):
 		print subs_sym_str(to_sym_str(' '.join(input_splt[1:])), [ (x['name'],x['lambd_f']) for x in funcs.values()])
 def enter_dsl(dsl):
 	go_dsl = True; sys_exit = False;
@@ -305,6 +341,7 @@ def enter_dsl(dsl):
 	if (sys_exit):
 		sys.exit()
 if not sys.flags.interactive:
+	g_dbg = arg_has('-dbg')
 	if arg_has('-pyexec'):
 		execfile(arg_get('-pyexec', ''))
 	elif arg_has('-pyscript'):
