@@ -17,8 +17,12 @@ echo Verifying (4)
 #
 echo Verifying (39)
  d O1 th1
- print d(O1,th1) -latex
+ #print d(O1,th1)
  func c1 s1 + 2*w12^2 - [ s2 + 2*w22^2 ]
  func _39 (-s1) * sin(2*r1) * [ (c1) + s1 * cos(2*r1) - s2 * cos(2*r2) ]
- print _39 -latex
+ #print _39
  ftest d(O1,th1) _39
+#
+echo Verifying (40)
+  func _40 (k*pi)/2 - atan2(w11,w22)
+  ztest _39 th1 _40 -k -1 1 1

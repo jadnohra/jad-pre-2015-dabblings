@@ -14,6 +14,8 @@ import traceback
 execfile('helper_arg.py')
 execfile('helper_math1.py')
 
+g_dbg = arg_has('-dbg')
+
 _ctx = {
 	'parse_func_re' : re.compile(ur'((?:\d+\.*(?:0?e-\d+)?\d*(?!\w)|\w+)\b)(?!\s*\()'),
 	'parse_number_re' : re.compile(ur'\d+\.*(?:0?e-\d+)?\d*(?!\w)'),
@@ -176,10 +178,43 @@ def func_gridtest(vlen1, vlen2, lbdf1, lbdf2, (rlo, rhi, h)):
 		could_step = multi_step(ts, h)
 	return err
 def func_randtest(vlen1, vlen2, lbdf1, lbdf2, (rlo, rhi, n)):
-	vlen = max(vlen1, vlen2)
-	err = 0.0; coords = [rlo+x*(rhi-rlo) for x in numpy.random.random(int(n)+vlen-1)];
-	for i in range(len(coords)-vlen):
+	vlen = max(vlen1, vlen2); coords = [rlo+x*(rhi-rlo) for x in numpy.random.random(int(n)+vlen-1)];
+	err = 0.0;
+	for i in range(len(coords)-vlen+1):
 		err = max(err, abs(lbdf1(*(coords[i:i+vlen1])) - lbdf2(*(coords[i:i+vlen2]))) )
+	return err
+def func_ztest(fctx, subs, k_int, (rlo, rhi, n)):
+	subs_keys = subs.keys(); subs_fctx = [subs[k] for k in subs_keys]; subs_lbds = [x['lambd_f'] for x in subs_fctx];
+	in_vars = Set()
+	for sub in subs_fctx + [fctx]:
+		for ev in sub['eval_vars']:
+			in_vars.add(ev)
+	in_vars = list(in_vars)
+	lbd_inds = [ [in_vars.index(x) for x in sub['eval_vars']] for sub in subs_fctx ]
+	f_lbd_inds = [in_vars.index(x) for x in fctx['eval_vars']]
+	subs_inds = [ fctx['eval_vars'].index(x) for x in fctx['eval_vars'] if x in subs_keys ]
+	k_inds = [ in_vars.index(x) for x in in_vars if x.startswith('k') ] if k_int else []
+	vlen = len(in_vars); coords = [rlo+x*(rhi-rlo) for x in numpy.random.random(int(n)+vlen-1)];
+	k_coords = numpy.random.randint(-50, 51, int(n)+vlen-1)
+	subs_vals = [0.0]*len(subs);
+	lbd_f = fctx['lambd_f']; fvlen = len(fctx['eval_vars']);
+	err = 0.0
+	for i in range(len(coords)-vlen+1):
+		coords_i = coords[i:i+vlen]; coords_k = k_coords[i:i+vlen];
+		for k,j in zip(k_inds, range(len(k_inds))):
+			coords_i[k] = coords_k[j]
+		for lbd,sub_lbd_inds,si in zip(subs_lbds, lbd_inds, range(len(subs_keys))):
+			sub_coords = [coords_i[x] for x in sub_lbd_inds]
+			subs_vals[si] = lbd(*sub_coords)
+			if g_dbg:
+				print '{} ({}) = {}'.format(subs_fctx[si]['name'], zip(subs_fctx[si]['eval_vars'], sub_coords), subs_vals[si])
+		coords_f = [coords_i[x] for x in f_lbd_inds]
+		for j in range(len(subs_inds)):
+			coords_f[subs_inds[j]] = subs_vals[j]
+		f_val = lbd_f(*coords_f)
+		if g_dbg:
+			print '{} ({}) = {}'.format(fctx['name'], zip(fctx['eval_vars'], coords_f), f_val)
+		err = max(err, abs(f_val))
 	return err
 def pp_func_args(fctx):
 	return '{}({})'.format(fctx['name'], ', '.join(fctx['eval_vars']))
@@ -228,6 +263,21 @@ def process_dsl_command(dsl, inp, quiet=False):
 		rng = [float(input_splt[3:][i]) if (len(input_splt[3:]) > i) else rng[i] for i in range(len(rng))]
 		func_test = func_randtest if (cmd != 'fgridtest') else func_gridtest
 		print func_test(len(funcs[n1]['eval_vars']), len(funcs[n2]['eval_vars']), funcs[n1]['lambd_f'], funcs[n2]['lambd_f'], rng)
+	elif (cmd == 'ztest'):
+		fn = input_splt[1]; fctx = funcs[fn];
+		k_int = False; subs = {}; lo_hi_n = [-1.0, 1.0, 1000];
+		state = ''; state_ev = ''; state_lhn = 0;
+		for part in input_splt[2:]:
+			if state == '':
+				if part in fctx['eval_vars']:
+					state_ev = part; state = 'ev';
+				elif part == '-k':
+					k_int = True
+				else:
+					lo_hi_n[state_lhn] = float(part); state_lhn = state_lhn+1;
+			elif state == 'ev':
+				subs[state_ev] = funcs[part]; state = '';
+		print func_ztest(fctx, subs, k_int, lo_hi_n)
 	elif (cmd in ['print', 'p']):
 		name = input_splt[1]; ltex = '-latex' in input_splt;
 		print ' ', pp_func_args_val(funcs[name], ltex = ltex)

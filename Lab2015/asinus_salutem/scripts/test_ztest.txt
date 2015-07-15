@@ -1,0 +1,6 @@
+func f1 sin(x)
+func f1z_x k*pi
+ztest f1 x f1z_x -k
+func f2 (2*x)^2-y^2
+func f2z_y 2*x
+ztest f2 y f2z_y
