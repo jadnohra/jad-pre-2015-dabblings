@@ -1,9 +1,9 @@
-f f1 x
-f f2 f1+1
-f f3 f2+cos(f1)^2+tan(y)
+let f1(.) = x
+let f2(.) = f1+1
+let f3(.) = f2+cos(f1)^2+tan(y)
 print f3
 bake f3 f3b
-f f1 2*x
+let f1(.) = 2*x
 print f3
 print f3b
 ddist f3 f3
