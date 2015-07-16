@@ -1,0 +1,17 @@
+#f f2 (x+1)
+#f f2 (x)+1
+#f f2 (x)+1+( () )
+f f2 (x)+1+( (0) )
+#f f2 2 x+ 2y
+f f2 (x +(y*x))+1+(2g2-cos(x))
+f f1 x
+f f2 f1+1
+f f2 f1+1.e3
+f f2 f1+1.01
+##f f2 f1+1.01-2.0.0.0
+##f f2 f1+1.e3+gh_g-g,g,g,g
+##f f2 f1+1.e
+f f2 f1 + (-1)
+f f2 f1 +   1
+f f3 f2+cos(f1)^2+tan(y+x)
+#f f3 4 pi x + 2g2+3g3*6

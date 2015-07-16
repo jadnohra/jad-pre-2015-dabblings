@@ -1,6 +1,6 @@
 # coding=utf-8
 # Allow function names like f' (replace when doing exe with func names)
-# Fix double parenthesis, sometimes they are legal cos(f1(3))
+
 
 from __future__ import division # prevent integer division (http://docs.sympy.org/0.7.1/gotchas.html)
 from sympy import *
@@ -25,13 +25,167 @@ _ctx = {
 	'parse_func_func_re' : re.compile(ur'\w+(?=\()'),
 }
 
+def parse_func_tokenize(func_str, sym_strict):
+	def has_ws(token):
+		return ''.join(token.split()) != token
+	def is_number(token, final = True, leaf = None):
+		return not has_ws(token) and (not (token.startswith('+') or token.startswith('-'))) and (is_float(token) if final else is_float(token+'0'))
+	def is_symbol(token, final = True, leaf = None):
+		tl = token[-1]
+		return not has_ws(token) and not (is_operator(tl) or is_group_start(tl) or is_group_end(tl) or (is_number(token.strip(), True) if final else False) )
+	def is_symbol_restricted(token, final = True, leaf = None):
+		return token[:1].isalpha() and is_symbol(token, final, leaf)
+	def is_operator(token, final = True, leaf = None):
+		if token in ['+','-','/','*','^']:
+			return True
+	def is_ws(token, final = True, leaf = None):
+		if len(token.strip()) == 0:
+			return True
+	def is_group_start(token, final = True, leaf = None):
+		return token in ['[','(']
+	def is_group_end(token, final = True, leaf = None):
+		return token in [']',')']
+	def parse_group(tl, tli, tlo, depth):
+		group = { 'parts':[], 'started':False }
+		while tli < len(tl):
+			#print depth, group, tli
+			tok = tl[tli]
+			if (tok[0] == ']'):
+				tlo[0] = tli+1; return group if (group['started']) else None;
+			if (tok[0] == '['):
+				if group['started']:
+					ngtlo = [0]; ng = parse_group(tl, tli, ngtlo, depth+1);
+					if ng:
+						tli = ngtlo[0]-1
+						#group['parts'].append(ng if len(ng['parts'])>1 else ng['parts'][0])
+						group['parts'].append(ng)
+					else:
+						return None
+				else:
+					group['started'] = True
+			else:
+				if group['started']:
+					if len(group['parts']) == 0 or (type(group['parts'][-1]) is not list):
+						group['parts'].append([])
+					group['parts'][-1].append(tli)
+				else:
+					if (tok[0] != 'ws'):
+						return None
+			tli = tli+1
+		return None
+	def parse_root_group(tl):
+		tlo = [0]; root = parse_group(tl, 0, tlo, 0);
+		rest_is_ws = all( tl[x][0]=='w' for x in range(tlo[0], len(tl)) )
+		return root if (root and rest_is_ws) else None
+	def print_group(group, tl, depth=0):
+		for p in group['parts']:
+			if (type(p) is not list):
+				print_group(p, tl, depth+1)
+			else:
+				content = ' '.join(["[{}]".format(tl[tli][1]) for tli in p])
+				print '{}{} {}'.format(''.join([' ']*(depth)), '{}|_'.format(' ' if depth-1 else '') if depth else '', content)
+	def group_to_str(group, tl):
+		els = []
+		for p in group['parts']:
+			if (type(p) is not list):
+				els.append('({})'.format(group_to_str(p, tl)))
+			else:
+				els.extend([tl[x][1] for x in p])
+		return ''.join(els)
+	token_tests = { 'n':is_number, 's':is_symbol_restricted if sym_strict else is_symbol, 'o':is_operator, 'w':is_ws, '[':is_group_start, ']':is_group_end }
+	root = {'parent':None, 'children':[], 'token':['?',''] }
+	pre_leafs = [root]
+	for ch in func_str:
+		post_leafs = []
+		for leaf in pre_leafs:
+			tp,to = leaf['token']
+			nto = to+ch
+			if (tp != '?'):
+				if token_tests[tp](nto, False, leaf):
+					leaf['token'][1] = nto
+					post_leafs.append(leaf)
+				else:
+					if token_tests[tp](to, True, leaf):
+						for ttp,tt in token_tests.items():
+							if tt(ch, False, leaf):
+								nl = {'parent':leaf, 'children':[], 'token':[ttp, ch] }
+								leaf['children'].append(nl); post_leafs.append(nl);
+			else:
+				cands = []
+				for ttp,tt in token_tests.items():
+					if tt(nto, False, leaf):
+						cands.append(ttp)
+				if len(cands) == 1:
+					leaf['token'][0] = cands[0]; leaf['token'][1] = nto;
+					post_leafs.append(leaf)
+				elif len(cands) > 1:
+					for c in cands:
+						nl = {'parent':leaf if len(leaf['token'][1]) else None, 'children':[], 'token':[c, nto] }
+						leaf['children'].append(nl); post_leafs.append(nl);
+		pre_leafs = post_leafs
+	if g_dbg:
+		print 'Dbg: parsing [{}]'.format(func_str)
+	valid_token_lists = []
+	for leaf in pre_leafs:
+		tp,to = leaf['token']
+		if (tp != '?' and token_tests[tp](to, True, leaf)):
+			token_list = []
+			while leaf:
+				token_list.append(leaf['token']); leaf = leaf['parent'];
+			valid_token_lists.append(list(reversed(token_list)))
+	no_ws_token_lists = []
+	for tl in valid_token_lists:
+		ptl = []
+		for tli in range(len(tl)):
+			if tl[tli][0] != 'w':
+				ptl.append(tl[tli])
+		no_ws_token_lists.append(ptl)
+	auto_op_token_lists = []
+	for tl in no_ws_token_lists:
+		ptl = []
+		for tli in range(len(tl)):
+			if tl[tli][0] in ['n', 's']:
+				ptl.append(tl[tli])
+				if tli+1<len(tl):
+					tn = tl[tli+1][1]
+					if is_number(tn) or is_symbol(tn):
+						ptl.append(('o','*'))
+			else:
+				ptl.append(tl[tli])
+		auto_op_token_lists.append(ptl)
+	processed_token_lists = auto_op_token_lists
+	valid_group_trees = []
+	for tl in processed_token_lists:
+		gtl = [('[','')] + tl + [(']','')]
+		tl_group = parse_root_group(gtl);
+		if (tl_group):
+			#print_group(tl_group, gtl); print '';
+			valid_group_trees.append((gtl, tl_group))
+	if len(valid_group_trees) == 0:
+		if g_dbg:
+			print 'Note: invalid expression'
+		return ('', None, None)
+	lbd_less_tokens = lambda x,y: len(x[0])-len(y[0])
+	sorted_group_trees = sorted(valid_group_trees, cmp=lbd_less_tokens)
+	if len(sorted_group_trees)>1 and lbd_less_tokens(sorted_group_trees[0], sorted_group_trees[1]) == 0:
+		if g_dbg:
+			print 'Note: ambiguous expression'
+		return ('', None, None)
+	gt = sorted_group_trees[0]
+	if g_dbg:
+		print_group(gt[1], gt[0])
+		print group_to_str(gt[1], gt[0])
+	return (group_to_str(gt[1], gt[0]), gt[1], gt[0])
+def parse_func_str2(func_str, sym_strict = arg_has('-sym_strict')):
+	return parse_func_tokenize(func_str, sym_strict)
 def to_std_delims(frag):
-	return frag.replace('[','(').replace(']',')')#.replace('((', '(').replace('))', ')')
+	return frag.replace('[','(').replace(']',')')
 def to_sym_exp(frag):
 	return frag.replace('^', '**').replace('√', 'sqrt')
 def to_std_exp(frag):
 	return frag.replace('**', '^').replace('sqrt', '√')
 def to_sym_str(func_str):
+	func_str = parse_func_str2(func_str)[0]
 	return to_sym_exp(to_std_delims(func_str))
 def parse_func_str(func_str):
 	symbols = []; numbers = []; constants = [];
@@ -168,7 +322,7 @@ def multi_step(ts, h):
 		else:
 			ts[ti] = 0.0
 	return could_step
-def func_gridtest(vlen1, vlen2, lbdf1, lbdf2, (rlo, rhi, h)):
+def func_gridtest(vlen1, vlen2, lbdf1, lbdf2, (rlo, rhi, h), excpt = False, seed = None, quiet = False):
 	vlen = max(vlen1, vlen2)
 	err = 0.0; ts = [0.0 for x in range(vlen)]
 	could_step = True
@@ -300,10 +454,22 @@ def process_dsl_command(dsl, inp, quiet=False):
 		funcs[name] = func_sym_to_df(funcs[fn], varn); funcs[name]['name'] = name; funcs[name]['_func_str'] = 'd({},{})'.format(funcs[fn]['_func_str'], varn);
 	elif (cmd in ['ftest', 'frandtest', 'fgridtest'] and run_sec):
 		n1,n2 = input_splt[1], input_splt[2]
-		rng = (-1.0,1.0,1000)
-		rng = [float(input_splt[3:][i]) if (len(input_splt[3:]) > i) else rng[i] for i in range(len(rng))]
+		lo_hi_n = [-1.0,1.0,1000]; seed = None;
+		state = ''; state_lhn = 0; excpt = False
+		for part in input_splt[3:]:
+			if state == '':
+				if part == '-k':
+					k_int = True
+				elif part == '-except':
+					excpt = True
+				elif part == '-seed':
+					state = 'seed'
+				elif state_lhn < 3 and is_float(part):
+					lo_hi_n[state_lhn] = float(part); state_lhn = state_lhn+1;
+			elif state == 'seed':
+				seed = int(part); state = '';
 		func_test = func_randtest if (cmd != 'fgridtest') else func_gridtest
-		print func_test(len(funcs[n1]['eval_vars']), len(funcs[n2]['eval_vars']), funcs[n1]['lambd_f'], funcs[n2]['lambd_f'], rng)
+		print func_test(len(funcs[n1]['eval_vars']), len(funcs[n2]['eval_vars']), funcs[n1]['lambd_f'], funcs[n2]['lambd_f'], lo_hi_n, excpt, seed = seed, quiet = quiet)
 	elif (cmd == 'ztest' and run_sec):
 		fn = input_splt[1]; fctx = funcs[fn];
 		k_int = False; subs = {}; lo_hi_n = [-1.0, 1.0, 1000]; seed = None;
