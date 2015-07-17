@@ -428,7 +428,7 @@ def func_ztest(fctx, subs, k_int, (rlo, rhi, n), excpt = False, seed = None, qui
 		print 'Note: Bypassed {} exceptions.'.format(except_count)
 	return err
 def pp_func_args(fctx, use_sympy=False):
-	return '{}{}({})'.format('{} of '.format(fctx['lvl_raw']['mod']) if len(fctx['lvl_raw']['mod']) else '', fctx['lvl_raw']['name'], ', '.join(fctx['lvl_parsed']['vars']))
+	return '{}{}({})'.format('' if len(fctx['lvl_raw']['mod']) else '', fctx['lvl_raw']['name'], ', '.join(fctx['lvl_parsed']['vars']))
 def pp_func_args_val(fctx, use_sympy=False):
 	eval_str = str(fctx['lvl_raw']['func_str']) if use_sympy else (str(fctx['lvl_sympy']['eval_func']) if len(fctx['lvl_raw']['mod']) else fctx['lvl_sympy']['eval_func_str'])
 	return '{} = {}'.format(pp_func_args(fctx, use_sympy), eval_str)
@@ -449,7 +449,7 @@ def dsl_add_fctx(dsl, name, fctx, allow_clobber, quiet):
 	old_func = dsl['funcs'].get(name, None); old_dep = old_func['lvl_composed']['dependants'] if old_func else None;
 	if (not allow_clobber and old_func is not None):
 		raise Exception()
-	dsl['funcs'][name] = fctx
+	dsl['funcs'][name] = fctx; fctx['lvl_raw']['name'] = name;
 	if (not quiet):
 		print ' ', pp_func_args_val(fctx, use_sympy=False)
 		print ' ', pp_func_args_val(fctx, use_sympy=True)
@@ -481,7 +481,7 @@ def process_dsl_command(dsl, inp, quiet=False):
 	elif (cmd == 'd'):
 		fn,varn = input_splt[1], input_splt[2]
 		name = 'd_{}({})'.format(varn,fn)
-		fctx = func_sym_to_df(funcs[fn], varn)
+		fctx = func_sym_to_df(funcs[fn], varn);
 		dsl_add_fctx(dsl, name, fctx, False, quiet or not run_sec)
 	elif (cmd in ['ftest', 'frandtest', 'fgridtest'] and run_sec):
 		n1,n2 = input_splt[1], input_splt[2]
