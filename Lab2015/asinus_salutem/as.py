@@ -105,11 +105,14 @@ def parse_func_tokenize(func_str, parse_strict, const_map):
 		return not has_ws(token) and (not (token.startswith('+') or token.startswith('-'))) and (is_float(token) if final else is_float(token+'0'))
 	def is_symbol(token, final = True, leaf = None):
 		tl = token[-1]
-		return not has_ws(token) and not (is_operator(tl) or is_group_start(tl) or is_group_end(tl) or (is_number(token.strip(), True) if final else False) )
+		return not has_ws(token) and not (is_separator(tl) or is_operator(tl) or is_group_start(tl) or is_group_end(tl) or (is_number(token.strip(), True) if final else False) )
 	def is_symbol_restricted(token, final = True, leaf = None):
 		return token[:1].isalpha() and is_symbol(token, final, leaf)
 	def is_operator(token, final = True, leaf = None):
 		if token in ['+','-','/','*','^']:
+			return True
+	def is_separator(token, final = True, leaf = None):
+		if token in [',']:
 			return True
 	def is_ws(token, final = True, leaf = None):
 		if len(token.strip()) == 0:
@@ -122,7 +125,7 @@ def parse_func_tokenize(func_str, parse_strict, const_map):
 		return tok_print_group(group, tl, depth)
 	def group_to_str(group, tl):
 		return tok_group_to_str(group, tl)
-	token_tests = { 'n':is_number, 's':is_symbol_restricted if parse_strict else is_symbol, 'o':is_operator, 'w':is_ws, '[':is_group_start, ']':is_group_end }
+	token_tests = { 'n':is_number, 's':is_symbol_restricted if parse_strict else is_symbol, 'o':is_operator, 'w':is_ws, ',':is_separator, '[':is_group_start, ']':is_group_end }
 	root = {'parent':None, 'children':[], 'token':['?','',''] }
 	pre_leafs = [root]
 	for ch in func_str:
@@ -222,6 +225,8 @@ def tok_translate_to_sympy(toks, const_map = k_as_const_map, sympy_constants = k
 			tok[1] = ')'
 		elif tok[0] == 'o' and tok[1] == '^':
 			tok[1] = '**'
+		elif (tok[0],tok[2]) == ('s','func') and tok[1] == '√':
+			tok[1] = 'sqrt'
 		elif (tok[0],tok[2]) == ('s','const'):
 			tok[1] = const_map[tok[1]]
 		elif (tok[0],tok[2]) in [('s','cvar'), ('s','var')]:
