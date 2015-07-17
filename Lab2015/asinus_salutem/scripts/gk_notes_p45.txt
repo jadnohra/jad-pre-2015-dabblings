@@ -1,36 +1,44 @@
-let s1(.) = w11^2+w13^2
-let s2(.) = w21^2+w23^2
+let s1(.) = w11^2 + w13^2
+let s2(.) = w21^2 + w23^2
 let r1(.) = th1 + atan2(w11,w13)
 let r2(.) = th2 + atan2(w21,w23)
-let t1(.) = √(s1) * cos( r1 )
-let t2(.) = √(s2) * cos( r2 )
-let p1(.) = [w11*sin(th1)-w13*cos(th1) ]^2 + w12^2
-let p2(.) = [w21*sin(th2)-w23*cos(th2) ]^2 + w22^2
+let t1(.) = √(s1) cos( r1 )
+let t2(.) = √(s2) cos( r2 )
+let p1(.) = [w11 sin(th1) - w13 cos(th1) ]^2 + w12^2
+let p2(.) = [w21 sin(th2)- w23 cos(th2) ]^2 + w22^2
 let _p1(.) = t1^2 + w12^2
 let _p2(.) = t2^2 + w22^2
-let e1(.) = p1-p2
+let e1(.) = p1 - p2
 let O1(.) = e1^2
 #
 section 1 Verifying (4)
  ftest p1 _p1
  ftest p2 _p2
+
 #
 section 2 Verifying (39)
+ # let d_th1[O1] = d_th1[O1]
  d O1 th1
- #print d(O1,th1)
- let c1(.) = [ s1 + 2*w12^2 ] - [ s2 + 2*w22^2 ]
- let _39(.) = (-s1) * sin(2*r1) * [ (c1) + s1 * cos(2*r1) - s2 * cos(2*r2) ]
- #print _39
- ftest d(O1,th1) _39
+ let c1(.) = [ s1 + 2 w12^2 ] - [ s2 + 2 w22^2 ]
+ let _39(.) = (-s1) sin(2 r1) [ (c1) + s1 cos(2 r1) - s2 cos(2 r2) ]
+ ftest d_th1(O1) _39
 #
 section 3 Verifying (40, 45)
-  let _40(.) = (k*@pi)/2 - atan2(w11,w13)
+  let _40(.) = (k @pi)/2 - atan2(w11,w13)
   ztest _39 th1 _40 -k
-  let _45_1(.) = acos( [(-c1) + s2*cos(2* (r2+k*@pi) )]/s1 )/2 - atan2(w11,w13)
-  let _45_2(.) = -acos( [(-c1) + s2*cos(2* (r2+k*@pi) )]/s1 )/2 - atan2(w11,w13)
-  let _45_3(.) = acos( [(c1) + s1*cos(2* (r1+k*@pi) )]/s2 )/2 - atan2(w21,w23)
-  let _45_4(.) = -acos( [(c1) + s1*cos(2* (r1+k*@pi) )]/s2 )/2 - atan2(w21,w23)
+  let _45_1(.) = acos( [(-c1) + s2 cos(2 (r2+k @pi) )]/s1 )/2 - atan2(w11,w13)
+  let _45_2(.) = -acos( [(-c1) + s2 cos(2 (r2+k @pi) )]/s1 )/2 - atan2(w11,w13)
+  let _45_3(.) = acos( [(c1) + s1 cos(2 (r1+k @pi) )]/s2 )/2 - atan2(w21,w23)
+  let _45_4(.) = -acos( [(c1) + s1 cos(2 (r1+k @pi) )]/s2 )/2 - atan2(w21,w23)
   ztest _39 th1 _45_1 -k -except
   ztest _39 th1 _45_2 -k -except
   ztest _39 th2 _45_3 -k -except
   ztest _39 th2 _45_4 -k -except
+#
+section 4 Verifying (??)
+ d O1 th2
+ d d_th1(O1) th1
+ d d_th1(O1) th2
+ d d_th2(O1) th1
+ print d_th1(d_th1(O1))
+ print d_th2(d_th1(O1))

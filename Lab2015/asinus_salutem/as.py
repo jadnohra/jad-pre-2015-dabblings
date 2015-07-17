@@ -182,8 +182,12 @@ def parse_func_tokenize(func_str, parse_strict, const_map):
 					ptl.append(tl[tli]); ptl.append(('o','*',''));
 				elif tli-1>0 and tl[tli-1][0] in [']']:
 					ptl.append(('o','*','')); ptl.append(tl[tli]);
+				elif tl[tli][2] != 'func' and tli+1<len(tl) and tl[tli+1][0] == '[':
+					ptl.append(tl[tli]); ptl.append(('o','*',''));
 				else:
 					ptl.append(tl[tli])
+			elif tl[tli][0] == ']' and tli+1<len(tl) and tl[tli+1][0] == '[':
+				ptl.append(tl[tli]); ptl.append(('o','*',''));
 			else:
 				ptl.append(tl[tli])
 		auto_op_token_lists.append(ptl)
@@ -280,15 +284,17 @@ def func_compose(fctx, toks, f_cand_map, depth=0):
 		c_toks.extend( comp_fctx['lvl_parsed']['toks'] );
 	c_toks.extend(toks[pci+1:])
 	return func_compose(fctx, c_toks, f_cand_map, depth+1)
+def func_str_relambda(fctx):
+	fctx['lvl_sympy']['eval_lbd'] = lambdify(fctx['lvl_sympy']['eval_sympy_symbs'], fctx['lvl_sympy']['eval_func'], "numpy")
 def func_str_resympify(fctx):
 	t_toks, t_transl, t_detransl = tok_translate_to_sympy(fctx['lvl_composed']['toks'], k_as_const_map, k_sympy_constants)
 	fctx['lvl_sympy']['toks'] = t_toks; fctx['lvl_sympy']['transl'] = t_transl; fctx['lvl_sympy']['detransl'] = t_detransl;
 	cvar_values = fctx['lvl_raw']['cvar_values']
 	fctx['lvl_sympy']['eval_toks'] = [x if (x[0],x[2]) != ('s','cvar') else [x[0],repr(cvar_values.get(x[1], 0.5)),x[2]] for x in fctx['lvl_sympy']['toks']]
 	fctx['lvl_sympy']['eval_func_str'] = tok_group_to_str(fctx['lvl_composed']['group_tree'], fctx['lvl_sympy']['eval_toks'])
-	sympy_symbs = [t_transl[x] for x in fctx['lvl_composed']['vars']]
-	fctx['lvl_sympy']['eval_func'] = def_sym_func(fctx['lvl_sympy']['eval_func_str'], sympy_symbs, True)
-	fctx['lvl_sympy']['eval_lbd'] = lambdify(sympy_symbs, expand(fctx['lvl_sympy']['eval_func']), "numpy")
+	fctx['lvl_sympy']['eval_sympy_symbs'] = [t_transl[x] for x in fctx['lvl_composed']['vars']]
+	fctx['lvl_sympy']['eval_func'] = def_sym_func(fctx['lvl_sympy']['eval_func_str'], fctx['lvl_sympy']['eval_sympy_symbs'], False)
+	func_str_relambda(fctx)
 def func_str_recompose(fctx, f_comp_map):
 	fctx['dependencies'] = Set()
 	fctx['lvl_composed']['toks'] = func_compose(fctx, fctx['lvl_parsed']['toks'], f_comp_map)
@@ -317,7 +323,9 @@ def func_update_dependants(fctx, f_comp_map, updated = Set()):
 def func_sym_to_df(fctx, var):
 	dfctx = copy.deepcopy(fctx)
 	dsym_func = diff(dfctx['lvl_sympy']['eval_func'], dfctx['lvl_sympy']['transl'][var])
-	dfctx['lvl_sympy']['eval_func'] = dsym_func; dfctx['lvl_raw']['mod'] = 'd{}'.format(var)+dfctx['lvl_raw']['mod']
+	cur_mod = dfctx['lvl_raw']['mod']
+	dfctx['lvl_sympy']['eval_func'] = dsym_func; dfctx['lvl_raw']['mod'] = 'd{}{}'.format(var, '({})'.format(cur_mod) if len(cur_mod) else '')
+	func_str_relambda(dfctx)
 	return dfctx
 def multi_step(ts, h):
 	could_step = False
@@ -329,6 +337,7 @@ def multi_step(ts, h):
 			ts[ti] = 0.0
 	return could_step
 def func_gridtest(vlen1, vlen2, lbdf1, lbdf2, (rlo, rhi, h), excpt = False, seed = None, quiet = False):
+	return float(inf)
 	vlen = max(vlen1, vlen2)
 	err = 0.0; ts = [0.0 for x in range(vlen)]
 	could_step = True
@@ -337,21 +346,27 @@ def func_gridtest(vlen1, vlen2, lbdf1, lbdf2, (rlo, rhi, h), excpt = False, seed
 		err = max(err, abs(lbdf1(*(coords[:vlen1])) - lbdf2(*(coords[:vlen2]))) )
 		could_step = multi_step(ts, h)
 	return err
-def func_randtest(vlen1, vlen2, lbdf1, lbdf2, (rlo, rhi, n), excpt = False, seed = None, quiet = False):
+def func_randtest(vars1, vars2, lbdf1, lbdf2, (rlo, rhi, n), excpt = False, seed = None, quiet = False):
 	if seed is not None:
 		numpy.random.seed(seed)
-	vlen = max(vlen1, vlen2); coords = [rlo+x*(rhi-rlo) for x in numpy.random.random(int(n)+vlen-1)];
+	vlen1,vlen2 = len(vars1), len(vars2)
+	all_vars = sorted(list(set(vars1+vars2)))
+	vlen = len(all_vars); coords = [rlo+x*(rhi-rlo) for x in numpy.random.random(int(n)+vlen-1)];
+	i_coords1 = [all_vars.index(x) for x in vars1]; i_coords2 = [all_vars.index(x) for x in vars2];
 	err = 0.0; i = 0; except_count = 0;
 	with numpy.errstate(invalid='raise'):
 		while i < len(coords)-vlen+1:
+			f_coords = [[coords[i+ci] for ci in i_coords] for i_coords in [i_coords1, i_coords2]]
 			has_except = False
 			if excpt:
 				try:
-					err = max(err, abs(lbdf1(*(coords[i:i+vlen1])) - lbdf2(*(coords[i:i+vlen2]))) )
+					f_vals = lbdf1(*f_coords[0]), lbdf2(*f_coords[1])
+					err = max(err, abs(f_vals[0] - f_vals[1]))
 				except:
 					has_except = True; except_count = except_count + 1
 			else:
-				err = max(err, abs(lbdf1(*(coords[i:i+vlen1])) - lbdf2(*(coords[i:i+vlen2]))) )
+				f_vals = lbdf1(*f_coords[0]), lbdf2(*f_coords[1])
+				err = max(err, abs(f_vals[0] - f_vals[1]))
 			if has_except:
 				coords[i:i+vlen] = [rlo+x*(rhi-rlo) for x in numpy.random.random(vlen)]
 			else:
@@ -396,7 +411,7 @@ def func_ztest(fctx, subs, k_int, (rlo, rhi, n), excpt = False, seed = None, qui
 				else:
 					subs_vals[si] = lbd(*sub_coords)
 				if g_dbg:
-					print '{} ({}) = {}'.format(subs_fctx[si]['name'], zip(subs_fctx[si]['lvl_composed']['vars'], sub_coords), subs_vals[si])
+					print '{} ({}) = {}'.format(subs_fctx[si]['lvl_raw']['name'], zip(subs_fctx[si]['lvl_composed']['vars'], sub_coords), subs_vals[si])
 			if has_except:
 				coords[i:i+vlen] = [rlo+x*(rhi-rlo) for x in numpy.random.random(vlen)]
 				k_coords[i:i+vlen] = numpy.random.randint(-10, 11, vlen)
@@ -406,7 +421,7 @@ def func_ztest(fctx, subs, k_int, (rlo, rhi, n), excpt = False, seed = None, qui
 					coords_f[subs_inds[j]] = subs_vals[j]
 				f_val = lbd_f(*coords_f)
 				if g_dbg:
-					print '{} ({}) = {}'.format(fctx['name'], zip(fctx['lvl_composed']['vars'], coords_f), f_val)
+					print '{} ({}) = {}'.format(fctx['lvl_raw']['name'], zip(fctx['lvl_composed']['vars'], coords_f), f_val)
 				err = max(err, abs(f_val))
 				i = i+1
 	if (except_count  and not quiet):
@@ -465,7 +480,7 @@ def process_dsl_command(dsl, inp, quiet=False):
 		dsl_add_fctx(dsl, bn, bfunc, False, quiet or not run_sec)
 	elif (cmd == 'd'):
 		fn,varn = input_splt[1], input_splt[2]
-		name = 'd({},{})'.format(fn, varn)
+		name = 'd_{}({})'.format(varn,fn)
 		fctx = func_sym_to_df(funcs[fn], varn)
 		dsl_add_fctx(dsl, name, fctx, False, quiet or not run_sec)
 	elif (cmd in ['ftest', 'frandtest', 'fgridtest'] and run_sec):
@@ -485,7 +500,7 @@ def process_dsl_command(dsl, inp, quiet=False):
 			elif state == 'seed':
 				seed = int(part); state = '';
 		func_test = func_randtest if (cmd != 'fgridtest') else func_gridtest
-		print func_test(len(funcs[n1]['lvl_composed']['vars']), len(funcs[n2]['lvl_composed']['vars']), funcs[n1]['lvl_sympy']['eval_lbd'], funcs[n2]['lvl_sympy']['eval_lbd'], lo_hi_n, excpt, seed = seed, quiet = quiet)
+		print func_test(funcs[n1]['lvl_composed']['vars'], funcs[n2]['lvl_composed']['vars'], funcs[n1]['lvl_sympy']['eval_lbd'], funcs[n2]['lvl_sympy']['eval_lbd'], lo_hi_n, excpt, seed = seed, quiet = quiet)
 	elif (cmd == 'ztest' and run_sec):
 		fn = input_splt[1]; fctx = funcs[fn];
 		k_int = False; subs = {}; lo_hi_n = [-1.0, 1.0, 1000]; seed = None;
