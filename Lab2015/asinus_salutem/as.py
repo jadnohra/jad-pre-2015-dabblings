@@ -13,14 +13,6 @@ execfile('helper_math1.py')
 
 g_dbg = False
 
-_ctx = {
-	'parse_func_re' : re.compile(ur'((?:\d+\.*(?:0?e-\d+)?\d*(?!\w)|\w+)\b)(?!\s*\()'),
-	'parse_number_re' : re.compile(ur'\d+\.*(?:0?e-\d+)?\d*(?!\w)'),
-	'parse_symb_re' : re.compile(ur'\w+'),
-	'parse_arithm_re' : re.compile(ur'(\+|\-|\*|\/|\\|\^|\.)'),
-	'parse_constants' : 'pi'.split(','),
-	'parse_func_func_re' : re.compile(ur'\w+(?=\()'),
-}
 def pp_toks(toks):
 	return ' '.join(["{}".format(tok[1]) for tok in toks if len(tok[1])])
 def pp_indexed_toks(toks, toksi):
