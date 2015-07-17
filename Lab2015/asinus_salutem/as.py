@@ -312,7 +312,7 @@ def func_update_dependants(fctx, f_comp_map, updated = Set()):
 def func_sym_to_df(fctx, var):
 	dfctx = copy.deepcopy(fctx)
 	dsym_func = diff(dfctx['lvl_sympy']['eval_func'], dfctx['lvl_sympy']['transl'][var])
-	dfctx['lvl_sympy']['eval_func'] = dsym_func; dfctx['lvl_raw']['eval_mod'] = 'd{}'.format(var)+dfctx['lvl_raw']['eval_mod']
+	dfctx['lvl_sympy']['eval_func'] = dsym_func; dfctx['lvl_raw']['mod'] = 'd{}'.format(var)+dfctx['lvl_raw']['mod']
 	return dfctx
 def multi_step(ts, h):
 	could_step = False
@@ -410,7 +410,7 @@ def func_ztest(fctx, subs, k_int, (rlo, rhi, n), excpt = False, seed = None, qui
 def pp_func_args(fctx, use_sympy=False):
 	return '{}{}({})'.format('{} of '.format(fctx['lvl_raw']['mod']) if len(fctx['lvl_raw']['mod']) else '', fctx['lvl_raw']['name'], ', '.join(fctx['lvl_parsed']['vars']))
 def pp_func_args_val(fctx, use_sympy=False):
-	eval_str = str(fctx['lvl_raw']['func_str']) if use_sympy else fctx['lvl_sympy']['eval_func_str']
+	eval_str = str(fctx['lvl_raw']['func_str']) if use_sympy else (str(fctx['lvl_sympy']['eval_func']) if len(fctx['lvl_raw']['mod']) else fctx['lvl_sympy']['eval_func_str'])
 	return '{} = {}'.format(pp_func_args(fctx, use_sympy), eval_str)
 def pp_func_args_orig(fctx, empty_name = False):
 	return '{} = {}'.format(''.join([' ']*len(pp_func_args(fctx))) if empty_name else pp_func_args(fctx, ltex), fctx['_func_str'])
