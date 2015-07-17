@@ -297,7 +297,7 @@ def func_str_to_sym(func_str, func_name='', f_comp_map={}):
 	parse_vars = sorted(list(set([x[1] for x in parse_toks if (x[0],x[2]) == ('s','var')])))
 	parse_cvars = sorted(list(set([x[1] for x in parse_toks if (x[0],x[2]) == ('s','cvar')])))
 	fctx = {
-		'lvl_raw': { 'name':func_name, 'func_str':func_str, 'cvar_values':{}  },
+		'lvl_raw': { 'name':func_name, 'func_str':func_str, 'cvar_values':{}, 'mod':''  },
 		'lvl_parsed':  { 'group_tree':parse_gt, 'toks':parse_toks, 'vars':parse_vars, 'cvars':parse_cvars, },
 		'lvl_composed': { 'toks':None, 'group_tree':None, 'vars':[], 'dependencies':Set(), 'dependants':Set(), },
 		'lvl_sympy': { 'toks':[], 'eval_toks':[], 'transl':[], 'detransl':[],  },
@@ -310,11 +310,9 @@ def func_update_dependants(fctx, f_comp_map, updated = Set()):
 	for fn in fctx['lvl_composed']['dependants']:
 		func_update_dependants(f_comp_map[fn], f_comp_map, updated)
 def func_sym_to_df(fctx, var):
-	dfctx = copy.copy(fctx)
-	dsym_func = diff(dfctx['sym_func'], dfctx['sympy_transl'].get(var, var))
-	func_update_sym_func(dfctx, dsym_func, dfctx['f_vars'], dfctx['f_constants'], dfctx['lvl_composed']['vars'], dfctx['eval_constants'])
-	for nk in ['_func_str', 'func_str']:
-		funcs[nk] = 'd({},{})'.format(funcs[nk], var)
+	dfctx = copy.deepcopy(fctx)
+	dsym_func = diff(dfctx['lvl_sympy']['eval_func'], dfctx['lvl_sympy']['transl'][var])
+	dfctx['lvl_sympy']['eval_func'] = dsym_func; dfctx['lvl_raw']['eval_mod'] = 'd{}'.format(var)+dfctx['lvl_raw']['eval_mod']
 	return dfctx
 def multi_step(ts, h):
 	could_step = False
@@ -410,7 +408,7 @@ def func_ztest(fctx, subs, k_int, (rlo, rhi, n), excpt = False, seed = None, qui
 		print 'Note: Bypassed {} exceptions.'.format(except_count)
 	return err
 def pp_func_args(fctx, use_sympy=False):
-	return '{}({})'.format(fctx['lvl_raw']['name'], ', '.join(fctx['lvl_parsed']['vars']))
+	return '{}{}({})'.format('{} of '.format(fctx['lvl_raw']['mod']) if len(fctx['lvl_raw']['mod']) else '', fctx['lvl_raw']['name'], ', '.join(fctx['lvl_parsed']['vars']))
 def pp_func_args_val(fctx, use_sympy=False):
 	eval_str = str(fctx['lvl_raw']['func_str']) if use_sympy else fctx['lvl_sympy']['eval_func_str']
 	return '{} = {}'.format(pp_func_args(fctx, use_sympy), eval_str)
