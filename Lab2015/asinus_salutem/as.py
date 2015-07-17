@@ -285,7 +285,7 @@ def func_compose(fctx, toks, f_cand_map, depth=0):
 	c_toks.extend(toks[pci+1:])
 	return func_compose(fctx, c_toks, f_cand_map, depth+1)
 def func_str_relambda(fctx):
-	fctx['lvl_sympy']['eval_lbd'] = lambdify(fctx['lvl_sympy']['eval_sympy_symbs'], fctx['lvl_sympy']['eval_func'], "numpy")
+	fctx['lvl_sympy']['eval_lbd'] = lambdify(fctx['lvl_sympy']['eval_sympy_symbs'], expand(fctx['lvl_sympy']['eval_func']), "numpy")
 def func_str_resympify(fctx):
 	t_toks, t_transl, t_detransl = tok_translate_to_sympy(fctx['lvl_composed']['toks'], k_as_const_map, k_sympy_constants)
 	fctx['lvl_sympy']['toks'] = t_toks; fctx['lvl_sympy']['transl'] = t_transl; fctx['lvl_sympy']['detransl'] = t_detransl;
