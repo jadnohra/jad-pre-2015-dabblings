@@ -236,10 +236,10 @@ def tok_translate_to_sympy(toks, const_map = k_as_const_map, sympy_constants = k
 		elif (tok[0],tok[2]) in [('s','cvar'), ('s','var')]:
 			tok[1] = vname_to_sympy(tok[1], sympy_constants); t_transl[pre_tok[1]] = tok[1]; t_detransl[tok[1]] = pre_tok[1];
 	return t_toks, t_transl, t_detransl
-def def_sym_func(str, symbs, do_expand):
+def def_sym_func(str, symbs):
 	for symb in symbs:
 		exec('{} = Symbol("{}")'.format(symb, symb))
-	ev = eval(str); return expand(ev) if do_expand else ev;
+	ev = eval(str); return ev;
 def subs_sym_str(str, func_lambds):
 	for (name,lambd) in func_lambds:
 		exec('{} = lambd;'.format(name))
@@ -293,7 +293,7 @@ def func_str_resympify(fctx):
 	fctx['lvl_sympy']['eval_toks'] = [x if (x[0],x[2]) != ('s','cvar') else [x[0],repr(cvar_values.get(x[1], 0.5)),x[2]] for x in fctx['lvl_sympy']['toks']]
 	fctx['lvl_sympy']['eval_func_str'] = tok_group_to_str(fctx['lvl_composed']['group_tree'], fctx['lvl_sympy']['eval_toks'])
 	fctx['lvl_sympy']['eval_sympy_symbs'] = [t_transl[x] for x in fctx['lvl_composed']['vars']]
-	fctx['lvl_sympy']['eval_func'] = def_sym_func(fctx['lvl_sympy']['eval_func_str'], fctx['lvl_sympy']['eval_sympy_symbs'], False)
+	fctx['lvl_sympy']['eval_func'] = def_sym_func(fctx['lvl_sympy']['eval_func_str'], fctx['lvl_sympy']['eval_sympy_symbs'])
 	func_str_relambda(fctx)
 def func_str_recompose(fctx, f_comp_map):
 	fctx['dependencies'] = Set()
