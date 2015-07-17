@@ -21,21 +21,75 @@ _ctx = {
 	'parse_constants' : 'pi'.split(','),
 	'parse_func_func_re' : re.compile(ur'\w+(?=\()'),
 }
+def pp_toks(toks):
+	return ' '.join(["{}".format(tok[1]) for tok in toks if len(tok[1])])
+def pp_indexed_toks(toks, toksi):
+	return ' '.join(["{}".format(toks[i][1]) for i in toksi if len(toks[i][1])])
+def tok_group_toks(group, tl):
+	els = []
+	for p in group['parts']:
+		if (type(p) is not list):
+			els.extend(tok_group_toks(p, tl))
+		else:
+			els.extend([tl[x] for x in p])
+	return els
 def tok_print_group(group, tl, depth=0):
 	for p in group['parts']:
 		if (type(p) is not list):
 			tok_print_group(p, tl, depth+1)
 		else:
-			content = ' '.join(["[{}]".format(tl[tli][1]) for tli in p])
-			print '{}{} {}'.format(''.join([' ']*(depth)), '{}|_'.format(' ' if depth-1 else '') if depth else '', content)
+			print '{}{} {}'.format(''.join([' ']*(depth)), '{}|_'.format(' ' if depth-1 else '') if depth else '', pp_indexed_toks(tl,p))
 def tok_group_to_str(group, tl):
-	els = []
-	for p in group['parts']:
+	return ''.join([x[1] for x in tok_group_toks(group, tl)])
+def parse_group_is_trivial(group): # only if group is not a call! to do this examine tok[2], and refine before this!
+	return len(group['parts']) == 3 and (type(group['parts'][1]) is list and len(group['parts'][1]) == 1)
+def parse_group_is_simple(group):
+	return parse_group_is_trivial(group) or len(group['parts']) == 3 and type(group['parts'][1]) is not list
+def parse_group_reduce(group, tl, parent_is_simple):
+	is_simple, is_trivial = parse_group_is_simple(group), parse_group_is_trivial(group)
+	parts = group['parts']; ngroup = { 'parts':[] }
+	for p,pi in zip(parts, range(len(parts))):
 		if (type(p) is not list):
-			els.append('({})'.format(tok_group_to_str(p, tl)))
+			ngroup['parts'].append(parse_group_reduce(p, tl, is_simple))
 		else:
-			els.extend([tl[x][1] for x in p])
-	return ''.join(els)
+			ngroup['parts'].append(copy.copy(p))
+	if (parent_is_simple and is_simple) or is_trivial:
+		return { 'parts':[ngroup['parts'][1]] }
+	else:
+		return ngroup
+def root_parse_group_reduce(root, tl):
+	return parse_group_reduce(root, tl, parse_group_is_simple(root))
+def parse_group(tl, tli, tlo, depth):
+	group = { 'parts':[] }; started = False;
+	while tli < len(tl):
+		tok = tl[tli]
+		if (tok[0] == ']'):
+			group['parts'].append([tli]); tlo[0] = tli+1; return group if (started) else None;
+		elif (tok[0] == '['):
+			if started:
+				ngtlo = [0]; ng = parse_group(tl, tli, ngtlo, depth+1);
+				if ng:
+					tli = ngtlo[0]-1; group['parts'].append(ng);
+				else:
+					return None
+			else:
+				group['parts'].append([tli]); started = True;
+		else:
+			if started:
+				if len(group['parts']) <= 1 or (type(group['parts'][-1]) is not list):
+					group['parts'].append([])
+				group['parts'][-1].append(tli)
+			else:
+				if (tok[0] != 'ws'):
+					return None
+		#print depth, started, group, tli, tl
+		tli = tli+1
+	return None
+def parse_root_group(tl):
+	gtl = [('[','(')] + tl + [(']',')')]
+	tlo = [0]; root = parse_group(gtl, 0, tlo, 0);
+	rest_is_ws = all( tl[x][0]=='w' for x in range(tlo[0], len(tl)) )
+	return gtl, root_parse_group_reduce(root, gtl) if (root and rest_is_ws) else None
 def parse_func_tokenize(func_str, parse_strict):
 	def has_ws(token):
 		return ''.join(token.split()) != token
@@ -56,36 +110,6 @@ def parse_func_tokenize(func_str, parse_strict):
 		return token in ['[','(']
 	def is_group_end(token, final = True, leaf = None):
 		return token in [']',')']
-	def parse_group(tl, tli, tlo, depth):
-		group = { 'parts':[], 'started':False }
-		while tli < len(tl):
-			#print depth, group, tli
-			tok = tl[tli]
-			if (tok[0] == ']'):
-				tlo[0] = tli+1; return group if (group['started']) else None;
-			if (tok[0] == '['):
-				if group['started']:
-					ngtlo = [0]; ng = parse_group(tl, tli, ngtlo, depth+1);
-					if ng:
-						tli = ngtlo[0]-1; group['parts'].append(ng);
-					else:
-						return None
-				else:
-					group['started'] = True
-			else:
-				if group['started']:
-					if len(group['parts']) == 0 or (type(group['parts'][-1]) is not list):
-						group['parts'].append([])
-					group['parts'][-1].append(tli)
-				else:
-					if (tok[0] != 'ws'):
-						return None
-			tli = tli+1
-		return None
-	def parse_root_group(tl):
-		tlo = [0]; root = parse_group(tl, 0, tlo, 0);
-		rest_is_ws = all( tl[x][0]=='w' for x in range(tlo[0], len(tl)) )
-		return root if (root and rest_is_ws) else None
 	def print_group(group, tl, depth=0):
 		return tok_print_group(group, tl, depth)
 	def group_to_str(group, tl):
@@ -155,64 +179,65 @@ def parse_func_tokenize(func_str, parse_strict):
 	processed_token_lists = auto_op_token_lists
 	valid_group_trees = []
 	for tl in processed_token_lists:
-		gtl = [('[','')] + tl + [(']','')]
-		tl_group = parse_root_group(gtl);
+		gtl, tl_group = parse_root_group(tl)
 		if (tl_group):
 			#print_group(tl_group, gtl); print '';
 			valid_group_trees.append((gtl, tl_group))
 	if len(valid_group_trees) == 0:
 		if g_dbg:
 			print 'Note: invalid expression'
-		return ('', None, None)
+		return (None, None)
 	lbd_less_tokens = lambda x,y: len(x[0])-len(y[0])
 	sorted_group_trees = sorted(valid_group_trees, cmp=lbd_less_tokens)
 	if len(sorted_group_trees)>1 and lbd_less_tokens(sorted_group_trees[0], sorted_group_trees[1]) == 0:
 		if g_dbg:
 			print 'Note: ambiguous expression'
-		return ('', None, None)
+		return (None, None)
 	gt = sorted_group_trees[0]
 	if g_dbg:
 		print_group(gt[1], gt[0])
-		print group_to_str(gt[1], gt[0])
-	return (group_to_str(gt[1], gt[0]), gt[1], gt[0])
-g_sympy_constants = ('j','inf','nan','pi','degree','e','phi','euler','catalan','apery','khinchin','glaisher','mertens','twinprime')
-g_as_constants = {'PI':'pi', 'E':'e', 'J':'j'}
-def name_to_sympy(name, is_func):
+		print pp_toks( tok_group_toks(gt[1], gt[0]))
+		#print group_to_str(gt[1], gt[0])
+	return gt[1], gt[0] # group_tree, toks
+g_as_const_map = {'@pi':'pi', '@e':'e', '@i':'j'}
+def parsed_refine_symbols(toks, const_map = g_as_const_map):
+	ntoks = copy.copy(toks)
+	for ti in range(len(ntoks)):
+		tok = ntoks[ti]
+		if tok[0] == 's':
+			if ti+1<len(ntoks) and ntoks[ti+1][0] == '[':
+				tok[0] = 's.func'
+			elif tok[1] in const_map:
+				tok[0] = 's.const'
+			else:
+				tok[0] = 's.var' if (not tok[1].upper() == tok[1]) else 's.cvar'
+	return ntoks
+def fname_to_sympy(name):
+	return name.replace("'", '_p_' if name.upper() != name else '_P_')
+def vname_to_sympy(name):
 	pre_repl = name.replace("'", '_p_' if name.upper() != name else '_P_')
-	if (not is_func) or pre_repl != name:
+	if pre_repl != name:
 		return '_{}'.format(pre_repl)
 	return name
-def fname_to_sympy(name):
-	return name_to_sympy(name, True)
-def parse_func_str(_func_str, parse_strict = arg_has('-parse_strict')):
-	func_str, group_tree, toks = parse_func_tokenize(_func_str, parse_strict)
-	sympy_toks = copy.copy(toks)
-	sympy_transl = {}; f_vars = []; f_constants = []; sympy_vars = []; sympy_constants = [];
-	for ti in range(len(sympy_toks)):
-		tok = sympy_toks[ti]; pre_tok = copy.copy(tok);
+g_sympy_constants = ('j','inf','nan','pi','degree','e','phi','euler','catalan','apery','khinchin','glaisher','mertens','twinprime')
+def refined_translate_to_sympy(toks, const_map = g_as_const_map, sympy_constants = g_sympy_constants):
+	t_toks = copy.copy(toks); t_transl = {}; t_detransl = {};
+	for ti in range(len(t_toks)):
+		tok = t_toks[ti]; pre_tok = copy.copy(tok);
 		if tok[0] == '[' and len(tok[1]):
 			tok[1] = '('
 		elif tok[0] == ']' and len(tok[1]):
 			tok[1] = ')'
 		elif tok[0] == 'o' and tok[1] == '^':
 			tok[1] = '**'
-		elif tok[0] == 's' and tok[1] in g_as_constants.keys():
-			tok[1] = g_as_constants[tok[1]]
-		elif tok[0] == 's':
-			is_func = ti+1<len(sympy_toks) and sympy_toks[ti+1][0] == '['
-			repl = name_to_sympy(tok[1], is_func)
-			if repl != tok[1]:
-				sympy_transl[tok[1]] = repl; tok[1] = repl;
-			if not is_func:
-				if tok[1].upper() == tok[1]:
-					f_constants.append(pre_tok[1]); sympy_constants.append(tok[1])
-				else:
-					f_vars.append(pre_tok[1]); sympy_vars.append(tok[1])
-	sympy_func_str = tok_group_to_str(group_tree, sympy_toks)
-	return (group_tree, func_str, toks, sorted(f_vars), sorted(f_constants), sympy_func_str, sympy_toks, sympy_transl, sorted(sympy_vars), sorted(sympy_constants))
-def eval_sym_str(str, symbs, do_expand, transl={}):
+		elif tok[0] == 's.const':
+			tok[1] = const_map[tok[1]]
+		elif tok[0] in ['s.cvar', 's.var']:
+			tok[1] = vname_to_sympy(tok[1]); t_transl[pre_tok[1]] = tok[1]; t_detransl[tok[1]] = pre_tok[1];
+	return {'toks':t_toks, 'transl':t_transl, 'detransl':t_detransl}
+def eval_sym_str(str, symbs, do_expand):
 	for symb in symbs:
-		exec('{} = Symbol("{}")'.format(transl.get(symb, symb), transl.get(symb, symb)))
+		exec('{} = Symbol("{}")'.format(symb, symb))
 	ev = eval(str); return expand(ev) if do_expand else ev;
 def subs_sym_str(str, func_lambds):
 	for (name,lambd) in func_lambds:
@@ -244,34 +269,22 @@ def def_var(fctx, names):
 		for d in (fctx['eval_constants'],fctx['eval_vars']):
 			d.discard(name)
 		fctx['eval_vars'].add(name)
-def find_composition_map(func_str, fctx_map):
-	matches = re.findall(_ctx['parse_func_func_re'], func_str)
-	comp_map = {}
-	for m in matches:
-		print m
-		if (m in fctx_map) and (m not in comp_map):
-			comp_map[m] = '_F{}_'.format(len(comp_map))
-	return comp_map
-def inject_composition_map(func_str, comp_map, forward):
-	inj_func_str = func_str
-	for (k,v) in comp_map.items():
-		(k,v) = (k,v) if forward else (v,k)
-		sub_re = re.compile(ur'{}\s*(?=\()'.format(k))
-		inj_func_str = sub_re.sub(v, inj_func_str)
-	return inj_func_str
-def subs_functional_vars(func_name, sympy_func_str, eval_vars, funcs, sympy_funcs, comps = Set()):
-	subs_func_str = sympy_func_str
-	for fv in eval_vars:
-		if (fv in sympy_funcs):
-			comps.add(fv); sympy_funcs[fv]['is_comp'].add(func_name);
-			sub_re = re.compile(ur'{}'.format(fv))
-			#print '{} -> {}'.format(fv, sympy_funcs[fv]['sympy_func_str'])
-			subs_func_str = sub_re.sub('({})'.format(sympy_funcs[fv]['sympy_func_str']), subs_func_str)
-			#print subs_func_str
-	if (subs_func_str != sympy_func_str):
-		return subs_functional_vars(func_name, subs_func_str, eval_vars, funcs, sympy_funcs, comps)
-	else:
-		return subs_func_str
+def func_compose(fctx, toks, f_cand_map, depth=0):
+	cis = [x for x in range(len(toks)) if toks[x][0] == 's.var' and toks[x][1] in f_cand_map]
+	if len(cis) == 0:
+		if g_dbg and depth != 0:
+			print 'Dbg: composed {}'.format(pp_toks(toks))
+		return toks
+	c_toks = []; pci = -1; name = fctx['lvl_raw']['name'];
+	for ci in cis:
+		comp_fname = toks[ci][1]; comp_fctx = f_cand_map[comp_fname];
+		comp_fctx['lvl_composed']['comp_dependants'].add(name); fctx['lvl_composed']['comp_dependencies'].add(comp_fname);
+		c_toks.extend(toks[pci+1:ci]); pci = ci;
+		#c_toks.append(('[', '('));
+		c_toks.extend( comp_fctx['lvl_refined']['toks'] );
+		#c_toks.append((']', ')'));
+	c_toks.extend(toks[pci+1:])
+	return func_compose(fctx, c_toks, f_cand_map, depth+1)
 def func_update_sym_func(fctx, sym_func, f_vars, f_constants, eval_vars, eval_constants):
 	fctx['sym_func'] = sym_func
 	eval_func = sym_func
@@ -282,27 +295,33 @@ def func_update_sym_func(fctx, sym_func, f_vars, f_constants, eval_vars, eval_co
 	fctx['eval_func'] = eval_func
 	fctx['eval_func_exp'] = expand(eval_func)
 	fctx['lambd_f'] = lambdify(eval_vars, expand(eval_func), "numpy")
-def func_str_to_sym(_func_str, func_name='', funcs={}, sympy_funcs={}):
-
+def func_str_to_sym(func_str, func_name='', f_comp_map={}):
+	parse_gt, parse_toks = parse_func_tokenize(func_str, False)
 	fctx = {
-
-	'lvl_raw': { 'name':'', 'func_str':''  },
-	'lvl_parsed':  { 'group_tree':None, 'func_str':None, 'toks':None, 'f_vars':None, 'f_constants':None, 'sympy_func_str':None, 'sympy_toks':None, 'sympy_transl':None, 'sympy_vars':None, 'sympy_constants':None },
-	'lvl_comp': { 'comp_func_str':'', 'comp_map':{}, 'comps':Set(), 'is_comp':Set(), }
-	'lvl_comp_parsed': {},
-	'lvl_eval': { 'eval_vars':[], 'eval_constants':[], 'const_values':{}, },
-	};
-	fctx['_func_str'] = _func_str
-	(group_tree, func_str, toks, f_vars, f_constants, sympy_func_str, sympy_toks, sympy_transl, eval_vars, eval_constants) = parse_func_str(_func_str)
-	fctx['name'] = func_name; fctx['func_str'] = func_str; fctx['sympy_func_str'] = sympy_func_str; fctx['sympy_transl'] = sympy_transl;
-	sympy_func_str = subs_functional_vars(func_name, sympy_func_str, eval_vars, funcs, sympy_funcs, fctx['comps'])
-	for ev in eval_vars:
-		def_var(fctx, ev)
-	for ec in eval_constants:
-		def_const(fctx, ec)
-	print sympy_func_str, eval_vars
-	sym_func = eval_sym_str(sympy_func_str, eval_vars + eval_constants, False, fctx['sympy_transl'])
-	func_update_sym_func(fctx, sym_func, f_vars, f_constants, eval_vars, eval_constants)
+		'lvl_raw': { 'name':func_name, 'func_str':func_str  },
+		'lvl_refined':  { 'group_tree':parse_gt, 'parse_toks':parse_toks, 'toks':None, 'vars':None, 'cvars':None },
+		'lvl_composed': { 'toks':None, 'group_tree':None, 'comp_dependencies':Set(), 'comp_dependants':Set(), },
+		'lvl_sympy': { 'eval_vars':[], 'eval_constants':[], 'const_values':{}, },
+		};
+	fctx['lvl_refined']['toks'] = parsed_refine_symbols(fctx['lvl_refined']['parse_toks'], g_as_const_map)
+	fctx['lvl_refined']['vars'] = sorted([x[1] for x in fctx['lvl_refined']['toks'] if x[0] == 's.var'])
+	fctx['lvl_refined']['cvars'] = sorted([x[1] for x in fctx['lvl_refined']['toks'] if x[0] == 's.cvar'])
+	fctx['lvl_composed']['toks'] = func_compose(fctx, fctx['lvl_refined']['toks'], f_comp_map)
+	gtl, ggp = parse_root_group(fctx['lvl_composed']['toks'])
+	fctx['lvl_composed']['toks'] = gtl; fctx['lvl_composed']['group_tree'] = ggp;
+	print pp_toks( tok_group_toks(fctx['lvl_composed']['group_tree'], fctx['lvl_composed']['toks'] ))
+	#print fctx
+	if False:
+		(group_tree, func_str, toks, f_vars, f_constants, sympy_func_str, sympy_toks, sympy_transl, eval_vars, eval_constants) = parse_func_str(_func_str)
+		fctx['name'] = func_name; fctx['func_str'] = func_str; fctx['sympy_func_str'] = sympy_func_str; fctx['sympy_transl'] = sympy_transl;
+		sympy_func_str = subs_functional_vars(func_name, sympy_func_str, eval_vars, funcs, sympy_funcs, fctx['comps'])
+		for ev in eval_vars:
+			def_var(fctx, ev)
+		for ec in eval_constants:
+			def_const(fctx, ec)
+		print sympy_func_str, eval_vars
+		sym_func = eval_sym_str(sympy_func_str, eval_vars + eval_constants, False, fctx['sympy_transl'])
+		func_update_sym_func(fctx, sym_func, f_vars, f_constants, eval_vars, eval_constants)
 	return fctx
 def func_sym_to_df(fctx, var):
 	dfctx = copy.copy(fctx)
@@ -423,19 +442,20 @@ def create_dsl():
 			'sections':[x for x in arg_get('-sections', '').split(',') if len(x)],
 			'cur_sec':None }
 def dsl_add_fctx(dsl, name, fctx, allow_clobber, quiet):
-	old_func = dsl['funcs'].get(name, None); old_is_comp = old_func['is_comp'] if old_func else None;
+	old_func = dsl['funcs'].get(name, None); #old_is_comp = old_func['is_comp'] if old_func else None;
 	if (not allow_clobber and old_func is not None):
 		raise Exception()
-	dsl['funcs'][name] = fctx; dsl['sympy_funcs'][name_to_sympy(name, False)] = fctx;
+	dsl['funcs'][name] = fctx
 	if (not quiet):
 		print ' ', pp_func_args_val(fctx, use_sympy=False)
 		print ' ', pp_func_args_val(fctx, use_sympy=True)
-	if (old_is_comp is not None) and len(old_is_comp):
-		fctx['is_comp'] = old_is_comp
-		updated = Set()
-		resubs_functional_vars(name, dsl['funcs'], dsl['sympy_funcs'], updated)
-		if (not quiet):
-			print '   [{}]'.format(', '.join(updated))
+	if False:
+		if (old_is_comp is not None) and len(old_is_comp):
+			fctx['is_comp'] = old_is_comp
+			updated = Set()
+			resubs_functional_vars(name, dsl['funcs'], dsl['sympy_funcs'], updated)
+			if (not quiet):
+				print '   [{}]'.format(', '.join(updated))
 def process_dsl_command(dsl, inp, quiet=False):
 	global g_dbg
 	funcs = dsl['funcs'];
@@ -449,8 +469,7 @@ def process_dsl_command(dsl, inp, quiet=False):
 		if '[' in name or '(' in name:
 			name_splt = name.split('(' if '(' in name else '[')
 			name = name_splt[0]; fvars = name_splt[1].split(',');
-		fctx = func_str_to_sym(func_str, name, dsl['funcs'], dsl['sympy_funcs'])
-		old_func = funcs.get(name, None); old_is_comp = old_func['is_comp'] if old_func else None;
+		fctx = func_str_to_sym(func_str, name, dsl['funcs'])
 		dsl_add_fctx(dsl, name, fctx, True, quiet or not run_sec)
 	elif (cmd == 'bake'):
 		fn,bn = input_splt[1], input_splt[2]
@@ -547,6 +566,8 @@ if not sys.flags.interactive:
 			for line in [x.rstrip().strip() for x in ifile.readlines()]:
 				if echo:
 					print ' >', line;
+				if line == 'quit':
+					break
 				process_dsl_command(dsl, line, quiet=quiet);
 		if arg_has('-continue'):
 			enter_dsl(dsl)

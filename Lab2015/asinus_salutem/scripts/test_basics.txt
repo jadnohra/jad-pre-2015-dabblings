@@ -1,10 +1,11 @@
 let f1(.) = x
 let f2(.) = f1+1
 let f3(.) = f2+cos(f1)^2+tan(y)
-print f3
+quit
+#print f3
 bake f3 f3b
 let f1(.) = 2*x
-print f3
-print f3b
+#print f3
+#print f3b
 ddist f3 f3
 ddist f3 f3b
