@@ -242,7 +242,7 @@ def has_const(fctx, name):
 def def_const(fctx, names, val = 0.5):
 	names = as_list(names)
 	for name in names:
-		for d in (fctx['eval_constants'],fctx['eval_vars']):
+		for d in (fctx['eval_constants'],fctx['lvl_composed']['vars']):
 			d.discard(name)
 		fctx['eval_constants'].add(name)
 		fctx['values'][name] = val
@@ -258,9 +258,9 @@ def set_const(fctx, name, val = 0.5):
 def def_var(fctx, names):
 	names = as_list(names)
 	for name in names:
-		for d in (fctx['eval_constants'],fctx['eval_vars']):
+		for d in (fctx['eval_constants'],fctx['lvl_composed']['vars']):
 			d.discard(name)
-		fctx['eval_vars'].add(name)
+		fctx['lvl_composed']['vars'].add(name)
 def func_compose(fctx, toks, f_cand_map, depth=0):
 	cis = [x for x in range(len(toks)) if (toks[x][0],toks[x][2]) == ('s','var') and toks[x][1] in f_cand_map]
 	if len(cis) == 0:
@@ -312,7 +312,7 @@ def func_update_dependants(fctx, f_comp_map, updated = Set()):
 def func_sym_to_df(fctx, var):
 	dfctx = copy.copy(fctx)
 	dsym_func = diff(dfctx['sym_func'], dfctx['sympy_transl'].get(var, var))
-	func_update_sym_func(dfctx, dsym_func, dfctx['f_vars'], dfctx['f_constants'], dfctx['eval_vars'], dfctx['eval_constants'])
+	func_update_sym_func(dfctx, dsym_func, dfctx['f_vars'], dfctx['f_constants'], dfctx['lvl_composed']['vars'], dfctx['eval_constants'])
 	for nk in ['_func_str', 'func_str']:
 		funcs[nk] = 'd({},{})'.format(funcs[nk], var)
 	return dfctx
@@ -359,20 +359,20 @@ def func_randtest(vlen1, vlen2, lbdf1, lbdf2, (rlo, rhi, n), excpt = False, seed
 def func_ztest(fctx, subs, k_int, (rlo, rhi, n), excpt = False, seed = None, quiet = False):
 	if seed is not None:
 		numpy.random.seed(seed)
-	subs_keys = subs.keys(); subs_fctx = [subs[k] for k in subs_keys]; subs_lbds = [x['lambd_f'] for x in subs_fctx];
+	subs_keys = subs.keys(); subs_fctx = [subs[k] for k in subs_keys]; subs_lbds = [x['lvl_sympy']['eval_lbd'] for x in subs_fctx];
 	in_vars = Set()
 	for sub in subs_fctx + [fctx]:
-		for ev in sub['eval_vars']:
+		for ev in sub['lvl_composed']['vars']:
 			in_vars.add(ev)
 	in_vars = list(in_vars)
-	lbd_inds = [ [in_vars.index(x) for x in sub['eval_vars']] for sub in subs_fctx ]
-	f_lbd_inds = [in_vars.index(x) for x in fctx['eval_vars']]
-	subs_inds = [ fctx['eval_vars'].index(x) for x in fctx['eval_vars'] if x in subs_keys ]
+	lbd_inds = [ [in_vars.index(x) for x in sub['lvl_composed']['vars']] for sub in subs_fctx ]
+	f_lbd_inds = [in_vars.index(x) for x in fctx['lvl_composed']['vars']]
+	subs_inds = [ fctx['lvl_composed']['vars'].index(x) for x in fctx['lvl_composed']['vars'] if x in subs_keys ]
 	k_inds = [ in_vars.index(x) for x in in_vars if x.startswith('k') ] if k_int else []
 	vlen = len(in_vars); coords = [rlo+x*(rhi-rlo) for x in numpy.random.random(int(n)+vlen-1)];
 	k_coords = numpy.random.randint(-10, 11, int(n)+vlen-1)
 	subs_vals = [0.0]*len(subs);
-	lbd_f = fctx['lambd_f']; fvlen = len(fctx['eval_vars']);
+	lbd_f = fctx['lvl_sympy']['eval_lbd']; fvlen = len(fctx['lvl_composed']['vars']);
 	err = 0.0; except_count = 0;
 	with numpy.errstate(invalid='raise'):
 		i = 0
@@ -393,7 +393,7 @@ def func_ztest(fctx, subs, k_int, (rlo, rhi, n), excpt = False, seed = None, qui
 				else:
 					subs_vals[si] = lbd(*sub_coords)
 				if g_dbg:
-					print '{} ({}) = {}'.format(subs_fctx[si]['name'], zip(subs_fctx[si]['eval_vars'], sub_coords), subs_vals[si])
+					print '{} ({}) = {}'.format(subs_fctx[si]['name'], zip(subs_fctx[si]['lvl_composed']['vars'], sub_coords), subs_vals[si])
 			if has_except:
 				coords[i:i+vlen] = [rlo+x*(rhi-rlo) for x in numpy.random.random(vlen)]
 				k_coords[i:i+vlen] = numpy.random.randint(-10, 11, vlen)
@@ -403,7 +403,7 @@ def func_ztest(fctx, subs, k_int, (rlo, rhi, n), excpt = False, seed = None, qui
 					coords_f[subs_inds[j]] = subs_vals[j]
 				f_val = lbd_f(*coords_f)
 				if g_dbg:
-					print '{} ({}) = {}'.format(fctx['name'], zip(fctx['eval_vars'], coords_f), f_val)
+					print '{} ({}) = {}'.format(fctx['name'], zip(fctx['lvl_composed']['vars'], coords_f), f_val)
 				err = max(err, abs(f_val))
 				i = i+1
 	if (except_count  and not quiet):
@@ -489,7 +489,7 @@ def process_dsl_command(dsl, inp, quiet=False):
 		state = ''; state_ev = ''; state_lhn = 0; excpt = False
 		for part in input_splt[2:]:
 			if state == '':
-				if part in fctx['eval_vars']:
+				if part in fctx['lvl_composed']['vars']:
 					state_ev = part; state = 'ev';
 				elif part == '-k':
 					k_int = True
@@ -518,7 +518,7 @@ def process_dsl_command(dsl, inp, quiet=False):
 		if len(input_splt) >= 2 and run_sec:
 			print ' '.join(input_splt[2:])
 	elif (cmd in ['?', 'calc', 'eval'] and run_sec):
-		print subs_sym_str(to_sym_str(' '.join(input_splt[1:])), [ ( name_to_sympy(x['name'], True),x['lambd_f']) for x in funcs.values()])
+		print subs_sym_str(to_sym_str(' '.join(input_splt[1:])), [ ( name_to_sympy(x['name'], True),x['lvl_sympy']['eval_lbd']) for x in funcs.values()])
 def enter_dsl(dsl):
 	go_dsl = True; sys_exit = False;
 	while go_dsl:
