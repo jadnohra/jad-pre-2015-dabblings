@@ -1,9 +1,9 @@
 let f1(.) = x
 let f2(.) = f1+1
 let f3(.) = f2+cos(f1)^2+tan(y)
-print f3
+print f3 r,c,s
 bake f3 f3b
-let f1(.) = 2*x
+relet f1(.) = 2*x
 print f3
 print f3b
 ftest f3 f3

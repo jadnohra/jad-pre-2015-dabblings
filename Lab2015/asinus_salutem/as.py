@@ -14,7 +14,10 @@ execfile('helper_math1.py')
 g_dbg = False
 k_as_const_map = {'@pi':'pi', '@e':'e', '@i':'j'}
 k_sympy_constants = ('j','inf','nan','pi','degree','e','phi','euler','catalan','apery','khinchin','glaisher','mertens','twinprime')
+k_format_sympy_const_map = {'pi':'pi', 'e':'e', 'j':'j'}
 
+def format_sympy_prepare_func_str(funct_str):
+	return funct_str.replace('**', '^').replace('sqrt', '√')
 def pp_toks(toks):
 	return ' '.join(["{}".format(tok[1]) for tok in toks if len(tok[1])])
 def pp_indexed_toks(toks, toksi):
@@ -87,7 +90,7 @@ def parse_root_group(tl):
 	rest_is_ws = all( tl[x][0]=='w' for x in range(tlo[0], len(tl)) )
 	return gtl, root_parse_group_reduce(root, gtl) if (root and rest_is_ws) else None
 def parse_refine_toks(toks, const_map):
-	ntoks = copy.copy(toks)
+	ntoks = copy.deepcopy(toks)
 	for ti in range(len(ntoks)):
 		tok = ntoks[ti]
 		if tok[0] == 's' and tok[2] == '':
@@ -220,7 +223,7 @@ def vname_to_sympy(name, sympy_constants):
 	pre_repl = name.replace("'", '_p_' if name.upper() != name else '_P_')
 	return '_{}'.format(pre_repl) if (name in sympy_constants or not pre_repl[0].isalpha()) else pre_repl
 def tok_translate_to_sympy(toks, const_map = k_as_const_map, sympy_constants = k_sympy_constants):
-	t_toks = copy.copy(toks); t_transl = {}; t_detransl = {};
+	t_toks = copy.deepcopy(toks); t_transl = {}; t_detransl = {};
 	for ti in range(len(t_toks)):
 		tok = t_toks[ti]; pre_tok = copy.copy(tok);
 		if tok[0] == '[' and len(tok[1]) and tok[1] != '(':
@@ -270,7 +273,7 @@ def def_var(fctx, names):
 		for d in (fctx['eval_constants'],fctx['lvl_composed']['vars']):
 			d.discard(name)
 		fctx['lvl_composed']['vars'].add(name)
-def func_compose(fctx, toks, f_cand_map, depth=0):
+def fctx_compose(fctx, toks, f_cand_map, depth=0):
 	cis = [x for x in range(len(toks)) if (toks[x][0],toks[x][2]) == ('s','var') and toks[x][1] in f_cand_map]
 	if len(cis) == 0:
 		if g_dbg and depth != 0:
@@ -283,10 +286,10 @@ def func_compose(fctx, toks, f_cand_map, depth=0):
 		c_toks.extend(toks[pci+1:ci]); pci = ci;
 		c_toks.extend( comp_fctx['lvl_parsed']['toks'] );
 	c_toks.extend(toks[pci+1:])
-	return func_compose(fctx, c_toks, f_cand_map, depth+1)
-def func_str_relambda(fctx):
+	return fctx_compose(fctx, c_toks, f_cand_map, depth+1)
+def fctx_relambda(fctx):
 	fctx['lvl_sympy']['eval_lbd'] = lambdify(fctx['lvl_sympy']['eval_sympy_symbs'], fctx['lvl_sympy']['eval_func'], "numpy")
-def func_str_resympify(fctx):
+def fctx_resympify(fctx):
 	t_toks, t_transl, t_detransl = tok_translate_to_sympy(fctx['lvl_composed']['toks'], k_as_const_map, k_sympy_constants)
 	fctx['lvl_sympy']['toks'] = t_toks; fctx['lvl_sympy']['transl'] = t_transl; fctx['lvl_sympy']['detransl'] = t_detransl;
 	cvar_values = fctx['lvl_raw']['cvar_values']
@@ -294,39 +297,50 @@ def func_str_resympify(fctx):
 	fctx['lvl_sympy']['eval_func_str'] = tok_group_to_str(fctx['lvl_composed']['group_tree'], fctx['lvl_sympy']['eval_toks'])
 	fctx['lvl_sympy']['eval_sympy_symbs'] = [t_transl[x] for x in fctx['lvl_composed']['vars']]
 	fctx['lvl_sympy']['eval_func'] = def_sym_func(fctx['lvl_sympy']['eval_func_str'], fctx['lvl_sympy']['eval_sympy_symbs'])
-	func_str_relambda(fctx)
-def func_str_recompose(fctx, f_comp_map):
+	fctx_relambda(fctx)
+def fctx_recompose(fctx, fctx_map):
 	fctx['dependencies'] = Set()
-	fctx['lvl_composed']['toks'] = func_compose(fctx, fctx['lvl_parsed']['toks'], f_comp_map)
+	fctx['lvl_composed']['toks'] = fctx_compose(fctx, fctx['lvl_parsed']['toks'], fctx_map)
 	fctx['lvl_composed']['vars'] = sorted(list(set([x[1] for x in fctx['lvl_composed']['toks'] if (x[0],x[2]) == ('s','var')])))
 	gtl, ggp = parse_root_group(fctx['lvl_composed']['toks'])
 	fctx['lvl_composed']['toks'] = gtl; fctx['lvl_composed']['group_tree'] = ggp;
 	#print 'recomp', pp_toks( tok_group_toks(fctx['lvl_composed']['group_tree'], fctx['lvl_composed']['toks'] ))
-	func_str_resympify(fctx)
-def func_str_to_sym(func_str, func_name='', f_comp_map={}):
-	parse_gt, parse_toks = parse_func_tokenize(func_str, False, k_as_const_map)
-	parse_vars = sorted(list(set([x[1] for x in parse_toks if (x[0],x[2]) == ('s','var')])))
-	parse_cvars = sorted(list(set([x[1] for x in parse_toks if (x[0],x[2]) == ('s','cvar')])))
-	fctx = {
-		'lvl_raw': { 'name':func_name, 'func_str':func_str, 'cvar_values':{}, 'mod':''  },
-		'lvl_parsed':  { 'group_tree':parse_gt, 'toks':parse_toks, 'vars':parse_vars, 'cvars':parse_cvars, },
+	fctx_resympify(fctx)
+def fctx_reop(fctx, op, fctx_map):
+	if op['type'] == 'df':
+		sfctx = fctx_map[op['dependency_name']]; dvar = op['dvar'];
+		func_str = format_sympy_prepare_func_str(str(diff(sfctx['lvl_sympy']['eval_func'], sfctx['lvl_sympy']['transl'][dvar])))
+		fctx_reparse(fctx, func_str, fctx_map, k_format_sympy_const_map)
+def fctx_create(func_name=''):
+	return {
+		'lvl_raw': { 'name':func_name, 'func_str':None, 'cvar_values':{}, 'op_dependencies':{}, 'op_dependants':{}  },
+		'lvl_parsed':  { 'group_tree':None, 'toks':None, 'vars':None, 'cvars':None, },
 		'lvl_composed': { 'toks':None, 'group_tree':None, 'vars':[], 'dependencies':Set(), 'dependants':Set(), },
 		'lvl_sympy': { 'toks':[], 'eval_toks':[], 'transl':[], 'detransl':[],  },
-		};
-	func_str_recompose(fctx, f_comp_map)
-	return fctx
-def func_update_dependants(fctx, f_comp_map, updated = Set()):
+		}
+def fctx_create_by_op(op, fctx_map, func_name):
+		fctx = fctx_create(func_name)
+		fctx['lvl_raw']['op_dependencies'][op['dependency_name']] = op;
+		fctx_map[op['dependency_name']]['lvl_raw']['op_dependants'][func_name] = op
+		fctx_reop(fctx, op, fctx_map)
+		return fctx
+def fctx_reparse(fctx, func_str, fctx_map, parse_const_map):
+	parse_gt, parse_toks = parse_func_tokenize(func_str, False, parse_const_map)
+	parse_vars = sorted(list(set([x[1] for x in parse_toks if (x[0],x[2]) == ('s','var')])))
+	parse_cvars = sorted(list(set([x[1] for x in parse_toks if (x[0],x[2]) == ('s','cvar')])))
+	fctx['lvl_raw']['func_str'] = func_str; fctx['lvl_parsed']['group_tree'] = parse_gt; fctx['lvl_parsed']['toks'] = parse_toks;
+	fctx['lvl_parsed']['vars'] = parse_vars; fctx['lvl_parsed']['cvars'] = parse_cvars;
+	fctx_recompose(fctx, fctx_map)
+def func_str_to_fctx(func_str, func_name='', fctx_map={}, parse_const_map = k_as_const_map):
+	fctx = fctx_create(func_name); fctx_reparse(fctx, func_str, fctx_map, parse_const_map); return fctx;
+def fctx_update_dependants(fctx, fctx_map, updated = Set()):
+	loc_upd = Set()
 	for fn in fctx['lvl_composed']['dependants']:
-		updated.add(fn); func_str_recompose(f_comp_map[fn], f_comp_map);
-	for fn in fctx['lvl_composed']['dependants']:
-		func_update_dependants(f_comp_map[fn], f_comp_map, updated)
-def func_sym_to_df(fctx, var):
-	dfctx = copy.deepcopy(fctx)
-	dsym_func = diff(dfctx['lvl_sympy']['eval_func'], dfctx['lvl_sympy']['transl'][var])
-	cur_mod = dfctx['lvl_raw']['mod']
-	dfctx['lvl_sympy']['eval_func'] = dsym_func; dfctx['lvl_raw']['mod'] = 'd{}{}'.format(var, '({})'.format(cur_mod) if len(cur_mod) else '')
-	func_str_relambda(dfctx)
-	return dfctx
+		loc_upd.add(fn); updated.add(fn); fctx_recompose(fctx_map[fn], fctx_map);
+	for fn,op in fctx['lvl_raw']['op_dependants'].items():
+		loc_upd.add(fn); updated.add(fn); fctx_reop(fctx_map[fn], op, fctx_map);
+	for fn in loc_upd:
+		fctx_update_dependants(fctx_map[fn], fctx_map, updated)
 def multi_step(ts, h):
 	could_step = False
 	for ti in range(len(ts)):
@@ -427,36 +441,48 @@ def func_ztest(fctx, subs, k_int, (rlo, rhi, n), excpt = False, seed = None, qui
 	if (except_count  and not quiet):
 		print 'Note: Bypassed {} exceptions.'.format(except_count)
 	return err
-def pp_func_args(fctx, use_sympy=False):
-	return '{}{}({})'.format('' if len(fctx['lvl_raw']['mod']) else '', fctx['lvl_raw']['name'], ', '.join(fctx['lvl_parsed']['vars']))
-def pp_func_args_val(fctx, use_sympy=False):
-	eval_str = str(fctx['lvl_raw']['func_str']) if use_sympy else (str(fctx['lvl_sympy']['eval_func']) if len(fctx['lvl_raw']['mod']) else fctx['lvl_sympy']['eval_func_str'])
-	return '{} = {}'.format(pp_func_args(fctx, use_sympy), eval_str)
-def pp_func_args_orig(fctx, empty_name = False):
-	return '{} = {}'.format(''.join([' ']*len(pp_func_args(fctx))) if empty_name else pp_func_args(fctx, ltex), fctx['_func_str'])
-def resubs_functional_vars(name, funcs, sympy_funcs, updated = Set()):
-	for fn in funcs[name]['is_comp']:
-		updated.add(fn);
-		funcs[fn] = func_str_to_sym(funcs[fn]['_func_str'], fn, funcs); funcs[fn]['name'] = fn;
-	for fn in funcs[name]['is_comp']:
-		resubs_functional_vars(funcs[fn]['name'], funcs, sympy_funcs, updated)
+def print_fctx(fctx, details):
+	def print_decl(key, pre_key, decl_len):
+		if decl_len == -1 or key != pre_key:
+			content = '{}({})'.format(fctx['lvl_raw']['name'], ', '.join(fctx[key]['vars']))
+			print content,
+			return key,len(content)
+		else:
+			print ''.join([' ']*decl_len),
+			return key,decl_len
+	curr_decl = ''; decl_len = -1;
+	for det,deti in zip(details, range(len(details))):
+		if deti != 0:
+			print ''
+		if det in ['raw', 'r', '1']:
+			curr_decl, decl_len = print_decl('lvl_parsed', curr_decl, decl_len)
+			print ' = ', fctx['lvl_raw']['func_str'],
+		elif det in ['comp', 'c', '2']:
+			curr_decl, decl_len = print_decl('lvl_composed', curr_decl, decl_len)
+			print ' = ', pp_toks(tok_group_toks(fctx['lvl_composed']['group_tree'], fctx['lvl_composed']['toks'])),
+		elif det in ['sympy', 's', '3']:
+			curr_decl, decl_len = print_decl('lvl_composed', curr_decl, decl_len)
+			print ' = ', fctx['lvl_sympy']['eval_func_str']
+	print '.'
 def create_dsl():
 	print ' Asinus Salutem'
 	return { 'funcs':{}, 'sympy_funcs':{}, 'dbg':False, 'g_dbg':arg_has('-dbg'),
 			'sections':[x for x in arg_get('-sections', '').split(',') if len(x)],
 			'cur_sec':None }
-def dsl_add_fctx(dsl, name, fctx, allow_clobber, quiet):
-	old_func = dsl['funcs'].get(name, None); old_dep = old_func['lvl_composed']['dependants'] if old_func else None;
-	if (not allow_clobber and old_func is not None):
-		raise Exception()
+def dsl_add_fctx(dsl, name, fctx, allow_update, quiet):
+	old_func = None; dsl['funcs'].get(name, None); old_dep = None;
+	if name in dsl['funcs']:
+		old_func = dsl['funcs'][name]; old_dep = (old_func['lvl_raw']['op_dependants'], old_func['lvl_composed']['dependants'])
+	if (not allow_update and old_func is not None):
+		raise Exception("Function already exists, use the proper command (e.g 'relet') to update it.")
 	dsl['funcs'][name] = fctx; fctx['lvl_raw']['name'] = name;
 	if (not quiet):
-		print ' ', pp_func_args_val(fctx, use_sympy=False)
-		print ' ', pp_func_args_val(fctx, use_sympy=True)
-	if (old_dep is not None) and len(old_dep):
-		fctx['lvl_composed']['dependants'] = copy.copy(old_dep)
+		print_fctx(fctx, ['comp'])
+	if (old_dep is not None) and (len(old_dep[0]) or len(old_dep[1])):
+		fctx['lvl_raw']['op_dependants'] = copy.copy(old_dep[0])
+		fctx['lvl_composed']['dependants'] = copy.copy(old_dep[1])
 		updated = Set()
-		func_update_dependants(fctx, dsl['funcs'], updated)
+		fctx_update_dependants(fctx, dsl['funcs'], updated)
 		if (not quiet):
 			print '   [{}]'.format(', '.join(updated))
 def process_dsl_command(dsl, inp, quiet=False):
@@ -466,23 +492,23 @@ def process_dsl_command(dsl, inp, quiet=False):
 	cmd = input_splt[0]
 	dsl['dbg'] = True if ('-dbg' in input_splt) else dsl['g_dbg']; g_dbg = dsl['dbg'];
 	run_sec = len(dsl['sections']) == 0 or dsl['cur_sec'] in dsl['sections']
-	if (cmd in ['let']):
+	if (cmd in ['let', 'relet']):
 		name = input_splt[1]
 		func_str = ' '.join(input_splt[3:])
 		if '[' in name or '(' in name:
 			name_splt = name.split('(' if '(' in name else '[')
 			name = name_splt[0]; fvars = name_splt[1].split(',');
-		fctx = func_str_to_sym(func_str, name, dsl['funcs'])
-		dsl_add_fctx(dsl, name, fctx, True, quiet or not run_sec)
+		fctx = func_str_to_fctx(func_str, name, dsl['funcs'])
+		dsl_add_fctx(dsl, name, fctx, cmd == 'relet', quiet or not run_sec)
 	elif (cmd == 'bake'):
 		fn,bn = input_splt[1], input_splt[2]
 		bfunc = copy.deepcopy(funcs[fn]); bfunc['name'] = bn; bfunc['comps'] = Set();
-		dsl_add_fctx(dsl, bn, bfunc, False, quiet or not run_sec)
+		dsl_add_fctx(dsl, bn, bfunc, '-u' in input_splt, quiet or not run_sec)
 	elif (cmd == 'd'):
 		fn,varn = input_splt[1], input_splt[2]
 		name = 'd_{}({})'.format(varn,fn)
-		fctx = func_sym_to_df(funcs[fn], varn);
-		dsl_add_fctx(dsl, name, fctx, False, quiet or not run_sec)
+		fctx = fctx_create_by_op({'dependant_name':name, 'dependency_name':fn, 'dvar':varn, 'type':'df'} , funcs, name)
+		dsl_add_fctx(dsl, name, fctx, '-u' in input_splt, quiet or not run_sec)
 	elif (cmd in ['ftest', 'frandtest', 'fgridtest'] and run_sec):
 		n1,n2 = input_splt[1], input_splt[2]
 		lo_hi_n = [-1.0,1.0,1000]; seed = None;
@@ -523,11 +549,8 @@ def process_dsl_command(dsl, inp, quiet=False):
 				subs[state_ev] = funcs[part]; state = '';
 		print func_ztest(fctx, subs, k_int, lo_hi_n, excpt, seed = seed, quiet = quiet)
 	elif (cmd in ['print', 'p'] and run_sec):
-		name = input_splt[1]
-		print ' ', pp_func_args_val(funcs[name], use_sympy = False)
-		print ' ', pp_func_args_val(funcs[name], use_sympy = True)
-		#if len(funcs[name]['comps']):
-		#	print ' ', pp_func_args_orig(funcs[name], empty_name = True)
+		name = input_splt[1]; details = input_splt[2].split(',') if len(input_splt) > 2 else ['comp'];
+		print_fctx(funcs[name], details)
 	elif (cmd in ['echo'] and run_sec):
 		print ' '.join(input_splt[1:])
 	elif (cmd in ['section']):
@@ -575,6 +598,6 @@ if not sys.flags.interactive:
 		if arg_has('-continue'):
 			enter_dsl(dsl)
 	elif arg_has('-test'):
-		print func_str_to_sym('A*cos(x)+B*sin(y)+[1^2*cos(x)]')
+		print func_str_to_fctx('A*cos(x)+B*sin(y)+[1^2*cos(x)]')
 	else:
 		enter_dsl(create_dsl())
