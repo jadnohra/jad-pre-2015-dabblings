@@ -1,5 +1,5 @@
 let f1(.) = cos(x^2)
-d f1 x
-print d_x(f1)
+let f1' = PD(f1,x)
+print f1'
 relet f1(.) = x^3
-print d_x(f1)
+print f1'

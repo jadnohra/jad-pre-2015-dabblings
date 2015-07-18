@@ -17,11 +17,10 @@ section 1 Verifying (4)
 
 #
 section 2 Verifying (39)
- # let d_th1[O1] = d_th1[O1]
- d O1 th1
+ let dO1\th1 = PD(O1,th1)
  let c1(.) = [ s1 + 2 w12^2 ] - [ s2 + 2 w22^2 ]
  let _39(.) = (-s1) sin(2 r1) [ (c1) + s1 cos(2 r1) - s2 cos(2 r2) ]
- ftest d_th1(O1) _39
+ ftest dO1\th1 _39
 #
 section 3 Verifying (40, 45)
   let _40(.) = (k @pi)/2 - atan2(w11,w13)
@@ -36,9 +35,9 @@ section 3 Verifying (40, 45)
   ztest _39 th2 _45_4 -k -except
 #
 section 4 Verifying (??)
- d O1 th2
- d d_th1(O1) th1
- d d_th1(O1) th2
- d d_th2(O1) th1
- print d_th1(d_th1(O1))
- print d_th2(d_th1(O1))
+ let dO1\th2 = PD(O1,th2)
+ let ddO1\th11 = PD(dO1\th1,th1)
+ let ddO1\th12 = PD(dO1\th1,th2)
+ let ddO1\th21 = PD(dO1\th2,th1)
+ print ddO1\th11
+ print ddO1\th21

@@ -494,21 +494,22 @@ def process_dsl_command(dsl, inp, quiet=False):
 	run_sec = len(dsl['sections']) == 0 or dsl['cur_sec'] in dsl['sections']
 	if (cmd in ['let', 'relet']):
 		name = input_splt[1]
-		func_str = ' '.join(input_splt[3:])
 		if '[' in name or '(' in name:
 			name_splt = name.split('(' if '(' in name else '[')
 			name = name_splt[0]; fvars = name_splt[1].split(',');
-		fctx = func_str_to_fctx(func_str, name, dsl['funcs'])
-		dsl_add_fctx(dsl, name, fctx, cmd == 'relet', quiet or not run_sec)
+		func_str = ' '.join(input_splt[3:])
+		if not func_str.startswith('PD('):
+			fctx = func_str_to_fctx(func_str, name, dsl['funcs'])
+			dsl_add_fctx(dsl, name, fctx, cmd == 'relet', quiet or not run_sec)
+		else: #TODO generalize this 2*PD(f1,x)+...
+			gt, toks = parse_func_tokenize(func_str, False, {})
+			fn,varn = toks[3][1], toks[5][1]
+			fctx = fctx_create_by_op({'dependant_name':name, 'dependency_name':fn, 'dvar':varn, 'type':'df'} , funcs, name)
+			dsl_add_fctx(dsl, name, fctx, '-u' in input_splt, quiet or not run_sec)
 	elif (cmd == 'bake'):
 		fn,bn = input_splt[1], input_splt[2]
 		bfunc = copy.deepcopy(funcs[fn]); bfunc['name'] = bn; bfunc['comps'] = Set();
 		dsl_add_fctx(dsl, bn, bfunc, '-u' in input_splt, quiet or not run_sec)
-	elif (cmd == 'd'):
-		fn,varn = input_splt[1], input_splt[2]
-		name = 'd_{}({})'.format(varn,fn)
-		fctx = fctx_create_by_op({'dependant_name':name, 'dependency_name':fn, 'dvar':varn, 'type':'df'} , funcs, name)
-		dsl_add_fctx(dsl, name, fctx, '-u' in input_splt, quiet or not run_sec)
 	elif (cmd in ['ftest', 'frandtest', 'fgridtest'] and run_sec):
 		n1,n2 = input_splt[1], input_splt[2]
 		lo_hi_n = [-1.0,1.0,1000]; seed = None;
