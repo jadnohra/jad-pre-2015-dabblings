@@ -468,7 +468,9 @@ def create_dsl():
 	print ' Asinus Salutem'
 	return { 'funcs':{}, 'sympy_funcs':{}, 'dbg':False, 'g_dbg':arg_has('-dbg'),
 			'sections':[x for x in arg_get('-sections' if arg_has('-sections') else '-section', '').split(',') if len(x)],
-			'cur_sec':None }
+			'cur_sec':None, 'is_focus_sec':True }
+def dsl_is_focus_sec(dsl):
+	return len(dsl['sections']) == 0 or dsl['cur_sec'] in dsl['sections']
 def dsl_add_fctx(dsl, name, fctx, allow_update, quiet):
 	old_func = None; dsl['funcs'].get(name, None); old_dep = None;
 	if name in dsl['funcs']:
@@ -491,7 +493,7 @@ def process_dsl_command(dsl, inp, quiet=False):
 	input_splt = inp.split(' ')
 	cmd = input_splt[0]
 	dsl['dbg'] = True if ('-dbg' in input_splt) else dsl['g_dbg']; g_dbg = dsl['dbg'];
-	run_sec = len(dsl['sections']) == 0 or dsl['cur_sec'] in dsl['sections']
+	is_focus_sec = dsl_is_focus_sec(dsl);
 	if (cmd in ['let', 'relet']):
 		name = input_splt[1]
 		if '[' in name or '(' in name:
@@ -500,17 +502,17 @@ def process_dsl_command(dsl, inp, quiet=False):
 		func_str = ' '.join(input_splt[3:])
 		if not func_str.startswith('PD('):
 			fctx = func_str_to_fctx(func_str, name, dsl['funcs'])
-			dsl_add_fctx(dsl, name, fctx, cmd == 'relet', quiet or not run_sec)
+			dsl_add_fctx(dsl, name, fctx, cmd == 'relet', quiet or not is_focus_sec)
 		else: #TODO generalize this 2*PD(f1,x)+...
 			gt, toks = parse_func_tokenize(func_str, False, {})
 			fn,varn = toks[3][1], toks[5][1]
 			fctx = fctx_create_by_op({'dependant_name':name, 'dependency_name':fn, 'dvar':varn, 'type':'df'} , funcs, name)
-			dsl_add_fctx(dsl, name, fctx, '-u' in input_splt, quiet or not run_sec)
+			dsl_add_fctx(dsl, name, fctx, '-u' in input_splt, quiet or not is_focus_sec)
 	elif (cmd == 'bake'):
 		fn,bn = input_splt[1], input_splt[2]
 		bfunc = copy.deepcopy(funcs[fn]); bfunc['name'] = bn; bfunc['comps'] = Set();
-		dsl_add_fctx(dsl, bn, bfunc, '-u' in input_splt, quiet or not run_sec)
-	elif (cmd in ['ftest', 'frandtest', 'fgridtest'] and run_sec):
+		dsl_add_fctx(dsl, bn, bfunc, '-u' in input_splt, quiet or not is_focus_sec)
+	elif (cmd in ['ftest', 'frandtest', 'fgridtest'] and is_focus_sec):
 		n1,n2 = input_splt[1], input_splt[2]
 		lo_hi_n = [-1.0,1.0,1000]; seed = None;
 		state = ''; state_lhn = 0; excpt = False
@@ -528,7 +530,7 @@ def process_dsl_command(dsl, inp, quiet=False):
 				seed = int(part); state = '';
 		func_test = func_randtest if (cmd != 'fgridtest') else func_gridtest
 		print func_test(funcs[n1]['lvl_composed']['vars'], funcs[n2]['lvl_composed']['vars'], funcs[n1]['lvl_sympy']['eval_lbd'], funcs[n2]['lvl_sympy']['eval_lbd'], lo_hi_n, excpt, seed = seed, quiet = quiet)
-	elif (cmd == 'ztest' and run_sec):
+	elif (cmd == 'ztest' and is_focus_sec):
 		fn = input_splt[1]; fctx = funcs[fn];
 		k_int = False; subs = {}; lo_hi_n = [-1.0, 1.0, 1000]; seed = None;
 		state = ''; state_ev = ''; state_lhn = 0; excpt = False
@@ -549,17 +551,19 @@ def process_dsl_command(dsl, inp, quiet=False):
 			elif state == 'ev':
 				subs[state_ev] = funcs[part]; state = '';
 		print func_ztest(fctx, subs, k_int, lo_hi_n, excpt, seed = seed, quiet = quiet)
-	elif (cmd in ['print', 'p'] and run_sec):
+	elif (cmd in ['print', 'p'] and is_focus_sec):
 		name = input_splt[1]; details = input_splt[2].split(',') if len(input_splt) > 2 else ['comp'];
 		print_fctx(funcs[name], details)
-	elif (cmd in ['echo'] and run_sec):
+	elif (cmd in ['echo'] and is_focus_sec):
 		print ' '.join(input_splt[1:])
 	elif (cmd in ['section']):
 		sec = input_splt[1]; dsl['cur_sec'] = sec;
-		run_sec = len(dsl['sections']) == 0 or dsl['cur_sec'] in dsl['sections']
-		if len(input_splt) >= 2 and run_sec:
+		is_focus_sec = len(dsl['sections']) == 0 or dsl['cur_sec'] in dsl['sections']
+		if len(input_splt) >= 2 and is_focus_sec:
 			print ' '.join(input_splt[2:])
-	elif (cmd in ['?', 'calc', 'eval'] and run_sec):
+	elif (cmd in ['fnames']):
+		print ' '.join(['[{}]'.format(k) for k in funcs.keys()])
+	elif (cmd in ['?', 'calc', 'eval'] and is_focus_sec):
 		print subs_sym_str(to_sym_str(' '.join(input_splt[1:])), [ ( name_to_sympy(x['name'], True),x['lvl_sympy']['eval_lbd']) for x in funcs.values()])
 def enter_dsl(dsl):
 	go_dsl = True; sys_exit = False;
@@ -591,12 +595,12 @@ if not sys.flags.interactive:
 		with open(arg_get('-script', ''), "r") as ifile:
 			quiet = arg_has('-quiet'); echo = arg_has('-echo');
 			for line in [x.rstrip().strip() for x in ifile.readlines()]:
-				if echo:
+				if echo and dsl_is_focus_sec(dsl):
 					print ' >', line;
 				if line == 'quit':
 					break
 				process_dsl_command(dsl, line, quiet=quiet);
-		if arg_has('-continue'):
+		if arg_has('-interact'):
 			enter_dsl(dsl)
 	elif arg_has('-test'):
 		print func_str_to_fctx('A*cos(x)+B*sin(y)+[1^2*cos(x)]')
