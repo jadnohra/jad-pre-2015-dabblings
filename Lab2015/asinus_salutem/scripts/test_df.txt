@@ -1,5 +1,7 @@
 let f1(.) = cos(x^2)
 let f1' = PD(f1,x)
+let df1\xx = PD(f1',x)
 print f1'
 relet f1(.) = x^3
 print f1'
+print df1\xx
