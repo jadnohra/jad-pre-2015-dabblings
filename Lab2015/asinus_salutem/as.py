@@ -467,7 +467,7 @@ def print_fctx(fctx, details):
 def create_dsl():
 	print ' Asinus Salutem'
 	return { 'funcs':{}, 'sympy_funcs':{}, 'dbg':False, 'g_dbg':arg_has('-dbg'),
-			'sections':[x for x in arg_get('-sections', '').split(',') if len(x)],
+			'sections':[x for x in arg_get('-sections' if arg_has('-sections') else '-section', '').split(',') if len(x)],
 			'cur_sec':None }
 def dsl_add_fctx(dsl, name, fctx, allow_update, quiet):
 	old_func = None; dsl['funcs'].get(name, None); old_dep = None;
