@@ -18,8 +18,8 @@ k_format_sympy_const_map = {'pi':'pi', 'e':'e', 'j':'j'}
 
 def format_sympy_prepare_func_str(funct_str):
 	return funct_str.replace('**', '^').replace('sqrt', '√')
-def pp_toks(toks):
-	return ' '.join(["{}".format(tok[1]) for tok in toks if len(tok[1])])
+def pp_toks(toks, join_ws = ' '):
+	return join_ws.join(["{}".format(tok[1]) for tok in toks if len(tok[1])])
 def pp_indexed_toks(toks, toksi):
 	return ' '.join(["{}".format(toks[i][1]) for i in toksi if len(toks[i][1])])
 def tok_group_toks(group, tl):
@@ -44,7 +44,7 @@ def parse_group_is_simple(group, pre_is_func):
 	return parse_group_is_trivial(group, pre_is_func) or len(group['parts']) == 3 and type(group['parts'][1]) is not list
 def parse_group_reduce(group, tl, parent_is_simple, pre_is_func):
 	is_simple, is_trivial = parse_group_is_simple(group, pre_is_func), parse_group_is_trivial(group, pre_is_func)
-	parts = group['parts']; ngroup = { 'parts':[] }; pre_is_func = False;
+	parts = group['parts']; ngroup = copy.copy(group); ngroup['parts']=[]; pre_is_func = False;
 	for p,pi in zip(parts, range(len(parts))):
 		if (type(p) is not list):
 			ngroup['parts'].append(parse_group_reduce(p, tl, is_simple, pre_is_func))
@@ -53,17 +53,17 @@ def parse_group_reduce(group, tl, parent_is_simple, pre_is_func):
 			ngroup['parts'].append(copy.copy(p))
 			pre_is_func = len(p) and (tl[p[-1]][0],tl[p[-1]][2]) == ('s','func')
 	if (parent_is_simple and is_simple) or is_trivial:
-		return { 'parts':[ngroup['parts'][1]] }
+		return { 'parts':[ngroup['parts'][1]], 'first_tok':ngroup['first_tok']+1, 'last_tok':ngroup['last_tok']-1 }
 	else:
 		return ngroup
 def root_parse_group_reduce(root, tl):
 	return parse_group_reduce(root, tl, parse_group_is_simple(root, False), False)
 def parse_group(tl, tli, tlo, depth):
-	group = { 'parts':[] }; started = False;
+	group = { 'parts':[], 'first_tok':tli, 'last_tok':-1 }; started = False;
 	while tli < len(tl):
 		tok = tl[tli]
 		if (tok[0] == ']'):
-			group['parts'].append([tli]); tlo[0] = tli+1; return group if (started) else None;
+			group['parts'].append([tli]); group['last_tok']=tli; tlo[0] = tli+1; return group if (started) else None;
 		elif (tok[0] == '['):
 			if started:
 				ngtlo = [0]; ng = parse_group(tl, tli, ngtlo, depth+1);
@@ -99,7 +99,7 @@ def parse_refine_toks(toks, const_map):
 			elif tok[1] in const_map:
 				tok[2] = 'const'
 			else:
-				tok[2] = 'var' if (not tok[1].upper() == tok[1]) else 'cvar'
+				tok[2] = 'cvar' if (tok[1].upper() == tok[1] and tok[1].upper() != tok[1].lower() ) else 'var'
 	return ntoks
 def parse_func_tokenize(func_str, parse_strict, const_map):
 	def has_ws(token):
@@ -474,40 +474,75 @@ def dsl_is_focus_sec(dsl):
 def dsl_add_fctx(dsl, name, fctx, allow_update, quiet):
 	old_func = None; dsl['funcs'].get(name, None); old_dep = None;
 	if name in dsl['funcs']:
-		old_func = dsl['funcs'][name]; old_dep = (old_func['lvl_raw']['op_dependants'], old_func['lvl_composed']['dependants'])
+		old_func = dsl['funcs'][name]; old_dep = (copy.copy(old_func['lvl_raw']['op_dependants']), copy.copy(old_func['lvl_composed']['dependants']))
 	if (not allow_update and old_func is not None):
 		raise Exception("Function already exists, use the proper command (e.g 'relet') to update it.")
 	dsl['funcs'][name] = fctx; fctx['lvl_raw']['name'] = name;
 	if (not quiet):
 		print_fctx(fctx, ['comp'])
-	if (old_dep is not None) and (len(old_dep[0]) or len(old_dep[1])):
+	if (old_dep is not None) and () and (len(old_dep[0]) or len(old_dep[1])):
 		fctx['lvl_raw']['op_dependants'] = copy.copy(old_dep[0])
 		fctx['lvl_composed']['dependants'] = copy.copy(old_dep[1])
 		updated = Set()
 		fctx_update_dependants(fctx, dsl['funcs'], updated)
 		if (not quiet):
 			print '   [{}]'.format(', '.join(updated))
+def dsl_command_let_basic(dsl, cmd_args):
+	cmd = cmd_args[0]; name = cmd_args[1];
+	if '[' in name or '(' in name:
+		name_splt = name.split('(' if '(' in name else '[')
+		name = name_splt[0]; fvars = name_splt[1].split(',');
+	func_str = ' '.join(cmd_args[3:])
+	if not func_str.startswith('PD('):
+		fctx = func_str_to_fctx(func_str, name, dsl['funcs'])
+		dsl_add_fctx(dsl, name, fctx, cmd == 'relet', quiet or not dsl['is_focus_sec'])
+	else: #TODO generalize this 2*PD(f1,x)+...
+		gt, toks = parse_func_tokenize(func_str, False, {})
+		fn,varn = toks[3][1], toks[5][1]
+		fctx = fctx_create_by_op({'dependant_name':name, 'dependency_name':fn, 'dvar':varn, 'type':'df'} , dsl['funcs'], name)
+		dsl_add_fctx(dsl, name, fctx, '-u' in input_splt, quiet or not dsl['is_focus_sec'])
+def dsl_command_let_PD(dsl, name, source_fn, varn, allow_update):
+	fctx = fctx_create_by_op({'dependant_name':name, 'dependency_name':source_fn, 'dvar':varn, 'type':'df'} , dsl['funcs'], name)
+	dsl_add_fctx(dsl, name, fctx, allow_update, quiet or not dsl['is_focus_sec'])
+def dsl_command_let(dsl, cmd_args):
+	def find_PD_recurse(g, tl, depth, PDs):
+		for pi in range(len(g['parts'])):
+			p = g['parts'][pi]
+			if (type(p) is not list):
+				pre_tok = p['first_tok'] - 1
+				if pre_tok >= 0 and tuple(tl[pre_tok][:3]) == ('s','PD','func'):
+					PDs.append((pre_tok, g, pi))
+				find_PD_recurse(p, tl, depth+1, PDs)
+	cmd = cmd_args[0]; name = cmd_args[1];
+	if '[' in name or '(' in name:
+		name_splt = name.split('(' if '(' in name else '[')
+		name = name_splt[0]; fvars = name_splt[1].split(',');
+	func_str = ' '.join(cmd_args[3:])
+	gt, toks = parse_func_tokenize(func_str, False, {})
+	PDs = []
+	find_PD_recurse(gt, toks, 0, PDs)
+	for PD in PDs:
+		pre_tok,g,pi = PD
+		gtoks = tok_group_toks(g['parts'][pi], toks)
+		#print gtoks
+		fn,varn = gtoks[1][1], gtoks[3][1]
+		PD_name = 'PD_{}_{}'.format(fn, varn)
+		if (PD_name not in dsl['funcs']):
+			dsl_command_let_PD(dsl, PD_name, fn, varn, False)
+		g['parts'].pop(pi); toks[pre_tok][1] = PD_name; toks[pre_tok][2] = 'var';
+	func_str = pp_toks(tok_group_toks(gt, toks), '')
+	fctx = func_str_to_fctx(func_str, name, dsl['funcs'])
+	dsl_add_fctx(dsl, name, fctx, cmd == 'relet', quiet or not dsl['is_focus_sec'])
+	#dsl_command_let_basic(dsl, cmd_args)
 def process_dsl_command(dsl, inp, quiet=False):
 	global g_dbg
 	funcs = dsl['funcs'];
 	input_splt = inp.split(' ')
 	cmd = input_splt[0]
 	dsl['dbg'] = True if ('-dbg' in input_splt) else dsl['g_dbg']; g_dbg = dsl['dbg'];
-	is_focus_sec = dsl_is_focus_sec(dsl);
+	is_focus_sec = dsl_is_focus_sec(dsl); dsl['is_focus_sec'] = is_focus_sec;
 	if (cmd in ['let', 'relet']):
-		name = input_splt[1]
-		if '[' in name or '(' in name:
-			name_splt = name.split('(' if '(' in name else '[')
-			name = name_splt[0]; fvars = name_splt[1].split(',');
-		func_str = ' '.join(input_splt[3:])
-		if not func_str.startswith('PD('):
-			fctx = func_str_to_fctx(func_str, name, dsl['funcs'])
-			dsl_add_fctx(dsl, name, fctx, cmd == 'relet', quiet or not is_focus_sec)
-		else: #TODO generalize this 2*PD(f1,x)+...
-			gt, toks = parse_func_tokenize(func_str, False, {})
-			fn,varn = toks[3][1], toks[5][1]
-			fctx = fctx_create_by_op({'dependant_name':name, 'dependency_name':fn, 'dvar':varn, 'type':'df'} , funcs, name)
-			dsl_add_fctx(dsl, name, fctx, '-u' in input_splt, quiet or not is_focus_sec)
+		dsl_command_let(dsl, input_splt)
 	elif (cmd == 'bake'):
 		fn,bn = input_splt[1], input_splt[2]
 		bfunc = copy.deepcopy(funcs[fn]); bfunc['name'] = bn; bfunc['comps'] = Set();
@@ -601,6 +636,7 @@ if not sys.flags.interactive:
 					break
 				process_dsl_command(dsl, line, quiet=quiet);
 		if arg_has('-interact'):
+			dsl['sections'] = []
 			enter_dsl(dsl)
 	elif arg_has('-test'):
 		print func_str_to_fctx('A*cos(x)+B*sin(y)+[1^2*cos(x)]')

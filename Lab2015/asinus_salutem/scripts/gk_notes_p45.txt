@@ -39,12 +39,24 @@ section 4 Verifying (34,35)
   let ddO1\th12 = PD(dO1\th1,th2)
   let ddO1\th21 = PD(dO1\th2,th1)
   let ddO1\th22 = PD(dO1\th2,th2)
-  let |H| = ddO1\th11 ddO1\th22 - ddO1\th12 ddO1\th21
+  let |1H| = ddO1\th11 ddO1\th22
+  let |2H| = ddO1\th12 ddO1\th21
+  let |H| = |1H| - |2H|
   let _21 = -2 s1 s2 sin(2 r1) sin(2 r2)
   ftest _21 ddO1\th12
-  #let _19 = (-s1) [ (s1) + e1 cos(2 r1) + s1 cos(4 r1) ]
-  #ftest _19 ddO1\th11
+  ftest _21 ddO1\th21
+  let _19 = (-2 s1) [ (-s1/2) + 2 e1 cos(2 r1) + (s1/2) cos(4 r1) ]
+  ftest _19 ddO1\th11
   let _34 = (-s1) [ (2 c1) cos(2 r1) + (2 s1) cos(4 r1) - (2 s2) cos(2 r1) cos(2 r2) ]
   ftest _34 ddO1\th11
   let _35 = (s2) [ (2 c1) cos(2 r2) - (2 s2) cos(4 r2) + (2 s1) cos(2 r2) cos(2 r1) ]
   ftest _35 ddO1\th22
+#
+section 5 Verifying (58)
+  let s12s = (s1 s2)^2
+  let _54 = s12s [ 1 - cos(4 r1) - cos(4 r2) + cos(4 r1) cos(4 r2) ]
+  ftest _54 |2H|
+  let _55 = 2 [ (-c1 s1) cos(2 r1) + (-s1^2) cos(4 r1) + (-c1 s2) cos(2 r2) + (s2^2) cos(4 r2) ]
+  ftest _55 |1H|
+  let _58 = [(-2 c1 s1) cos(2 r1)] + [(-2 s1^2 + s12s) cos(4 r1)] + [(-2 c1 s2) cos(2 r2)] + [(2 s2^2 + s12s) cos(4 r2)] + [(-s12s) cos(4 r1) cos(4 r2)] + [-s12s]
+  ftest _58 |H|
