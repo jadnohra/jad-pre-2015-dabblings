@@ -487,24 +487,10 @@ def dsl_add_fctx(dsl, name, fctx, allow_update, quiet):
 		fctx_update_dependants(fctx, dsl['funcs'], updated)
 		if (not quiet):
 			print '   [{}]'.format(', '.join(updated))
-def dsl_command_let_basic(dsl, cmd_args):
-	cmd = cmd_args[0]; name = cmd_args[1];
-	if '[' in name or '(' in name:
-		name_splt = name.split('(' if '(' in name else '[')
-		name = name_splt[0]; fvars = name_splt[1].split(',');
-	func_str = ' '.join(cmd_args[3:])
-	if not func_str.startswith('PD('):
-		fctx = func_str_to_fctx(func_str, name, dsl['funcs'])
-		dsl_add_fctx(dsl, name, fctx, cmd == 'relet', quiet or not dsl['is_focus_sec'])
-	else: #TODO generalize this 2*PD(f1,x)+...
-		gt, toks = parse_func_tokenize(func_str, False, {})
-		fn,varn = toks[3][1], toks[5][1]
-		fctx = fctx_create_by_op({'dependant_name':name, 'dependency_name':fn, 'dvar':varn, 'type':'df'} , dsl['funcs'], name)
-		dsl_add_fctx(dsl, name, fctx, '-u' in input_splt, quiet or not dsl['is_focus_sec'])
-def dsl_command_let_PD(dsl, name, source_fn, varn, allow_update):
-	fctx = fctx_create_by_op({'dependant_name':name, 'dependency_name':source_fn, 'dvar':varn, 'type':'df'} , dsl['funcs'], name)
-	dsl_add_fctx(dsl, name, fctx, allow_update, quiet or not dsl['is_focus_sec'])
 def dsl_command_let(dsl, cmd_args):
+	def dsl_command_let_PD(dsl, name, source_fn, varn, allow_update):
+		fctx = fctx_create_by_op({'dependant_name':name, 'dependency_name':source_fn, 'dvar':varn, 'type':'df'} , dsl['funcs'], name)
+		dsl_add_fctx(dsl, name, fctx, allow_update, quiet or not dsl['is_focus_sec'])
 	def find_PD_recurse(g, tl, depth, PDs):
 		for pi in range(len(g['parts'])):
 			p = g['parts'][pi]
