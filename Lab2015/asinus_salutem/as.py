@@ -12,9 +12,10 @@ execfile('helper_arg.py')
 execfile('helper_math1.py')
 
 g_dbg = False
-k_as_const_map = {'@pi':'pi', '@e':'e', '@i':'j'}
-k_sympy_constants = ('j','inf','nan','pi','degree','e','phi','euler','catalan','apery','khinchin','glaisher','mertens','twinprime')
-k_format_sympy_const_map = {'pi':'pi', 'e':'e', 'j':'j'}
+k_as_constants = set(('@pi', '@e', '@i'))
+k_const_as_to_sympy = {'@pi':'pi', '@e':'e', '@i':'j'}
+k_sympy_constants = set(('pi','e','j'))
+k_sympy_reserved = set(('j','inf','nan','pi','degree','e','phi','euler','catalan','apery','khinchin','glaisher','mertens','twinprime'))
 k_uni_comp = u'∘'
 k_sqrt = u'√'
 
@@ -39,7 +40,7 @@ def tok_print_group(group, tl, depth=0):
 		if (type(p) is not list):
 			tok_print_group(p, tl, depth+1)
 		else:
-			print '{}{} {}'.format(''.join([' ']*(depth)), '{}|_'.format(' ' if depth-1 else '') if depth else '', pp_indexed_toks(tl,p))
+			print u'{}{} {}'.format(''.join([' ']*(depth)), '{}|_'.format(' ' if depth-1 else '') if depth else '', pp_indexed_toks(tl,p))
 def tok_get_simple_group_seplist(g, tl):
 	sepl = g['parts'][0] if len(g['parts']) == 1 else g['parts'][1]
 	return [x for x in sepl if tl[x][0] != ',']
@@ -172,7 +173,7 @@ def parse_func_tokenize(func_str, parse_strict, const_map):
 						leaf['children'].append(nl); post_leafs.append(nl);
 		pre_leafs = post_leafs
 	if g_dbg:
-		print 'Dbg: parsing [{}]'.format(func_str)
+		print u'Dbg: parsing [{}]'.format(func_str if isinstance(func_str, unicode) else unicode(func_str, 'utf-8'))
 	valid_token_lists = []
 	for leaf in pre_leafs:
 		tp,to,tr = leaf['token']
@@ -237,10 +238,10 @@ def var_rename_prepare_func_str(func_str, parse_strict, const_map, var_map):
 	return pp_group_toks(gt, toks, '')
 def fname_to_sympy(name):
 	return name.replace("'", '_p_' if name.upper() != name else '_P_')
-def vname_to_sympy(name, sympy_constants):
+def vname_to_sympy(name, sympy_reserved):
 	pre_repl = name.replace("'", '_p_' if name.upper() != name else '_P_')
-	return '_{}'.format(pre_repl) if (name in sympy_constants or not pre_repl[0].isalpha()) else pre_repl
-def tok_translate_to_sympy(toks, const_map = k_as_const_map, sympy_constants = k_sympy_constants):
+	return '_{}'.format(pre_repl) if (name in sympy_reserved or not pre_repl[0].isalpha()) else pre_repl
+def tok_translate_to_sympy(toks, const_map = k_const_as_to_sympy, sympy_reserved = k_sympy_reserved):
 	t_toks = copy.deepcopy(toks); t_transl = {}; t_detransl = {};
 	for ti in range(len(t_toks)):
 		tok = t_toks[ti]; pre_tok = copy.copy(tok);
@@ -253,9 +254,9 @@ def tok_translate_to_sympy(toks, const_map = k_as_const_map, sympy_constants = k
 		elif (tok[0],tok[2]) == ('s','func') and tok[1] == k_sqrt:
 			tok[1] = 'sqrt'
 		elif (tok[0],tok[2]) == ('s','const'):
-			tok[1] = const_map[tok[1]]
+			tok[1] = const_map.get(tok[1], tok[1])
 		elif (tok[0],tok[2]) in [('s','cvar'), ('s','var')]:
-			tok[1] = vname_to_sympy(tok[1], sympy_constants); t_transl[pre_tok[1]] = tok[1]; t_detransl[tok[1]] = pre_tok[1];
+			tok[1] = vname_to_sympy(tok[1], sympy_reserved); t_transl[pre_tok[1]] = tok[1]; t_detransl[tok[1]] = pre_tok[1];
 	return t_toks, t_transl, t_detransl
 def def_sym_func(str, symbs):
 	for symb in symbs:
@@ -308,7 +309,7 @@ def fctx_compose(fctx, toks, f_cand_map, depth=0):
 def fctx_relambda(fctx):
 	fctx['lvl_sympy']['eval_lbd'] = lambdify(fctx['lvl_sympy']['eval_sympy_symbs'], fctx['lvl_sympy']['eval_func'], "numpy")
 def fctx_resympify(fctx):
-	t_toks, t_transl, t_detransl = tok_translate_to_sympy(fctx['lvl_composed']['toks'], k_as_const_map, k_sympy_constants)
+	t_toks, t_transl, t_detransl = tok_translate_to_sympy(fctx['lvl_composed']['toks'], k_const_as_to_sympy, k_sympy_reserved)
 	fctx['lvl_sympy']['toks'] = t_toks; fctx['lvl_sympy']['transl'] = t_transl; fctx['lvl_sympy']['detransl'] = t_detransl;
 	cvar_values = fctx['lvl_raw']['cvar_values']
 	fctx['lvl_sympy']['eval_toks'] = [x if (x[0],x[2]) != ('s','cvar') else [x[0],repr(cvar_values.get(x[1], 0.5)),x[2]] for x in fctx['lvl_sympy']['toks']]
@@ -328,11 +329,12 @@ def fctx_reop(fctx, op, fctx_map):
 	if op['type'] == 'df':
 		sfctx = fctx_map[op['dependency_name']]; dvar = op['dvar'];
 		func_str = format_sympy_prepare_func_str(str(diff(sfctx['lvl_sympy']['eval_func'], sfctx['lvl_sympy']['transl'][dvar])))
-		fctx_reparse(fctx, func_str, fctx_map, k_format_sympy_const_map)
+		fctx_reparse(fctx, func_str, fctx_map, k_sympy_constants)
 	elif op['type'] == 'comp':
 		sfctx = fctx_map[op['dependency_name']]; comp_transl = op['comp_transl'];
-		func_str = var_rename_prepare_func_str(sfctx['lvl_raw']['func_str'], False, k_as_const_map, comp_transl)
-		fctx_reparse(fctx, func_str, fctx_map, k_as_const_map)
+		composed_str = pp_group_toks(sfctx['lvl_composed']['group_tree'], sfctx['lvl_composed']['toks'], '')
+		func_str = var_rename_prepare_func_str(composed_str, False, k_as_constants, comp_transl)
+		fctx_reparse(fctx, func_str, fctx_map, k_as_constants)
 def fctx_create(func_name=''):
 	return {
 		'lvl_raw': { 'name':func_name, 'func_str':None, 'cvar_values':{}, 'op_dependencies':{}, 'op_dependants':{}  },
@@ -353,7 +355,7 @@ def fctx_reparse(fctx, func_str, fctx_map, parse_const_map):
 	fctx['lvl_raw']['func_str'] = func_str; fctx['lvl_parsed']['group_tree'] = parse_gt; fctx['lvl_parsed']['toks'] = parse_toks;
 	fctx['lvl_parsed']['vars'] = parse_vars; fctx['lvl_parsed']['cvars'] = parse_cvars;
 	fctx_recompose(fctx, fctx_map)
-def func_str_to_fctx(func_str, func_name='', fctx_map={}, parse_const_map = k_as_const_map):
+def func_str_to_fctx(func_str, func_name='', fctx_map={}, parse_const_map = k_as_constants):
 	fctx = fctx_create(func_name); fctx_reparse(fctx, func_str, fctx_map, parse_const_map); return fctx;
 def fctx_update_dependants(fctx, fctx_map, updated = Set()):
 	loc_upd = Set()
@@ -399,7 +401,7 @@ def func_randtest(vars1, vars2, lbdf1, lbdf2, (rlo, rhi, n), excpt = False, seed
 					f_vals = lbdf1(*f_coords[0]), lbdf2(*f_coords[1])
 					err = max(err, abs(f_vals[0] - f_vals[1]))
 				except:
-					has_except = True; except_count = except_count + 1
+					has_except = True; except_count = except_count + 1;
 			else:
 				f_vals = lbdf1(*f_coords[0]), lbdf2(*f_coords[1])
 				err = max(err, abs(f_vals[0] - f_vals[1]))
@@ -432,7 +434,7 @@ def func_ztest(fctx, k_int, (rlo, rhi, n), excpt = False, seed = None, quiet = F
 				except:
 					if g_dbg:
 						print 'except'
-					except_count = except_count+1; has_except = True; break;
+					except_count = except_count+1; has_except = True;
 			else:
 				f_val = lbd_f(*coords_i)
 			if has_except:
