@@ -410,23 +410,14 @@ def func_randtest(vars1, vars2, lbdf1, lbdf2, (rlo, rhi, n), excpt = False, seed
 	if (except_count  and not quiet):
 		print 'Note: Bypassed {} exceptions.'.format(except_count)
 	return err
-def func_ztest(fctx, subs, k_int, (rlo, rhi, n), excpt = False, seed = None, quiet = False):
+def func_ztest(fctx, k_int, (rlo, rhi, n), excpt = False, seed = None, quiet = False):
 	if seed is not None:
 		numpy.random.seed(seed)
-	subs_keys = subs.keys(); subs_fctx = [subs[k] for k in subs_keys]; subs_lbds = [x['lvl_sympy']['eval_lbd'] for x in subs_fctx];
-	in_vars = Set()
-	for sub in subs_fctx + [fctx]:
-		for ev in sub['lvl_composed']['vars']:
-			in_vars.add(ev)
-	in_vars = list(in_vars)
-	lbd_inds = [ [in_vars.index(x) for x in sub['lvl_composed']['vars']] for sub in subs_fctx ]
-	f_lbd_inds = [in_vars.index(x) for x in fctx['lvl_composed']['vars']]
-	subs_inds = [ fctx['lvl_composed']['vars'].index(x) for x in fctx['lvl_composed']['vars'] if x in subs_keys ]
-	k_inds = [ in_vars.index(x) for x in in_vars if x.startswith('k') ] if k_int else []
+	in_vars = fctx['lvl_composed']['vars']
 	vlen = len(in_vars); coords = [rlo+x*(rhi-rlo) for x in numpy.random.random(int(n)+vlen-1)];
 	k_coords = numpy.random.randint(-10, 11, int(n)+vlen-1)
-	subs_vals = [0.0]*len(subs);
-	lbd_f = fctx['lvl_sympy']['eval_lbd']; fvlen = len(fctx['lvl_composed']['vars']);
+	k_inds = [ in_vars.index(x) for x in in_vars if x.startswith('k') ] if k_int else []
+	lbd_f = fctx['lvl_sympy']['eval_lbd']
 	err = 0.0; except_count = 0;
 	with numpy.errstate(invalid='raise'):
 		i = 0
@@ -435,29 +426,21 @@ def func_ztest(fctx, subs, k_int, (rlo, rhi, n), excpt = False, seed = None, qui
 			coords_i = coords[i:i+vlen]; coords_k = k_coords[i:i+vlen];
 			for k,j in zip(k_inds, range(len(k_inds))):
 				coords_i[k] = coords_k[j]
-			for lbd,sub_lbd_inds,si in zip(subs_lbds, lbd_inds, range(len(subs_keys))):
-				sub_coords = [coords_i[x] for x in sub_lbd_inds]
-				if excpt:
-					try:
-						subs_vals[si] = lbd(*sub_coords)
-					except:
-						if g_dbg:
-							print 'except'
-						except_count = except_count+1; has_except = True; break;
-				else:
-					subs_vals[si] = lbd(*sub_coords)
-				if g_dbg:
-					print '{} ({}) = {}'.format(subs_fctx[si]['lvl_raw']['name'], zip(subs_fctx[si]['lvl_composed']['vars'], sub_coords), subs_vals[si])
+			if excpt:
+				try:
+					f_val = lbd_f(*coords_i)
+				except:
+					if g_dbg:
+						print 'except'
+					except_count = except_count+1; has_except = True; break;
+			else:
+				f_val = lbd_f(*coords_i)
 			if has_except:
 				coords[i:i+vlen] = [rlo+x*(rhi-rlo) for x in numpy.random.random(vlen)]
 				k_coords[i:i+vlen] = numpy.random.randint(-10, 11, vlen)
 			else:
-				coords_f = [coords_i[x] for x in f_lbd_inds]
-				for j in range(len(subs_inds)):
-					coords_f[subs_inds[j]] = subs_vals[j]
-				f_val = lbd_f(*coords_f)
 				if g_dbg:
-					print '{} ({}) = {}'.format(fctx['lvl_raw']['name'], zip(fctx['lvl_composed']['vars'], coords_f), f_val)
+					print '{} ({}) = {}'.format(fctx['lvl_raw']['name'], zip(fctx['lvl_composed']['vars'], coords_i), f_val)
 				err = max(err, abs(f_val))
 				i = i+1
 	if (except_count  and not quiet):
@@ -570,12 +553,12 @@ def dsl_command_let(dsl, cmd_args):
 		g,pi,ti = comps[0]
 		if (pi-2 >= 0) and (pi+1 < len(g['parts'])) and (type(g['parts'][pi-2]) is list) and (toks[g['parts'][pi-2][-1]][2] == 'func') and (type(g['parts'][pi-1]) is not list) and (type(g['parts'][pi+1]) is not list):
 			fn, fn_vars, fn_comps = toks[g['parts'][pi-2][-1]][1], tok_get_simple_group_seplist(g['parts'][pi-1], toks), tok_get_simple_group_seplist(g['parts'][pi+1], toks)
-			print 'comp', fn, pp_indexed_toks(toks, fn_vars), pp_indexed_toks(toks, fn_comps)
+			#print 'comp', fn, pp_indexed_toks(toks, fn_vars), pp_indexed_toks(toks, fn_comps)
 			if len(fn_vars) == len(fn_comps) and len(fn_vars) > 0:
 				fn_vars = [toks[x][1] for x in fn_vars]; fn_comps = [toks[x][1] for x in fn_comps]
 				comp_name = '{}_{}_{}'.format(fn, '_'.join(fn_vars), '_'.join(fn_comps))
 				comp_transl = {x:y for (x,y) in zip(fn_vars, fn_comps) if y != x and y != 'id' }
-				print comp_name, comp_transl
+				#print comp_name, comp_transl
 				dsl_command_let_comp(dsl, comp_name, fn, comp_transl, False)
 				g['parts'][pi-2].pop(); g['parts'].pop(pi+1); g['parts'].pop(pi-1); toks[ti][0] = 's'; toks[ti][1] = comp_name; toks[ti][2] = 'var';
 				comp_OK = True
@@ -621,14 +604,12 @@ def process_dsl_command(dsl, inp, quiet=False):
 		func_test = func_randtest if (cmd != 'fgridtest') else func_gridtest
 		print func_test(funcs[n1]['lvl_composed']['vars'], funcs[n2]['lvl_composed']['vars'], funcs[n1]['lvl_sympy']['eval_lbd'], funcs[n2]['lvl_sympy']['eval_lbd'], lo_hi_n, excpt, seed = seed, quiet = quiet)
 	elif (cmd == 'ztest' and is_focus_sec):
-		fn = input_splt[1]; fctx = funcs[fn];
-		k_int = False; subs = {}; lo_hi_n = [-1.0, 1.0, 1000]; seed = None;
-		state = ''; state_ev = ''; state_lhn = 0; excpt = False
+		fn = input_splt[1]
+		lo_hi_n = [-1.0,1.0,1000]; seed = None;
+		state = ''; state_lhn = 0; excpt = False
 		for part in input_splt[2:]:
 			if state == '':
-				if part in fctx['lvl_composed']['vars']:
-					state_ev = part; state = 'ev';
-				elif part == '-k':
+				if part == '-k':
 					k_int = True
 				elif part == '-except':
 					excpt = True
@@ -638,9 +619,7 @@ def process_dsl_command(dsl, inp, quiet=False):
 					lo_hi_n[state_lhn] = float(part); state_lhn = state_lhn+1;
 			elif state == 'seed':
 				seed = int(part); state = '';
-			elif state == 'ev':
-				subs[state_ev] = funcs[part]; state = '';
-		print func_ztest(fctx, subs, k_int, lo_hi_n, excpt, seed = seed, quiet = quiet)
+		print func_ztest(funcs[fn], k_int, lo_hi_n, excpt, seed = seed, quiet = quiet)
 	elif (cmd in ['print', 'p'] and is_focus_sec):
 		name = input_splt[1]; details = input_splt[2].split(',') if len(input_splt) > 2 else ['comp'];
 		print_fctx(funcs[name], details)

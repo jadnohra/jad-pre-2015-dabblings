@@ -22,16 +22,23 @@ section 2 Verifying (39)
   ftest dO1\th1 _39
 #
 section 3 Verifying (40, 45)
+scope
   let _40(.) = (k @pi)/2 - atan2(w11,w13)
-  ztest _39 th1 _40 -k
+  let z_39_1 = _39(th1)∘(_40)
+  ztest z_39_1 -k
+  quit  
+    ztest _39 th1 _40 -k
   let _45_1(.) = acos( [(-c1) + s2 cos(2 (r2+k @pi) )]/s1 )/2 - atan2(w11,w13)
   let _45_2(.) = -acos( [(-c1) + s2 cos(2 (r2+k @pi) )]/s1 )/2 - atan2(w11,w13)
   let _45_3(.) = acos( [(c1) + s1 cos(2 (r1+k @pi) )]/s2 )/2 - atan2(w21,w23)
   let _45_4(.) = -acos( [(c1) + s1 cos(2 (r1+k @pi) )]/s2 )/2 - atan2(w21,w23)
-  ztest _39 th1 _45_1 -k -except
-  ztest _39 th1 _45_2 -k -except
-  ztest _39 th2 _45_3 -k -except
-  ztest _39 th2 _45_4 -k -except
+  scope
+
+    ztest _39 th1 _45_1 -k -except
+    ztest _39 th1 _45_2 -k -except
+    ztest _39 th2 _45_3 -k -except
+    ztest _39 th2 _45_4 -k -except
+end
 #
 section 4 Verifying (34,35)
   let dO1\th2 = PD(O1,th2)

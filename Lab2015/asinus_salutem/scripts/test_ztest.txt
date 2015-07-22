@@ -1,11 +1,8 @@
 let f1(.) = sin(x)
 scope
-	let sx(.) = k @pi
-	let zf1(.) = f1(x,y)∘(sx,id)
-	let zf2(.) = f1(x)∘(sx) + 2*f1(x)∘(id)
-	quit
+	let zx(.) = k @pi
+	let zf1(.) = f1(x)∘(zx)
 	ztest zf1 -k
-
 #let f1(.) = sin(x)
 #let f1z_x(.) = k*@pi
 #ztest f1 x f1z_x -k
