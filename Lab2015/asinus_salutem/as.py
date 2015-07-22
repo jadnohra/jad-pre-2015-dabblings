@@ -915,6 +915,8 @@ def process_dsl_command(dsl, inp, quiet=False):
 		dsl_leave_scope(dsl)
 	elif (cmd in ['fnames']):
 		print ' '.join(['[{}]'.format(k) for k in funcs.keys()])
+	elif (cmd in ['fstrs']):
+		print u'\n'.join([u'{}'.format(funcs[k]['lvl_raw']['func_str']) for k in funcs.keys()])
 	elif (cmd in ['?', 'calc', 'eval'] and is_focus_sec):
 		print subs_sym_str(to_sym_str(' '.join(input_splt[1:])), [ ( name_to_sympy(x['name'], True),x['lvl_sympy']['eval_lbd']) for x in funcs.values()])
 def enter_dsl(dsl):
