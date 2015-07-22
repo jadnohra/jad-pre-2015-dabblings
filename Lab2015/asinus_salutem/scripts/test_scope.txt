@@ -1,0 +1,8 @@
+let f1(.) = sin(x)
+let f1(.) = sin(x)
+scope
+	let f2(.) = cos(x)
+	#relet f1(.) = x+x
+	fnames
+end
+fnames

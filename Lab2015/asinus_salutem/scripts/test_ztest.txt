@@ -1,7 +1,15 @@
 let f1(.) = sin(x)
-let f1z_x(.) = k*@pi
-ztest f1 x f1z_x -k
-let f2(.) = (2*x)^2-y^2
-let f2z_y(.) = 2*x
-ztest f2 y f2z_y
-ztest f2 x f2z_y
+scope
+	let sx(.) = k @pi
+	let zf1(.) = f1(x,y)∘(sx,id)
+	let zf2(.) = f1(x)∘(sx) + 2*f1(x)∘(id)
+	quit
+	ztest zf1 -k
+
+#let f1(.) = sin(x)
+#let f1z_x(.) = k*@pi
+#ztest f1 x f1z_x -k
+#let f2(.) = (2*x)^2-y^2
+#let f2z_y(.) = 2*x
+#ztest f2 y f2z_y
+#ztest f2 x f2z_y
