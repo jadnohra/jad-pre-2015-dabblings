@@ -412,6 +412,42 @@ def func_randtest(vars1, vars2, lbdf1, lbdf2, (rlo, rhi, n), excpt = False, seed
 	if (except_count  and not quiet):
 		print 'Note: Bypassed {} exceptions.'.format(except_count)
 	return err
+def func_sample_rad(fctx, center, rad, n, excpt, seed):
+	if seed is not None:
+		numpy.random.seed(seed)
+	in_vars = fctx['lvl_composed']['vars']
+	vlen = len(in_vars);
+	dirs = [-1.0+x*(2.0) for x in numpy.random.random(int(n)+vlen-1)]
+	mags = [rad*x for x in numpy.random.random(int(n))]
+	lbd_f = fctx['lvl_sympy']['eval_lbd']
+	err = 0.0; except_count = 0;
+	sample_coords = []; sample_vals = [];
+	with numpy.errstate(invalid='raise'):
+		i = 0
+		while i < (len(dirs)-vlen+1):
+			has_except = False
+			#print center, dirs[i:i+vlen], mags[i]
+			coords_i = vec_add(center, vec_muls(vec_normd(dirs[i:i+vlen]), mags[i]))
+			if excpt:
+				try:
+					f_val = lbd_f(*coords_i)
+				except:
+					if g_dbg:
+						print 'except'
+					except_count = except_count+1; has_except = True;
+			else:
+				f_val = lbd_f(*coords_i)
+			if has_except:
+				dirs[i:i+vlen] = [-1.0+x*(2.0) for x in numpy.random.random(vlen)]
+				mags[i] = [rad*x for x in numpy.random.random(1)]
+			else:
+				if g_dbg:
+					print '{} ({}) = {}'.format(fctx['lvl_raw']['name'], zip(fctx['lvl_composed']['vars'], coords_i), f_val)
+				sample_coords.append(coords_i); sample_vals.append(f_val)
+				i = i+1
+	if (except_count  and not quiet):
+		print 'Note: Bypassed {} exceptions.'.format(except_count)
+	return (sample_coords, sample_vals)
 def func_ztest(fctx, k_int, (rlo, rhi, n), excpt = False, seed = None, quiet = False):
 	if seed is not None:
 		numpy.random.seed(seed)
@@ -444,6 +480,118 @@ def func_ztest(fctx, k_int, (rlo, rhi, n), excpt = False, seed = None, quiet = F
 				if g_dbg:
 					print '{} ({}) = {}'.format(fctx['lvl_raw']['name'], zip(fctx['lvl_composed']['vars'], coords_i), f_val)
 				err = max(err, abs(f_val))
+				i = i+1
+	if (except_count  and not quiet):
+		print 'Note: Bypassed {} exceptions.'.format(except_count)
+	return err
+def func_subs_ztest(fctx, subs, k_int, (rlo, rhi, n), excpt = False, seed = None, quiet = False):
+	if seed is not None:
+		numpy.random.seed(seed)
+	subs_keys = subs.keys(); subs_fctx = [subs[k] for k in subs_keys]; subs_lbds = [x['lvl_sympy']['eval_lbd'] for x in subs_fctx];
+	in_vars = Set()
+	for sub in subs_fctx + [fctx]:
+		for ev in sub['lvl_composed']['vars']:
+			in_vars.add(ev)
+	in_vars = list(in_vars)
+	lbd_inds = [ [in_vars.index(x) for x in sub['lvl_composed']['vars']] for sub in subs_fctx ]
+	f_lbd_inds = [in_vars.index(x) for x in fctx['lvl_composed']['vars']]
+	subs_inds = [ fctx['lvl_composed']['vars'].index(x) for x in fctx['lvl_composed']['vars'] if x in subs_keys ]
+	k_inds = [ in_vars.index(x) for x in in_vars if x.startswith('k') ] if k_int else []
+	vlen = len(in_vars); coords = [rlo+x*(rhi-rlo) for x in numpy.random.random(int(n)+vlen-1)];
+	k_coords = numpy.random.randint(-10, 11, int(n)+vlen-1)
+	subs_vals = [0.0]*len(subs);
+	lbd_f = fctx['lvl_sympy']['eval_lbd']; fvlen = len(fctx['lvl_composed']['vars']);
+	err = 0.0; except_count = 0;
+	with numpy.errstate(invalid='raise'):
+		i = 0
+		while i < (len(coords)-vlen+1):
+			has_except = False
+			coords_i = coords[i:i+vlen]; coords_k = k_coords[i:i+vlen];
+			for k,j in zip(k_inds, range(len(k_inds))):
+				coords_i[k] = coords_k[j]
+			for lbd,sub_lbd_inds,si in zip(subs_lbds, lbd_inds, range(len(subs_keys))):
+				sub_coords = [coords_i[x] for x in sub_lbd_inds]
+				if excpt:
+					try:
+						subs_vals[si] = lbd(*sub_coords)
+					except:
+						if g_dbg:
+							print 'except'
+						except_count = except_count+1; has_except = True; break;
+				else:
+					subs_vals[si] = lbd(*sub_coords)
+				if g_dbg:
+					print '{} ({}) = {}'.format(subs_fctx[si]['lvl_raw']['name'], zip(subs_fctx[si]['lvl_composed']['vars'], sub_coords), subs_vals[si])
+			if has_except:
+				coords[i:i+vlen] = [rlo+x*(rhi-rlo) for x in numpy.random.random(vlen)]
+				k_coords[i:i+vlen] = numpy.random.randint(-10, 11, vlen)
+			else:
+				coords_f = [coords_i[x] for x in f_lbd_inds]
+				for j in range(len(subs_inds)):
+					coords_f[subs_inds[j]] = subs_vals[j]
+				f_val = lbd_f(*coords_f)
+				if g_dbg:
+					print '{} ({}) = {}'.format(fctx['lvl_raw']['name'], zip(fctx['lvl_composed']['vars'], coords_f), f_val)
+				err = max(err, abs(f_val))
+				i = i+1
+	if (except_count  and not quiet):
+		print 'Note: Bypassed {} exceptions.'.format(except_count)
+	return err
+def func_subs_mtest(fctx, subs, k_int, (rlo, rhi, n), (mrad, mn), use_min, excpt = False, seed = None, quiet = False):
+	if seed is not None:
+		numpy.random.seed(seed)
+	subs_keys = subs.keys(); subs_fctx = [subs[k] for k in subs_keys]; subs_lbds = [x['lvl_sympy']['eval_lbd'] for x in subs_fctx];
+	in_vars = Set()
+	for sub in subs_fctx + [fctx]:
+		for ev in sub['lvl_composed']['vars']:
+			in_vars.add(ev)
+	in_vars = list(in_vars)
+	lbd_inds = [ [in_vars.index(x) for x in sub['lvl_composed']['vars']] for sub in subs_fctx ]
+	f_lbd_inds = [in_vars.index(x) for x in fctx['lvl_composed']['vars']]
+	subs_inds = [ fctx['lvl_composed']['vars'].index(x) for x in fctx['lvl_composed']['vars'] if x in subs_keys ]
+	k_inds = [ in_vars.index(x) for x in in_vars if x.startswith('k') ] if k_int else []
+	vlen = len(in_vars); coords = [rlo+x*(rhi-rlo) for x in numpy.random.random(int(n)+vlen-1)];
+	k_coords = numpy.random.randint(-10, 11, int(n)+vlen-1)
+	subs_vals = [0.0]*len(subs);
+	lbd_f = fctx['lvl_sympy']['eval_lbd']; fvlen = len(fctx['lvl_composed']['vars']);
+	err = 0.0; except_count = 0;
+	with numpy.errstate(invalid='raise'):
+		i = 0
+		while i < (len(coords)-vlen+1):
+			has_except = False
+			coords_i = coords[i:i+vlen]; coords_k = k_coords[i:i+vlen];
+			for k,j in zip(k_inds, range(len(k_inds))):
+				coords_i[k] = coords_k[j]
+			for lbd,sub_lbd_inds,si in zip(subs_lbds, lbd_inds, range(len(subs_keys))):
+				sub_coords = [coords_i[x] for x in sub_lbd_inds]
+				if excpt:
+					try:
+						subs_vals[si] = lbd(*sub_coords)
+					except:
+						if g_dbg:
+							print 'except'
+						except_count = except_count+1; has_except = True; break;
+				else:
+					subs_vals[si] = lbd(*sub_coords)
+				if g_dbg:
+					print '{} ({}) = {}'.format(subs_fctx[si]['lvl_raw']['name'], zip(subs_fctx[si]['lvl_composed']['vars'], sub_coords), subs_vals[si])
+			if has_except:
+				coords[i:i+vlen] = [rlo+x*(rhi-rlo) for x in numpy.random.random(vlen)]
+				k_coords[i:i+vlen] = numpy.random.randint(-10, 11, vlen)
+			else:
+				coords_f = [coords_i[x] for x in f_lbd_inds]
+				for j in range(len(subs_inds)):
+					coords_f[subs_inds[j]] = subs_vals[j]
+				f_val = lbd_f(*coords_f)
+				sample_coords, sample_vals = func_sample_rad(fctx, coords_f, mrad, mn, excpt, None)
+				for xi in range(len(sample_vals)):
+					x = sample_vals[xi]
+					lerr = abs(f_val-min(f_val, x)) if use_min else abs(f_val-max(f_val, x))
+					#if lerr:
+					#	print lerr, sample_coords[xi], sample_vals[xi], coords_f, f_val
+					err = max(err, lerr)
+				if g_dbg:
+					print '{} ({}) = {}'.format(fctx['lvl_raw']['name'], zip(fctx['lvl_composed']['vars'], coords_f), f_val)
 				i = i+1
 	if (except_count  and not quiet):
 		print 'Note: Bypassed {} exceptions.'.format(except_count)
@@ -622,6 +770,53 @@ def process_dsl_command(dsl, inp, quiet=False):
 			elif state == 'seed':
 				seed = int(part); state = '';
 		print func_ztest(funcs[fn], k_int, lo_hi_n, excpt, seed = seed, quiet = quiet)
+	elif (cmd == 'sztest' and is_focus_sec):
+		fn = input_splt[1]; fctx = funcs[fn];
+		k_int = False; subs = {}; lo_hi_n = [-1.0, 1.0, 1000]; seed = None;
+		state = ''; state_ev = ''; state_lhn = 0; excpt = False
+		for part in input_splt[2:]:
+			if state == '':
+				if part in fctx['lvl_composed']['vars']:
+					state_ev = part; state = 'ev';
+				elif part == '-k':
+					k_int = True
+				elif part == '-except':
+					excpt = True
+				elif part == '-seed':
+					state = 'seed'
+				elif state_lhn < 3 and is_float(part):
+					lo_hi_n[state_lhn] = float(part); state_lhn = state_lhn+1;
+			elif state == 'seed':
+				seed = int(part); state = '';
+			elif state == 'ev':
+				subs[state_ev] = funcs[part]; state = '';
+		print func_subs_ztest(fctx, subs, k_int, lo_hi_n, excpt, seed = seed, quiet = quiet)
+	elif (cmd == 'mtest' and is_focus_sec):
+		fn = input_splt[1]; fctx = funcs[fn];
+		k_int = False; subs = {}; lo_hi_n = [-1.0, 1.0, 1000]; seed = None;
+		state = ''; state_ev = ''; state_lhn = 0; excpt = False; use_min = True;
+		mrad = 0.1; mn = 100;
+		for part in input_splt[2:]:
+			if state == '':
+				if part in fctx['lvl_composed']['vars']:
+					state_ev = part; state = 'ev';
+				elif part == '-k':
+					k_int = True
+				elif part == '-except':
+					excpt = True
+				elif part == '-max':
+					use_min = False
+				elif part == '-seed':
+					state = 'seed'
+				elif state_lhn < 3 and is_float(part):
+					lo_hi_n[state_lhn] = float(part); state_lhn = state_lhn+1;
+			elif state == 'seed':
+				seed = int(part); state = '';
+			elif state == 'rad':
+				mrad = float(part); state = '';
+			elif state == 'ev':
+				subs[state_ev] = funcs[part]; state = '';
+		print func_subs_mtest(fctx, subs, k_int, lo_hi_n, (mrad, mn), use_min, excpt, seed = seed, quiet = quiet)
 	elif (cmd in ['print', 'p'] and is_focus_sec):
 		name = input_splt[1]; details = input_splt[2].split(',') if len(input_splt) > 2 else ['comp'];
 		print_fctx(funcs[name], details)
