@@ -47,9 +47,9 @@ section 4 Verifying (34,35)
   let ddO1\th12 = PD(dO1\th1,th2)
   let ddO1\th21 = PD(dO1\th2,th1)
   let ddO1\th22 = PD(dO1\th2,th2)
-  let |1H| = ddO1\th11 ddO1\th22
-  let |2H| = ddO1\th12 ddO1\th21
-  let |H| = |1H| - |2H|
+  let 1Hes = ddO1\th11 ddO1\th22
+  let 2Hes = ddO1\th12 ddO1\th21
+  let Hes = 1Hes - 2Hes
   let _21 = -2 s1 s2 sin(2 r1) sin(2 r2)
   ftest _21 ddO1\th12
   ftest _21 ddO1\th21
@@ -60,11 +60,24 @@ section 4 Verifying (34,35)
   let _35 = (s2) [ (2 c1) cos(2 r2) - (2 s2) cos(4 r2) + (2 s1) cos(2 r2) cos(2 r1) ]
   ftest _35 ddO1\th22
 #
-section 5 Verifying (58)
+section 5 Verifying (54)
   let s12s = (s1 s2)^2
   let _54 = s12s [ 1 - cos(4 r1) - cos(4 r2) + cos(4 r1) cos(4 r2) ]
-  ftest _54 |2H|
-  let _55 = 2 [ (-c1 s1) cos(2 r1) + (-s1^2) cos(4 r1) + (-c1 s2) cos(2 r2) + (s2^2) cos(4 r2) ]
-  ftest _55 |1H|
-  let _58 = [(-2 c1 s1) cos(2 r1)] + [(-2 s1^2 + s12s) cos(4 r1)] + [(-2 c1 s2) cos(2 r2)] + [(2 s2^2 + s12s) cos(4 r2)] + [(-s12s) cos(4 r1) cos(4 r2)] + [-s12s]
-  ftest _58 |H|
+  ftest _54 2Hes
+#
+section 6 Verifying (62, 64, 65)
+scope
+  let case_1(.) = (k1 @pi) - atan2(w11,w13)
+  let case_2(.) = @pi/2 + (k1 @pi) - atan2(w11,w13)
+  let case_3(.) = (k2 @pi) - atan2(w21,w23)
+  let case_4(.) = @pi/2 + (k2 @pi) - atan2(w21,w23)
+  let s_w12(.) = 0.5 √(w21^2+w23^2+w22^2)
+  fssample Hes th1 case_1 th2 case_3 w12 s_w12 -k -range
+  fssample Hes th1 case_2 th2 case_3 w12 s_w12 -k -range
+  fssample Hes th1 case_1 th2 case_4 w12 s_w12 -k -range
+  fssample Hes th1 case_2 th2 case_4 w12 s_w12 -k -range
+
+  fssample ddO1\th11 w12 s_w12 -range
+
+  #mtest O1 th1 case_2 th2 case_3 w12 s_w12 -k -max -rad 0.05
+end
