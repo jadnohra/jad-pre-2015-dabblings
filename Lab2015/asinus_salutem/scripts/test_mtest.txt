@@ -2,6 +2,6 @@ let f1(.) = sin(x)
 let zx(.) = k @pi
 let onex(.) = @pi/2 + (2 k @pi)
 let monex(.) = @pi + onex
-mtest f1 x zx -max -k
-mtest f1 x onex -max -k
-mtest f1 x monex -min -k
+mtest f1 x zx -max -k -rad 1
+mtest f1 x onex -max -k -rad 1
+mtest f1 x monex -min -k -rad 1

@@ -808,6 +808,8 @@ def process_dsl_command(dsl, inp, quiet=False):
 					use_min = False
 				elif part == '-seed':
 					state = 'seed'
+				elif part == '-rad':
+					state = 'rad'	
 				elif state_lhn < 3 and is_float(part):
 					lo_hi_n[state_lhn] = float(part); state_lhn = state_lhn+1;
 			elif state == 'seed':
