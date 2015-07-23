@@ -10,6 +10,7 @@ import traceback
 
 execfile('helper_arg.py')
 execfile('helper_math1.py')
+execfile('helper_term.py')
 
 g_dbg = False
 k_as_constants = set(('@pi', '@e', '@i'))
@@ -527,10 +528,7 @@ def func_subs_sample(fctx, subs, k_int, (rlo, rhi, n), excpt = False, seed = Non
 					subs_vals[si] = lbd(*sub_coords)
 				if g_dbg:
 					print '{} ({}) = {}'.format(subs_fctx[si]['lvl_raw']['name'], zip(subs_fctx[si]['lvl_composed']['vars'], sub_coords), subs_vals[si])
-			if has_except:
-				coords[i:i+vlen] = [rlo+x*(rhi-rlo) for x in numpy.random.random(vlen)]
-				k_coords[i:i+vlen] = numpy.random.randint(-10, 11, vlen)
-			else:
+			def try_val():
 				coords_f = [coords_i[x] for x in f_lbd_inds]
 				for j in range(len(subs_inds)):
 					coords_f[subs_inds[j]] = subs_vals[j]
@@ -538,6 +536,21 @@ def func_subs_sample(fctx, subs, k_int, (rlo, rhi, n), excpt = False, seed = Non
 				sample_coords.append(coords_f); sample_vals.append(f_val)
 				if g_dbg:
 					print '{} ({}) = {}'.format(fctx['lvl_raw']['name'], zip(fctx['lvl_composed']['vars'], coords_f), f_val)
+			if not has_except:
+				if excpt:
+					try:
+						try_val()
+					except:
+						if g_dbg:
+							print 'except'
+						except_count = except_count+1; has_except = True;
+				else:
+					try_val()
+			if has_except:
+				coords[i:i+vlen] = [rlo+x*(rhi-rlo) for x in numpy.random.random(vlen)]
+				k_coords[i:i+vlen] = numpy.random.randint(-10, 11, vlen)
+			else:
+
 				i = i+1
 	if (except_count  and not quiet):
 		print 'Note: Bypassed {} exceptions.'.format(except_count)
@@ -656,7 +669,7 @@ def func_subs_mtest(fctx, subs, k_int, (rlo, rhi, n), (mrad, mn), use_min, test_
 	if (except_count  and not quiet):
 		print 'Note: Bypassed {} exceptions.'.format(except_count)
 	return err
-def print_fctx(fctx, details):
+def print_fctx(fctx, details, print_lf = True):
 	def print_decl(key, pre_key, decl_len):
 		if decl_len == -1 or key != pre_key:
 			content = '{}({})'.format(fctx['lvl_raw']['name'], ', '.join(fctx[key]['vars']))
@@ -678,7 +691,7 @@ def print_fctx(fctx, details):
 		elif det in ['sympy', 's', '3']:
 			curr_decl, decl_len = print_decl('lvl_composed', curr_decl, decl_len)
 			print ' = ', fctx['lvl_sympy']['eval_func_str']
-	print '.'
+	print '.{}'.format('\n' if print_lf else ''),
 def create_dsl():
 	print ' Asinus Salutem'
 	return { 'funcs':{},
@@ -772,8 +785,8 @@ def dsl_command_let(dsl, cmd_args):
 				dsl_command_let_comp(dsl, comp_name, fn, comp_transl, False)
 				g['parts'][pi-2].pop(); g['parts'].pop(pi+1); g['parts'].pop(pi-1); toks[ti][0] = 's'; toks[ti][1] = comp_name; toks[ti][2] = 'var';
 				comp_OK = True
-		#else:
-			#tok_print_group(g, toks)
+		else:
+			tok_print_group(g, toks)
 			#print g, pi
 			#print (pi-2 >= 0) , (pi+1 < len(g['parts'])) , (type(g['parts'][pi-2]) is list), (toks[g['parts'][pi-2][-1]][2] == 'func'), (type(g['parts'][pi-1]) is not list), (type(g['parts'][pi+1]) is not list)
 		if not comp_OK:
@@ -812,7 +825,7 @@ def process_dsl_command(dsl, inp, quiet=False):
 			elif state == 'seed':
 				seed = int(part); state = '';
 		func_test = func_randtest if (cmd != 'fgridtest') else func_gridtest
-		print func_test(funcs[n1]['lvl_composed']['vars'], funcs[n2]['lvl_composed']['vars'], funcs[n1]['lvl_sympy']['eval_lbd'], funcs[n2]['lvl_sympy']['eval_lbd'], lo_hi_n, excpt, seed = seed, quiet = quiet)
+		print vt_cm['green'], func_test(funcs[n1]['lvl_composed']['vars'], funcs[n2]['lvl_composed']['vars'], funcs[n1]['lvl_sympy']['eval_lbd'], funcs[n2]['lvl_sympy']['eval_lbd'], lo_hi_n, excpt, seed = seed, quiet = quiet), vt_cm['']
 	elif (cmd == 'fssample' and is_focus_sec):
 		fn = input_splt[1]; fctx = funcs[fn];
 		subs = {}; lo_hi_n = [-1.0,1.0,1000]; seed = None;
@@ -836,9 +849,9 @@ def process_dsl_command(dsl, inp, quiet=False):
 		sample_coords, sample_vals = func_subs_sample(funcs[fn], subs, k_int, lo_hi_n, excpt, seed = seed)
 		set_vals = set(sample_vals); sorted_vals = sorted(list(set_vals));
 		if ('-range' in input_splt):
-			print '({}, {})'.format(sorted_vals[0], sorted_vals[-1])
+			print vt_cm['green'], '({}, {})'.format(sorted_vals[0], sorted_vals[-1]), vt_cm['']
 		else:
-			print sorted_vals
+			print vt_cm['green'], sorted_vals, vt_cm['']
 	elif (cmd == 'ztest' and is_focus_sec):
 		fn = input_splt[1]
 		lo_hi_n = [-1.0,1.0,1000]; seed = None;
@@ -911,14 +924,14 @@ def process_dsl_command(dsl, inp, quiet=False):
 		print func_subs_mtest(fctx, subs, k_int, lo_hi_n, (mrad, mn), use_min, test_vars, excpt, seed = seed, quiet = quiet)
 	elif (cmd in ['print', 'p'] and is_focus_sec):
 		name = input_splt[1]; details = input_splt[2].split(',') if len(input_splt) > 2 else ['comp'];
-		print_fctx(funcs[name], details)
+		print vt_cm['magenta'],; print_fctx(funcs[name], details, False); print vt_cm[''];
 	elif (cmd in ['echo'] and is_focus_sec):
 		print ' '.join(input_splt[1:])
 	elif (cmd in ['section']):
 		sec = input_splt[1]; dsl['cur_sec'] = sec;
 		is_focus_sec = len(dsl['sections']) == 0 or dsl['cur_sec'] in dsl['sections']
 		if len(input_splt) >= 2 and is_focus_sec:
-			print ' '.join(input_splt[2:])
+			print vt_cm['bgreen'],' '.join(input_splt[2:]), vt_cm['']
 	elif (cmd in ['scope']):
 		dsl_enter_scope(dsl)
 	elif (cmd in ['end']):
@@ -962,7 +975,7 @@ if not sys.flags.interactive:
 			to_line = int(arg_get('-toline', len(lines)))
 			for line,li in zip(lines, range(len(lines))):
 				if echo and dsl_is_focus_sec(dsl):
-					print ' >{}. {}'.format(li+1, line)
+					print ' >{}{}. {}{}'.format(vt_cm['yellow'], li+1, line, vt_cm[''])
 				if line == 'quit':
 					break
 				if li == to_line:

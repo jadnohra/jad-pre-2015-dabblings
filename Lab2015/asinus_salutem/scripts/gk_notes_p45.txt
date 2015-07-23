@@ -22,7 +22,7 @@ section 2 Verifying (39)
   ftest dO1\th1 _39
 #
 section 3 Verifying (40, 45)
-scope
+#scope
   let _40(.) = (k @pi)/2 - atan2(w11,w13)
   let _45_1(.) = acos( [(-c1) + s2 cos(2 (r2+k @pi) )]/s1 )/2 - atan2(w11,w13)
   let _45_2(.) = -acos( [(-c1) + s2 cos(2 (r2+k @pi) )]/s1 )/2 - atan2(w11,w13)
@@ -39,7 +39,7 @@ scope
   ztest z_39_3 -k -except
   ztest z_39_4 -k -except
   ztest z_39_5 -k -except
-end
+#end
 #
 section 4 Verifying (34,35)
   let dO1\th2 = PD(O1,th2)
@@ -82,4 +82,30 @@ scope
 
   mtest O1 th1 case_2 th2 case_3 w12 s_w12_neg -k -max -rad 0.05 -testvars th1,th2
   mtest O1 th1 case_2 th2 case_3 w12 s_w12_pos -k -min -rad 0.05 -testvars th1,th2
+end
+#
+section 7 Verifying (71)
+scope
+
+scope
+  let _A1(.) = (-s1) [ (2 c1) cos(2 r1) + (2 s1) cos(4 r1) - (2 s2) cos(2 r1) cos(2 r2) ]
+  fssample _A1 -k -except -range
+  fssample _A1 th2 _45_3 -k -except -range
+  let _A11(.) = _A1(th2)∘(_45_3)
+  fssample _A11 -k -except -range
+  print _A11
+  let _A2(.) = (-s1^2) [cos(4 r1) - 1]
+
+  fssample _A2 -k -except -range
+  ftest _A11 _A2 -k -except
+end
+quit
+
+
+  let _71(.) = (2 s1) [c1 cos(2 r1) + s1]
+  let _71_1(.) = (-s1) ( [2 c1 cos(2 r1)] + [ 2 s1 cos(4 r1)] - [2 cos(2 r1) (c1 + s1 cos(2 r1)) ] )
+  fssample Hes th1 _45_1 -k -range -except -10.0 10.0 1000
+
+  fssample ddO1\th11 -k -range -except -10.0 10.0 1000
+  fssample ddO1\th11 th1 _45_1 -k -range -except -10.0 10.0 1000
 end
