@@ -73,12 +73,12 @@ scope
   let case_4(.) = @pi/2 + (k2 @pi) - atan2(w21,w23)
   let s_w12_pos(.) = 1 + √(w21^2+w23^2+w22^2)
   let s_w12_neg(.) = 0.5 √(w21^2+w23^2+w22^2)
-  fssample Hes th1 case_1 th2 case_3 -k -range
-  fssample Hes th1 case_2 th2 case_3 -k -range
-  fssample Hes th1 case_1 th2 case_4 -k -range
-  fssample Hes th1 case_2 th2 case_4 -k -range
-  fssample ddO1\th11 th1 case_2 th2 case_3 w12 s_w12_pos -k -range
-  fssample ddO1\th11 th1 case_2 th2 case_3 w12 s_w12_neg -k -range
+  fssample Hes th1 case_1 th2 case_3 -k
+  fssample Hes th1 case_2 th2 case_3 -k
+  fssample Hes th1 case_1 th2 case_4 -k
+  fssample Hes th1 case_2 th2 case_4 -k
+  fssample ddO1\th11 th1 case_2 th2 case_3 w12 s_w12_pos -k
+  fssample ddO1\th11 th1 case_2 th2 case_3 w12 s_w12_neg -k
 
   mtest O1 th1 case_2 th2 case_3 w12 s_w12_neg -k -max -rad 0.05 -testvars th1,th2
   mtest O1 th1 case_2 th2 case_3 w12 s_w12_pos -k -min -rad 0.05 -testvars th1,th2
@@ -87,25 +87,56 @@ end
 section 7 Verifying (71)
 scope
 
+#debug
 scope
-  let _A1(.) = (-s1) [ (2 c1) cos(2 r1) + (2 s1) cos(4 r1) - (2 s2) cos(2 r1) cos(2 r2) ]
-  fssample _A1 -k -except -range
-  fssample _A1 th2 _45_3 -k -except -range
-  let _A11(.) = _A1(th2)∘(_45_3)
-  fssample _A11 -k -except -range
-  print _A11
-  let _A2(.) = (-s1^2) [cos(4 r1) - 1]
+  let fA1(.) = (-s1) [ (2 c1) cos(2 r1) + (2 s1) cos(4 r1) - (2 s2) cos(2 r1) cos(2 r2) ]
+  #fssample fA1 -k -except
+  #fssample fA1 th2 _45_3 -k -except
+  let fA11(.) = fA1(th2)∘(_45_3)
+  let fA11_(.) = ddO1\th11(th2)∘(_45_3)
+  #fssample fA11 -k -except
+  #print fA11
+  let fA2(.) = (-s1^2) [cos(4 r1) - 1]
+  let fAeq(.) = fA11 - fA2
+  #print fAeq all
+  fssample fAeq -k -except
 
-  fssample _A2 -k -except -range
-  ftest _A11 _A2 -k -except
+  #fssample fA2 -k -except
+  ftest fA11 fA2 -k -except
+  ftest fA11_ fA2 -k -except
 end
+  let fA_1(.) = ddO1\th11(th2)∘(_45_3)
+  let _67(.) = (-s1^2) [cos(4 r1) - 1]
+  ftest fA_1 _67 -k -except
+
+  let fB_1(.) = ddO1\th22(th2)∘(_45_3)
+  let _68(.) = [(-2 c1^2) - (s1^2) + (2 s2^2)] - (s1) [4 c1 cos(2 r1) + s1 cos(4 r1)]
+  ftest fB_1 _68 -k -except
+
+  fssample _67 -k -except
+  fssample _68 -k -except
+
+  let 1Hes_72(.) = _67 _68
+  let 1Hes_72_1(.) = 1Hes(th2)∘(_45_3)
+  print 1Hes_72 c
+  print 1Hes_72_1 c
+  let ztt = 1Hes_72-1Hes_72_1
+
+  ftest 1Hes_72 1Hes_72_1 -k -except
+    fssample ztt -k -except
+
+  fssample 1Hes_72 -k -except
+  fssample 1Hes_72_1 -k -except
+
 quit
+
+
 
 
   let _71(.) = (2 s1) [c1 cos(2 r1) + s1]
   let _71_1(.) = (-s1) ( [2 c1 cos(2 r1)] + [ 2 s1 cos(4 r1)] - [2 cos(2 r1) (c1 + s1 cos(2 r1)) ] )
-  fssample Hes th1 _45_1 -k -range -except -10.0 10.0 1000
+  fssample Hes th1 _45_1 -k  -except -10.0 10.0 1000
 
-  fssample ddO1\th11 -k -range -except -10.0 10.0 1000
-  fssample ddO1\th11 th1 _45_1 -k -range -except -10.0 10.0 1000
+  fssample ddO1\th11 -k  -except -10.0 10.0 1000
+  fssample ddO1\th11 th1 _45_1 -k  -except -10.0 10.0 1000
 end

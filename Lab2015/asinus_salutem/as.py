@@ -375,7 +375,7 @@ def multi_step(ts, h):
 		else:
 			ts[ti] = 0.0
 	return could_step
-def func_gridtest(vlen1, vlen2, lbdf1, lbdf2, (rlo, rhi, h), excpt = False, seed = None, quiet = False):
+def func_gridtest(vlen1, k_int, vlen2, lbdf1, lbdf2, (rlo, rhi, h), excpt = False, seed = None, quiet = False):
 	return float(inf)
 	vlen = max(vlen1, vlen2)
 	err = 0.0; ts = [0.0 for x in range(vlen)]
@@ -385,16 +385,21 @@ def func_gridtest(vlen1, vlen2, lbdf1, lbdf2, (rlo, rhi, h), excpt = False, seed
 		err = max(err, abs(lbdf1(*(coords[:vlen1])) - lbdf2(*(coords[:vlen2]))) )
 		could_step = multi_step(ts, h)
 	return err
-def func_randtest(vars1, vars2, lbdf1, lbdf2, (rlo, rhi, n), excpt = False, seed = None, quiet = False):
+def func_randtest(vars1, vars2, lbdf1, lbdf2, k_int, (rlo, rhi, n), excpt = False, seed = None, quiet = False):
 	if seed is not None:
 		numpy.random.seed(seed)
 	vlen1,vlen2 = len(vars1), len(vars2)
 	all_vars = sorted(list(set(vars1+vars2)))
 	vlen = len(all_vars); coords = [rlo+x*(rhi-rlo) for x in numpy.random.random(int(n)+vlen-1)];
+	k_coords = numpy.random.randint(-10, 11, int(n)+vlen-1)
+	k_inds = [ all_vars.index(x) for x in all_vars if x.startswith('k') ] if k_int else []
 	i_coords1 = [all_vars.index(x) for x in vars1]; i_coords2 = [all_vars.index(x) for x in vars2];
 	err = 0.0; i = 0; except_count = 0;
 	with numpy.errstate(invalid='raise'):
 		while i < len(coords)-vlen+1:
+			coords_k = k_coords[i:i+vlen];
+			for k,j in zip(k_inds, range(len(k_inds))):
+				coords[i+k] = coords_k[j]
 			f_coords = [[coords[i+ci] for ci in i_coords] for i_coords in [i_coords1, i_coords2]]
 			has_except = False
 			if excpt:
@@ -408,7 +413,11 @@ def func_randtest(vars1, vars2, lbdf1, lbdf2, (rlo, rhi, n), excpt = False, seed
 				err = max(err, abs(f_vals[0] - f_vals[1]))
 			if has_except:
 				coords[i:i+vlen] = [rlo+x*(rhi-rlo) for x in numpy.random.random(vlen)]
+				k_coords[i:i+vlen] = numpy.random.randint(-10, 11, vlen)
 			else:
+				if g_dbg:
+					print '@1({}) = {}'.format(zip(vars1, f_coords[0]), f_vals[0])
+					print '@2({}) = {}'.format(zip(vars2, f_coords[1]), f_vals[1])
 				i = i+1
 	if (except_count  and not quiet):
 		print 'Note: Bypassed {} exceptions.'.format(except_count)
@@ -679,6 +688,7 @@ def print_fctx(fctx, details, print_lf = True):
 			print ''.join([' ']*decl_len),
 			return key,decl_len
 	curr_decl = ''; decl_len = -1;
+	details = ['1','2','3'] if 'all' in details else details
 	for det,deti in zip(details, range(len(details))):
 		if deti != 0:
 			print ''
@@ -811,7 +821,7 @@ def process_dsl_command(dsl, inp, quiet=False):
 	elif (cmd in ['ftest', 'frandtest', 'fgridtest'] and is_focus_sec):
 		n1,n2 = input_splt[1], input_splt[2]
 		lo_hi_n = [-1.0,1.0,1000]; seed = None;
-		state = ''; state_lhn = 0; excpt = False
+		state = ''; state_lhn = 0; excpt = False; k_int = False;
 		for part in input_splt[3:]:
 			if state == '':
 				if part == '-k':
@@ -825,7 +835,8 @@ def process_dsl_command(dsl, inp, quiet=False):
 			elif state == 'seed':
 				seed = int(part); state = '';
 		func_test = func_randtest if (cmd != 'fgridtest') else func_gridtest
-		print vt_cm['green'], func_test(funcs[n1]['lvl_composed']['vars'], funcs[n2]['lvl_composed']['vars'], funcs[n1]['lvl_sympy']['eval_lbd'], funcs[n2]['lvl_sympy']['eval_lbd'], lo_hi_n, excpt, seed = seed, quiet = quiet), vt_cm['']
+		test_ret = func_test(funcs[n1]['lvl_composed']['vars'], funcs[n2]['lvl_composed']['vars'], funcs[n1]['lvl_sympy']['eval_lbd'], funcs[n2]['lvl_sympy']['eval_lbd'], k_int, lo_hi_n, excpt, seed = seed, quiet = quiet)
+		print vt_cm['green'], test_ret, vt_cm['']
 	elif (cmd == 'fssample' and is_focus_sec):
 		fn = input_splt[1]; fctx = funcs[fn];
 		subs = {}; lo_hi_n = [-1.0,1.0,1000]; seed = None;
@@ -848,10 +859,9 @@ def process_dsl_command(dsl, inp, quiet=False):
 				subs[state_ev] = funcs[part]; state = '';
 		sample_coords, sample_vals = func_subs_sample(funcs[fn], subs, k_int, lo_hi_n, excpt, seed = seed)
 		set_vals = set(sample_vals); sorted_vals = sorted(list(set_vals));
-		if ('-range' in input_splt):
-			print vt_cm['green'], '({}, {})'.format(sorted_vals[0], sorted_vals[-1]), vt_cm['']
-		else:
-			print vt_cm['green'], sorted_vals, vt_cm['']
+		if ('-dump' in input_splt):
+			print vt_cm['blue'], sorted_vals, vt_cm['']
+		print vt_cm['green'], '({}, {})'.format(sorted_vals[0], sorted_vals[-1]), vt_cm['']
 	elif (cmd == 'ztest' and is_focus_sec):
 		fn = input_splt[1]
 		lo_hi_n = [-1.0,1.0,1000]; seed = None;
