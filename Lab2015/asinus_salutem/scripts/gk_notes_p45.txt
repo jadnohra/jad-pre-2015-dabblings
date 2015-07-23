@@ -81,4 +81,5 @@ scope
   fssample ddO1\th11 th1 case_2 th2 case_3 w12 s_w12_neg -k -range
 
   mtest O1 th1 case_2 th2 case_3 w12 s_w12_neg -k -max -rad 0.05 -testvars th1,th2
+  mtest O1 th1 case_2 th2 case_3 w12 s_w12_pos -k -min -rad 0.05 -testvars th1,th2
 end
