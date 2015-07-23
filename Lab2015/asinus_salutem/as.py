@@ -412,13 +412,15 @@ def func_randtest(vars1, vars2, lbdf1, lbdf2, (rlo, rhi, n), excpt = False, seed
 	if (except_count  and not quiet):
 		print 'Note: Bypassed {} exceptions.'.format(except_count)
 	return err
-def func_sample_rad(fctx, center, rad, n, excpt, seed):
+def func_sample_rad(fctx, center, rad, n, test_vars, excpt, seed, allow_dbg = True):
 	if seed is not None:
 		numpy.random.seed(seed)
-	in_vars = fctx['lvl_composed']['vars']
-	vlen = len(in_vars);
+	all_vars = fctx['lvl_composed']['vars']; all_len = len(all_vars)
+	test_vars = test_vars if (test_vars is not None) else all_vars; vlen = len(test_vars);
 	dirs = [-1.0+x*(2.0) for x in numpy.random.random(int(n)+vlen-1)]
 	mags = [rad*x for x in numpy.random.random(int(n))]
+	brdcast = [test_vars.index(x) if x in test_vars else vlen for x in all_vars]
+	#print all_vars, test_vars, brdcast
 	lbd_f = fctx['lvl_sympy']['eval_lbd']
 	err = 0.0; except_count = 0;
 	sample_coords = []; sample_vals = [];
@@ -426,13 +428,15 @@ def func_sample_rad(fctx, center, rad, n, excpt, seed):
 		i = 0
 		while i < (len(dirs)-vlen+1):
 			has_except = False
-			#print center, dirs[i:i+vlen], mags[i]
-			coords_i = vec_add(center, vec_muls(vec_normd(dirs[i:i+vlen]), mags[i]))
+			tdir = dirs[i:i+vlen] + [0.0]
+			tvec = [tdir[brdcast[x]] for x in range(all_len)]
+			#print center, tvec, mags[i]
+			coords_i = vec_add(center, vec_muls(vec_normd(tvec), mags[i]))
 			if excpt:
 				try:
 					f_val = lbd_f(*coords_i)
 				except:
-					if g_dbg:
+					if g_dbg and allow_dbg:
 						print 'except'
 					except_count = except_count+1; has_except = True;
 			else:
@@ -441,7 +445,7 @@ def func_sample_rad(fctx, center, rad, n, excpt, seed):
 				dirs[i:i+vlen] = [-1.0+x*(2.0) for x in numpy.random.random(vlen)]
 				mags[i] = [rad*x for x in numpy.random.random(1)]
 			else:
-				if g_dbg:
+				if g_dbg and allow_dbg:
 					print '{} ({}) = {}'.format(fctx['lvl_raw']['name'], zip(fctx['lvl_composed']['vars'], coords_i), f_val)
 				sample_coords.append(coords_i); sample_vals.append(f_val)
 				i = i+1
@@ -591,7 +595,7 @@ def func_subs_ztest(fctx, subs, k_int, (rlo, rhi, n), excpt = False, seed = None
 	if (except_count  and not quiet):
 		print 'Note: Bypassed {} exceptions.'.format(except_count)
 	return err
-def func_subs_mtest(fctx, subs, k_int, (rlo, rhi, n), (mrad, mn), use_min, excpt = False, seed = None, quiet = False):
+def func_subs_mtest(fctx, subs, k_int, (rlo, rhi, n), (mrad, mn), use_min, test_vars = None, excpt = False, seed = None, quiet = False):
 	if seed is not None:
 		numpy.random.seed(seed)
 	subs_keys = subs.keys(); subs_fctx = [subs[k] for k in subs_keys]; subs_lbds = [x['lvl_sympy']['eval_lbd'] for x in subs_fctx];
@@ -628,7 +632,7 @@ def func_subs_mtest(fctx, subs, k_int, (rlo, rhi, n), (mrad, mn), use_min, excpt
 				else:
 					subs_vals[si] = lbd(*sub_coords)
 				if g_dbg:
-					print '{} ({}) = {}'.format(subs_fctx[si]['lvl_raw']['name'], zip(subs_fctx[si]['lvl_composed']['vars'], sub_coords), subs_vals[si])
+					print '{} ({}) = {}'.format(subs_fctx[si]['lvl_raw']['name'], zip(subs_fctx[si]['lvl_composed']['vars'], sub_coords), repr(subs_vals[si]))
 			if has_except:
 				coords[i:i+vlen] = [rlo+x*(rhi-rlo) for x in numpy.random.random(vlen)]
 				k_coords[i:i+vlen] = numpy.random.randint(-10, 11, vlen)
@@ -637,15 +641,17 @@ def func_subs_mtest(fctx, subs, k_int, (rlo, rhi, n), (mrad, mn), use_min, excpt
 				for j in range(len(subs_inds)):
 					coords_f[subs_inds[j]] = subs_vals[j]
 				f_val = lbd_f(*coords_f)
-				sample_coords, sample_vals = func_sample_rad(fctx, coords_f, mrad, mn, excpt, None)
+				sample_coords, sample_vals = func_sample_rad(fctx, coords_f, mrad, mn, test_vars, excpt, None, False)
+				lerr = 0.0
 				for xi in range(len(sample_vals)):
 					x = sample_vals[xi]
-					lerr = abs(f_val-min(f_val, x)) if use_min else abs(f_val-max(f_val, x))
+					llerr = abs(f_val-min(f_val, x)) if use_min else abs(f_val-max(f_val, x))
+					lerr = max(lerr, llerr)
 					#if lerr:
 					#	print lerr, sample_coords[xi], sample_vals[xi], coords_f, f_val
-					err = max(err, lerr)
+				err = max(err, lerr)
 				if g_dbg:
-					print '{} ({}) = {}'.format(fctx['lvl_raw']['name'], zip(fctx['lvl_composed']['vars'], coords_f), f_val)
+					print '{} ({}) = {}'.format(fctx['lvl_raw']['name'], zip(fctx['lvl_composed']['vars'], [repr(x) for x in coords_f]), f_val)
 				i = i+1
 	if (except_count  and not quiet):
 		print 'Note: Bypassed {} exceptions.'.format(except_count)
@@ -875,7 +881,7 @@ def process_dsl_command(dsl, inp, quiet=False):
 		fn = input_splt[1]; fctx = funcs[fn];
 		k_int = False; subs = {}; lo_hi_n = [-1.0, 1.0, 1000]; seed = None;
 		state = ''; state_ev = ''; state_lhn = 0; excpt = False; use_min = True;
-		mrad = 0.1; mn = 100;
+		mrad = 0.1; mn = 100; test_vars = None;
 		for part in input_splt[2:]:
 			if state == '':
 				if part in fctx['lvl_composed']['vars']:
@@ -890,6 +896,8 @@ def process_dsl_command(dsl, inp, quiet=False):
 					state = 'seed'
 				elif part == '-rad':
 					state = 'rad'
+				elif part == '-testvars':
+					state = 'tv';
 				elif state_lhn < 3 and is_float(part):
 					lo_hi_n[state_lhn] = float(part); state_lhn = state_lhn+1;
 			elif state == 'seed':
@@ -898,7 +906,9 @@ def process_dsl_command(dsl, inp, quiet=False):
 				mrad = float(part); state = '';
 			elif state == 'ev':
 				subs[state_ev] = funcs[part]; state = '';
-		print func_subs_mtest(fctx, subs, k_int, lo_hi_n, (mrad, mn), use_min, excpt, seed = seed, quiet = quiet)
+			elif state == 'tv':
+				test_vars = part.split(','); state = '';
+		print func_subs_mtest(fctx, subs, k_int, lo_hi_n, (mrad, mn), use_min, test_vars, excpt, seed = seed, quiet = quiet)
 	elif (cmd in ['print', 'p'] and is_focus_sec):
 		name = input_splt[1]; details = input_splt[2].split(',') if len(input_splt) > 2 else ['comp'];
 		print_fctx(funcs[name], details)
@@ -924,7 +934,7 @@ def enter_dsl(dsl):
 	while go_dsl:
 		try:
 			print ' >',
-			inp = raw_input()
+			inp = raw_input().rstrip().strip()
 			if (inp == 'e'):
 				go_dsl = False
 			elif (inp == 'q'):
@@ -948,12 +958,16 @@ if not sys.flags.interactive:
 		dsl = create_dsl()
 		with open(arg_get('-script', ''), "r") as ifile:
 			quiet = arg_has('-quiet'); echo = arg_has('-echo');
-			for line in [x.rstrip().strip() for x in ifile.readlines()]:
+			lines = [x.rstrip().strip() for x in ifile.readlines()]
+			to_line = int(arg_get('-toline', len(lines)))
+			for line,li in zip(lines, range(len(lines))):
 				if echo and dsl_is_focus_sec(dsl):
-					print ' >', line;
+					print ' >{}. {}'.format(li+1, line)
 				if line == 'quit':
 					break
-				process_dsl_command(dsl, line, quiet=quiet);
+				if li == to_line:
+					print '(quit at line {})'.format(to_line); break;
+				process_dsl_command(dsl, line, quiet=quiet)
 		if arg_has('-interact'):
 			dsl['sections'] = []
 			enter_dsl(dsl)

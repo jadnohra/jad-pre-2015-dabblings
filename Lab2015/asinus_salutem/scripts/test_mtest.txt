@@ -5,3 +5,6 @@ let monex(.) = @pi + onex
 mtest f1 x zx -max -k -rad 1
 mtest f1 x onex -max -k -rad 1
 mtest f1 x monex -min -k -rad 1
+let f2(.) = cos(x)*sin(y)
+mtest f2 y onex -max -k -rad 1
+mtest f2 y onex -max -k -rad 1 -testvars y

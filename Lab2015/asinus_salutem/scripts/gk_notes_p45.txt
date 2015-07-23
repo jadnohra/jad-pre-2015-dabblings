@@ -71,13 +71,14 @@ scope
   let case_2(.) = @pi/2 + (k1 @pi) - atan2(w11,w13)
   let case_3(.) = (k2 @pi) - atan2(w21,w23)
   let case_4(.) = @pi/2 + (k2 @pi) - atan2(w21,w23)
-  let s_w12(.) = 0.5 √(w21^2+w23^2+w22^2)
-  fssample Hes th1 case_1 th2 case_3 w12 s_w12 -k -range
-  fssample Hes th1 case_2 th2 case_3 w12 s_w12 -k -range
-  fssample Hes th1 case_1 th2 case_4 w12 s_w12 -k -range
-  fssample Hes th1 case_2 th2 case_4 w12 s_w12 -k -range
+  let s_w12_pos(.) = 1 + √(w21^2+w23^2+w22^2)
+  let s_w12_neg(.) = 0.5 √(w21^2+w23^2+w22^2)
+  fssample Hes th1 case_1 th2 case_3 -k -range
+  fssample Hes th1 case_2 th2 case_3 -k -range
+  fssample Hes th1 case_1 th2 case_4 -k -range
+  fssample Hes th1 case_2 th2 case_4 -k -range
+  fssample ddO1\th11 th1 case_2 th2 case_3 w12 s_w12_pos -k -range
+  fssample ddO1\th11 th1 case_2 th2 case_3 w12 s_w12_neg -k -range
 
-  fssample ddO1\th11 w12 s_w12 -range
-
-  #mtest O1 th1 case_2 th2 case_3 w12 s_w12 -k -max -rad 0.05
+  mtest O1 th1 case_2 th2 case_3 w12 s_w12_neg -k -max -rad 0.05 -testvars th1,th2
 end
