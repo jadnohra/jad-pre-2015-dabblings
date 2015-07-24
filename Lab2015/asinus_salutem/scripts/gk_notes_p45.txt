@@ -22,13 +22,13 @@ section 2 Verifying (39)
   ftest dO1\th1 _39
 #
 section 3 Verifying (40, 45)
-#scope
+
   let _40(.) = (k @pi)/2 - atan2(w11,w13)
   let _45_1(.) = acos( [(-c1) + s2 cos(2 (r2+k @pi) )]/s1 )/2 - atan2(w11,w13)
   let _45_2(.) = -acos( [(-c1) + s2 cos(2 (r2+k @pi) )]/s1 )/2 - atan2(w11,w13)
   let _45_3(.) = acos( [(c1) + s1 cos(2 (r1+k @pi) )]/s2 )/2 - atan2(w21,w23)
   let _45_4(.) = -acos( [(c1) + s1 cos(2 (r1+k @pi) )]/s2 )/2 - atan2(w21,w23)
-
+scope
   let z_39_1(.) = _39(th1)∘(_40)
   let z_39_2(.) = _39(th1)∘(_45_1)
   let z_39_3(.) = _39(th1)∘(_45_2)
@@ -39,7 +39,7 @@ section 3 Verifying (40, 45)
   ztest z_39_3 -k -except
   ztest z_39_4 -k -except
   ztest z_39_5 -k -except
-#end
+end
 #
 section 4 Verifying (34,35)
   let dO1\th2 = PD(O1,th2)
@@ -84,59 +84,16 @@ scope
   mtest O1 th1 case_2 th2 case_3 w12 s_w12_pos -k -min -rad 0.05 -testvars th1,th2
 end
 #
-section 7 Verifying (71)
-scope
+section 7 Verifying (75)
+  fssample Hes th1 _45_1 -k -except -10.0 10.0 100
+  fssample Hes th1 _45_2 -k -except -10.0 10.0 100
+  fssample Hes th2 _45_3 -k -except -10.0 10.0 100
+  fssample Hes th2 _45_4 -k -except -10.0 10.0 100
 
-#debug
-scope
-  let fA1(.) = (-s1) [ (2 c1) cos(2 r1) + (2 s1) cos(4 r1) - (2 s2) cos(2 r1) cos(2 r2) ]
-  #fssample fA1 -k -except
-  #fssample fA1 th2 _45_3 -k -except
-  let fA11(.) = fA1(th2)∘(_45_3)
-  let fA11_(.) = ddO1\th11(th2)∘(_45_3)
-  #fssample fA11 -k -except
-  #print fA11
-  let fA2(.) = (-s1^2) [cos(4 r1) - 1]
-  let fAeq(.) = fA11 - fA2
-  #print fAeq all
-  fssample fAeq -k -except
-
-  #fssample fA2 -k -except
-  ftest fA11 fA2 -k -except
-  ftest fA11_ fA2 -k -except
-end
-  let fA_1(.) = ddO1\th11(th2)∘(_45_3)
-  let _67(.) = (-s1^2) [cos(4 r1) - 1]
-  ftest fA_1 _67 -k -except
-
-  let fB_1(.) = ddO1\th22(th2)∘(_45_3)
-  let _68(.) = [(-2 c1^2) - (s1^2) + (2 s2^2)] - (s1) [4 c1 cos(2 r1) + s1 cos(4 r1)]
-  ftest fB_1 _68 -k -except
-
-  fssample _67 -k -except
-  fssample _68 -k -except
-
-  let 1Hes_72(.) = _67 _68
-  let 1Hes_72_1(.) = 1Hes(th2)∘(_45_3)
-  print 1Hes_72 c
-  print 1Hes_72_1 c
-  let ztt = 1Hes_72-1Hes_72_1
-
-  ftest 1Hes_72 1Hes_72_1 -k -except
-    fssample ztt -k -except
-
-  fssample 1Hes_72 -k -except
-  fssample 1Hes_72_1 -k -except
-
-quit
-
-
-
-
+section 8 Verifying (71)
   let _71(.) = (2 s1) [c1 cos(2 r1) + s1]
   let _71_1(.) = (-s1) ( [2 c1 cos(2 r1)] + [ 2 s1 cos(4 r1)] - [2 cos(2 r1) (c1 + s1 cos(2 r1)) ] )
   fssample Hes th1 _45_1 -k  -except -10.0 10.0 1000
 
   fssample ddO1\th11 -k  -except -10.0 10.0 1000
   fssample ddO1\th11 th1 _45_1 -k  -except -10.0 10.0 1000
-end

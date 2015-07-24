@@ -13,6 +13,7 @@ execfile('helper_math1.py')
 execfile('helper_term.py')
 
 g_dbg = False
+g_dbg2 = False
 k_as_constants = set(('@pi', '@e', '@i'))
 k_const_as_to_sympy = {'@pi':'pi', '@e':'e', '@i':'j'}
 k_sympy_constants = set(('pi','e','j'))
@@ -51,22 +52,61 @@ def parse_group_is_trivial(group, pre_is_func):
 	return not pre_is_func and (len(group['parts']) == 3 and (type(group['parts'][1]) is list and len(group['parts'][1]) == 1))
 def parse_group_is_simple(group, pre_is_func):
 	return parse_group_is_trivial(group, pre_is_func) or len(group['parts']) == 3 and type(group['parts'][1]) is not list
-def parse_group_reduce(group, tl, parent_is_simple, pre_is_func):
-	is_simple, is_trivial = parse_group_is_simple(group, pre_is_func), parse_group_is_trivial(group, pre_is_func)
-	parts = group['parts']; ngroup = copy.copy(group); ngroup['parts']=[]; pre_is_func = False;
-	for p,pi in zip(parts, range(len(parts))):
+def parse_group_match_group_seps(group, tl, gsep_pairs, gsep_open):
+	for p in group['parts']:
 		if (type(p) is not list):
-			ngroup['parts'].append(parse_group_reduce(p, tl, is_simple, pre_is_func))
-			pre_is_func = False
+			if not parse_group_match_group_seps(p, tl, gsep_pairs, gsep_open):
+				return False
 		else:
-			ngroup['parts'].append(copy.copy(p))
-			pre_is_func = len(p) and (tl[p[-1]][0],tl[p[-1]][2]) == ('s','func')
-	if (parent_is_simple and is_simple) or is_trivial:
-		return { 'parts':[ngroup['parts'][1]], 'first_tok':ngroup['first_tok']+1, 'last_tok':ngroup['last_tok']-1 }
-	else:
-		return ngroup
+			for ti in p:
+				if tl[ti][0] == '[':
+					gsep_pairs.append([ti,None]); gsep_open[0] = len(gsep_pairs)-1;
+				elif tl[ti][0] == ']':
+					if gsep_open[0] < 0:
+						return False
+					gsep_pairs[gsep_open[0]][1] = ti;
+					while gsep_open[0] >= 0 and (gsep_pairs[gsep_open[0]][1] is not None):
+						 gsep_open[0] = gsep_open[0]-1;
+	return True
+def root_parse_group_match_group_seps(root, tl):
+	gsep_pairs = []; gsep_open = [-1];
+	success = parse_group_match_group_seps(root, tl, gsep_pairs, gsep_open)
+	return (success and gsep_open[0] == -1), gsep_pairs
+def in_place_group_rem_toks(group, tl, rem_tl, rem_i):
+	for gpi in range(len(group['parts'])):
+		p = group['parts'][gpi]
+		rem_p_local = []
+		if (type(p) is not list):
+			rem_i = in_place_group_rem_toks(p, tl, rem_tl, rem_i)
+		else:
+			rem_ti_local = []
+			for pii in range(len(p)):
+				if rem_i < len(rem_tl) and p[pii] == rem_tl[rem_i]:
+					rem_ti_local.append(pii); rem_i = rem_i+1;
+			for ri in reversed(rem_ti_local):
+				p.pop(ri)
+		if len(p) == 0:
+			rem_p_local.append(gpi)
+	for ri in reversed(rem_p_local):
+		group['parts'].pop(ri)
+	return rem_i
+def root_group_rem_toks(root, tl, rem_tl):
+	ngroup = copy.deepcopy(root); in_place_group_rem_toks(ngroup, tl, sorted(rem_tl), 0); return ngroup;
 def root_parse_group_reduce(root, tl):
-	return parse_group_reduce(root, tl, parse_group_is_simple(root, False), False)
+	ok_gseps, gsep_pairs = root_parse_group_match_group_seps(root, tl)
+	if not ok_gseps:
+		return False, None
+	rem_pairs_inds = Set()
+	for pi in range(len(gsep_pairs)-1):
+		pair_i = gsep_pairs[pi]
+		for pj in range(pi+1, len(gsep_pairs)):
+			pair_j = gsep_pairs[pj]
+			if pair_i[0] == pair_j[0]-1 and pair_i[1] == pair_j[1]+1:
+				rem_pairs_inds.add(tuple(pair_j))
+			else:
+				break
+	rem_toks = sorted(list(sum(list(rem_pairs_inds), ())))
+	return True, root_group_rem_toks(root, tl, rem_toks)
 def parse_group(tl, tli, tlo, depth):
 	group = { 'parts':[], 'first_tok':tli, 'last_tok':-1 }; started = False;
 	while tli < len(tl):
@@ -97,7 +137,8 @@ def parse_root_group(tl):
 	gtl = [('[','(','')] + tl + [(']',')','')]
 	tlo = [0]; root = parse_group(gtl, 0, tlo, 0);
 	rest_is_ws = all( tl[x][0]=='w' for x in range(tlo[0], len(tl)) )
-	return gtl, root_parse_group_reduce(root, gtl) if (root and rest_is_ws) else None
+	success_reduce, g_reduced = root_parse_group_reduce(root, gtl)
+	return gtl, g_reduced if (root and rest_is_ws and success_reduce) else None
 def parse_refine_toks(toks, const_map):
 	ntoks = copy.deepcopy(toks)
 	for ti in range(len(ntoks)):
@@ -237,8 +278,6 @@ def var_rename_prepare_func_str(func_str, parse_strict, const_map, var_map):
 		if (tok[0],tok[2]) == ('s','var') and (tok[1] in var_map):
 			tok[1] = var_map[tok[1]]
 	return pp_group_toks(gt, toks, '')
-def fname_to_sympy(name):
-	return name.replace("'", '_p_' if name.upper() != name else '_P_')
 def vname_to_sympy(name, sympy_reserved):
 	pre_repl = name.replace("'", '_p_' if name.upper() != name else '_P_')
 	return '_{}'.format(pre_repl) if (name in sympy_reserved or not pre_repl[0].isalpha()) else pre_repl
@@ -259,14 +298,14 @@ def tok_translate_to_sympy(toks, const_map = k_const_as_to_sympy, sympy_reserved
 		elif (tok[0],tok[2]) in [('s','cvar'), ('s','var')]:
 			tok[1] = vname_to_sympy(tok[1], sympy_reserved); t_transl[pre_tok[1]] = tok[1]; t_detransl[tok[1]] = pre_tok[1];
 	return t_toks, t_transl, t_detransl
-def def_sym_func(str, symbs):
+def def_sympy_func(str, symbs):
 	for symb in symbs:
 		exec('{} = Symbol("{}")'.format(symb, symb))
-	ev = eval(str); return ev;
+	ev = sympify(str, evaluate=False); return ev; # evaluate=False prevents (dangerous) simplification, e.g: cos(acos(x)) is not x!
 def subs_sym_str(str, func_lambds):
 	for (name,lambd) in func_lambds:
 		exec('{} = lambd;'.format(name))
-	return float( eval(str) )
+	return float( sympify(str, evaluate=False) ) # evaluate=False prevents (dangerous) simplification, e.g: cos(acos(x)) is not x!
 def as_list(names):
 	return names.split(',') if (type(names) is not list) else names
 def has_const(fctx, name):
@@ -310,13 +349,18 @@ def fctx_compose(fctx, toks, f_cand_map, depth=0):
 def fctx_relambda(fctx):
 	fctx['lvl_sympy']['eval_lbd'] = lambdify(fctx['lvl_sympy']['eval_sympy_symbs'], fctx['lvl_sympy']['eval_func'], "numpy")
 def fctx_resympify(fctx):
+	global g_dbg2
 	t_toks, t_transl, t_detransl = tok_translate_to_sympy(fctx['lvl_composed']['toks'], k_const_as_to_sympy, k_sympy_reserved)
 	fctx['lvl_sympy']['toks'] = t_toks; fctx['lvl_sympy']['transl'] = t_transl; fctx['lvl_sympy']['detransl'] = t_detransl;
 	cvar_values = fctx['lvl_raw']['cvar_values']
 	fctx['lvl_sympy']['eval_toks'] = [x if (x[0],x[2]) != ('s','cvar') else [x[0],repr(cvar_values.get(x[1], 0.5)),x[2]] for x in fctx['lvl_sympy']['toks']]
 	fctx['lvl_sympy']['eval_func_str'] = tok_group_to_str(fctx['lvl_composed']['group_tree'], fctx['lvl_sympy']['eval_toks'])
 	fctx['lvl_sympy']['eval_sympy_symbs'] = [t_transl[x] for x in fctx['lvl_composed']['vars']]
-	fctx['lvl_sympy']['eval_func'] = def_sym_func(fctx['lvl_sympy']['eval_func_str'], fctx['lvl_sympy']['eval_sympy_symbs'])
+	fctx['lvl_sympy']['eval_func'] = def_sympy_func(fctx['lvl_sympy']['eval_func_str'], fctx['lvl_sympy']['eval_sympy_symbs'])
+	if fctx['lvl_raw']['name'] == 'fA11':
+		g_dbg2 = True
+	else:
+		g_dbg2 = False
 	fctx_relambda(fctx)
 def fctx_recompose(fctx, fctx_map):
 	fctx['dependencies'] = Set()
@@ -403,10 +447,13 @@ def func_randtest(vars1, vars2, lbdf1, lbdf2, k_int, (rlo, rhi, n), excpt = Fals
 			f_coords = [[coords[i+ci] for ci in i_coords] for i_coords in [i_coords1, i_coords2]]
 			has_except = False
 			if excpt:
+				f_vals = [None, None]
 				try:
-					f_vals = lbdf1(*f_coords[0]), lbdf2(*f_coords[1])
+					f_vals[0] = lbdf1(*f_coords[0]); f_vals[1] = lbdf2(*f_coords[1]);
 					err = max(err, abs(f_vals[0] - f_vals[1]))
 				except:
+					if g_dbg:
+						print 'except', f_vals
 					has_except = True; except_count = except_count + 1;
 			else:
 				f_vals = lbdf1(*f_coords[0]), lbdf2(*f_coords[1])
@@ -531,8 +578,9 @@ def func_subs_sample(fctx, subs, k_int, (rlo, rhi, n), excpt = False, seed = Non
 						subs_vals[si] = lbd(*sub_coords)
 					except:
 						if g_dbg:
-							print 'except'
-						except_count = except_count+1; has_except = True; break;
+							print 'except [{}]'.format(subs_keys[si])
+						if subs_keys[si] != 'trick':
+							except_count = except_count+1; has_except = True; break;
 				else:
 					subs_vals[si] = lbd(*sub_coords)
 				if g_dbg:
@@ -688,7 +736,7 @@ def print_fctx(fctx, details, print_lf = True):
 			print ''.join([' ']*decl_len),
 			return key,decl_len
 	curr_decl = ''; decl_len = -1;
-	details = ['1','2','3'] if 'all' in details else details
+	details = ['1','2','3','4'] if 'all' in details else details
 	for det,deti in zip(details, range(len(details))):
 		if deti != 0:
 			print ''
@@ -701,6 +749,10 @@ def print_fctx(fctx, details, print_lf = True):
 		elif det in ['sympy', 's', '3']:
 			curr_decl, decl_len = print_decl('lvl_composed', curr_decl, decl_len)
 			print ' = ', fctx['lvl_sympy']['eval_func_str']
+		elif det in ['sympy2', 's2', '4']:
+			curr_decl, decl_len = print_decl('lvl_composed', curr_decl, decl_len)
+			print ' = ', str(fctx['lvl_sympy']['eval_func'])
+			print '<{}>'.format(fctx['lvl_sympy']['eval_sympy_symbs'])
 	print '.{}'.format('\n' if print_lf else ''),
 def create_dsl():
 	print ' Asinus Salutem'
@@ -951,7 +1003,8 @@ def process_dsl_command(dsl, inp, quiet=False):
 	elif (cmd in ['fstrs']):
 		print u'\n'.join([u'{}'.format(funcs[k]['lvl_raw']['func_str']) for k in funcs.keys()])
 	elif (cmd in ['?', 'calc', 'eval'] and is_focus_sec):
-		print subs_sym_str(to_sym_str(' '.join(input_splt[1:])), [ ( name_to_sympy(x['name'], True),x['lvl_sympy']['eval_lbd']) for x in funcs.values()])
+		fn = input_splt[1].split('(')[0]; sfn = vname_to_sympy(fn, k_sympy_reserved);
+		print subs_sym_str(input_splt[1].replace(fn, sfn), [(sfn, funcs[fn]['lvl_sympy']['eval_lbd'])])
 def enter_dsl(dsl):
 	go_dsl = True; sys_exit = False;
 	while go_dsl:
@@ -985,7 +1038,7 @@ if not sys.flags.interactive:
 			to_line = int(arg_get('-toline', len(lines)))
 			for line,li in zip(lines, range(len(lines))):
 				if echo and dsl_is_focus_sec(dsl):
-					print ' >{}{}. {}{}'.format(vt_cm['yellow'], li+1, line, vt_cm[''])
+					print ' >{}{}. {}{}'.format(vt_cm['bblue' if line.startswith('#') else 'yellow'], li+1, line, vt_cm[''])
 				if line == 'quit':
 					break
 				if li == to_line:
