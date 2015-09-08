@@ -1,15 +1,13 @@
 module Shared_funcs
   # Waiting for https://github.com/JuliaLang/julia/pull/6884
   using GZip
-
   function comp_density{T}(A::Matrix{T})
     nz = 0
     for a in A
       nz = nz + ((a == zero(T)) ? 1 : 0)
     end
-    return one(T) - (convert(T, nz) / convert(T, length(A)))
+    return one(T) - (convert(Float32, nz) / convert(Float32, length(A)))
   end
-
   function _read_matrix_mtx(filename, infoonly::Bool=false)
     function skewsymmetric!(M::AbstractMatrix)
         m,n = size(M)
@@ -41,7 +39,6 @@ module Shared_funcs
         end
         return M
     end
-
     #println(pwd())
     mmfile = Nothing()
     if (endswith(filename, ".gz"))
@@ -49,7 +46,6 @@ module Shared_funcs
     else
       mmfile = open(filename,"r")
     end
-
     # Read first line
     firstline = chomp(readline(mmfile))
     tokens = split(firstline)
@@ -63,7 +59,6 @@ module Shared_funcs
     if head1 != "matrix"
         throw(ParseError("Unknown MatrixMarket data type: $head1 (only \"matrix\" is supported)"))
     end
-
     eltype = field == "real" ? Float64 :
              field == "complex" ? Complex128 :
              field == "pattern" ? Bool :
@@ -74,7 +69,6 @@ module Shared_funcs
                symm == "hermitian" ? hermitian! :
                symm == "skew-symmetric" ? skewsymmetric! :
                throw(ParseError("Unknown matrix symmetry: $symm (only general, symmetric, skew-symmetric and hermitian are supported)"))
-
     # Skip all comments and empty lines
     ll   = readline(mmfile)
     while length(chomp(ll))==0 || (length(ll) > 0 && ll[1] == '%')
@@ -111,11 +105,44 @@ module Shared_funcs
     end
     return symlabel(reshape([parsefloat(readline(mmfile)) for i in 1:entries], (rows,cols)))
   end
-
   function read_matrix_mtx(filename)
-    M = _read_matrix_mtx(filename)
-    return full(M)
+    return _read_matrix_mtx(filename)
   end
-
-
+  function random_matrix(seed, scale, dense, n, m, show)
+    rng = MersenneTwister(seed)
+    A = scale * rand(rng, (m, n))
+    if dense != 100
+      #zeros = rand(rng, 1:(m*n), zero_n) # Needs next version of Julia
+      zero_n = int(round((m*n) * (1.0 - dense / 100.0)))
+      if (zero_n > 0)
+        #sprand is useless, the output will not be the same even with fixed seed.
+        toindex = x -> clamp(int((m*n)* 0.5*(1.0+x)), 1, m*n)
+        xis = [ toindex(x) for x in randn(rng, zero_n) ]
+        for i=2:length(xis)
+          it = 0
+          while (it < 5 && xis[i] in xis[1:i-1])
+            xis[i] = toindex(rand(rng))
+            it = it + 1
+          end
+        end
+        for i in xis
+          A[i] = A[i]*0
+        end
+      end
+    end
+    if (show)
+      println("A", A)
+    end
+    return A
+  end
+  function random_matrix(params)
+    seed = get(params, "seed", int(time_ns()) % 32768 )
+    scale = int(get(params, "scale", 1.0))
+    dense = int(get(params, "dense", 100 ))
+    n = int(get(params, "n", 10))
+    m = int(get(params, "m", n))
+    show = get(params, "show", false)
+    println("/seed:", seed)
+    return random_matrix(seed, scale, dense, n, m, show)
+  end
 end
