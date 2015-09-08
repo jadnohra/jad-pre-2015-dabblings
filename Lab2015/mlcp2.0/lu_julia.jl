@@ -29,7 +29,7 @@ module Lu_julia_sparse
 #
 	type Dat{T}
 		prob::Lu.Problem{T}
-		A::SparseMatrixCSC
+		A::SparseMatrixCSC{T}
 	#
 		Dat() = new()
 	end
@@ -42,6 +42,12 @@ module Lu_julia_sparse
 		dat.A = sparse(prob.A)
 	end
 	function solve_dat{T}(dat::Dat{T}, sol::Lu.Solution{T})
-		println(lufact(dat.A))
+		# Note, lufact with sparse matrices seems to only be possible with a specific type (e.g Float64)
+		# try: methods(lufact)
+		# https://github.com/JuliaLang/julia/issues/4439 says: "I do believe that UMFPACK does not have a Float32/Complex64 interface"
+		luF = lufact(dat.A); L,U,p,q,Rs = luF[:(:)]
+		sol.L = L; sol.U = U; sol.p = p; sol.q = q; sol.rs = Rs; sol.solved = true;
+		println(typeof(luF))
+		println(typeof(L))
 	end
 end

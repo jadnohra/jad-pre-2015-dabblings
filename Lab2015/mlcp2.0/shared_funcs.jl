@@ -1,12 +1,8 @@
 module Shared_funcs
   # Waiting for https://github.com/JuliaLang/julia/pull/6884
   using GZip
-  function comp_density{T}(A::Matrix{T})
-    nz = 0
-    for a in A
-      nz = nz + ((a == zero(T)) ? 1 : 0)
-    end
-    return one(T) - (convert(Float32, nz) / convert(Float32, length(A)))
+  function comp_density(A::AbstractMatrix)
+    return 1.0 - (countnz(A) / length(A))
   end
   function _read_matrix_mtx(filename, infoonly::Bool=false)
     function skewsymmetric!(M::AbstractMatrix)
@@ -136,7 +132,7 @@ module Shared_funcs
     return A
   end
   function random_matrix(params)
-    seed = get(params, "seed", int(time_ns()) % 32768 )
+    seed = int(get(params, "seed", int(time_ns()) % 32768))
     scale = int(get(params, "scale", 1.0))
     dense = int(get(params, "dense", 100 ))
     n = int(get(params, "n", 10))

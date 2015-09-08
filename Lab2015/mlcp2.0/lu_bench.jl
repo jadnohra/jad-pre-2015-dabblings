@@ -83,5 +83,6 @@ module Lu_bench
       println("************")
       println("Distance: ", Lu.calc_solution_distance(lu_prob, raw_sol))
       println("")
+      return raw_sol
     end
 end

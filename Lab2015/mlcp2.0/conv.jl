@@ -35,11 +35,18 @@ module Conv
 		return ret
 	end
 	function matrix(conv::Converter, M::Matrix)
-		r = size(M)[1]; c = size(M)[2];
-		ret = Array(conv.t, (r, c))
+		ret = Array(conv.t, (size(M,1), size(M,2)))
 		for i = 1:length(M)
 			ret[i] = conv.f(M[i])
 		end
 		return ret
+	end
+	function matrix(conv::Converter, M::SparseMatrixCSC)
+		I,J,V = findnz(M)
+		Vc = Array(conv.t, length(V))
+		for i = 1:length(V)
+			Vc[i] = conv.f(V[i])
+		end
+		return sparse(I,J,Vc)
 	end
 end
