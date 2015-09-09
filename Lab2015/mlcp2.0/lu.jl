@@ -28,9 +28,7 @@ type Solution{T}
   q::Vector{Int}
   rs::Vector{T}
   #
-  function Solution(params::Params)
-    x = new(); x.solved = false; return x;
-  end
+  function Solution(params::Params) x = new(); x.solved = false; return x; end
 end
 #
   function is_dense(prob::Problem) return issparse(prob.A) == false end
@@ -60,17 +58,13 @@ end
   end
   function calc_solution_distance(prob::Problem, sol::Solution)
     if (sol.solved == false) return Inf end
+    println(sol.L); println(sol.U);
     if (istril(sol.L) == false) return Inf end
     if (istriu(sol.U) == false) return Inf end
+    nA = prob.A[isdefined(sol, :p) ? sol.p : range(1,end),isdefined(sol, :q) ? sol.q : range(1,end)]
+    nA = isdefined(sol, :rs) ? scale(sol.rs, nA) : nA
     normp = 1 #2-norm not yet implemented for sparse matrices
-    if is_dense(sol)
-      nA = prob.A[sol.p,:]
-      return norm(nA - sol.L*sol.U, normp)
-    else
-      # https://github.com/JuliaLang/julia/blob/master/test/sparsedir/umfpack.jl
-      #nA = sol.rs .* prob.A[sol.p, sol.q]
-      nA = scale(sol.rs,prob.A)[sol.p,sol.q]
-      return norm(nA - sol.L*sol.U, normp)
-    end
+    println(nA); println(sol.L*sol.U);
+    return norm(nA - sol.L*sol.U, normp)
   end
 end
