@@ -141,4 +141,29 @@ module Shared_funcs
     println("/seed:", seed)
     return random_matrix(seed, scale, dense, n, m, show)
   end
+  function str_range(str)
+  	function single_range(str)
+      beg = int(split(str, "-")[1])
+      nd = int(split(split(str, "-")[2],":")[1])
+      stp = contains(str,":") ? int(split(str, ":")[2]) : 1
+      cnt = int((nd-beg+1)/stp)
+    	return [range(beg,stp,cnt)]
+    end
+    rngs = Array(Int, 0)
+    for x in split(str, ",")
+      rngs = vcat(rngs, contains(x, "-") ? single_range(x) : [int(x)])
+    end
+    return rngs
+  end
+  function print_choose(list, autochoose::Bool = false)
+    if length(list) == 0 return [] end
+    if length(list) == 1 && autochoose return list end
+    cols = [:white, :yellow]
+    for i in 1:length(list)
+      print_with_color(cols[1+i%2], " $i. $(list[i]) \n")
+    end
+    print(" > ")
+    inp = readline()
+    println( str_range(inp))
+  end
 end

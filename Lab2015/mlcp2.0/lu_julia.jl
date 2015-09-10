@@ -2,6 +2,9 @@ module Lu_julia_dense
 #
 	using Lu
 #
+		ArgName = "julia_dense"
+		Descr = "Julia's default algorithm on a dense matrix."
+#
 	type Dat{T}
 		prob::Lu.Problem{T}
 		A::Array{T,2}
@@ -26,6 +29,9 @@ end
 module Lu_julia_sparse
 #
 	using Lu
+#
+	ArgName = "julia_sparse"
+	Descr = "Julia's default algorithm on a sparse matrix (uses umfpack)."	
 #
 	type Dat{T}
 		prob::Lu.Problem{T}

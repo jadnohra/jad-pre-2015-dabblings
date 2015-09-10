@@ -7,12 +7,15 @@ module Lu_bench
 #
   import Lu_julia_dense
   import Lu_julia_sparse
+  import Lu_elim_I
 #
   type DbProblem
     creator::Function
     descr::String
   end
 #
+  module_db = [Lu_julia_dense, Lu_julia_sparse, Lu_elim_I]
+  module_name_map = merge([x.ArgName => x for x in module_db], [i => module_db[i] for i in 1:length(module_db)])
   prob_db = DbProblem[]
   prob_last = Array(Any, 0)
 #
@@ -38,12 +41,19 @@ module Lu_bench
     code_module.solve_dat(dat, sol)
     return sol
   end
+  function solve_problem_timed(code_module::Module, params::Params, lu_prob)
+    @time sol = solve_problem(code_module::Module, params::Params, lu_prob)
+    return sol
+  end
   function solve_problem(params::Params, lu_prob)
-    modules = {"julia_dense" => Lu_julia_dense, "julia_sparse" => Lu_julia_sparse}
-    return solve_problem(modules[params["module"]], params, lu_prob)
+    chosen = split(params["module"], ",")
+    if haskey(params, "choose")
+      Shared_funcs.print_choose(module_db)
+    end
+    return [solve_problem_timed(module_name_map[x], params, lu_prob) for x in chosen]
   end
   function solve(arg_str::String = "/prob:t1")
-    def_params = { "prob"=>"t1", "type"=>"Float32", "module"=>"julia_dense" }
+    def_params = { "prob"=>"t1", "type"=>"Float32", "module"=>Lu_julia_dense.ArgName }
     params = deepcopy(def_params)
     arg_get(arg_create(arg_str), params)
     #
@@ -79,10 +89,10 @@ module Lu_bench
         ", form:", Lu.get_form(lu_prob),
         " +++++++")
       end
-      @time raw_sol = solve_problem(params, lu_prob)
+      sols = solve_problem(params, lu_prob)
       println("************")
-      println("Distance: ", Lu.calc_solution_distance(lu_prob, raw_sol))
+      println("Distance: ", [Lu.calc_solution_distance(lu_prob, x) for x in sols])
       println("")
-      return raw_sol
+      return sols
     end
 end
