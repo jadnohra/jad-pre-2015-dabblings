@@ -30,6 +30,6 @@ module Lu_elim_I
 				U[j,k:m] = U[j,k:m] - L[j,k] * U[k,k:m]
 			end
 		end
-		sol.L = tril(L); sol.U = triu(U); sol.solved = true;
+		sol.L = tril(L); sol.U = triu(U); sol.solved = all(isfinite(L)) && all(isfinite(U));
 	end
 end

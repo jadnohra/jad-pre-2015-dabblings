@@ -110,31 +110,25 @@ module Shared_funcs
     return _read_matrix_mtx(filename)
   end
   function random_matrix(seed, scale, dense, n, m, show)
+    function toindex(x,n) return clamp(int((n)* 0.5*(1.0+x)), 1, n) end
     rng = MersenneTwister(seed)
-    A = scale * rand(rng, (m, n))
+    B = A = scale * rand(rng, (m, n))
     if dense != 100
       #zeros = rand(rng, 1:(m*n), zero_n) # Needs next version of Julia
       zero_n = int(round((m*n) * (1.0 - dense / 100.0)))
       if (zero_n > 0)
-        #sprand is useless, the output will not be the same even with fixed seed.
-        toindex = x -> clamp(int((m*n)* 0.5*(1.0+x)), 1, m*n)
-        xis = [ toindex(x) for x in randn(rng, zero_n) ]
-        for i=2:length(xis)
-          it = 0
-          while (it < 5 && xis[i] in xis[1:i-1])
-            xis[i] = toindex(rand(rng))
-            it = it + 1
-          end
+        nz_i = [1:m*n]
+        while length(nz_i) + zero_n > (m*n)
+          splice!(nz_i, toindex(rand(rng), length(nz_i)))
         end
-        for i in xis
-          A[i] = A[i]*0
-        end
+        B = zeros(Float64, (m,n))
+        for i in nz_i B[i] = A[i] end
       end
     end
     if (show)
-      println("A", A)
+      println("A", B)
     end
-    return A
+    return B
   end
   function random_matrix(params)
     seed = int(get(params, "seed", int(time_ns()) % 32768))
