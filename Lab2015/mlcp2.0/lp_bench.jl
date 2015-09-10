@@ -218,10 +218,6 @@ module Lp_bench
     println();
   end
 
-  function format_percent(v)
-    return strip(strip(@sprintf("%0.2f", 100.0 * v), '0'), '.') * "%"
-  end
-
   function introspect(arg_str::String = "", code_module::Module = lp_defaults)
     def_params = { "type"=>"Float32", "kind"=>"native" }
     params = deepcopy(def_params)
@@ -324,7 +320,7 @@ module Lp_bench
       #Lp_bench.prob_last[1] =
       println("+++++++",
         " n:", Lp.get_n(lp_prob), ", m:", Lp.get_m(lp_prob),
-        ", density:", format_percent(Lp.comp_density(lp_prob)),
+        ", density:", Shared_funcs.format_percent(Lp.comp_density(lp_prob)),
         ", type:", Lp.get_t(lp_prob),
         ", form:", Lp.get_form(lp_prob),
         " +++++++")

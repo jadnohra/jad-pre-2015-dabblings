@@ -1,8 +1,13 @@
 module Shared_funcs
+#
   # Waiting for https://github.com/JuliaLang/julia/pull/6884
   using GZip
+#
+  function format_percent(v)
+    return strip(strip(@sprintf("%0.2f", 100.0 * v), '0'), '.') * "%"
+  end
   function comp_density(A::AbstractMatrix)
-    return 1.0 - (countnz(A) / length(A))
+    return countnz(A) / length(A)
   end
   function _read_matrix_mtx(filename, infoonly::Bool=false)
     function skewsymmetric!(M::AbstractMatrix)
@@ -141,7 +146,7 @@ module Shared_funcs
     println("/seed:", seed)
     return random_matrix(seed, scale, dense, n, m, show)
   end
-  function str_range(str)
+  function str_range(str, list = [])
   	function single_range(str)
       beg = int(split(str, "-")[1])
       nd = int(split(split(str, "-")[2],":")[1])
@@ -149,9 +154,10 @@ module Shared_funcs
       cnt = int((nd-beg+1)/stp)
     	return [range(beg,stp,cnt)]
     end
+    if str == "all" return 1:length(list) end
     rngs = Array(Int, 0)
     for x in split(str, ",")
-      rngs = vcat(rngs, contains(x, "-") ? single_range(x) : [int(x)])
+      if length(x) != 0 rngs = vcat(rngs, contains(x, "-") ? single_range(x) : [int(x)]) end
     end
     return rngs
   end
@@ -163,7 +169,6 @@ module Shared_funcs
       print_with_color(cols[1+i%2], " $i. $(list[i]) \n")
     end
     print(" > ")
-    inp = readline()
-    println( str_range(inp))
+    return str_range(strip(readline()), list)
   end
 end

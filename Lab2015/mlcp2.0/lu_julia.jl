@@ -31,7 +31,7 @@ module Lu_julia_sparse
 	using Lu
 #
 	ArgName = "julia_sparse"
-	Descr = "Julia's default algorithm on a sparse matrix (uses umfpack)."	
+	Descr = "Julia's default algorithm on a sparse matrix (uses umfpack)."
 #
 	type Dat{T}
 		prob::Lu.Problem{T}
@@ -53,7 +53,5 @@ module Lu_julia_sparse
 		# https://github.com/JuliaLang/julia/issues/4439 says: "I do believe that UMFPACK does not have a Float32/Complex64 interface"
 		luF = lufact(dat.A); L,U,p,q,Rs = luF[:(:)]
 		sol.L = L; sol.U = U; sol.p = p; sol.q = q; sol.rs = Rs; sol.solved = true;
-		println(typeof(luF))
-		println(typeof(L))
 	end
 end

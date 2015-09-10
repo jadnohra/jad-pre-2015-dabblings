@@ -30,9 +30,6 @@ module Lu_bench
   function problem_random(params::Params)
   return Lu.create_Problem(params, Shared_funcs.random_matrix(params))
   end; push!(prob_db, DbProblem(problem_random, "random"))
-  function format_percent(v)
-    return strip(strip(@sprintf("%0.2f", 100.0 * v), '0'), '.') * "%"
-  end
   function solve_problem(code_module::Module, params::Params, lu_prob)
     T = Lu.get_t(lu_prob)
     dat = code_module.construct_dat(T)
@@ -42,13 +39,13 @@ module Lu_bench
     return sol
   end
   function solve_problem_timed(code_module::Module, params::Params, lu_prob)
-    @time sol = solve_problem(code_module::Module, params::Params, lu_prob)
+    @time sol = solve_problem(code_module, params, lu_prob)
     return sol
   end
   function solve_problem(params::Params, lu_prob)
     chosen = split(params["module"], ",")
     if haskey(params, "choose")
-      Shared_funcs.print_choose(module_db)
+      chosen = [module_db[i].ArgName for i in Shared_funcs.print_choose(["$(x.ArgName): $(x.Descr)"for x in module_db])]
     end
     return [solve_problem_timed(module_name_map[x], params, lu_prob) for x in chosen]
   end
@@ -84,7 +81,7 @@ module Lu_bench
       #
       println("+++++++",
         " n:", Lu.get_r(lu_prob), ", m:", Lu.get_c(lu_prob),
-        ", density:", format_percent(Lu.comp_density(lu_prob)),
+        ", density:", Shared_funcs.format_percent(Lu.comp_density(lu_prob)),
         ", type:", Lu.get_t(lu_prob),
         ", form:", Lu.get_form(lu_prob),
         " +++++++")

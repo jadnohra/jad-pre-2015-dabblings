@@ -4,6 +4,24 @@ module Lu_elim_I
 #
 		ArgName = "elim_I"
 		Descr = "Elimination without pivoting."
-		Source = "[Trefethen] Numerical Linear Algebra. p151."
+		Source = "[Trefethen] Numerical Linear Algebra (p151)."
+		Detail = "O(n³)"
 #
+	type Dat{T}
+		prob::Lu.Problem{T}
+		U::Lu.MatrixTypesT(T)
+		L::Matrix{T}
+	#
+		Dat() = new()
+	end
+#
+	function construct_dat(T::DataType)
+		return Dat{T}()
+	end
+	function fill_dat{T}(prob::Lu.Problem, dat::Dat{T})
+		dat.prob = prob
+		dat.U = deepcopy(prob.A); dat.L = eye(T, prob.r);
+	end
+	function solve_dat{T}(dat::Dat{T}, sol::Lu.Solution{T})
+	end
 end
