@@ -15,7 +15,7 @@ module Lu_bench
   end
 #
   module_db = [Lu_julia_dense, Lu_julia_sparse, Lu_elim_I]
-  module_name_map = merge([x.ArgName => x for x in module_db], [i => module_db[i] for i in 1:length(module_db)])
+  module_name_map = merge([x.ArgName => x for x in module_db], [string(i) => module_db[i] for i in 1:length(module_db)])
   prob_db = DbProblem[]
   prob_last = Array(Any, 0)
 #
@@ -43,14 +43,18 @@ module Lu_bench
     return sol
   end
   function solve_problem(params::Params, lu_prob)
-    chosen = params["module"] == "all" ? [x.ArgName for x in module_db] : split(params["module"], ",")
-    if haskey(params, "choose")
+    chosen = []
+    if params["module"] == "all"
+      chosen = [x.ArgName for x in module_db]
+    elseif params["module"] == "choose"
       chosen = [module_db[i].ArgName for i in Shared_funcs.print_choose(["$(x.ArgName): $(x.Descr)"for x in module_db])]
+    else
+      chosen = split(params["module"], ",")
     end
     return [solve_problem_timed(module_name_map[x], params, lu_prob) for x in chosen]
   end
   function solve(arg_str::String = "/prob:t1")
-    def_params = { "prob"=>"t1", "type"=>"Float32", "module"=>Lu_julia_dense.ArgName }
+    def_params = { "prob"=>"t1", "type"=>"Float32", "module"=>"choose" }
     params = deepcopy(def_params)
     arg_get(arg_create(arg_str), params)
     #
