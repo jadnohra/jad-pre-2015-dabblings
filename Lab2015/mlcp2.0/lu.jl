@@ -58,13 +58,13 @@ end
   end
   function calc_solution_distance(prob::Problem, sol::Solution)
     if (sol.solved == false) return Inf end
-    #println(sol.L); println(sol.U);
+    println(sol.L); println(sol.U);
     if (istril(sol.L) == false) return Inf end
     if (istriu(sol.U) == false) return Inf end
     nA = prob.A[isdefined(sol, :p) ? sol.p : range(1,end),isdefined(sol, :q) ? sol.q : range(1,end)]
     nA = isdefined(sol, :rs) ? scale(sol.rs, nA) : nA
     normp = 1 #2-norm not yet implemented for sparse matrices
-    #println(nA); println(sol.L*sol.U);
+    println(nA); println(sol.L*sol.U);
     return norm(nA - sol.L*sol.U, normp)
   end
 end

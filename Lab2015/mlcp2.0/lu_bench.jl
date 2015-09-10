@@ -43,7 +43,7 @@ module Lu_bench
     return sol
   end
   function solve_problem(params::Params, lu_prob)
-    chosen = split(params["module"], ",")
+    chosen = params["module"] == "all" ? [x.ArgName for x in module_db] : split(params["module"], ",")
     if haskey(params, "choose")
       chosen = [module_db[i].ArgName for i in Shared_funcs.print_choose(["$(x.ArgName): $(x.Descr)"for x in module_db])]
     end
